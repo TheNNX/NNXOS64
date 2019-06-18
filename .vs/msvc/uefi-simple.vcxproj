@@ -400,6 +400,7 @@ rmdir /Q /S $(ProjectName)</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\boot.c" />
+    <ClCompile Include="..\..\pe\pe.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\debug.bat" />
@@ -409,6 +410,7 @@ rmdir /Q /S $(ProjectName)</Command>
     <ClInclude Include="..\..\low.h" />
     <ClInclude Include="..\..\nnxarg.h" />
     <ClInclude Include="..\..\nnxint.h" />
+    <ClInclude Include="..\..\pe\pe.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
