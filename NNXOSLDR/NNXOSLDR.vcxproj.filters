@@ -19,6 +19,15 @@
     <Filter Include="Header Files\video">
       <UniqueIdentifier>{847b8be3-5b5d-43f6-aad7-30f707bff7de}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\memory">
+      <UniqueIdentifier>{7d505c85-0283-481d-b62f-06fd834a35b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\memory">
+      <UniqueIdentifier>{9412fc92-537d-4834-8778-5890a7dd8dc7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\HAL">
+      <UniqueIdentifier>{3165601d-65f2-49d7-bb25-49ad552ce279}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -26,6 +35,9 @@
     </ClCompile>
     <ClCompile Include="video\SimpleTextIO.c">
       <Filter>Source Files\video</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\paging.c">
+      <Filter>Source Files\memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -38,5 +50,13 @@
     <ClInclude Include="video\SimpleTextIO.h">
       <Filter>Header Files\video</Filter>
     </ClInclude>
+    <ClInclude Include="memory\paging.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HAL\memory.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -91,7 +91,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies />
+      <AdditionalDependencies>$(ProjectDir)\memory.obj</AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
       <BaseAddress>0x100000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -99,6 +99,10 @@
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <SubSystem>Native</SubSystem>
     </Link>
+    <PreBuildEvent>
+      <Command>cd $(ProjectDir)HAL\
+nasm -f win64 memory.asm -o ..\memory.obj</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -138,12 +142,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="memory\paging.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="memory\paging.h" />
     <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HAL\memory.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

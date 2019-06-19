@@ -16,3 +16,4 @@ temp/*
 x64/*
 gnu-efi/*
 .vs/nnxos64/*
+*.tmp
