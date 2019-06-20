@@ -34,10 +34,6 @@ void PagingInit() {
 	}
 	PML4[511] = 0;
 	
-	//All PTs seems to be empty, I have no idea how is this memory identify mapped... I'll create my own tables then, I guess...
-	for (int a = 0; a < 512; a++) {
-		PrintT("%x     ",((UINT64*)PG_ALIGN(((UINT64*)PG_ALIGN(PML4e[0][0]))[511]))[a]);
-	}
 	((UINT64*)PG_ALIGN(PML4e[0][0]))[10] = ((UINT64)temp) | 7;
 	temp[1] = ((UINT64)temp2) | 7;
 

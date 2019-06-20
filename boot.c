@@ -7,7 +7,9 @@
 
 #define MAXIMAL_STAGE2_FILESIZE 64 * 1024 //64KiB
 
-void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN);
+EFI_BOOT_SERVICES* bs;
+
+void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64);
 
 
 EFI_FILE_PROTOCOL* GetFile(CHAR16* name) {
@@ -38,26 +40,23 @@ EFI_FILE_PROTOCOL* GetFile(CHAR16* name) {
 	return file;
 }
 
-EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
-{
-	InitializeLib(ImageHandle, SystemTable);
-	SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
-	EFI_STATUS status;
-	EFI_BOOT_SERVICES* bs = SystemTable->BootServices;
-	
-	UINTN mapSize = 0, mapKey, descriptorSize = 0;
-	EFI_MEMORY_DESCRIPTOR *memoryMap = NULL;
-	UINT32 descriptorVersion;
+EFI_STATUS status = 0;
+UINTN mapSize = 0, mapKey, descriptorSize = 0;
+EFI_MEMORY_DESCRIPTOR *memoryMap = NULL;
+UINT32 descriptorVersion;
 
-	while (EFI_SUCCESS != (status = uefi_call_wrapper((void *)SystemTable->BootServices->GetMemoryMap, 5, &mapSize,
+void scanAndPrintMemoryMap(UINT64* freePages, UINT64* totPages, UINT64* outMapKey) {
+
+	while (EFI_SUCCESS != (status = uefi_call_wrapper((void *)bs->GetMemoryMap, 5, &mapSize,
 		memoryMap, &mapKey, &descriptorSize, &descriptorVersion)))
 	{
 		if (status == EFI_BUFFER_TOO_SMALL)
 		{
 			mapSize += 2 * descriptorSize;
-			uefi_call_wrapper((void *)SystemTable->BootServices->AllocatePool, 3, EfiLoaderData, mapSize, (void **)&memoryMap);
+			uefi_call_wrapper((void *)bs->AllocatePool, 3, EfiLoaderData, mapSize, (void **)&memoryMap);
 		}
 	}
+
 
 	UINT64 startOfMemoryMap = memoryMap;
 	UINT64 endOfMemoryMap = startOfMemoryMap + mapSize;
@@ -65,21 +64,17 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	UINT64 offset = startOfMemoryMap;
 
 	UINT64 index = 0;
-
-	UINT64 pages = 0;
-	UINT64 freePages = 0;
-
 	int printN = 61;
 
 	while (offset < endOfMemoryMap)
 	{
 		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *)offset;
 
-		for (int a = 0; a < 1+(desc->NumberOfPages / 64); a++) {
+		for (int a = 0; a < 1 + (desc->NumberOfPages / 64); a++) {
 			if (printN > 60)
 			{
 				printN = 0;
-				Print(L"\n%ll016X: ", desc->PhysicalStart + a*64*4096);
+				Print(L"\n%ll016X: ", desc->PhysicalStart + a * 64 * 4096);
 			}
 			if (desc->Type == EfiConventionalMemory)
 				Print(L"_");
@@ -102,25 +97,57 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 			else
 				Print(L"?");
 			printN++;
-			for (UINT64 timer = 0; timer < 0xFFFF; timer++);
+			for (UINT64 timer = 0; timer < 0xFFF; timer++);
 		}
-		
 
 		offset += descriptorSize;
-		pages += desc->NumberOfPages;
+		*totPages += desc->NumberOfPages;
 
 		if (desc->Type == EfiConventionalMemory || desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData || desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
-			freePages += desc->NumberOfPages;
-
-		
+			*freePages += desc->NumberOfPages;
 
 		index++;
 	}
-	Print("\n");
-	
-	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n",freePages*4096,freePages/256,pages*4096,pages/256);
+	Print(L"\n");
+	*outMapKey = mapKey;
+}
 
-	//while (1);
+EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+{
+	InitializeLib(ImageHandle, SystemTable);
+	SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+	EFI_STATUS status;
+	bs = SystemTable->BootServices;
+
+	UINT64 pages = 0;
+	UINT64 freePages = 0;
+	
+	scanAndPrintMemoryMap(&freePages, &pages, &mapKey);
+
+	UINT8* nnxMMap = 0;
+	status = bs->AllocatePool(EfiBootServicesData, pages, &nnxMMap);
+	if (status != EFI_SUCCESS) {
+		Print(L"Error: could not allocate memory for memory map...\n");
+		return status;
+	}
+
+	UINT64 offset = memoryMap;
+	UINT64 nnxMMapIndex = 0;
+	while (offset < ((UINT64)memoryMap) + mapSize)
+	{
+		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *)offset;
+		for (UINT64 a = 0; a < desc->NumberOfPages; a++) {
+			if (desc->Type == EfiConventionalMemory || desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData || desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
+				nnxMMap[nnxMMapIndex] = 1;
+			else
+				nnxMMap[nnxMMapIndex] = 0;
+			nnxMMapIndex++;
+		}
+		offset += descriptorSize;
+	}
+	Print(L"Memory map has been filled up to index %d\n",nnxMMapIndex);
+	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n",freePages*4096,freePages/256,pages*4096,pages/256);
+	Print(L"%lf%% memory free to use.\n",((double)freePages)/((double)pages)*100.0);
 
 	UINT32* framebuffer;
 	UINT32* framebufferEnd;
@@ -169,7 +196,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
-		stage2_entrypoint(framebuffer, framebufferEnd, gop->Mode->Info->HorizontalResolution, gop->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, mapKey);
+		stage2_entrypoint(framebuffer, framebufferEnd, gop->Mode->Info->HorizontalResolution, gop->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, mapKey, nnxMMap, nnxMMapIndex);
 	}
 	else {
 		Print(L"%EError%N: NNXOSLDR.exe missing or corrupted.");
