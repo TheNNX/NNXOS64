@@ -10,3 +10,13 @@ SetCR3:
 GetCR3:
 	mov rax, cr3
 	ret
+
+[GLOBAL SetCR0]
+SetCR0:
+	mov cr0, rcx
+	ret
+
+[GLOBAL GetCR0]
+GetCR0:
+	mov rax, cr0
+	ret

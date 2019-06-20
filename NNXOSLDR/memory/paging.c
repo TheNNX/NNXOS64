@@ -19,6 +19,9 @@ void PagingMapPage(void* virtual, void* physical, UINT16 flags) {
 }
 
 void PagingInit() {
+	UINT64 CR0 = GetCR0();
+	CR0 &= (~65536);
+	SetCR0(CR0);
 	UINT64*** sourceCR3 = GetCR3();
 	UINT64** sourceFisrtEntryOfPML4 = sourceCR3[0];
 	for (int a = 0; a < 512; a++) {
