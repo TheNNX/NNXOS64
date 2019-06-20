@@ -1,4 +1,4 @@
-
+﻿
 #include "gnu-efi/inc/efi.h"
 #include "gnu-efi/inc/efilib.h"
 #include "gnu-efi/inc/efishellintf.h"
@@ -8,6 +8,7 @@
 #define MAXIMAL_STAGE2_FILESIZE 64 * 1024 //64KiB
 
 void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN);
+
 
 EFI_FILE_PROTOCOL* GetFile(CHAR16* name) {
 	EFI_STATUS  Status = 0;
@@ -48,11 +49,79 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	EFI_MEMORY_DESCRIPTOR *memoryMap = NULL;
 	UINT32 descriptorVersion;
 
-	status = uefi_call_wrapper((void *)gBS->GetMemoryMap, 5, &mapSize, &memoryMap, &mapKey, &descriptorSize, &descriptorVersion);
-	mapSize += 16 * descriptorSize;
-	status = uefi_call_wrapper((void *)gBS->AllocatePool, 3, EfiLoaderData, mapSize, (void **)&memoryMap);
-	status = uefi_call_wrapper((void *)gBS->GetMemoryMap, 5, &mapSize, &memoryMap, &mapKey, &descriptorSize, &descriptorVersion);
+	while (EFI_SUCCESS != (status = uefi_call_wrapper((void *)SystemTable->BootServices->GetMemoryMap, 5, &mapSize,
+		memoryMap, &mapKey, &descriptorSize, &descriptorVersion)))
+	{
+		if (status == EFI_BUFFER_TOO_SMALL)
+		{
+			mapSize += 2 * descriptorSize;
+			uefi_call_wrapper((void *)SystemTable->BootServices->AllocatePool, 3, EfiLoaderData, mapSize, (void **)&memoryMap);
+		}
+	}
+
+	UINT64 startOfMemoryMap = memoryMap;
+	UINT64 endOfMemoryMap = startOfMemoryMap + mapSize;
+
+	UINT64 offset = startOfMemoryMap;
+
+	UINT64 index = 0;
+
+	UINT64 pages = 0;
+	UINT64 freePages = 0;
+
+	int printN = 61;
+
+	while (offset < endOfMemoryMap)
+	{
+		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *)offset;
+
+		for (int a = 0; a < 1+(desc->NumberOfPages / 64); a++) {
+			if (printN > 60)
+			{
+				printN = 0;
+				Print(L"\n%ll016X: ", desc->PhysicalStart + a*64*4096);
+			}
+			if (desc->Type == EfiConventionalMemory)
+				Print(L"_");
+			else if (desc->Type == EfiMemoryMappedIO || desc->Type == EfiMemoryMappedIOPortSpace)
+				Print(L"I");
+			else if (desc->Type == EfiReservedMemoryType)
+				Print(L"█");
+			else if (desc->Type == EfiUnusableMemory)
+				Print(L"U");
+			else if (desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData)
+				Print(L"░");
+			else if (desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
+				Print(L"░");
+			else if (desc->Type == EfiRuntimeServicesCode || desc->Type == EfiRuntimeServicesData)
+				Print(L"R");
+			else if (desc->Type == EfiACPIMemoryNVS || desc->Type == EfiACPIReclaimMemory)
+				Print(L"A");
+			else if (desc->Type == EfiPalCode)
+				Print(L"P");
+			else
+				Print(L"?");
+			printN++;
+			for (UINT64 timer = 0; timer < 0xFFFF; timer++);
+		}
+		
+
+		offset += descriptorSize;
+		pages += desc->NumberOfPages;
+
+		if (desc->Type == EfiConventionalMemory || desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData || desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
+			freePages += desc->NumberOfPages;
+
+		
+
+		index++;
+	}
+	Print("\n");
 	
+	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n",freePages*4096,freePages/256,pages*4096,pages/256);
+
+	//while (1);
+
 	UINT32* framebuffer;
 	UINT32* framebufferEnd;
 
