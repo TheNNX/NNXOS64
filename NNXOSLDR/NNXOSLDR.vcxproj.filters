@@ -39,6 +39,12 @@
     <ClCompile Include="memory\paging.c">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
+    <ClCompile Include="memory\physical_allocator.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\MemoryOperations.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">
@@ -51,6 +57,12 @@
       <Filter>Header Files\video</Filter>
     </ClInclude>
     <ClInclude Include="memory\paging.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\physical_allocator.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\MemoryOperations.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
   </ItemGroup>

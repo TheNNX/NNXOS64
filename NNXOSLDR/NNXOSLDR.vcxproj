@@ -142,11 +142,15 @@ nasm -f win64 memory.asm -o ..\memory.obj</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="memory\MemoryOperations.c" />
     <ClCompile Include="memory\paging.c" />
+    <ClCompile Include="memory\physical_allocator.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="memory\MemoryOperations.h" />
     <ClInclude Include="memory\paging.h" />
+    <ClInclude Include="memory\physical_allocator.h" />
     <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
