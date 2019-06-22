@@ -20,3 +20,12 @@ SetCR0:
 GetCR0:
 	mov rax, cr0
 	ret
+
+[GLOBAL GetStack]
+GetStack:
+	mov rax, rsp
+	ret
+
+[GLOBAL SetStack]
+	xchg rcx, rsp
+	jmp qword [rcx]

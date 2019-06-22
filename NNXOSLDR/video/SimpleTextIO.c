@@ -1,6 +1,6 @@
 
 #include  "SimpleTextIO.h"
-
+#include "memory/physical_allocator.h"
 
 int* framebuffer;
 int* framebufferEnd;
@@ -392,5 +392,30 @@ void TextIOTest(UINT64 mode) {
 		TextIOOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, width, 0, height);
 		PrintT("test %i 0x%X %x %x %c '%s' %i '%s'\n",185,0x666666,0x12345678,0xabcdef00, '*', "g", 0x69LL, "mn");
 	
+	}
+}
+
+void drawMap() {
+	int x = 0;
+	int y = 0;
+
+	TextIOGetCursorPosition(&x, &y);
+
+	x = 0;
+	y += 10;
+
+	for (int a = 0; a < GlobalPhysicalMemoryMapSize; a++) {
+		if (GlobalPhysicalMemoryMap[a] == 1)
+			framebuffer[x + y * width] = 0xFF007F00;
+		else if (GlobalPhysicalMemoryMap[a] == 2)
+			framebuffer[x + y * width] = 0xFFAFAF00;
+		else
+			framebuffer[x + y * width] = 0xFF7F0000;
+		x++;
+		if (x > width)
+		{
+			y++;
+			x = 0;
+		}
 	}
 }
