@@ -7,7 +7,7 @@
 #include "efilib.h"
 #include "efibind.h"
 
-EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** entrypoint);
+EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** entrypoint, UINT8* memoryMap);
 
 
 #define IMAGE_PE_MAGIC 0x4550

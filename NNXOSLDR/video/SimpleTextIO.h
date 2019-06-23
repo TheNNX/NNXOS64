@@ -21,5 +21,9 @@ UINT8 TextIOIsInitialized();
 void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
 void PrintT(const char* input, ...);
 void TextIOClear();
+UINT64 FrameBufferSize();
+
+extern UINT32* framebuffer;
+extern UINT32* framebufferEnd;
 
 #endif // !NNX_TXTIO_SIMPLE

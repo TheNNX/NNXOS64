@@ -59,9 +59,8 @@ void PagingInit() {
 			PML4e[a] = 0;
 		}
 	}
-	
 
-	for (int c = 0; c < 20; c++) {
+	for (int c = 0; c < 16; c++) {
 		UINT64** pageDirectory = ((UINT64***)PG_ALIGN(PML4e[0]))[c] = InternalAllocatePhysicalPage();
 
 		for (int a = 0; a < 512; a++) {
@@ -74,15 +73,20 @@ void PagingInit() {
 			((UINT64*)pageDirectory)[a] |= 3;
 		}
 		((UINT64*)PG_ALIGN(PML4e[0]))[c] |= 3;
+		if (!(c % (16 / 3))) {
+			PrintT(".");
+		}
 	}
 
 	for (int a = 0; a < 512; a++) {
 		PML4[a] = ((UINT64)(PML4e[a]));
-
 	}
-	PML4[511] = PML4;
-	((UINT64**)PG_ALIGN(PML4e[0]))[2] = ((UINT64*)PG_ALIGN(GetCR3()[0]))[2]; //interesting, it seems that I can manipulate the location of the framebuffer,
-																			 //since its tied up to the physical address.
+	PML4[511] = PML4; // my pathetic try at recursive paging
+	SetCR3(PML4);
 
-	SetCR3(PML4);	
+	for (int i = 0; i < FrameBufferSize()/4096+1; i++) {
+		PagingMapPage(0x80000000+i*4096, ((UINT64)framebuffer)+i*4096, 0x3);
+	
+	}
+	TextIOInitialize(0x80000000, 0x80000000 + ((FrameBufferSize()/4096)+1)*4096, 800, 600);
 }

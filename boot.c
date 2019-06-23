@@ -9,7 +9,7 @@
 
 EFI_BOOT_SERVICES* bs;
 
-void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64);
+void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64);
 
 
 EFI_FILE_PROTOCOL* GetFile(CHAR16* name) {
@@ -137,8 +137,16 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	{
 		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *)offset;
 		for (UINT64 a = 0; a < desc->NumberOfPages; a++) {
-			if (desc->Type == EfiConventionalMemory || desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData || desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
+			if (nnxMMapIndex*4096 >= nnxMMap && nnxMMapIndex*4096 <= (((UINT64)nnxMMap) + pages)) {
+				nnxMMap[nnxMMapIndex] = 0;
+				nnxMMapIndex++;
+				continue;
+			}
+			
+			if (desc->Type == EfiConventionalMemory)
 				nnxMMap[nnxMMapIndex] = 1;
+			else if (desc->Type == EfiLoaderCode || desc->Type == EfiLoaderData || desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData)
+				nnxMMap[nnxMMapIndex] = 2;
 			else
 				nnxMMap[nnxMMapIndex] = 0;
 			nnxMMapIndex++;
@@ -169,6 +177,10 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	framebuffer = gop->Mode->FrameBufferBase;
 	framebufferEnd = gop->Mode->FrameBufferSize + gop->Mode->FrameBufferBase;
 
+	for (UINT64 times = 0; times < gop->Mode->FrameBufferSize / 4096; times++) {
+		nnxMMap[times + ((UINT64)framebuffer)/4096] = 0;
+	}
+
 	for (UINT32* a = framebuffer; a < framebufferEnd; a++) {
 		*a = 0x7f7f7f7f;
 	}
@@ -188,15 +200,16 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	fp->Close(fp);
 
 	if (fileBuffer[0] == 'M' && fileBuffer[1] == 'Z') {
-		int status = LoadPortableExecutable(fileBuffer, limitBufferSize, &stage2_entrypoint);
+		int status = LoadPortableExecutable(fileBuffer, limitBufferSize, &stage2_entrypoint, nnxMMap);
 
 		if (status) {
 			Print(L"%r\n",status);
 			return status;
 		}
-
+		
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
-		stage2_entrypoint(framebuffer, framebufferEnd, gop->Mode->Info->HorizontalResolution, gop->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, mapKey, nnxMMap, nnxMMapIndex);
+		stage2_entrypoint(framebuffer, framebufferEnd, gop->Mode->Info->HorizontalResolution, gop->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, mapKey, 
+			nnxMMap, nnxMMapIndex, pages * 4096);
 	}
 	else {
 		Print(L"%EError%N: NNXOSLDR.exe missing or corrupted.");

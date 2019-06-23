@@ -3,6 +3,8 @@
 #include "memory/physical_allocator.h"
 #include "memory/paging.h"
 
+const char version[] = " 0.1";
+
 void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void (*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n, UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize) {
 	
 	ExitBootServices(imageHandle, n);
@@ -17,14 +19,12 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	MemorySize = memorySize;
 
 	TextIOInitialize(framebuffer, framebufferEnd, width, height);
-	int boundingBox[4] = {0,width,0,height};
-	TextIOSetBoundingBox(boundingBox);
-	TextIOSetCursorPosition(0, 0);
 	TextIOClear();
 
-	PrintT("NNXOSLDR.EXE\n");
+	PrintT("Initializing memory");
 	PagingInit();
-	PrintT("Stage 2 loaded... %x\n",framebuffer);
+	PrintT("NNXOSLDR.exe version %s\n",version);
+	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
 	PrintT("Memory map: ");
 	TextIOSetColorInformation(0xffffffff, 0xff007f00, 1);

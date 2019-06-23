@@ -1,6 +1,6 @@
 #include "pe.h"
 
-EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** entrypoint) {
+EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** entrypoint, UINT8* memoryMap) {
 	IMAGE_DOS_HEADER* dos_header = fileBuffer;
 	IMAGE_PE_HEADER* pe_header = (UINT64)((UINT64)dos_header + (UINT64)dos_header->e_lfanew);
 	
@@ -36,6 +36,11 @@ EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** ent
 		
 		UINT8* dst = SectionHeader->VirtualAddress + imageBase;
 		UINT8* src = SectionHeader->SectionPointer + (UINT64)fileBuffer;
+
+		for (int times = 0; times < SectionHeader->SizeOfSection / 4096 + 5; times++) {
+			memoryMap[((UINT64)dst) / 4096 + times - 5] = 0;
+			Print(L"%d: %x %x [%d]\n",times, dst,SectionHeader->SizeOfSection, ((UINT64)dst) / 4096 + times);
+		}
 
 		for (int memory = 0; memory < SectionHeader->SizeOfSection; memory++) {
 			dst[memory] = src[memory];

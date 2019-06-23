@@ -2,8 +2,12 @@
 #include  "SimpleTextIO.h"
 #include "memory/physical_allocator.h"
 
-int* framebuffer;
-int* framebufferEnd;
+UINT32* framebuffer;
+UINT32* framebufferEnd;
+
+UINT64 FrameBufferSize() {
+	return (((UINT64)framebufferEnd) - ((UINT64)framebuffer));
+}
 
 UINT32 width;
 UINT32 height;
@@ -152,12 +156,19 @@ void TextIOSetAlignment(UINT8 alignment) {
 void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h) {
 	framebuffer = framebufferIn;
 	framebufferEnd = framebufferEndIn;
+	
+	for (int a = 0; a < FrameBufferSize() / 4096 + 1; a++) {
+		if (a + ((UINT64)framebuffer) / 4096 > GlobalPhysicalMemoryMapSize / 4096)
+			break;
+		GlobalPhysicalMemoryMap[a + ((UINT64)framebuffer) / 4096] = 0;
+	}
+	
 	width = w;
 	height = h;
 	initialized = 0xFF;
 	
 	TextIOSetAlignment(0);
-	TextIOSetCursorPosition(0,0);
+	TextIOSetCursorPosition(1,1);
 	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
 	UINT32 defBoundingBox[4] = { 0 };
 	defBoundingBox[1] = width;
