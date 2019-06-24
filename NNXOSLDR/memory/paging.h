@@ -2,7 +2,7 @@
 #include "nnxint.h"
 
 extern UINT64**** PML4;
-extern UINT64*** PML4e[512];
+extern UINT64**** PML4_IdentifyMap;
 
 UINT64*** GetCR3();
 void SetCR3(UINT64***);
