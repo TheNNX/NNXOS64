@@ -26,4 +26,6 @@ UINT64 FrameBufferSize();
 extern UINT32* framebuffer;
 extern UINT32* framebufferEnd;
 
+#define FRAMEBUFFER_DESIRED_LOCATION 0x80000000
+
 #endif // !NNX_TXTIO_SIMPLE

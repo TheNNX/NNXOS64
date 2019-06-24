@@ -45,7 +45,6 @@ void PagingInit() {
 	UINT64 CR0 = GetCR0();
 	CR0 &= (~65536);
 	SetCR0(CR0);
-
 	PML4 = InternalAllocatePhysicalPage();
 
 	memset(PML4, 0, 4096);
@@ -60,7 +59,9 @@ void PagingInit() {
 		}
 	}
 
-	for (int c = 0; c < 16; c++) {
+	int memSizeInPageDirs = MemorySize / 4096 / 512 / 512 + 1;
+
+	for (int c = 0; c < memSizeInPageDirs; c++) {
 		UINT64** pageDirectory = ((UINT64***)PG_ALIGN(PML4e[0]))[c] = InternalAllocatePhysicalPage();
 
 		for (int a = 0; a < 512; a++) {
@@ -73,7 +74,8 @@ void PagingInit() {
 			((UINT64*)pageDirectory)[a] |= 3;
 		}
 		((UINT64*)PG_ALIGN(PML4e[0]))[c] |= 3;
-		if (!(c % (16 / 3))) {
+		
+		if (!((c+1) % (memSizeInPageDirs / 3 + 1))) {
 			PrintT(".");
 		}
 	}
@@ -85,8 +87,8 @@ void PagingInit() {
 	SetCR3(PML4);
 
 	for (int i = 0; i < FrameBufferSize()/4096+1; i++) {
-		PagingMapPage(0x80000000+i*4096, ((UINT64)framebuffer)+i*4096, 0x3);
+		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION+i*4096, ((UINT64)framebuffer)+i*4096, 0x3);
 	
 	}
-	TextIOInitialize(0x80000000, 0x80000000 + ((FrameBufferSize()/4096)+1)*4096, 800, 600);
+	TextIOInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + ((FrameBufferSize()/4096)+1)*4096, 800, 600);
 }
