@@ -30,6 +30,6 @@ DisableInterrupts:
 [GLOBAL ForceInterrupt]
 ForceInterrupt:
 	mov byte [intID], cl
-	db 0xcd		//INT
-intID: db 0x0	//immediate8
+	db 0xcd		;INT
+intID: db 0x0	;immediate8
 	ret
