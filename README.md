@@ -1,3 +1,5 @@
+![NNXOS64](graphics/logo.png)
+
 # NNXOS64
 
 NNXOS64 is an 64 bit hobbyist operating system.  
