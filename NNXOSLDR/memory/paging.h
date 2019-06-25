@@ -8,6 +8,7 @@ UINT64*** GetCR3();
 void SetCR3(UINT64***);
 void PagingTest();
 void PagingInit();
+void PagingMapPage(void* virtual, void* physical, UINT16 flags);
 
 #define PML4_ADDRESS_MASK 0xff8000000000
 #define PDP_ADDRESS_MASK 0x7fc0000000

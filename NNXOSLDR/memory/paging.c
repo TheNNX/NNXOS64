@@ -15,17 +15,17 @@ void PagingMapPage(void* virtual, void* physical, UINT16 flags) {
 	UINT64 page_number = (((UINT64)virtual) & PT_ADDRESS_MASK) >> 12;
 
 	if (pml4[pdp_number] == 0) {
-		pml4[pdp_number] = ((UINT64)InternalAllocatePhysicalPage()) | 7;
+		pml4[pdp_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
 		memset(PG_ALIGN(pml4[pdp_number]), 0, 4096);
 	}
 	UINT64*** pdp = PG_ALIGN(PML4[pdp_number]);
 	if (pdp[pd_number] == 0) {
-		pdp[pd_number] = ((UINT64)InternalAllocatePhysicalPage()) | 7;
+		pdp[pd_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
 		memset(PG_ALIGN(pdp[pd_number]), 0, 4096);
 	}
 	UINT64** pd = PG_ALIGN(pdp[pd_number]);
 	if (pd[pt_number] == 0) {
-		pd[pt_number] = ((UINT64)InternalAllocatePhysicalPage()) | 7;
+		pd[pt_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
 		memset(PG_ALIGN(pd[pt_number]), 0, 4096);
 	}
 
@@ -48,11 +48,11 @@ void PagingInit() {
 	for (int a = 0; a < 512; a++) {
 		PML4[a] = InternalAllocatePhysicalPage();
 		memset(PML4[a], 0, 4096);
-		((UINT64*)PML4)[a] |= 3;
+		((UINT64*)PML4)[a] |= PAGE_PRESENT | PAGE_WRITE;
 
 		PML4_IdentifyMap[a] = InternalAllocatePhysicalPage();
 		memset(PML4_IdentifyMap[a], 0, 4096);
-		((UINT64*)PML4_IdentifyMap)[a] |= 3;
+		((UINT64*)PML4_IdentifyMap)[a] |= PAGE_PRESENT | PAGE_WRITE;
 	}
 
 	int memSizeInPDPs = ((MemorySize-1) / 4096 / 512 / 512 / 512 + 1) %512;
@@ -69,14 +69,14 @@ void PagingInit() {
 				UINT64* pageTableIM = pageDirectoryIM[a];
 				for (UINT64 b = 0; b < 512; b++) {
 					pageTableIM[b] = pageTable[b] = (b + 512 * a + 512 * 512 * c + d * 512 * 512 * 512) * 4096;
-					pageTable[b] |= 3; //to be optimized, this paging structures set don't need to cover all of the memory
-					pageTableIM[b] |= 3;
+					pageTable[b] |= PAGE_PRESENT | PAGE_WRITE; //to be optimized, this paging structures set don't need to cover all of the memory
+					pageTableIM[b] |= PAGE_PRESENT | PAGE_WRITE;
 				}
-				((UINT64*)pageDirectory)[a] |= 3;
-				((UINT64*)pageDirectoryIM)[a] |= 3;
+				((UINT64*)pageDirectory)[a] |= PAGE_PRESENT | PAGE_WRITE;
+				((UINT64*)pageDirectoryIM)[a] |= PAGE_PRESENT | PAGE_WRITE;
 			}
-			((UINT64*)PG_ALIGN(PML4[d]))[c] |= 3;
-			((UINT64*)PG_ALIGN(PML4_IdentifyMap[d]))[c] |= 3;
+			((UINT64*)PG_ALIGN(PML4[d]))[c] |= PAGE_PRESENT | PAGE_WRITE;
+			((UINT64*)PG_ALIGN(PML4_IdentifyMap[d]))[c] |= PAGE_PRESENT | PAGE_WRITE;
 			if (!(((d + 1)*512 + c + 1) % ((memSizeInPDPs / 3 + 1) * 512 + (memSizeInPageDirs / 3 + 1)))) {
 				PrintT(".");
 			}
@@ -89,4 +89,5 @@ void PagingInit() {
 		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION+i*4096, ((UINT64)framebuffer)+i*4096, 0x3);
 	}
 	TextIOInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + ((FrameBufferSize()/4096)+1)*4096, 800, 600);
+	TextIOClear();
 }

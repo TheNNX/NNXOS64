@@ -27,5 +27,6 @@ GetStack:
 	ret
 
 [GLOBAL SetStack]
+SetStack:
 	xchg rcx, rsp
 	jmp qword [rcx]

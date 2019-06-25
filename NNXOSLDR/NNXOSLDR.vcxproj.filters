@@ -28,6 +28,9 @@
     <Filter Include="Source Files\HAL">
       <UniqueIdentifier>{3165601d-65f2-49d7-bb25-49ad552ce279}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\HAL">
+      <UniqueIdentifier>{b3d0895e-6219-4efa-a819-91c962a2b8d1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -65,9 +68,21 @@
     <ClInclude Include="memory\MemoryOperations.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\GDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\IDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\memory.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\GDT.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\IDT.asm">
       <Filter>Source Files\HAL</Filter>
     </None>
   </ItemGroup>

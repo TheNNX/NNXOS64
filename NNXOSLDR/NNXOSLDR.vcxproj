@@ -75,10 +75,11 @@
     <TargetName>NNXOSLDR</TargetName>
     <GenerateManifest>false</GenerateManifest>
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level1</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
@@ -91,9 +92,9 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>$(ProjectDir)\memory.obj</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)memory.obj;$(ProjectDir)gdt.obj;$(ProjectDir)idt.obj</AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0x10000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -101,7 +102,9 @@
     </Link>
     <PreBuildEvent>
       <Command>cd $(ProjectDir)HAL\
-nasm -f win64 memory.asm -o ..\memory.obj</Command>
+nasm -f win64 memory.asm -o ..\memory.obj
+nasm -f win64 gdt.asm -o ..\gdt.obj
+nasm -f win64 idt.asm -o ..\idt.obj</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -148,6 +151,8 @@ nasm -f win64 memory.asm -o ..\memory.obj</Command>
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="HAL\GDT.h" />
+    <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
     <ClInclude Include="memory\paging.h" />
     <ClInclude Include="memory\physical_allocator.h" />
@@ -156,6 +161,8 @@ nasm -f win64 memory.asm -o ..\memory.obj</Command>
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="HAL\GDT.asm" />
+    <None Include="HAL\IDT.asm" />
     <None Include="HAL\memory.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
