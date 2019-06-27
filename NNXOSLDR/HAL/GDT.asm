@@ -1,5 +1,5 @@
 [BITS 64]
-[SECTION .TEXT]
+[SECTION .text]
 [GLOBAL LoadGDT]
 %define retfq o64 retf
 LoadGDT:

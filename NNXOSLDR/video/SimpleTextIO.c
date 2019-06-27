@@ -208,6 +208,17 @@ void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY,
 	}
 }
 
+void TextIOMoveUpARow() {
+	
+	for (UINT64 y = gMinY; y < gMaxY-9; y++) {
+		for (UINT64 x = gMinX; x < gMaxX; x++) {
+			framebuffer[width*y + x] = framebuffer[width*(y+9) + x];
+			framebuffer[width*(y + 9) + x] = gBackdrop;
+		}
+	}
+	gCursorY -= 9;
+}
+
 void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop) {
 	if (!TextIOIsInitialized())
 		return;
@@ -227,7 +238,7 @@ void TextIOOutputStringGlobal(const char* input) {
 			gCursorY += 9;
 		}
 		if (gCursorY + 8 > gMaxY) {
-			return;
+			TextIOMoveUpARow();
 		}
 
 		if (align)
@@ -300,7 +311,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 			gCursorY += 9;
 		}
 		if (gCursorY + 8 > gMaxY) {
-			return;
+			TextIOMoveUpARow();
 		}
 
 		if (align)

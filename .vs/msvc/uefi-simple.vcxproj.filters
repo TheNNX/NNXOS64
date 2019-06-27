@@ -23,9 +23,6 @@
     <None Include="..\..\debug.bat">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\..\low.asm">
-      <Filter>Source Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\boot.c">
@@ -48,5 +45,10 @@
     <ClInclude Include="..\..\pe\pe.h">
       <Filter>Header Files\pe</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\low.asm">
+      <Filter>Source Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -48,6 +48,9 @@
     <ClCompile Include="memory\MemoryOperations.c">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\IDT.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">
@@ -74,6 +77,12 @@
     <ClInclude Include="HAL\IDT.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\PIC.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\memory.asm">
@@ -85,5 +94,21 @@
     <None Include="HAL\IDT.asm">
       <Filter>Source Files\HAL</Filter>
     </None>
+    <None Include="HAL\PIC.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\func.inc">
+      <Filter>Header Files\HAL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="NNXOSLDR.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="HAL\Port.asm">
+      <Filter>Source Files\HAL</Filter>
+    </Text>
   </ItemGroup>
 </Project>

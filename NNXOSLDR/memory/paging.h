@@ -4,8 +4,8 @@
 extern UINT64**** PML4;
 extern UINT64**** PML4_IdentifyMap;
 
-UINT64*** GetCR3();
-void SetCR3(UINT64***);
+UINT64**** GetCR3();
+void SetCR3(UINT64****);
 void PagingTest();
 void PagingInit();
 void PagingMapPage(void* virtual, void* physical, UINT16 flags);

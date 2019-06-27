@@ -1,5 +1,5 @@
 [BITS 64]
-[SECTION .TEXT]
+[SECTION .text]
 
 [GLOBAL SetCR3]
 SetCR3:
@@ -9,6 +9,16 @@ SetCR3:
 [GLOBAL GetCR3]
 GetCR3:
 	mov rax, cr3
+	ret
+
+[GLOBAL SetCR2]
+SetCR2:
+	mov cr2, rcx
+	ret
+
+[GLOBAL GetCR2]
+GetCR2:
+	mov rax, cr2
 	ret
 
 [GLOBAL SetCR0]

@@ -30,4 +30,44 @@ void EnableInterrupts();
 void DisableInterrupts();
 void ForceInterrupt(UINT8);
 
+void Exception0();
+void Exception1();
+void Exception2();
+void Exception3();
+void Exception4();
+void Exception5();
+void Exception6();
+void Exception7();
+void Exception8();
+void Exception10();
+void Exception11();
+void Exception12();
+void Exception13();
+void Exception14();
+void Exception16();
+void Exception17();
+void Exception18();
+void Exception19();
+void Exception20();
+void Exception30();
+void ExceptionReserved();
+void ExceptionHandler(UINT32 number, UINT32 errorCode);
+
+void IRQ0();
+void IRQ1();
+void IRQ2();
+void IRQ3();
+void IRQ4();
+void IRQ5();
+void IRQ6();
+void IRQ7();
+void IRQ8();
+void IRQ9();
+void IRQ10();
+void IRQ11();
+void IRQ12();
+void IRQ13();
+void IRQ14();
+void IRQHandler(UINT32);
+
 #pragma pack(pop)
