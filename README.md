@@ -12,3 +12,9 @@ After cloning this repository to your computer, you should initialize submoudles
 
 The project was built using Visual Studio 2017. I do **not** plan on adding support for other toolchains.
 To build the project, just load the solution file in Visual Studio 2017 and press `Ctrl+Shift+B`. If you have QEMU installed, you can automaticly run the build using the `F5` key.
+
+## TODO
+
+[ ] PIC and PIT
+[ ] Keyboard
+[ ] Multitasking
