@@ -98,7 +98,8 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>$(ProjectDir)memory.obj;$(ProjectDir)gdt.obj;$(ProjectDir)idt.obj;$(ProjectDir)pic.obj;$(ProjectDir)port.obj</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
       <BaseAddress>0x10000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -107,13 +108,16 @@
       <SubSystem>Native</SubSystem>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(ProjectDir)HAL\
-nasm -f win64 memory.asm -o ..\memory.obj
-nasm -f win64 gdt.asm -o ..\gdt.obj
-nasm -f win64 idt.asm -o ..\idt.obj
-nasm -f win64 pic.asm -o ..\pic.obj
-nasm -f win64 port.asm -o ..\port.obj</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <CustomBuild>
+      <Command>cd $(ProjectDir)HAL
+nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(ProjectDir)%(Filename).obj</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
     <ClCompile>
@@ -169,6 +173,7 @@ compile.bat</Command>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
@@ -177,37 +182,39 @@ compile.bat</Command>
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\GDT.h" />
     <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="HAL\PIC.h" />
+    <ClInclude Include="HAL\Port.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
     <ClInclude Include="memory\paging.h" />
     <ClInclude Include="memory\physical_allocator.h" />
     <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxint.h" />
-    <ClInclude Include="resource.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc" />
-    <Text Include="HAL\Port.asm">
+    <CustomBuild Include="HAL\Port.asm">
       <FileType>Document</FileType>
-    </Text>
-    <Text Include="HAL\GDT.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\GDT.asm">
       <FileType>Document</FileType>
-    </Text>
-    <Text Include="HAL\IDT.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">cd $(ProjectDir)HAL
+nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">$(ProjectDir)%(Filename).obj</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="HAL\IDT.asm">
       <FileType>Document</FileType>
-    </Text>
-    <Text Include="HAL\memory.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\memory.asm">
       <FileType>Document</FileType>
-    </Text>
-    <Text Include="HAL\PIC.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIC.asm">
       <FileType>Document</FileType>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="NNXOSLDR.rc" />
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

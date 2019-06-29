@@ -31,6 +31,12 @@
     <Filter Include="Header Files\HAL">
       <UniqueIdentifier>{b3d0895e-6219-4efa-a819-91c962a2b8d1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\device">
+      <UniqueIdentifier>{f22829b9-d36e-4851-8e19-d593f5976854}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\device">
+      <UniqueIdentifier>{d1ff59bc-635b-411e-be6b-a75ceac6a801}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -50,6 +56,9 @@
     </ClCompile>
     <ClCompile Include="HAL\IDT.c">
       <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="device\Keyboard.c">
+      <Filter>Source Files\device</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -80,35 +89,33 @@
     <ClInclude Include="HAL\PIC.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="device\Keyboard.h">
+      <Filter>Header Files\device</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\Port.h">
+      <Filter>Header Files\HAL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="HAL\memory.asm">
-      <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\GDT.asm">
-      <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\IDT.asm">
-      <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\PIC.asm">
-      <Filter>Source Files\HAL</Filter>
-    </None>
     <None Include="HAL\func.inc">
       <Filter>Header Files\HAL</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="NNXOSLDR.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="HAL\Port.asm">
+    <CustomBuild Include="HAL\GDT.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\IDT.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\memory.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIC.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\Port.asm">
       <Filter>Source Files\HAL</Filter>
-    </Text>
+    </CustomBuild>
   </ItemGroup>
 </Project>

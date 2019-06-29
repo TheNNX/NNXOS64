@@ -5,6 +5,7 @@
 #include "HAL/GDT.h"
 #include "HAL/IDT.h"
 #include "HAL/PIC.h"
+#include "device/Keyboard.h"
 
 void IntTestASM();
 
@@ -124,6 +125,8 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	LoadIDT(idtr);
 	PICInitialize();
 	EnableInterrupts();
+	KeyboardInitialize();
+
 	#ifndef BOCHS
 	PrintT("NNXOSLDR.exe version %s\n",version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
