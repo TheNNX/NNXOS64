@@ -63,7 +63,7 @@ UINT8 StaticFont8x8[][8] = { {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,
 {0x00, 0x08, 0x00, 0x18, 0x08, 0x08, 0x48, 0x30}/*j*/, {0x40, 0x40, 0x48, 0x48, 0x50, 0x60, 0x50, 0x48}/*k*/, {0x30, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x38}/*l*/,
 {0x00, 0x00, 0xEC, 0x92, 0x92, 0x92, 0x92, 0x92}/*m*/, {0x00, 0x00, 0x38, 0x24, 0x24, 0x24, 0x24, 0x24}/*n*/, {0x00, 0x00, 0x38, 0x44, 0x44, 0x44, 0x44, 0x38}/*o*/,
 {0x00, 0x00, 0x5C, 0x22, 0x22, 0x3C, 0x20, 0x20}/*p*/, {0x00, 0x00, 0x3A, 0x44, 0x44, 0x3C, 0x04, 0x04}/*q*/, {0x00, 0x00, 0x38, 0x44, 0x40, 0x40, 0x40, 0x40}/*r*/,
-{0x00, 0x00, 0x38, 0x40, 0x38, 0x04, 0x04, 0x38}/*s*/, {0x20, 0x20, 0x78, 0x20, 0x20, 0x20, 0x20, 0x18}/*t*/, {0x00, 0x00, 0x42, 0x42, 0x42, 0x42, 0x42, 0x3C}/*u*/,
+{0x00, 0x00, 0x38, 0x40, 0x38, 0x04, 0x04, 0x38}/*s*/, {0x20, 0x20, 0x78, 0x20, 0x20, 0x20, 0x20, 0x18}/*t*/, {0x00, 0x00, 0x44, 0x44, 0x44, 0x44, 0x44, 0x38}/*u*/,
 {0x00, 0x00, 0x44, 0x44, 0x28, 0x28, 0x10, 0x10}/*v*/, {0x00, 0x00, 0x92, 0x92, 0x92, 0x54, 0x28, 0x28}/*w*/, {0x00, 0x00, 0x44, 0x28, 0x10, 0x10, 0x28, 0x44}/*x*/,
 {0x00, 0x00, 0x22, 0x22, 0x14, 0x08, 0x10, 0x20}/*y*/, {0x00, 0x00, 0x7C, 0x08, 0x10, 0x10, 0x20, 0x7C}/*z*/,
 //symbols and utils 4
@@ -225,8 +225,46 @@ void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 c
 	TextIOOutputCharacterWithinBox(characterID, posX, posY, color, backdrop, renderBackdrop, 0, width, 0, height);
 }
 
-void TextIOOutputStringGlobal(const char* input) {
+void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
 	if (!TextIOIsInitialized())
+		return;
+
+	gCursorX = posX;
+	gCursorY = posY;
+
+	int stringIndex = 0;
+
+	while (input[stringIndex])
+	{
+		if (gCursorX + 8 > maxX || input[stringIndex] == '\n') {
+			gCursorX = minX;
+			gCursorY += 9;
+		}
+		if (gCursorY + 8 > maxY) {
+			return;
+		}
+
+		if (input[stringIndex] == '\n')
+			return;
+
+		if (align)
+		{
+			gCursorX += (align - 1);
+			gCursorX /= align;
+			gCursorX *= align;
+		}
+
+		TextIOOutputCharacterWithinBox(input[stringIndex], gCursorX, gCursorY, color, backdrop, renderBackdrop, minX, maxX, minY, maxY);
+		if (align)
+			gCursorX += align;
+		else
+			gCursorX += 8;
+		stringIndex++;
+	}
+}
+
+void TextIOOutputStringGlobal(const char* input) {
+	/*if (!TextIOIsInitialized())
 		return;
 
 	int stringIndex = 0;
@@ -254,42 +292,8 @@ void TextIOOutputStringGlobal(const char* input) {
 		else
 			gCursorX += 8;
 		stringIndex++;
-	}
-}
-
-void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
-	if (!TextIOIsInitialized())
-		return;
-
-	UINT32 cursorX = posX;
-	UINT32 cursorY = posY;
-
-	int stringIndex = 0;
-
-	while (input[stringIndex])
-	{
-		if (cursorX + 8 > maxX || input[stringIndex] == '\n') {
-			cursorX = minX;
-			cursorY += 9;
-		}
-		if (cursorY + 8 > maxY) {
-			return;
-		}
-
-		if (align)
-		{
-			cursorX += (align - 1);
-			cursorX /= align;
-			cursorX *= align;
-		}
-
-		TextIOOutputCharacterWithinBox(input[stringIndex], cursorX, cursorY, color, backdrop, renderBackdrop, minX, maxX, minY, maxY);
-		if (align)
-			cursorX += align;
-		else
-			cursorX += 8;
-		stringIndex++;
-	}
+	}*/
+	TextIOOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
 unsigned int __strlen(const char* input) {
