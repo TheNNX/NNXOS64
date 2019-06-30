@@ -141,9 +141,10 @@
 #define K_SQ_BRACKET_CLOSE 0xdd
 #define K_BACKSLASH 0xdc
 #define K_QUOTE 0xde
+
 struct KeyState;
-#define RELEASE_MASK 0x80
 extern struct KeyState state;
+
 #define keyname(x) Key ## x
 #define KEY(name,numval,baseChar,shiftChar,capsChar,shiftCapsChar) UINT8 keyname(name)(UINT8 released){\
 	state.KeyState[numval] = !released; \

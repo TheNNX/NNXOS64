@@ -189,7 +189,7 @@ UINT8 GetScancodeSet() {
 }
 
 UINT8 SetScancodeSet(UINT8 setNumber) {
-	if (setNumber == 0 || setNumber > 3)
+	if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
 		return 0;
 	DisableInterrupts();
 	outb(KEYBOARD_PORT, 0xf0);

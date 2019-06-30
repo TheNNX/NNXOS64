@@ -11,7 +11,15 @@ void ExceptionHandler(UINT32 n, UINT32 errcode) {
 
 void IRQHandler(UINT32 n) {
 	if (n == 1) {
-		PrintT("%c", KeyboardInterrupt());
+		UINT8 character = KeyboardInterrupt();
+		switch (character) {
+		case 0:
+			return;
+		default:
+			PrintT("%c",character);
+			return;
+			/* TODO: AddKeyToKeyboardBuffer(character); */
+		};
 	}
 }
 
