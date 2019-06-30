@@ -6,6 +6,7 @@
 #include "HAL/IDT.h"
 #include "HAL/PIC.h"
 #include "device/Keyboard.h"
+#include "HAL//PCI/PCI.h"
 
 void IntTestASM();
 
@@ -126,6 +127,8 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	PICInitialize();
 	EnableInterrupts();
 	KeyboardInitialize();
+
+	PCIScan();
 
 	#ifndef BOCHS
 	PrintT("NNXOSLDR.exe version %s\n",version);

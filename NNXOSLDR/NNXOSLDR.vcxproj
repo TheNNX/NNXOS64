@@ -175,6 +175,7 @@ compile.bat</Command>
   <ItemGroup>
     <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\IDT.c" />
+    <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
     <ClCompile Include="memory\paging.c" />
@@ -185,11 +186,13 @@ compile.bat</Command>
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\GDT.h" />
     <ClInclude Include="HAL\IDT.h" />
+    <ClInclude Include="HAL\PCI\PCI.h" />
     <ClInclude Include="HAL\PIC.h" />
     <ClInclude Include="HAL\Port.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
     <ClInclude Include="memory\paging.h" />
     <ClInclude Include="memory\physical_allocator.h" />
+    <ClInclude Include="multitasking\Task.h" />
     <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
@@ -215,6 +218,10 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <CustomBuild Include="HAL\PIC.asm">
       <FileType>Document</FileType>
     </CustomBuild>
+    <None Include="multitasking\Task.asm">
+      <SubType>
+      </SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

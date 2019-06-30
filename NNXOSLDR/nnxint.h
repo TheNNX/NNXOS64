@@ -19,6 +19,16 @@ typedef UINT32 DWORD;
 typedef UINT16 WORD;
 typedef UINT8 BYTE;
 
+typedef UINT8 bool;
+typedef bool BOOL;
+#define TRUE 1
+#define FALSE 0
+#define true TRUE
+#define false FALSE
+
+typedef void VOID;
+typedef void* PVOID;
+
 #define GetBit(num,n) (num >> n) & 1
 
 #endif // !_NNXINT

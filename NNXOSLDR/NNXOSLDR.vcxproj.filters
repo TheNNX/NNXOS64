@@ -37,6 +37,18 @@
     <Filter Include="Header Files\device">
       <UniqueIdentifier>{d1ff59bc-635b-411e-be6b-a75ceac6a801}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\multitasking">
+      <UniqueIdentifier>{81e9bf0f-8cb7-49c5-8d4a-d9dc2477fb1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\multitasking">
+      <UniqueIdentifier>{8ab5266d-35a8-48ab-b4c1-cb28a30243c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\HAL\PCI">
+      <UniqueIdentifier>{1ca4b481-5749-4fd4-98ed-5b42cca6973d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HAL\PCI">
+      <UniqueIdentifier>{a0e03c1f-a76c-4a18-9b72-96cbbdd7f946}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -59,6 +71,9 @@
     </ClCompile>
     <ClCompile Include="device\Keyboard.c">
       <Filter>Source Files\device</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\PCI\PCI.c">
+      <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -95,26 +110,35 @@
     <ClInclude Include="HAL\Port.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
+    <ClInclude Include="multitasking\Task.h">
+      <Filter>Header Files\multitasking</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\PCI\PCI.h">
+      <Filter>Header Files\HAL\PCI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">
       <Filter>Header Files\HAL</Filter>
     </None>
+    <None Include="multitasking\Task.asm">
+      <Filter>Source Files\multitasking</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\GDT.asm">
-      <Filter>Source Files</Filter>
+    <CustomBuild Include="HAL\Port.asm">
+      <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\IDT.asm">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\HAL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\GDT.asm">
+      <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\memory.asm">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\PIC.asm">
-      <Filter>Source Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\Port.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
   </ItemGroup>
