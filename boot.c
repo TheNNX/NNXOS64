@@ -9,7 +9,7 @@
 
 EFI_BOOT_SERVICES* bs;
 
-void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64);
+void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
 
 
 EFI_FILE_PROTOCOL* GetFile(CHAR16* name) {
@@ -116,7 +116,11 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
 	InitializeLib(ImageHandle, SystemTable);
 	SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
+	void* pAcpiPointer;
+	LibGetSystemConfigurationTable(&AcpiTableGuid, (void *)&pAcpiPointer);
+	
 	EFI_STATUS status;
+	
 	bs = SystemTable->BootServices;
 
 	UINT64 pages = 0;
@@ -209,7 +213,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
 		stage2_entrypoint(framebuffer, framebufferEnd, gop->Mode->Info->HorizontalResolution, gop->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, mapKey, 
-			nnxMMap, nnxMMapIndex, pages * 4096);
+			nnxMMap, nnxMMapIndex, pages * 4096, pAcpiPointer);
 	}
 	else {
 		Print(L"%EError%N: NNXOSLDR.exe missing or corrupted.");

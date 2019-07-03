@@ -6,7 +6,8 @@
 #include "HAL/IDT.h"
 #include "HAL/PIC.h"
 #include "device/Keyboard.h"
-#include "HAL//PCI/PCI.h"
+#include "HAL/PCI/PCI.h"
+#include "HAL/ACPI/AML.h"
 
 void IntTestASM();
 
@@ -20,7 +21,8 @@ const char version[] = " 0.1";
 #ifdef BOCHS
 void main(){
 #else
-void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void (*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n, UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize) {
+void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void (*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n, 
+	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
 #endif
 
 	void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
@@ -127,6 +129,21 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	PICInitialize();
 	EnableInterrupts();
 	KeyboardInitialize();
+	UINT8 status = 0;
+	ACPI_FACP* facp = GetFADT(rdsp);
+	if (!facp) {
+		status = ACPI_LastError();
+		ACPI_ERROR(status);
+		while (1);
+	}
+	if (rdsp->Revision == 0)
+		status = ACPI_ParseDSDT(facp->DSDT);
+	else
+		status = ACPI_ParseDSDT(facp->X_DSDT);
+	if (status) {
+		ACPI_ERROR(status);
+		while (1);
+	}
 
 	PCIScan();
 

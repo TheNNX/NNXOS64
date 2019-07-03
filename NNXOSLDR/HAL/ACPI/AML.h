@@ -1,4 +1,5 @@
 #pragma once
+#include "video/SimpleTextIO.h"
 #include "nnxint.h"
 
 #pragma pack(push, 1)
@@ -15,22 +16,106 @@ typedef struct SDTHeader {
 	UINT32 CreatorRevision;
 }ACPI_SDTHeader;
 
+typedef struct GAS {
+	UINT8 AddressSpace;
+	UINT8 BitWidth;
+	UINT8 BitOffset;
+	UINT8 AccessSize;
+	UINT64 Address;
+}ACPI_GAS;
+
 typedef struct XSDT {
 	ACPI_SDTHeader Header;
 	ACPI_SDTHeader* OtherSDTs[0];
 }ACPI_XSDT;
 
-typedef struct ACPI_RDSP {
+typedef struct RSDT {
+	ACPI_SDTHeader Header;
+	UINT32 OtherSDTs[0];
+}ACPI_RSDT;
+
+typedef struct RDSPExtension {
+	UINT32 Lenght;
+	ACPI_XSDT* XSDTAddress;
+	UINT8 ExtendedChecksum;
+	UINT8 Reserved[3];
+}ACPI_RDSPExtension;
+
+typedef struct RDSP {
 	UINT8 Singature[8];
 	UINT8 Checksum;
 	UINT8 OEMID[6];
 	UINT8 Revision;
 	UINT32 RSDTAddress;
-	UINT32 Lenght;
-	XSDT* XSDTAddress;
-	UINT8 ExtendedChecksum;
-	UINT8 Reserved[3];
+	ACPI_RDSPExtension v20;
+
 }ACPI_RDSP;
+
+typedef struct DSDT {
+	ACPI_SDTHeader Header;
+	UINT8 amlCode[0];
+}ACPI_DSDT;
+
+typedef struct FADT
+{
+	ACPI_SDTHeader Header;
+	UINT32 FirmwareCtrl;
+	UINT32 DSDT;
+	UINT8 Reserved;
+	UINT8 PreferredPowerManagmnetProfile;
+	UINT16 SCIInterrupt;
+	UINT32 SMICommandPort;
+	UINT8 ACPIEnable;
+	UINT8 ACPIDisable;
+	UINT8 S4BIOSREQ;
+	UINT8 PSTATECTRL;
+	UINT32 PM1aEventBlock;
+	UINT32 PM1bEventBlock;
+	UINT32 PM1aControlBlock;
+	UINT32 PM1bControlBlock;
+	UINT32 PM2ControlBlock;
+	UINT32 PMTimerBlock;
+	UINT32 GPE0Block;
+	UINT32 GPE1Block;
+	UINT8 PM1EventLenght;
+	UINT8 PM1ControlLenght;
+	UINT8 PM2ControlLenght;
+	UINT8 PMTimerLenght;
+	UINT8 GPE0Lenght;
+	UINT8 GPE1Lenght;
+	UINT8 GPE1Base;
+	UINT8 CSTATECTRL;
+	UINT16 WorstC2Latency;
+	UINT16 WorstC3Latency;
+	UINT16 FlushSize;
+	UINT16 FlushStride;
+	UINT8 DutyOffset;
+	UINT8 DutyWidth;
+	UINT8 Day;
+	UINT8 Month;
+	UINT8 Century;
+
+	UINT16 BootArchitectureFlags;
+	UINT8 Reserved2;
+	UINT32 Flags;
+
+	//ACPI 2.0+
+	ACPI_GAS ResetReg;
+	UINT8 ResetValue;
+	UINT8 Reserved3[3];
+
+	UINT64 X_FirmwareCtrl;
+	UINT64 X_DSDT;
+
+	ACPI_GAS X_PM1aEventBlock;
+	ACPI_GAS X_PM1bEventBlock;
+	ACPI_GAS X_PM1aControlBlock;
+	ACPI_GAS X_PM1bControlBlock;
+	ACPI_GAS X_PM2ControlBlock;
+	ACPI_GAS X_PMTimerBlock;
+	ACPI_GAS X_GPE0Block;
+	ACPI_GAS X_GPE1Block;
+}ACPI_FADT, ACPI_FACP;
 
 #pragma pack(pop)
 #ifdef __cplusplus
@@ -43,7 +128,7 @@ typedef struct AMLScope {
 class ACPI_AML_CODE
 {
 public:
-	ACPI_AML_CODE(void *table);
+	ACPI_AML_CODE(ACPI_DSDT *table);
 	void Parse();
 private:
 	UINT64 index;
@@ -65,8 +150,13 @@ private:
 };
 
 extern "C" {
-
 #endif
+
+BOOL verifyACPI_RDSP(ACPI_RDSP*);
+BOOL verifyACPI_XSDT(ACPI_XSDT*);
+BOOL verifyACPI_RSDT(ACPI_RSDT*);
+BOOL verifyACPI_FADT(ACPI_FADT*);
+BOOL verifyACPI_DSDT(ACPI_DSDT*);
 
 #define AML_OPCODE_ZEROOPCODE 0
 #define AML_OPCODE_ONEOPCODE 1
@@ -191,8 +281,51 @@ extern "C" {
 #define AML_OPCODE_BREAKPOINTOPCODE 0XCC
 #define AML_OPCODE_ONESOPCODE 0XFF
 
-void parseTable(UINT8* table);
-void seekTable();
+#define ACPI_SUCCESS 0
+#define ACPI_ERROR_INVALID_RDSP 1
+#define ACPI_ERROR_INVALID_XSDT 2
+#define ACPI_ERROR_INVALID_DSDT 3
+#define ACPI_ERROR_INVALID_RSDT 4
+#define ACPI_ERROR_INVALID_FADT 4
+#define ACPI_ERROR_INVALID_SDT 0x10
+#define ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10 0x11
+
+#define ACPI_ERROR_MSG(a) PrintT("ACPI ERROR: %s\n",a)
+
+
+inline void ACPI_ERROR(UINT32 code)
+{
+	switch (code)
+	{
+	case ACPI_SUCCESS:
+		return;
+	case ACPI_ERROR_INVALID_RDSP:
+		ACPI_ERROR_MSG("INVALID RDSP");
+		break;
+	case ACPI_ERROR_INVALID_XSDT:
+		ACPI_ERROR_MSG("INVALID XSDT");
+		break;
+	case ACPI_ERROR_INVALID_RSDT:
+		ACPI_ERROR_MSG("INVALID RSDT");
+		break;
+	case ACPI_ERROR_INVALID_DSDT:
+		ACPI_ERROR_MSG("INVALID DSDT");
+		break;
+	case ACPI_ERROR_INVALID_SDT:
+		ACPI_ERROR_MSG("INVALID SDT");
+		break;
+	case ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10:
+		ACPI_ERROR_MSG("The requested feature is not supported by ACPI version 1.0");
+	default:
+		break;
+	}
+}
+ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
+ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
+ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
+UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
+
+UINT8 ACPI_LastError();
 
 #ifdef __cplusplus
 }

@@ -19,12 +19,15 @@ typedef UINT32 DWORD;
 typedef UINT16 WORD;
 typedef UINT8 BYTE;
 
-typedef UINT8 bool;
+#ifndef __cplusplus
+	typedef UINT8 bool;
+	#define true TRUE
+	#define false FALSE
+#endif // !__cplusplus
+
 typedef bool BOOL;
 #define TRUE 1
 #define FALSE 0
-#define true TRUE
-#define false FALSE
 
 typedef void VOID;
 typedef void* PVOID;

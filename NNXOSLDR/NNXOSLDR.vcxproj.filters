@@ -49,6 +49,12 @@
     <Filter Include="Header Files\HAL\PCI">
       <UniqueIdentifier>{a0e03c1f-a76c-4a18-9b72-96cbbdd7f946}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HAL\ACPI">
+      <UniqueIdentifier>{bd4222f6-d384-43e9-95b9-bc5599d4371a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HAL\ACPI">
+      <UniqueIdentifier>{f8f3a94d-9676-4cd9-a625-92c855610905}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -74,6 +80,9 @@
     </ClCompile>
     <ClCompile Include="HAL\PCI\PCI.c">
       <Filter>Source Files\HAL\PCI</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\ACPI\AML.cpp">
+      <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +124,9 @@
     </ClInclude>
     <ClInclude Include="HAL\PCI\PCI.h">
       <Filter>Header Files\HAL\PCI</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\ACPI\AML.h">
+      <Filter>Header Files\HAL\ACPI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
