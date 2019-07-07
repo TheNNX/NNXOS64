@@ -8,6 +8,7 @@
 #include "device/Keyboard.h"
 #include "HAL/PCI/PCI.h"
 #include "HAL/ACPI/AML.h"
+#include "memory/nnxalloc.h"
 
 void IntTestASM();
 
@@ -129,6 +130,12 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	PICInitialize();
 	EnableInterrupts();
 	KeyboardInitialize();
+	
+
+	nnxalloc_init();
+	for(int a = 0; a < 8; a++)
+		nnxalloc_append(PagingAllocatePage(), 4096);
+
 	UINT8 status = 0;
 	ACPI_FACP* facp = GetFADT(rdsp);
 	if (!facp) {
@@ -164,6 +171,6 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	TextIOSetCursorPosition(0, 580);
 	#endif
-	//ForceInterrupt(0);
+	
 	while (1);
 }

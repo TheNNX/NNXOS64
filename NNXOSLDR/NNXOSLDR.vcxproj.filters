@@ -84,6 +84,12 @@
     <ClCompile Include="HAL\ACPI\AML.cpp">
       <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
+    <ClCompile Include="memory\nnxalloc.h">
+      <Filter>Header Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\nnxalloc.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">
@@ -127,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="HAL\ACPI\AML.h">
       <Filter>Header Files\HAL\ACPI</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxllist.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

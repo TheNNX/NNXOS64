@@ -51,7 +51,6 @@ void PCI_BridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNu
 void PCI_MassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
 
 void PCIScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber) {
-	//PrintT("Bus: %x Device: %x Function: %x\n", busNumber, deviceNumber, functionNumber);
 	if (!PCICheckIfPresent(busNumber, deviceNumber, functionNumber))
 		return;
 	UINT8 Class = PCIGetClass(busNumber, deviceNumber, functionNumber);
@@ -70,7 +69,6 @@ void PCIScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber) 
 }
 
 void PCI_BridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass){
-	PrintT("PCI: %x %x %x %x %x\n", busNumber, deviceNumber, functionNumber, Class, Subclass);
 	switch (Subclass)
 	{
 	case PCI_SUBCLASS_PCI_TO_PCI_BRIDGE:;

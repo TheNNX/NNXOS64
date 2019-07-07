@@ -5,7 +5,9 @@
 #ifndef __NNX_LIST_H
 #define	__NNX_LIST_H
 
+
 #ifdef __cplusplus
+
 extern "C"
 {
 #endif

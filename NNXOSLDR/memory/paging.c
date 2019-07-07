@@ -11,26 +11,34 @@ void* PagingAllocatePage() {
 	UINT64**** pml4 = GetCR3();
 	SetCR3(PML4_IdentifyMap);
 
-	for (UINT64 pdp_number = 510; pdp_number < 512; pdp_number++) {
+	for (UINT64 pdp_number = 16; pdp_number < 512; pdp_number++) {
 		for (UINT64 pd_number = 0; pd_number < 512; pd_number++) {
 			for (UINT64 pt_number = 0; pt_number < 512; pt_number++) {
 				for (UINT64 page_number = 0; page_number < 512; page_number++) {
-					result = (page_number + 512 * (pt_number + 512 * (pd_number + 512 * pdp_number)));
+					result = 4096 * (page_number + 512 * (pt_number + 512 * (pd_number + 512 * pdp_number)));
+					SetCR3(pml4);
+					PrintT("%x (%i %i %i %i)\n", result, page_number, pt_number, pd_number, pdp_number);
+					SetCR3(PML4_IdentifyMap);
 					UINT64*** pdp = PG_ALIGN(pml4[pdp_number]);
-					if (pdp == 0)
+					if (!(((UINT64)pml4[pdp_number]) & 1))
 						goto end;
 					UINT64** pd = PG_ALIGN(pdp[pd_number]);
-					if (pd == 0)
+					if (!(((UINT64)pdp[pd_number]) & 1))
 						goto end;
 					UINT64* pt = PG_ALIGN(pd[pt_number]);
-					if (pt == 0)
+					if (!(((UINT64)pd[pt_number]) & 1))
 						goto end;
-					if (pt[page_number] == 0 || !(pt[page_number] & PAGE_PRESENT))
+					if (!(((UINT64)pt[page_number]) & 1))
 						goto end;
+					SetCR3(pml4);
+					PrintT("%x (%i %i %i %i)\n", result, pdp, pd, pt, pt[page_number]);
+					SetCR3(PML4_IdentifyMap);
+					
 				}
 			}
 		}
 	}
+	SetCR3(pml4);
 	return 0;
 end:
 	SetCR3(pml4);

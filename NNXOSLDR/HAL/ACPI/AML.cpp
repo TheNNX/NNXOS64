@@ -1,4 +1,10 @@
 #include "AML.h"
+#include "memory/nnxalloc.h"
+
+#ifndef  NULL
+#define NULL 0
+#endif // ! NULL
+
 
 extern "C" { 
 
@@ -9,12 +15,14 @@ extern "C" {
 	}
 
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table) {
+		PrintT("ACPI_AML_CODE class initialization\n");
 		if (!verifyACPI_DSDT(table))
 		{
 			localLastError = ACPI_ERROR_INVALID_DSDT;
 			return localLastError;
 		}
-		ACPI_AML_CODE acpi(table);
+		ACPI_AML_CODE acpi = ACPI_AML_CODE(table);
+		PrintT("ACPI_AML_CODE class initialized\n");
 		acpi.Parse();
 	}
 
@@ -149,6 +157,7 @@ extern "C" {
 }
 ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->table = (UINT8*)table;
+	PrintT("So far so good\n");
 	this->index = 0;
 	GetString(this->name, 4);
 	this->size = GetDword();
@@ -159,29 +168,8 @@ ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->oemRevision = GetDword();
 	GetString(compilerName, 4);
 	this->compilerRevision = GetDword();
-
-	UINT8 tempBuffer[9];
-	for (int a = 0; a < 4; a++) {
-		tempBuffer[a] = this->name[a];
-		tempBuffer[a + 1] = 0;
-	}
-	PrintT("%s %i %x %x ", tempBuffer, this->size, this->revision, this->checksum);
-	for (int a = 0; a < 6; a++) {
-		tempBuffer[a] = this->oemid[a];
-		tempBuffer[a + 1] = 0;
-	}
-	PrintT("%s ", tempBuffer);
-	for (int a = 0; a < 8; a++) {
-		tempBuffer[a] = this->tableid[a];
-		tempBuffer[a + 1] = 0;
-	}
-	PrintT("%s %x", tempBuffer, oemRevision);
-	for (int a = 0; a < 4; a++) {
-		tempBuffer[a] = this->compilerName[a];
-		tempBuffer[a + 1] = 0;
-	}
-	PrintT("%s %x", tempBuffer, compilerRevision);
-
+	PrintT("Setting up root namespace\n");
+	this->root = AMLNamespace();
 }
 
 UINT8 ACPI_AML_CODE::GetByte() {
@@ -210,6 +198,11 @@ void ACPI_AML_CODE::GetString(UINT8* output, UINT32 lenght, UINT8 terminator) {
 	}
 }
 
+AML_Name ACPI_AML_CODE::GetName() {
+	UINT32 temp = GetDword();
+	return *((AML_Name*)(&temp));
+}
+
 void ACPI_AML_CODE::Parse() {
 	while (1) {
 		UINT8 opcode = GetByte();
@@ -218,9 +211,31 @@ void ACPI_AML_CODE::Parse() {
 		case AML_OPCODE_ZEROOPCODE:
 		case AML_OPCODE_ONESOPCODE:
 			break;
+		case AML_OPCODE_NAMEOPCODE: {
+			AMLNamedObject *namedObject = AMLNamedObject::newObject(GetName(), NULL);
+
+			break;
+		}
 		default:
 			PrintT("Error: unimplmeneted ACPI Machine Language opcode: %x\n",opcode);
 			while (1);
 		}
 	}
+}
+
+AMLNamedObject::AMLNamedObject(AML_Name name, void* object) {
+	this->name = name;
+	this->object = object;
+}
+
+AMLNamedObject* AMLNamedObject::newObject(AML_Name name, void* object) {
+	PrintT("Allocating new named object\n");
+	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
+	AMLNamedObject toCopy = AMLNamedObject(name, object);
+	*output = toCopy;
+	return output;
+}
+
+AMLNamespace::AMLNamespace() {
+	this->parent = 0;
 }

@@ -85,7 +85,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">
     <ClCompile>
-      <WarningLevel>Level1</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
@@ -95,6 +95,8 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <CompileAsManaged>false</CompileAsManaged>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -178,7 +180,9 @@ compile.bat</Command>
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
+    <ClCompile Include="memory\nnxalloc.h" />
     <ClCompile Include="memory\paging.c" />
     <ClCompile Include="memory\physical_allocator.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
@@ -197,6 +201,7 @@ compile.bat</Command>
     <ClInclude Include="multitasking\Task.h" />
     <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxint.h" />
+    <ClInclude Include="nnxllist.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>

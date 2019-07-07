@@ -1,6 +1,7 @@
 #pragma once
 #include "video/SimpleTextIO.h"
 #include "nnxint.h"
+#include "nnxllist.h"
 
 #pragma pack(push, 1)
 
@@ -117,13 +118,26 @@ typedef struct FADT
 	ACPI_GAS X_GPE1Block;
 }ACPI_FADT, ACPI_FACP;
 
+typedef struct { UINT8 name[4]; } AML_Name;
+
 #pragma pack(pop)
 #ifdef __cplusplus
 
-typedef struct AMLScope {
-	AMLScope* parent;
-}AMLScope;
 
+class AMLNamedObject {
+public:
+	AML_Name name;
+	void* object;
+	AMLNamedObject(AML_Name name, void* object);
+	static AMLNamedObject* newObject(AML_Name name, void* object);
+};
+
+class AMLNamespace {
+public:
+	AMLNamespace* parent;
+	NNXLinkedList<AMLNamedObject*> namedObjects;
+	AMLNamespace();
+};
 
 class ACPI_AML_CODE
 {
@@ -147,6 +161,8 @@ private:
 	VOID GetString(UINT8* output, UINT32 lenght, UINT8 terminator);
 	UINT8 GetByte();
 	UINT32 GetDword();
+	AML_Name GetName();
+	AMLNamespace root;
 };
 
 extern "C" {
