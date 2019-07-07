@@ -6,6 +6,38 @@
 UINT64**** PML4;
 UINT64**** PML4_IdentifyMap;
 
+void* PagingAllocatePage() {
+	void* result;
+	UINT64**** pml4 = GetCR3();
+	SetCR3(PML4_IdentifyMap);
+
+	for (UINT64 pdp_number = 510; pdp_number < 512; pdp_number++) {
+		for (UINT64 pd_number = 0; pd_number < 512; pd_number++) {
+			for (UINT64 pt_number = 0; pt_number < 512; pt_number++) {
+				for (UINT64 page_number = 0; page_number < 512; page_number++) {
+					result = (page_number + 512 * (pt_number + 512 * (pd_number + 512 * pdp_number)));
+					UINT64*** pdp = PG_ALIGN(pml4[pdp_number]);
+					if (pdp == 0)
+						goto end;
+					UINT64** pd = PG_ALIGN(pdp[pd_number]);
+					if (pd == 0)
+						goto end;
+					UINT64* pt = PG_ALIGN(pd[pt_number]);
+					if (pt == 0)
+						goto end;
+					if (pt[page_number] == 0 || !(pt[page_number] & PAGE_PRESENT))
+						goto end;
+				}
+			}
+		}
+	}
+	return 0;
+end:
+	SetCR3(pml4);
+	PagingMapPage(result, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
+	return result;
+}
+
 void PagingMapPage(void* virtual, void* physical, UINT16 flags) {
 	UINT64**** pml4 = GetCR3();
 	SetCR3(PML4_IdentifyMap);
