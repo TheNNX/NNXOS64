@@ -40,7 +40,7 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	#ifndef BOCHS
 
 	ExitBootServices(imageHandle, n);
-
+	DisableInterrupts();
 	GlobalPhysicalMemoryMap = nnxMMap;
 	GlobalPhysicalMemoryMapSize = nnxMMapSize;
 
@@ -128,13 +128,16 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	LoadIDT(idtr);
 	PICInitialize();
-	EnableInterrupts();
 	KeyboardInitialize();
 	
-
 	nnxalloc_init();
-	for(int a = 0; a < 8; a++)
+	for (int a = 0; a < 8; a++) {
+		if(a % 16 == 0)
+		PrintT("%i/7\n", a);
 		nnxalloc_append(PagingAllocatePage(), 4096);
+	}
+
+	EnableInterrupts();
 
 	UINT8 status = 0;
 	ACPI_FACP* facp = GetFADT(rdsp);

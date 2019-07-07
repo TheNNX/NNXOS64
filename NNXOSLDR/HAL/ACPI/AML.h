@@ -130,6 +130,7 @@ public:
 	void* object;
 	AMLNamedObject(AML_Name name, void* object);
 	static AMLNamedObject* newObject(AML_Name name, void* object);
+	void PrintName();
 };
 
 class AMLNamespace {

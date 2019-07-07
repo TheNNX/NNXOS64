@@ -179,7 +179,7 @@ UINT8 ACPI_AML_CODE::GetByte() {
 
 UINT32 ACPI_AML_CODE::GetDword() {
 	index += 4;
-	return table[index-4];
+	return *((UINT32*)(table+index-4));
 }
 
 void ACPI_AML_CODE::GetString(UINT8* output, UINT32 lenght) {
@@ -200,6 +200,7 @@ void ACPI_AML_CODE::GetString(UINT8* output, UINT32 lenght, UINT8 terminator) {
 
 AML_Name ACPI_AML_CODE::GetName() {
 	UINT32 temp = GetDword();
+	PrintT("name: %x\n",temp);
 	return *((AML_Name*)(&temp));
 }
 
@@ -217,7 +218,7 @@ void ACPI_AML_CODE::Parse() {
 			break;
 		}
 		default:
-			PrintT("Error: unimplmeneted ACPI Machine Language opcode: %x\n",opcode);
+			PrintT("Error: unimplmeneted ACPI Machine Language opcode: 0x%x\n",opcode);
 			while (1);
 		}
 	}
@@ -229,11 +230,21 @@ AMLNamedObject::AMLNamedObject(AML_Name name, void* object) {
 }
 
 AMLNamedObject* AMLNamedObject::newObject(AML_Name name, void* object) {
-	PrintT("Allocating new named object\n");
 	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
 	AMLNamedObject toCopy = AMLNamedObject(name, object);
 	*output = toCopy;
+	PrintT("Allocated new named object for name ");
+	output->PrintName();
+	PrintT("\n");
 	return output;
+}
+
+void AMLNamedObject::PrintName() {
+	char buffer[5] = { 0 };
+	for (int a = 0; a < 4; a++) {
+		buffer[a] = this->name.name[a];
+	}
+	PrintT("%s", buffer);
 }
 
 AMLNamespace::AMLNamespace() {
