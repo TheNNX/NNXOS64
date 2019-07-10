@@ -1,3 +1,16 @@
+/*
+			WORK IN PROGRESS
+		  IT IS NOT FUNCTIONAL
+
+AND THE NAMES OF STRUCTURES AND FUNCTIONS
+ARE VERY BAD, LIKE REALLY BAD. DID YOU
+EXPECT ME TO ACTUALLY READ THE ACPI/AML
+SPECIFIACTION? I'M NOT GOING TO READ THE
+1000 PAGES JUST SO SOME NAMES ARE CORRECT.
+AS LONG AS IT WORKS (WHICH AT THE MOMENT
+IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
+*/
+
 #include "AML.h"
 #include "memory/nnxalloc.h"
 #include "memory/MemoryOperations.h"
@@ -169,7 +182,8 @@ ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->oemRevision = GetDword();
 	GetString(compilerName, 4);
 	this->compilerRevision = GetDword();
-	this->namedObjects = NNXLinkedList<AMLNamedObject*>();
+	this->root = AMLNamespace();
+	this->currentNamespace = &(this->root);
 }
 
 UINT8 ACPI_AML_CODE::GetByte() {
@@ -223,10 +237,10 @@ void ACPI_AML_CODE::Parse() {
 		case AML_OPCODE_ONESOPCODE:
 			break;
 		case AML_OPCODE_NAMEOPCODE: {
-			AMLNamedObject *namedObject = AMLNamedObject::newObject(GetName(), NULL);
-			void* amlObject = this->GetAMLObject(GetByte()).pointer;
+			AMLNamedObject *namedObject = AMLNamedObject::newObject(GetName(), CreateAMLObjRef(NULL, tAMLInvalid));
+			AMLObjRef amlObject = this->GetAMLObject(GetByte());
 			namedObject->object = amlObject;
-			namedObjects.add(namedObject);
+			currentNamespace->namedObjects.add(namedObject);
 			break;
 		}
 		default:
@@ -236,12 +250,12 @@ void ACPI_AML_CODE::Parse() {
 	}
 }
 
-AMLNamedObject::AMLNamedObject(AML_Name name, void* object) {
+AMLNamedObject::AMLNamedObject(AML_Name name, AMLObjRef object) {
 	this->name = name;
 	this->object = object;
 }
 
-AMLNamedObject* AMLNamedObject::newObject(AML_Name name, void* object) {
+AMLNamedObject* AMLNamedObject::newObject(AML_Name name, AMLObjRef object) {
 	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
 	AMLNamedObject toCopy = AMLNamedObject(name, object);
 	*output = toCopy;
@@ -260,6 +274,7 @@ void AMLNamedObject::PrintName() {
 }
 
 AMLNamespace::AMLNamespace() {
+	this->namedObjects = NNXLinkedList<AMLNamedObject*>();
 	this->parent = 0;
 }
 
@@ -281,6 +296,9 @@ UINT32 ACPI_AML_CODE::DecodePkgLenght() {
 UINT32 ACPI_AML_CODE::DecodePackageNumElements() {
 	UINT8 Byte0 = this->GetByte();
 	
+	//TODO: That's not going to work if we have 0x0b as Byte0, then values like ex. 0xwhatever 0xwhatever 0xa
+	//		It could be checked by reading the PkgLength and enumerating elements; for every element the NumElements copy would be decreased by one
+	//		and the PkgLength copy would be decreased by number of bytes read. If both values don't hit 0 at the same time, the checked case is false.
 	if (Byte0 == AML_OPCODE_WORDPREFIX &&
 		this->table[this->index + 2] != AML_OPCODE_ZEROOPCODE &&
 		this->table[this->index + 2] != AML_OPCODE_ONEOPCODE &&
@@ -309,6 +327,7 @@ AMLBuffer* ACPI_AML_CODE::CreateBuffer() {
 
 AMLPackage::AMLPackage(UINT16 numElements) {
 	this->numElements = numElements;
+	this->values = (AMLObjRef*)nnxcalloc(numElements, sizeof(AMLObjRef));
 }
 
 AMLPackage* ACPI_AML_CODE::CreatePackage() {
@@ -320,7 +339,6 @@ AMLPackage* ACPI_AML_CODE::CreatePackage() {
 
 
 	return amlPackage;
-	
 }
 
 AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {

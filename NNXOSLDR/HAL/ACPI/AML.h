@@ -1,4 +1,18 @@
 #pragma once
+
+/*
+			WORK IN PROGRESS
+		  IT IS NOT FUNCTIONAL
+
+AND THE NAMES OF STRUCTURES AND FUNCTIONS
+ARE VERY BAD, LIKE REALLY BAD. DID YOU
+EXPECT ME TO ACTUALLY READ THE ACPI/AML
+SPECIFIACTION? I'M NOT GOING TO READ THE
+1000 PAGES JUST SO SOME NAMES ARE CORRECT.
+AS LONG AS IT WORKS (WHICH AT THE MOMENT
+IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
+*/
+
 #include "video/SimpleTextIO.h"
 #include "nnxint.h"
 #include "nnxllist.h"
@@ -6,6 +20,11 @@
 #pragma pack(push, 1)
 
 typedef UINT64 AMLObjectType, AMLObjType;
+
+typedef struct AMLObjectReference {
+	void* pointer;
+	AMLObjType type;
+}AMLObjRef, AMLObjectReference;
 
 typedef struct SDTHeader {
 	UINT8 Signature[4];
@@ -125,13 +144,14 @@ typedef struct { UINT8 name[4]; } AML_Name;
 #pragma pack(pop)
 #ifdef __cplusplus
 #include "nnxllist.h"
+AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type);
 
 class AMLNamedObject {
 public:
 	AML_Name name;
-	void* object;
-	AMLNamedObject(AML_Name name, void* object);
-	static AMLNamedObject* newObject(AML_Name name, void* object);
+	AMLObjRef object;
+	AMLNamedObject(AML_Name name, AMLObjRef object);
+	static AMLNamedObject* newObject(AML_Name name, AMLObjRef object);
 	void PrintName();
 };
 
@@ -144,15 +164,12 @@ private:
 	UINT64 size;
 };
 
-typedef struct AMLObjectReference {
-	void* pointer;
-	AMLObjType type;
-}AMLObjRef, AMLObjectReference;
 
 class AMLPackage {
 public:
 	AMLPackage(UINT16 numberOfElements);
 	UINT16 numElements;
+	AMLObjRef* values;
 };
 
 class AMLNamespace {
@@ -183,8 +200,6 @@ private:
 	AMLBuffer* CreateBuffer();
 	AMLPackage* CreatePackage();
 
-	NNXLinkedList<AMLNamedObject*> namedObjects;
-
 	UINT32 DecodePkgLenght();
 	UINT32 DecodePackageNumElements();
 	VOID GetString(UINT8* output, UINT32 lenght);
@@ -197,6 +212,7 @@ private:
 	
 	AML_Name GetName();
 	AMLNamespace root;
+	AMLNamespace* currentNamespace;
 };
 
 extern "C" {
