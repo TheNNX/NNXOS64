@@ -1,5 +1,6 @@
 #include "AML.h"
 #include "memory/nnxalloc.h"
+#include "memory/MemoryOperations.h"
 
 #ifndef  NULL
 #define NULL 0
@@ -54,8 +55,6 @@ extern "C" {
 
 
 	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
-		ACPI_DSDT* output = 0;
-
 		if (rdsp->Revision == 0) {
 			ACPI_RSDT* rsdt = GetRSDT(rdsp);
 			if (!rsdt)
@@ -68,7 +67,7 @@ extern "C" {
 				return 0;
 			}
 			UINT32 numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
-			for (int a = 0; a < numberOfEntries; a++) {
+			for (UINT32 a = 0; a < numberOfEntries; a++) {
 				UINT32 tableAddress = rsdt->OtherSDTs[a];
 				ACPI_SDTHeader* sdt = (ACPI_SDTHeader*)tableAddress;
 				const UINT8 dsdt[] = {'F','A','C','P'};
@@ -94,7 +93,7 @@ extern "C" {
 				return 0;
 			}
 			UINT32 numberOfEntries = (xsdt->Header.Lenght - sizeof(xsdt->Header)) / 8;
-			for (int a = 0; a < numberOfEntries; a++) {
+			for (UINT32 a = 0; a < numberOfEntries; a++) {
 				ACPI_SDTHeader* tableAddress = xsdt->OtherSDTs[a];
 				const UINT8 dsdt[] = { 'F','A','C','P' };
 				if (*((UINT32*)dsdt) == *((UINT32*)tableAddress->Signature))
@@ -107,6 +106,8 @@ extern "C" {
 				}
 			}
 		}
+		localLastError = ACPI_ERROR_INVALID_FADT;
+		return 0;
 	}
 
 	BOOL verifyACPI_FADT(ACPI_FADT* fadt) {
@@ -168,8 +169,7 @@ ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->oemRevision = GetDword();
 	GetString(compilerName, 4);
 	this->compilerRevision = GetDword();
-	PrintT("Setting up root namespace\n");
-	this->root = AMLNamespace();
+	this->namedObjects = NNXLinkedList<AMLNamedObject*>();
 }
 
 UINT8 ACPI_AML_CODE::GetByte() {
@@ -177,9 +177,19 @@ UINT8 ACPI_AML_CODE::GetByte() {
 	return table[index-1];
 }
 
+UINT16 ACPI_AML_CODE::GetWord() {
+	index += 2;
+	return *((UINT16*)(table+index-2));
+}
+
 UINT32 ACPI_AML_CODE::GetDword() {
 	index += 4;
 	return *((UINT32*)(table+index-4));
+}
+
+UINT64 ACPI_AML_CODE::GetQword() {
+	index += 8;
+	return *((UINT64*)(table + index - 8));
 }
 
 void ACPI_AML_CODE::GetString(UINT8* output, UINT32 lenght) {
@@ -214,7 +224,9 @@ void ACPI_AML_CODE::Parse() {
 			break;
 		case AML_OPCODE_NAMEOPCODE: {
 			AMLNamedObject *namedObject = AMLNamedObject::newObject(GetName(), NULL);
-
+			void* amlObject = this->GetAMLObject(GetByte()).pointer;
+			namedObject->object = amlObject;
+			namedObjects.add(namedObject);
 			break;
 		}
 		default:
@@ -249,4 +261,100 @@ void AMLNamedObject::PrintName() {
 
 AMLNamespace::AMLNamespace() {
 	this->parent = 0;
+}
+
+UINT32 ACPI_AML_CODE::DecodePkgLenght() {
+	UINT8 Byte0 = GetByte();
+	UINT8 PkgLengthType = (Byte0 & 0xc0) >> 6;
+	if (PkgLengthType) {
+		UINT32 result = Byte0 & 0xf;
+		for (int a = 0; a < PkgLengthType; a++) {
+			result |= (GetByte() << (4 + 8 * a));
+		}
+		return result;
+	}
+	else {
+		return Byte0 & 0x3f;
+	}
+}
+
+UINT32 ACPI_AML_CODE::DecodePackageNumElements() {
+	UINT8 Byte0 = this->GetByte();
+	
+	if (Byte0 == AML_OPCODE_WORDPREFIX &&
+		this->table[this->index + 2] != AML_OPCODE_ZEROOPCODE &&
+		this->table[this->index + 2] != AML_OPCODE_ONEOPCODE &&
+		this->table[this->index + 2] != AML_OPCODE_ONESOPCODE &&
+		!(this->table[this->index + 2] > AML_OPCODE_BYTEPREFIX && this->table[this->index + 2] < AML_OPCODE_QWORDPREFIX)) 
+	{
+		return GetWord();
+	}
+	else {
+		return Byte0;
+	}
+	
+}
+
+AMLBuffer* ACPI_AML_CODE::CreateBuffer() {
+	UINT32 pkgLength = DecodePkgLenght();
+	UINT32 bufferSize = *((UINT32*)(GetAMLObject(GetByte()).pointer));
+	
+	AMLBuffer* amlBuffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
+	*amlBuffer = AMLBuffer(bufferSize);
+	for (int a = 0; a < bufferSize; a++) {
+		amlBuffer->data[a] = GetByte();
+	}
+	return amlBuffer;
+}
+
+AMLPackage::AMLPackage(UINT16 numElements) {
+	this->numElements = numElements;
+}
+
+AMLPackage* ACPI_AML_CODE::CreatePackage() {
+	UINT32 pkgLenght = DecodePkgLenght();
+	UINT64 numElements = DecodePackageNumElements();
+	AMLPackage* amlPackage = (AMLPackage*)nnxmalloc(sizeof(AMLPackage));
+	*amlPackage = AMLPackage(numElements);
+
+
+
+	return amlPackage;
+	
+}
+
+AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {
+	AMLObjRef result = { 0 };
+	result.pointer = pointer;
+	result.type = type;
+	return result;
+}
+
+AMLObjRef ACPI_AML_CODE::GetAMLObject(UINT8 opcode) {
+	switch (opcode)
+	{
+	case AML_OPCODE_BYTEPREFIX:
+		return CreateAMLObjRef(&(*((UINT8*)nnxmalloc(sizeof(UINT8))) = GetByte()), tAMLByte);
+	case AML_OPCODE_WORDPREFIX:
+		return CreateAMLObjRef(&(*((UINT16*)nnxmalloc(sizeof(UINT16))) = GetWord()), tAMLWord);
+	case AML_OPCODE_DWORDPREFIX:
+		return CreateAMLObjRef(&(*((UINT32*)nnxmalloc(sizeof(UINT32))) = GetDword()), tAMLDword);
+	case AML_OPCODE_QWORDPREFIX:
+		return CreateAMLObjRef(&(*((UINT64*)nnxmalloc(sizeof(UINT64))) = GetQword()), tAMLQword);
+	case AML_OPCODE_BUFFEROPCODE:
+		return CreateAMLObjRef(CreateBuffer(), tAMLBuffer);
+	case AML_OPCODE_PACKAGEOPCODE:
+		return CreateAMLObjRef(CreatePackage(), tAMLPackage);
+	default:
+		return CreateAMLObjRef(NULL, tAMLInvalid);
+	}
+}
+
+AMLBuffer::AMLBuffer(UINT8 size) {
+	this->size = size;
+	this->data = (UINT8*)nnxcalloc(size, 1);
+}
+
+AMLBuffer::~AMLBuffer() {
+	nnxfree(this->data);
 }

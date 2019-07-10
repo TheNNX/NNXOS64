@@ -18,7 +18,7 @@ public:
 	}
 
 	NNXLinkedList(T element) {
-		this->first = nnxmalloc(sizeof(NNXLinkedListEntry<T>));
+		this->first = (NNXLinkedListEntry<T>*)nnxmalloc(sizeof(NNXLinkedListEntry<T>));
 		*this->first = NNXLinkedListEntry<T>();
 		this->first->next = 0;
 		this->first->value = element;
@@ -51,7 +51,7 @@ public:
 			cur = &((*cur)->next);
 		}
 
-		*cur = nnxmalloc(sizeof(NNXLinkedListEntry<T>));
+		*cur = (NNXLinkedListEntry<T>*)nnxmalloc(sizeof(NNXLinkedListEntry<T>));
 		**cur = NNXLinkedListEntry<T>();
 		(*cur)->next = 0;
 		(*cur)->value = element;
@@ -166,7 +166,7 @@ public:
 	}
 
 	NNXDictionary(K key, V element) {
-		this->first = nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>))
+		this->first = (NNXDictionaryListEntry<K, V>*)nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>))
 		*this->first = NNXDictionaryListEntry<K, V>();
 		this->first->next = 0;
 		this->first->value = element;
@@ -208,7 +208,7 @@ public:
 			cur = &((*cur)->next);
 		}
 
-		*cur = nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>));
+		*cur = (NNXDictionaryListEntry<K, V>*)nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>));
 		**cur = NNXDictionaryListEntry<K, V>();
 		(*cur)->next = 0;
 		(*cur)->value = element;

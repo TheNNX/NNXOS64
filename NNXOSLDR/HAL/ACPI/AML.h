@@ -5,6 +5,8 @@
 
 #pragma pack(push, 1)
 
+typedef UINT64 AMLObjectType, AMLObjType;
+
 typedef struct SDTHeader {
 	UINT8 Signature[4];
 	UINT32 Lenght;
@@ -122,7 +124,7 @@ typedef struct { UINT8 name[4]; } AML_Name;
 
 #pragma pack(pop)
 #ifdef __cplusplus
-
+#include "nnxllist.h"
 
 class AMLNamedObject {
 public:
@@ -131,6 +133,26 @@ public:
 	AMLNamedObject(AML_Name name, void* object);
 	static AMLNamedObject* newObject(AML_Name name, void* object);
 	void PrintName();
+};
+
+class AMLBuffer {
+public:
+	AMLBuffer(UINT8 size);
+	~AMLBuffer();
+	UINT8 *data;
+private:
+	UINT64 size;
+};
+
+typedef struct AMLObjectReference {
+	void* pointer;
+	AMLObjType type;
+}AMLObjRef, AMLObjectReference;
+
+class AMLPackage {
+public:
+	AMLPackage(UINT16 numberOfElements);
+	UINT16 numElements;
 };
 
 class AMLNamespace {
@@ -158,10 +180,21 @@ private:
 	UINT8 compilerName[4];
 	UINT32 compilerRevision;
 
+	AMLBuffer* CreateBuffer();
+	AMLPackage* CreatePackage();
+
+	NNXLinkedList<AMLNamedObject*> namedObjects;
+
+	UINT32 DecodePkgLenght();
+	UINT32 DecodePackageNumElements();
 	VOID GetString(UINT8* output, UINT32 lenght);
 	VOID GetString(UINT8* output, UINT32 lenght, UINT8 terminator);
 	UINT8 GetByte();
+	UINT16 GetWord();
 	UINT32 GetDword();
+	UINT64 GetQword();
+	AMLObjRef GetAMLObject(UINT8 opcode);
+	
 	AML_Name GetName();
 	AMLNamespace root;
 };
@@ -183,7 +216,7 @@ BOOL verifyACPI_DSDT(ACPI_DSDT*);
 #define AML_OPCODE_WORDPREFIX 0XB
 #define AML_OPCODE_DWORDPREFIX 0XC
 #define AML_OPCODE_STRINGPREFIX 0XD
-#define AML_OPCODE_QWRODPREFIX 0XE
+#define AML_OPCODE_QWORDPREFIX 0XE
 #define AML_OPCDOE_SCOPEOPCODE 0X10
 #define AML_OPCODE_BUFFEROPCODE 0X11
 #define AML_OPCODE_PACKAGEOPCODE 0X12
@@ -307,8 +340,20 @@ BOOL verifyACPI_DSDT(ACPI_DSDT*);
 #define ACPI_ERROR_INVALID_SDT 0x10
 #define ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10 0x11
 
+#define ACPI_ERROR_AML_BUFFER_INVALID_SIZE 0x8a
+
 #define ACPI_ERROR_MSG(a) PrintT("ACPI ERROR: %s\n",a)
 
+typedef enum {
+	tAMLByte = AML_OPCODE_BYTEPREFIX,
+	tAMLWord = AML_OPCODE_WORDPREFIX,
+	tAMLDword = AML_OPCODE_DWORDPREFIX,
+	tAMLString = AML_OPCODE_STRINGPREFIX,
+	tAMLQword = AML_OPCODE_QWORDPREFIX,
+	tAMLBuffer = AML_OPCODE_BUFFEROPCODE,
+	tAMLPackage = AML_OPCODE_PACKAGEOPCODE,
+	tAMLInvalid = AML_OPCODE_ZEROOPCODE
+};
 
 inline void ACPI_ERROR(UINT32 code)
 {
@@ -333,6 +378,10 @@ inline void ACPI_ERROR(UINT32 code)
 		break;
 	case ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10:
 		ACPI_ERROR_MSG("The requested feature is not supported by ACPI version 1.0");
+		break;
+	case ACPI_ERROR_AML_BUFFER_INVALID_SIZE:
+		ACPI_ERROR_MSG("The buffer exceeds the limits.");
+		break;
 	default:
 		break;
 	}
