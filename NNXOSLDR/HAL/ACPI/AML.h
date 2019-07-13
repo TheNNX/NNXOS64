@@ -21,208 +21,138 @@ IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 
 typedef UINT64 AMLObjectType, AMLObjType;
 
-typedef struct AMLObjectReference {
-	void* pointer;
-	AMLObjType type;
-}AMLObjRef, AMLObjectReference;
-
-typedef struct SDTHeader {
-	UINT8 Signature[4];
-	UINT32 Lenght;
-	UINT8 Revision;
-	UINT8 Checksum;
-	UINT8 OEMID[6];
-	UINT8 OEMTableID[8];
-	UINT32 OEMRevision;
-	UINT32 CreatorID;
-	UINT32 CreatorRevision;
-}ACPI_SDTHeader;
-
-typedef struct GAS {
-	UINT8 AddressSpace;
-	UINT8 BitWidth;
-	UINT8 BitOffset;
-	UINT8 AccessSize;
-	UINT64 Address;
-}ACPI_GAS;
-
-typedef struct XSDT {
-	ACPI_SDTHeader Header;
-	ACPI_SDTHeader* OtherSDTs[0];
-}ACPI_XSDT;
-
-typedef struct RSDT {
-	ACPI_SDTHeader Header;
-	UINT32 OtherSDTs[0];
-}ACPI_RSDT;
-
-typedef struct RDSPExtension {
-	UINT32 Lenght;
-	ACPI_XSDT* XSDTAddress;
-	UINT8 ExtendedChecksum;
-	UINT8 Reserved[3];
-}ACPI_RDSPExtension;
-
-typedef struct RDSP {
-	UINT8 Singature[8];
-	UINT8 Checksum;
-	UINT8 OEMID[6];
-	UINT8 Revision;
-	UINT32 RSDTAddress;
-	ACPI_RDSPExtension v20;
-
-}ACPI_RDSP;
-
-typedef struct DSDT {
-	ACPI_SDTHeader Header;
-	UINT8 amlCode[0];
-}ACPI_DSDT;
-
-typedef struct FADT
-{
-	ACPI_SDTHeader Header;
-	UINT32 FirmwareCtrl;
-	UINT32 DSDT;
-	UINT8 Reserved;
-	UINT8 PreferredPowerManagmnetProfile;
-	UINT16 SCIInterrupt;
-	UINT32 SMICommandPort;
-	UINT8 ACPIEnable;
-	UINT8 ACPIDisable;
-	UINT8 S4BIOSREQ;
-	UINT8 PSTATECTRL;
-	UINT32 PM1aEventBlock;
-	UINT32 PM1bEventBlock;
-	UINT32 PM1aControlBlock;
-	UINT32 PM1bControlBlock;
-	UINT32 PM2ControlBlock;
-	UINT32 PMTimerBlock;
-	UINT32 GPE0Block;
-	UINT32 GPE1Block;
-	UINT8 PM1EventLenght;
-	UINT8 PM1ControlLenght;
-	UINT8 PM2ControlLenght;
-	UINT8 PMTimerLenght;
-	UINT8 GPE0Lenght;
-	UINT8 GPE1Lenght;
-	UINT8 GPE1Base;
-	UINT8 CSTATECTRL;
-	UINT16 WorstC2Latency;
-	UINT16 WorstC3Latency;
-	UINT16 FlushSize;
-	UINT16 FlushStride;
-	UINT8 DutyOffset;
-	UINT8 DutyWidth;
-	UINT8 Day;
-	UINT8 Month;
-	UINT8 Century;
-
-	UINT16 BootArchitectureFlags;
-	UINT8 Reserved2;
-	UINT32 Flags;
-
-	//ACPI 2.0+
-	ACPI_GAS ResetReg;
-	UINT8 ResetValue;
-	UINT8 Reserved3[3];
-
-	UINT64 X_FirmwareCtrl;
-	UINT64 X_DSDT;
-
-	ACPI_GAS X_PM1aEventBlock;
-	ACPI_GAS X_PM1bEventBlock;
-	ACPI_GAS X_PM1aControlBlock;
-	ACPI_GAS X_PM1bControlBlock;
-	ACPI_GAS X_PM2ControlBlock;
-	ACPI_GAS X_PMTimerBlock;
-	ACPI_GAS X_GPE0Block;
-	ACPI_GAS X_GPE1Block;
-}ACPI_FADT, ACPI_FACP;
-
-typedef struct { UINT8 name[4]; } AML_Name;
-
-#pragma pack(pop)
-#ifdef __cplusplus
-#include "nnxllist.h"
-AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type);
-
-class AMLNamedObject {
-public:
-	AML_Name name;
-	AMLObjRef object;
-	AMLNamedObject(AML_Name name, AMLObjRef object);
-	static AMLNamedObject* newObject(AML_Name name, AMLObjRef object);
-	void PrintName();
-};
-
-class AMLBuffer {
-public:
-	AMLBuffer(UINT8 size);
-	~AMLBuffer();
-	UINT8 *data;
-private:
-	UINT64 size;
-};
-
-
-class AMLPackage {
-public:
-	AMLPackage(UINT16 numberOfElements);
-	UINT16 numElements;
-	AMLObjRef* values;
-};
-
-class AMLNamespace {
-public:
-	AMLNamespace* parent;
-	NNXLinkedList<AMLNamedObject*> namedObjects;
-	AMLNamespace();
-};
-
-class ACPI_AML_CODE
-{
-public:
-	ACPI_AML_CODE(ACPI_DSDT *table);
-	void Parse();
-private:
-	UINT64 index;
-	UINT8* table;
-	UINT8 name[4];
-	UINT32 size;
-	UINT8 revision;
-	UINT8 checksum;
-	UINT8 oemid[6];
-	UINT8 tableid[8];
-	UINT32 oemRevision;
-	UINT8 compilerName[4];
-	UINT32 compilerRevision;
-
-	AMLBuffer* CreateBuffer();
-	AMLPackage* CreatePackage();
-
-	UINT32 DecodePkgLenght();
-	UINT32 DecodePackageNumElements();
-	VOID GetString(UINT8* output, UINT32 lenght);
-	VOID GetString(UINT8* output, UINT32 lenght, UINT8 terminator);
-	UINT8 GetByte();
-	UINT16 GetWord();
-	UINT32 GetDword();
-	UINT64 GetQword();
-	AMLObjRef GetAMLObject(UINT8 opcode);
-	
-	AML_Name GetName();
-	AMLNamespace root;
-	AMLNamespace* currentNamespace;
-};
-
+#ifdef __cplusplus 
 extern "C" {
 #endif
 
-BOOL verifyACPI_RDSP(ACPI_RDSP*);
-BOOL verifyACPI_XSDT(ACPI_XSDT*);
-BOOL verifyACPI_RSDT(ACPI_RSDT*);
-BOOL verifyACPI_FADT(ACPI_FADT*);
-BOOL verifyACPI_DSDT(ACPI_DSDT*);
+	typedef struct AMLObjectReference {
+		void* pointer;
+		AMLObjType type;
+	}AMLObjRef, AMLObjectReference;
+
+	typedef struct SDTHeader {
+		UINT8 Signature[4];
+		UINT32 Lenght;
+		UINT8 Revision;
+		UINT8 Checksum;
+		UINT8 OEMID[6];
+		UINT8 OEMTableID[8];
+		UINT32 OEMRevision;
+		UINT32 CreatorID;
+		UINT32 CreatorRevision;
+	}ACPI_SDTHeader;
+
+	typedef struct GAS {
+		UINT8 AddressSpace;
+		UINT8 BitWidth;
+		UINT8 BitOffset;
+		UINT8 AccessSize;
+		UINT64 Address;
+	}ACPI_GAS;
+
+	typedef struct XSDT {
+		ACPI_SDTHeader Header;
+		ACPI_SDTHeader* OtherSDTs[0];
+	}ACPI_XSDT;
+
+	typedef struct RSDT {
+		ACPI_SDTHeader Header;
+		UINT32 OtherSDTs[0];
+	}ACPI_RSDT;
+
+	typedef struct RDSPExtension {
+		UINT32 Lenght;
+		ACPI_XSDT* XSDTAddress;
+		UINT8 ExtendedChecksum;
+		UINT8 Reserved[3];
+	}ACPI_RDSPExtension;
+
+	typedef struct RDSP {
+		UINT8 Singature[8];
+		UINT8 Checksum;
+		UINT8 OEMID[6];
+		UINT8 Revision;
+		UINT32 RSDTAddress;
+		ACPI_RDSPExtension v20;
+
+	}ACPI_RDSP;
+
+	typedef struct DSDT {
+		ACPI_SDTHeader Header;
+		UINT8 amlCode[0];
+	}ACPI_DSDT;
+
+	typedef struct FADT
+	{
+		ACPI_SDTHeader Header;
+		UINT32 FirmwareCtrl;
+		UINT32 DSDT;
+		UINT8 Reserved;
+		UINT8 PreferredPowerManagmnetProfile;
+		UINT16 SCIInterrupt;
+		UINT32 SMICommandPort;
+		UINT8 ACPIEnable;
+		UINT8 ACPIDisable;
+		UINT8 S4BIOSREQ;
+		UINT8 PSTATECTRL;
+		UINT32 PM1aEventBlock;
+		UINT32 PM1bEventBlock;
+		UINT32 PM1aControlBlock;
+		UINT32 PM1bControlBlock;
+		UINT32 PM2ControlBlock;
+		UINT32 PMTimerBlock;
+		UINT32 GPE0Block;
+		UINT32 GPE1Block;
+		UINT8 PM1EventLenght;
+		UINT8 PM1ControlLenght;
+		UINT8 PM2ControlLenght;
+		UINT8 PMTimerLenght;
+		UINT8 GPE0Lenght;
+		UINT8 GPE1Lenght;
+		UINT8 GPE1Base;
+		UINT8 CSTATECTRL;
+		UINT16 WorstC2Latency;
+		UINT16 WorstC3Latency;
+		UINT16 FlushSize;
+		UINT16 FlushStride;
+		UINT8 DutyOffset;
+		UINT8 DutyWidth;
+		UINT8 Day;
+		UINT8 Month;
+		UINT8 Century;
+
+		UINT16 BootArchitectureFlags;
+		UINT8 Reserved2;
+		UINT32 Flags;
+
+		//ACPI 2.0+
+		ACPI_GAS ResetReg;
+		UINT8 ResetValue;
+		UINT8 Reserved3[3];
+
+		UINT64 X_FirmwareCtrl;
+		UINT64 X_DSDT;
+
+		ACPI_GAS X_PM1aEventBlock;
+		ACPI_GAS X_PM1bEventBlock;
+		ACPI_GAS X_PM1aControlBlock;
+		ACPI_GAS X_PM1bControlBlock;
+		ACPI_GAS X_PM2ControlBlock;
+		ACPI_GAS X_PMTimerBlock;
+		ACPI_GAS X_GPE0Block;
+		ACPI_GAS X_GPE1Block;
+	}ACPI_FADT, ACPI_FACP;
+
+	typedef struct { UINT8 name[4]; } AML_Name;
+
+#pragma pack(pop)
+
+
+	BOOL verifyACPI_RDSP(ACPI_RDSP*);
+	BOOL verifyACPI_XSDT(ACPI_XSDT*);
+	BOOL verifyACPI_RSDT(ACPI_RSDT*);
+	BOOL verifyACPI_FADT(ACPI_FADT*);
+	BOOL verifyACPI_DSDT(ACPI_DSDT*);
 
 #define AML_OPCODE_ZEROOPCODE 0
 #define AML_OPCODE_ONEOPCODE 1
@@ -356,59 +286,62 @@ BOOL verifyACPI_DSDT(ACPI_DSDT*);
 #define ACPI_ERROR_INVALID_SDT 0x10
 #define ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10 0x11
 
+#define ACPI_ERROR_AML_OBJECT_NOT_FOUND 0x89
 #define ACPI_ERROR_AML_BUFFER_INVALID_SIZE 0x8a
 
 #define ACPI_ERROR_MSG(a) PrintT("ACPI ERROR: %s\n",a)
 
-typedef enum {
-	tAMLByte = AML_OPCODE_BYTEPREFIX,
-	tAMLWord = AML_OPCODE_WORDPREFIX,
-	tAMLDword = AML_OPCODE_DWORDPREFIX,
-	tAMLString = AML_OPCODE_STRINGPREFIX,
-	tAMLQword = AML_OPCODE_QWORDPREFIX,
-	tAMLBuffer = AML_OPCODE_BUFFEROPCODE,
-	tAMLPackage = AML_OPCODE_PACKAGEOPCODE,
-	tAMLInvalid = AML_OPCODE_ZEROOPCODE
-};
+	typedef enum {
+		tAMLByte = AML_OPCODE_BYTEPREFIX,
+		tAMLWord = AML_OPCODE_WORDPREFIX,
+		tAMLDword = AML_OPCODE_DWORDPREFIX,
+		tAMLString = AML_OPCODE_STRINGPREFIX,
+		tAMLQword = AML_OPCODE_QWORDPREFIX,
+		tAMLBuffer = AML_OPCODE_BUFFEROPCODE,
+		tAMLPackage = AML_OPCODE_PACKAGEOPCODE,
+		tAMLInvalid = AML_OPCODE_ZEROOPCODE
+	};
 
-inline void ACPI_ERROR(UINT32 code)
-{
-	switch (code)
+	inline void ACPI_ERROR(UINT32 code)
 	{
-	case ACPI_SUCCESS:
-		return;
-	case ACPI_ERROR_INVALID_RDSP:
-		ACPI_ERROR_MSG("INVALID RDSP");
-		break;
-	case ACPI_ERROR_INVALID_XSDT:
-		ACPI_ERROR_MSG("INVALID XSDT");
-		break;
-	case ACPI_ERROR_INVALID_RSDT:
-		ACPI_ERROR_MSG("INVALID RSDT");
-		break;
-	case ACPI_ERROR_INVALID_DSDT:
-		ACPI_ERROR_MSG("INVALID DSDT");
-		break;
-	case ACPI_ERROR_INVALID_SDT:
-		ACPI_ERROR_MSG("INVALID SDT");
-		break;
-	case ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10:
-		ACPI_ERROR_MSG("The requested feature is not supported by ACPI version 1.0");
-		break;
-	case ACPI_ERROR_AML_BUFFER_INVALID_SIZE:
-		ACPI_ERROR_MSG("The buffer exceeds the limits.");
-		break;
-	default:
-		break;
+		switch (code)
+		{
+		case ACPI_SUCCESS:
+			return;
+		case ACPI_ERROR_INVALID_RDSP:
+			ACPI_ERROR_MSG("INVALID RDSP");
+			break;
+		case ACPI_ERROR_INVALID_XSDT:
+			ACPI_ERROR_MSG("INVALID XSDT");
+			break;
+		case ACPI_ERROR_INVALID_RSDT:
+			ACPI_ERROR_MSG("INVALID RSDT");
+			break;
+		case ACPI_ERROR_INVALID_DSDT:
+			ACPI_ERROR_MSG("INVALID DSDT");
+			break;
+		case ACPI_ERROR_INVALID_SDT:
+			ACPI_ERROR_MSG("INVALID SDT");
+			break;
+		case ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10:
+			ACPI_ERROR_MSG("The requested feature is not supported by ACPI version 1.0");
+			break;
+		case ACPI_ERROR_AML_BUFFER_INVALID_SIZE:
+			ACPI_ERROR_MSG("The buffer exceeds the limits.");
+			break;
+		default:
+			break;
+		}
 	}
-}
-ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
-ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
-ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
-UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
+	ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
+	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
+	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
+	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
 
-UINT8 ACPI_LastError();
+	UINT8 ACPI_LastError();
 
-#ifdef __cplusplus
+#ifdef __cplusplus 
 }
+#include "AMLCPP.h"
 #endif
+

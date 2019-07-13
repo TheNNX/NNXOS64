@@ -6,3 +6,9 @@ void memset(void* dest, UINT64 value, UINT64 c) {
 		dest = ((UINT64)dest) + 1;
 	}
 }
+
+void memcpy(void* dst, void *src, UINT64 size) {
+	for (int b = 0; b < size; b++) {
+		((UINT8*)dst)[b] = ((UINT8*)src)[b];
+	}
+}

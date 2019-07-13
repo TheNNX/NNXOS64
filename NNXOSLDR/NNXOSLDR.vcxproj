@@ -190,6 +190,7 @@ compile.bat</Command>
   <ItemGroup>
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
+    <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\GDT.h" />
     <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="HAL\PCI\PCI.h" />

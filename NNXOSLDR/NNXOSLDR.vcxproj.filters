@@ -137,6 +137,9 @@
     <ClInclude Include="nnxllist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\ACPI\AMLCPP.h">
+      <Filter>Header Files\HAL\ACPI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">

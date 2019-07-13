@@ -1,4 +1,5 @@
 #pragma once
+#include "video/SimpleTextIO.h"
 #include "memory/nnxalloc.h"
 #ifdef __cplusplus
 template<typename T> struct NNXLinkedListEntry {
@@ -46,7 +47,6 @@ public:
 			this->optimized = this->first;
 
 		NNXLinkedListEntry<T>** cur = &(this->optimized);
-
 		while (*cur) {
 			cur = &((*cur)->next);
 		}
