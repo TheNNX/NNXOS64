@@ -152,7 +152,7 @@ void ACPI_AML_CODE::Parse(AMLScope* scope, UINT32 size) {
 				AMLDevice *device = AMLDevice::newScope((const char*)nws.name.name, scope);
 				this->Parse(device, size);
 				device->Init_HID();
-				PrintT("_HID: %x", GetIntegerFromAMLObjRef(->Get_HID()->object));
+				PrintT("_HID: %x", GetIntegerFromAMLObjRef(device->Get_HID()->object));
 				break;
 			}
 			default:
