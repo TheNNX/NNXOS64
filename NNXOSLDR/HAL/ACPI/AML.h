@@ -25,147 +25,147 @@ typedef UINT64 AMLObjectType, AMLObjType;
 extern "C" {
 #endif
 
-	typedef struct AMLObjectReference {
-		void* pointer;
-		AMLObjType type;
-	}AMLObjRef, AMLObjectReference;
+typedef struct AMLObjectReference {
+	void* pointer;
+	AMLObjType type;
+}AMLObjRef, AMLObjectReference;
 
-	typedef struct SDTHeader {
-		UINT8 Signature[4];
-		UINT32 Lenght;
-		UINT8 Revision;
-		UINT8 Checksum;
-		UINT8 OEMID[6];
-		UINT8 OEMTableID[8];
-		UINT32 OEMRevision;
-		UINT32 CreatorID;
-		UINT32 CreatorRevision;
-	}ACPI_SDTHeader;
+typedef struct SDTHeader {
+	UINT8 Signature[4];
+	UINT32 Lenght;
+	UINT8 Revision;
+	UINT8 Checksum;
+	UINT8 OEMID[6];
+	UINT8 OEMTableID[8];
+	UINT32 OEMRevision;
+	UINT32 CreatorID;
+	UINT32 CreatorRevision;
+}ACPI_SDTHeader;
 
-	typedef struct GAS {
-		UINT8 AddressSpace;
-		UINT8 BitWidth;
-		UINT8 BitOffset;
-		UINT8 AccessSize;
-		UINT64 Address;
-	}ACPI_GAS;
+typedef struct GAS {
+	UINT8 AddressSpace;
+	UINT8 BitWidth;
+	UINT8 BitOffset;
+	UINT8 AccessSize;
+	UINT64 Address;
+}ACPI_GAS;
 
-	typedef struct XSDT {
-		ACPI_SDTHeader Header;
-		ACPI_SDTHeader* OtherSDTs[0];
-	}ACPI_XSDT;
+typedef struct XSDT {
+	ACPI_SDTHeader Header;
+	ACPI_SDTHeader* OtherSDTs[0];
+}ACPI_XSDT;
 
-	typedef struct RSDT {
-		ACPI_SDTHeader Header;
-		UINT32 OtherSDTs[0];
-	}ACPI_RSDT;
+typedef struct RSDT {
+	ACPI_SDTHeader Header;
+	UINT32 OtherSDTs[0];
+}ACPI_RSDT;
 
-	typedef struct RDSPExtension {
-		UINT32 Lenght;
-		ACPI_XSDT* XSDTAddress;
-		UINT8 ExtendedChecksum;
-		UINT8 Reserved[3];
-	}ACPI_RDSPExtension;
+typedef struct RDSPExtension {
+	UINT32 Lenght;
+	ACPI_XSDT* XSDTAddress;
+	UINT8 ExtendedChecksum;
+	UINT8 Reserved[3];
+}ACPI_RDSPExtension;
 
-	typedef struct RDSP {
-		UINT8 Singature[8];
-		UINT8 Checksum;
-		UINT8 OEMID[6];
-		UINT8 Revision;
-		UINT32 RSDTAddress;
-		ACPI_RDSPExtension v20;
+typedef struct RDSP {
+	UINT8 Singature[8];
+	UINT8 Checksum;
+	UINT8 OEMID[6];
+	UINT8 Revision;
+	UINT32 RSDTAddress;
+	ACPI_RDSPExtension v20;
 
-	}ACPI_RDSP;
+}ACPI_RDSP;
 
-	typedef struct DSDT {
-		ACPI_SDTHeader Header;
-		UINT8 amlCode[0];
-	}ACPI_DSDT;
+typedef struct DSDT {
+	ACPI_SDTHeader Header;
+	UINT8 amlCode[0];
+}ACPI_DSDT;
 
-	typedef struct FADT
-	{
-		ACPI_SDTHeader Header;
-		UINT32 FirmwareCtrl;
-		UINT32 DSDT;
-		UINT8 Reserved;
-		UINT8 PreferredPowerManagmnetProfile;
-		UINT16 SCIInterrupt;
-		UINT32 SMICommandPort;
-		UINT8 ACPIEnable;
-		UINT8 ACPIDisable;
-		UINT8 S4BIOSREQ;
-		UINT8 PSTATECTRL;
-		UINT32 PM1aEventBlock;
-		UINT32 PM1bEventBlock;
-		UINT32 PM1aControlBlock;
-		UINT32 PM1bControlBlock;
-		UINT32 PM2ControlBlock;
-		UINT32 PMTimerBlock;
-		UINT32 GPE0Block;
-		UINT32 GPE1Block;
-		UINT8 PM1EventLenght;
-		UINT8 PM1ControlLenght;
-		UINT8 PM2ControlLenght;
-		UINT8 PMTimerLenght;
-		UINT8 GPE0Lenght;
-		UINT8 GPE1Lenght;
-		UINT8 GPE1Base;
-		UINT8 CSTATECTRL;
-		UINT16 WorstC2Latency;
-		UINT16 WorstC3Latency;
-		UINT16 FlushSize;
-		UINT16 FlushStride;
-		UINT8 DutyOffset;
-		UINT8 DutyWidth;
-		UINT8 Day;
-		UINT8 Month;
-		UINT8 Century;
+typedef struct FADT
+{
+	ACPI_SDTHeader Header;
+	UINT32 FirmwareCtrl;
+	UINT32 DSDT;
+	UINT8 Reserved;
+	UINT8 PreferredPowerManagmnetProfile;
+	UINT16 SCIInterrupt;
+	UINT32 SMICommandPort;
+	UINT8 ACPIEnable;
+	UINT8 ACPIDisable;
+	UINT8 S4BIOSREQ;
+	UINT8 PSTATECTRL;
+	UINT32 PM1aEventBlock;
+	UINT32 PM1bEventBlock;
+	UINT32 PM1aControlBlock;
+	UINT32 PM1bControlBlock;
+	UINT32 PM2ControlBlock;
+	UINT32 PMTimerBlock;
+	UINT32 GPE0Block;
+	UINT32 GPE1Block;
+	UINT8 PM1EventLenght;
+	UINT8 PM1ControlLenght;
+	UINT8 PM2ControlLenght;
+	UINT8 PMTimerLenght;
+	UINT8 GPE0Lenght;
+	UINT8 GPE1Lenght;
+	UINT8 GPE1Base;
+	UINT8 CSTATECTRL;
+	UINT16 WorstC2Latency;
+	UINT16 WorstC3Latency;
+	UINT16 FlushSize;
+	UINT16 FlushStride;
+	UINT8 DutyOffset;
+	UINT8 DutyWidth;
+	UINT8 Day;
+	UINT8 Month;
+	UINT8 Century;
 
-		UINT16 BootArchitectureFlags;
-		UINT8 Reserved2;
-		UINT32 Flags;
+	UINT16 BootArchitectureFlags;
+	UINT8 Reserved2;
+	UINT32 Flags;
 
-		//ACPI 2.0+
-		ACPI_GAS ResetReg;
-		UINT8 ResetValue;
-		UINT8 Reserved3[3];
+	//ACPI 2.0+
+	ACPI_GAS ResetReg;
+	UINT8 ResetValue;
+	UINT8 Reserved3[3];
 
-		UINT64 X_FirmwareCtrl;
-		UINT64 X_DSDT;
+	UINT64 X_FirmwareCtrl;
+	UINT64 X_DSDT;
 
-		ACPI_GAS X_PM1aEventBlock;
-		ACPI_GAS X_PM1bEventBlock;
-		ACPI_GAS X_PM1aControlBlock;
-		ACPI_GAS X_PM1bControlBlock;
-		ACPI_GAS X_PM2ControlBlock;
-		ACPI_GAS X_PMTimerBlock;
-		ACPI_GAS X_GPE0Block;
-		ACPI_GAS X_GPE1Block;
-	}ACPI_FADT, ACPI_FACP;
+	ACPI_GAS X_PM1aEventBlock;
+	ACPI_GAS X_PM1bEventBlock;
+	ACPI_GAS X_PM1aControlBlock;
+	ACPI_GAS X_PM1bControlBlock;
+	ACPI_GAS X_PM2ControlBlock;
+	ACPI_GAS X_PMTimerBlock;
+	ACPI_GAS X_GPE0Block;
+	ACPI_GAS X_GPE1Block;
+}ACPI_FADT, ACPI_FACP;
 
-	typedef struct { UINT8 name[4]; } AML_Name;
+typedef struct { UINT8 name[4]; } AML_Name;
 
 #pragma pack(pop)
 
 
-	BOOL verifyACPI_RDSP(ACPI_RDSP*);
-	BOOL verifyACPI_XSDT(ACPI_XSDT*);
-	BOOL verifyACPI_RSDT(ACPI_RSDT*);
-	BOOL verifyACPI_FADT(ACPI_FADT*);
-	BOOL verifyACPI_DSDT(ACPI_DSDT*);
+BOOL verifyACPI_RDSP(ACPI_RDSP*);
+BOOL verifyACPI_XSDT(ACPI_XSDT*);
+BOOL verifyACPI_RSDT(ACPI_RSDT*);
+BOOL verifyACPI_FADT(ACPI_FADT*);
+BOOL verifyACPI_DSDT(ACPI_DSDT*);
 
-#define AML_OPCODE_ZEROOPCODE 0
-#define AML_OPCODE_ONEOPCODE 1
+ #define AML_OPCODE_ZEROOPCODE 0
+ #define AML_OPCODE_ONEOPCODE 1
 #define AML_OPCODE_ALIASOPCODE 0X6
-#define AML_OPCODE_NAMEOPCODE 0X8
-#define AML_OPCODE_BYTEPREFIX 0XA
-#define AML_OPCODE_WORDPREFIX 0XB
-#define AML_OPCODE_DWORDPREFIX 0XC
+ #define AML_OPCODE_NAMEOPCODE 0X8
+ #define AML_OPCODE_BYTEPREFIX 0XA
+ #define AML_OPCODE_WORDPREFIX 0XB
+ #define AML_OPCODE_DWORDPREFIX 0XC
 #define AML_OPCODE_STRINGPREFIX 0XD
-#define AML_OPCODE_QWORDPREFIX 0XE
-#define AML_OPCDOE_SCOPEOPCODE 0X10
-#define AML_OPCODE_BUFFEROPCODE 0X11
-#define AML_OPCODE_PACKAGEOPCODE 0X12
+ #define AML_OPCODE_QWORDPREFIX 0XE
+ #define AML_OPCDOE_SCOPEOPCODE 0X10
+ #define AML_OPCODE_BUFFEROPCODE 0X11
+ #define AML_OPCODE_PACKAGEOPCODE 0X12
 #define AML_OPCODE_VARIABLEPACKAGEOPCODE 0X13
 #define AML_OPCODE_METHODOPCODE 0x14
 #define AML_OPCODE_EXTERNAL 0X15
@@ -275,7 +275,7 @@ extern "C" {
 #define AML_OPCODE_RETURNOPCODE 0XA4
 #define AML_OPCODE_BREAKOPCODE 0XA5
 #define AML_OPCODE_BREAKPOINTOPCODE 0XCC
-#define AML_OPCODE_ONESOPCODE 0XFF
+ #define AML_OPCODE_ONESOPCODE 0XFF
 
 #define ACPI_SUCCESS 0
 #define ACPI_ERROR_INVALID_RDSP 1
@@ -339,7 +339,7 @@ extern "C" {
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
 
 	UINT8 ACPI_LastError();
-
+	AML_Name CreateName(const char* name);
 #ifdef __cplusplus 
 }
 #include "AMLCPP.h"

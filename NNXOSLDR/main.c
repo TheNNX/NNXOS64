@@ -131,9 +131,9 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	KeyboardInitialize();
 	
 	nnxalloc_init();
-	for (int a = 0; a < 8; a++) {
+	for (int a = 0; a < 64; a++) {
 		if(a % 16 == 0)
-		PrintT("%i/7\n", a);
+		PrintT("%i/63\n", a);
 		nnxalloc_append(PagingAllocatePage(), 4096);
 	}
 

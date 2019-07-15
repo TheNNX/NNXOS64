@@ -11,6 +11,8 @@ AS LONG AS IT WORKS (WHICH AT THE MOMENT
 IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 */
 
+#define PRINT_IN_DEBUG_ONLY
+
 #include "AML.h"
 #include "memory/nnxalloc.h"
 #include "memory/MemoryOperations.h"
@@ -19,17 +21,11 @@ IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 #define NULL 0
 #endif // ! NULL
 
+AML_Name g_HID;
 
-extern "C" { 
-
-	UINT8 localLastError = 0;
-
-	UINT8 ACPI_LastError() {
-		return localLastError;
-	}
-
+extern "C" {
+	extern UINT8 localLastError;
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table) {
-		PrintT("ACPI_AML_CODE class initialization\n");
 		if (!verifyACPI_DSDT(table))
 		{
 			localLastError = ACPI_ERROR_INVALID_DSDT;
@@ -39,139 +35,10 @@ extern "C" {
 		PrintT("ACPI_AML_CODE class initialized\n");
 		acpi.Parse(acpi.GetRootScope(), acpi.GetSize());
 	}
-
-	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp) {
-		if (!verifyACPI_RDSP(rdsp)) {
-			localLastError = ACPI_ERROR_INVALID_RDSP;
-			return 0;
-		}
-
-		UINT64 result = 0;
-		result = rdsp->RSDTAddress;
-		return (ACPI_RSDT*)result;
-	}
-
-	ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp) {
-		if (rdsp->Revision == 0)
-		{
-			localLastError = ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10;
-			return 0;
-		}
-		if (!verifyACPI_RDSP(rdsp)) {
-			localLastError = ACPI_ERROR_INVALID_RDSP;
-			return 0;
-		}
-
-		return rdsp->v20.XSDTAddress;
-	}
-
-
-
-	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
-		if (rdsp->Revision == 0) {
-			ACPI_RSDT* rsdt = GetRSDT(rdsp);
-			if (!rsdt)
-			{
-				localLastError = ACPI_ERROR_INVALID_RSDT;
-				return 0;
-			}
-			if (!verifyACPI_RSDT(rsdt)) {
-				localLastError = ACPI_ERROR_INVALID_RSDT;
-				return 0;
-			}
-			UINT32 numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
-			for (UINT32 a = 0; a < numberOfEntries; a++) {
-				UINT32 tableAddress = rsdt->OtherSDTs[a];
-				ACPI_SDTHeader* sdt = (ACPI_SDTHeader*)tableAddress;
-				const UINT8 dsdt[] = {'F','A','C','P'};
-				if (*((UINT32*)dsdt) == *((UINT32*)sdt->Signature))
-				{
-					PrintT("FACP: %i\n",a);
-					return (ACPI_FADT*)tableAddress;
-				}
-				else {
-					PrintT("%i: %s\n",a,sdt->Signature);
-				}
-			}
-		}
-		else {
-			ACPI_XSDT* xsdt = GetXSDT(rdsp);
-			if (!xsdt)
-			{
-				localLastError = ACPI_ERROR_INVALID_XSDT;
-				return 0;
-			}
-			if(!verifyACPI_XSDT(xsdt)) {
-				localLastError = ACPI_ERROR_INVALID_XSDT;
-				return 0;
-			}
-			UINT32 numberOfEntries = (xsdt->Header.Lenght - sizeof(xsdt->Header)) / 8;
-			for (UINT32 a = 0; a < numberOfEntries; a++) {
-				ACPI_SDTHeader* tableAddress = xsdt->OtherSDTs[a];
-				const UINT8 dsdt[] = { 'F','A','C','P' };
-				if (*((UINT32*)dsdt) == *((UINT32*)tableAddress->Signature))
-				{
-					PrintT("FACP: %i\n", a);
-					return (ACPI_FADT*)tableAddress;
-				}
-				else {
-					PrintT("%i: %s\n", a, tableAddress->Signature);
-				}
-			}
-		}
-		localLastError = ACPI_ERROR_INVALID_FADT;
-		return 0;
-	}
-
-	BOOL verifyACPI_FADT(ACPI_FADT* fadt) {
-		UINT32 sum = 0;
-		for (UINT32 index = 0; index < fadt->Header.Lenght; index++) {
-			sum += ((char*)fadt)[index];
-		}
-		return (sum & 0xFF) == 0;
-	}
-
-	BOOL verifyACPI_DSDT(ACPI_DSDT* dsdt) {
-		UINT32 sum = 0;
-		for (UINT32 index = 0; index < dsdt->Header.Lenght; index++) {
-			sum += ((char*)dsdt)[index];
-		}
-		return (sum & 0xFF) == 0;
-	}
-
-	BOOL verifyACPI_XSDT(ACPI_XSDT* xsdt) {
-		UINT32 sum = 0;
-		for (UINT32 index = 0; index < xsdt->Header.Lenght; index++) {
-			sum += ((char*)xsdt)[index];
-		}
-		return (sum & 0xFF) == 0;
-	}
-
-	BOOL verifyACPI_RSDT(ACPI_RSDT* rsdt) {
-		UINT32 Lenght = rsdt->Header.Lenght;
-		UINT64 sum = 0;
-		for (UINT32 a = 0; a < Lenght; a++) {
-			sum += ((UINT8*)rsdt)[a];
-		}
-		return (sum & 0xFF) == 0;
-	}
-
-	BOOL verifyACPI_RDSP(ACPI_RDSP* rdsp) {
-		UINT32 Lenght = sizeof(ACPI_RDSP) - sizeof(ACPI_RDSPExtension);
-		if (rdsp->Revision > 0) {
-			Lenght = rdsp->v20.Lenght;
-		}
-		PrintT("%x %i %x\n", rdsp, rdsp->Revision, Lenght);
-		UINT32 sum = 0;
-		for (UINT32 index = 0; index < Lenght; index++) {
-			sum += ((char*)rdsp)[index];
-		}
-		return (sum & 0xFF) == 0;
-	}
 }
+
 ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->table = (UINT8*)table;
-	PrintT("So far so good\n");
 	this->index = 0;
 	GetString(this->name, 4);
 	this->size = GetDword();
@@ -184,6 +51,7 @@ ACPI_AML_CODE::ACPI_AML_CODE(ACPI_DSDT* table) {
 	this->compilerRevision = GetDword();
 	this->root = AMLScope();
 	this->size -= index;
+	g_HID = CreateName("_HID");
 	InitializeNamespace(&(this->root));
 }
 
@@ -225,12 +93,13 @@ void ACPI_AML_CODE::GetString(UINT8* output, UINT32 lenght, UINT8 terminator) {
 
 AML_Name ACPI_AML_CODE::GetName() {
 	UINT32 temp = GetDword();
-	PrintT("name: %x\n",temp);
 	return *((AML_Name*)(&temp));
 }
 
 void ACPI_AML_CODE::Parse(AMLScope* scope, UINT32 size) {
+	PrintT("Parsing for scope: %x ", scope); PrintName(scope->name); PrintT("\n");
 	UINT64 indexMax = index + size;
+	PrintT("Size: %i (max index: %x)\n\n", size, indexMax);
 	while (index < indexMax) {
 		UINT8 opcode = GetByte();
 		switch (opcode)
@@ -251,19 +120,49 @@ void ACPI_AML_CODE::Parse(AMLScope* scope, UINT32 size) {
 		{
 			UINT64 index1 = index;
 			UINT32 PkgLenght = this->DecodePkgLenght();
+			
 			AMLNameWithinAScope nws = this->DecodeNameWithinAScope(scope);
-			AMLScope* scope = FindScope(nws.name, nws.scope);
-			if (scope == 0) {
+			AMLScope* _scope = FindScope(nws.name, nws.scope);
+			if (_scope == 0) {
 				PrintT("Couldn't find object: ");
 				PrintName(nws.name);
 				while (1);
 			}
 			UINT64 index2 = index;
 			UINT32 size = PkgLenght - (index2 - index1);
-			this->Parse(scope, size);
+			this->Parse(_scope, size);
+			break;
+		}
+		case AML_OPCODE_EXTOPPREFIX:
+		{
+			UINT8 extOpcode = GetByte();
+			switch (extOpcode)
+			{
+			case AML_OPCODE_EXTOP_DEVICEOPCODE:
+			{
+				UINT64 index1 = this->index;
+				UINT32 PkgLenght = DecodePkgLenght();
+				AMLNameWithinAScope nws = DecodeNameWithinAScope(scope);
+				UINT64 index2 = this->index;
+				UINT32 size = PkgLenght - (index2 - index1);
+				PrintT("Device: ");
+				PrintName(nws.name);
+				PrintT("\n");
+
+				AMLDevice *device = AMLDevice::newScope((const char*)nws.name.name, scope);
+				this->Parse(device, size);
+				device->Init_HID();
+				PrintT("_HID: %x", GetIntegerFromAMLObjRef(->Get_HID()->object));
+				break;
+			}
+			default:
+				PrintT("Error: unimplemented ACPI Machine Language opcode 0x5B 0x%X", GetByte());
+				while (1);
+			}
+			
 		}
 		default:
-			PrintT("Error: unimplmeneted ACPI Machine Language opcode: 0x%x\n",opcode);
+			PrintT("Error: unimplmeneted ACPI Machine Language opcode: 0x%X\n",opcode);
 			while (1);
 		}
 	}
@@ -287,8 +186,11 @@ AMLNameWithinAScope ACPI_AML_CODE::DecodeNameWithinAScope(AMLScope* current) {
 			}
 		}
 	}
-	if (this->table[index] == '^') {
+	if (this->table[index] == AML_OPCODE_PARENTPREFIXCHAR) {
 		dstScope = dstScope->parent;
+	}
+	else if (this->table[index] == AML_OPCODE_ROOTCHAROPCODE) {
+		dstScope = &(this->root);
 	}
 	AMLNameWithinAScope name;
 	name.name = GetName();
@@ -326,11 +228,8 @@ AMLNamedObject::AMLNamedObject(AML_Name name, AMLObjRef object) {
 
 AMLNamedObject* AMLNamedObject::newObject(AML_Name name, AMLObjRef object) {
 	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
-	AMLNamedObject toCopy = AMLNamedObject(name, object);
-	*output = toCopy;
-	PrintT("Allocated new named object for name ");
-	PrintName(output->name);
-	PrintT("\n");
+	*output = AMLNamedObject(name, object);
+	PrintT("Allocated new named object for name ");PrintName(output->name);PrintT(" at location %x\n", output);
 	return output;
 }
 
@@ -354,11 +253,13 @@ UINT32 ACPI_AML_CODE::DecodePkgLenght() {
 	if (PkgLengthType) {
 		UINT32 result = Byte0 & 0xf;
 		for (int a = 0; a < PkgLengthType; a++) {
-			result |= (GetByte() << (4 + 8 * a));
+			result |= (((UINT32)GetByte()) << (4 + 8 * a));
 		}
+		PrintT("PKGLENGHT: %x\n",result);
 		return result;
 	}
 	else {
+		PrintT("PKGLENGHT: %x\n", Byte0 & 0x3f);
 		return Byte0 & 0x3f;
 	}
 }
@@ -375,12 +276,38 @@ UINT8 ACPI_AML_CODE::DecodePackageNumElements() {
 	
 }
 
+UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef) {
+	switch (objRef.type)
+	{
+	case tAMLByte: 
+		return *((UINT8*)objRef.pointer);
+	case tAMLWord:
+		return *((UINT16*)objRef.pointer);
+	case tAMLDword:
+		return *((UINT32*)objRef.pointer);
+	case tAMLQword:
+		return *((UINT64*)objRef.pointer);
+	case tAMLString:
+		return *((UINT64*)objRef.pointer);
+	default:
+		return 0;
+	} 
+}
+
+
+UINT32 ACPI_AML_CODE::DecodeBufferSize() {
+	AMLObjRef objRef = GetAMLObject(GetByte());
+	return GetIntegerFromAMLObjRef(objRef);
+}
+
 AMLBuffer* ACPI_AML_CODE::CreateBuffer() {
 	UINT32 pkgLength = DecodePkgLenght();
-	UINT32 bufferSize = *((UINT32*)(GetAMLObject(GetByte()).pointer));
-	
+	UINT32 bufferSize = DecodeBufferSize();
+	PrintT("Allocating buffer");
 	AMLBuffer* amlBuffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
+	PrintT(" (%x)", amlBuffer);
 	*amlBuffer = AMLBuffer(bufferSize);
+	PrintT(" - Done\n");
 	for (int a = 0; a < bufferSize; a++) {
 		amlBuffer->data[a] = GetByte();
 	}
@@ -417,6 +344,7 @@ AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {
 }
 
 AMLObjRef ACPI_AML_CODE::GetAMLObject(UINT8 opcode) {
+
 	switch (opcode)
 	{
 	case AML_OPCODE_ZEROOPCODE:
@@ -429,6 +357,11 @@ AMLObjRef ACPI_AML_CODE::GetAMLObject(UINT8 opcode) {
 		return CreateAMLObjRef(&(*((UINT16*)nnxmalloc(sizeof(UINT16))) = GetWord()), tAMLWord);
 	case AML_OPCODE_DWORDPREFIX:
 		return CreateAMLObjRef(&(*((UINT32*)nnxmalloc(sizeof(UINT32))) = GetDword()), tAMLDword);
+	case AML_OPCODE_STRINGPREFIX: {
+		UINT8* str = (UINT8*)nnxcalloc(256, 1);
+		GetString(str, 255, 0);
+		return CreateAMLObjRef(str, tAMLString); 
+	}
 	case AML_OPCODE_QWORDPREFIX:
 		return CreateAMLObjRef(&(*((UINT64*)nnxmalloc(sizeof(UINT64))) = GetQword()), tAMLQword);
 	case AML_OPCODE_BUFFEROPCODE:
@@ -459,17 +392,47 @@ UINT32 ACPI_AML_CODE::GetSize() {
 
 void InitializeNamespace(AMLScope* root) {
 	PrintT("Adding predefined scopes.\n");
-	root->children.add(AMLScope::newScope("_SB_"));
-	root->children.add(AMLScope::newScope("_TZ_"));
-	root->children.add(AMLScope::newScope("_SI_"));
-	root->children.add(AMLScope::newScope("_PR_"));
-	root->children.add(AMLScope::newScope("_GPE"));
+	root->children.add(AMLScope::newScope("_SB_", root));
+	root->children.add(AMLScope::newScope("_TZ_", root));
+	root->children.add(AMLScope::newScope("_SI_", root));
+	root->children.add(AMLScope::newScope("_PR_", root));
+	root->children.add(AMLScope::newScope("_GPE", root));
 	PrintT("Adding predefined scopes ended.\n");
 }
 
-AMLScope* AMLScope::newScope(const char* name) {
+extern "C" AML_Name CreateName(const char* name) {
+	AML_Name n;
+	memcpy(n.name, (void*)name, 4);
+	return n;
+}
+
+AMLScope* AMLScope::newScope(const char* name, AMLScope* parent) {
 	AMLScope* result = (AMLScope*)nnxmalloc(sizeof(AMLScope));
 	*result = AMLScope();
-	memcpy(result->name.name, (void*)name, 4);
+	result->parent = parent;
+	result->name = CreateName(name);
+	return result;
+}
+
+
+AMLNamedObject* AMLDevice::Get_HID() {
+	return this->_HID;
+}
+
+void AMLDevice::Init_HID() {
+	NNXLinkedListEntry<AMLNamedObject*>* current = this->namedObjects.first;
+	while (current) {
+		if (current->value->name == g_HID) {
+			this->_HID = current->value;
+		}
+		current = current->next;
+	}
+}
+
+AMLDevice* AMLDevice::newScope(const char* name, AMLScope* parent) {
+	AMLDevice* result = (AMLDevice*)nnxmalloc(sizeof(AMLDevice));
+	*result = AMLDevice();
+	result->parent = parent;
+	result->name = CreateName(name);
 	return result;
 }

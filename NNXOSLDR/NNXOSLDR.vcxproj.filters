@@ -90,6 +90,9 @@
     <ClCompile Include="memory\nnxalloc.c">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\ACPI\ACPI.c">
+      <Filter>Source Files\HAL\ACPI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">

@@ -395,6 +395,7 @@ display:
 }
 
 void PrintT(char input[], ...) {
+
 	va_list		args;
 	va_start(args, input);
 	

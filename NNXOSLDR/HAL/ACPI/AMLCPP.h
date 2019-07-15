@@ -5,6 +5,12 @@
 
 AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type);
 
+class AMLNamedObject;
+class AMLScope;
+class AMLBuffer;
+class AMLPackage;
+class AMLDevice;
+
 class AMLNamedObject {
 public:
 	AML_Name name;
@@ -29,22 +35,21 @@ public:
 	AMLObjRef* elements;
 };
 
-class AMLScope {
+class AMLScope{
 public:
 	AML_Name name;
 	AMLScope* parent;
 	NNXLinkedList<AMLNamedObject*> namedObjects;
 	NNXLinkedList<AMLScope*> children;
+	NNXLinkedList<AMLDevice*> devices;
 	AMLScope();
-	static AMLScope* newScope(const char* name);
+	static AMLScope* newScope(const char* name, AMLScope* parent);
 };
 
 typedef struct {
 	AML_Name name;
 	AMLScope* scope;
 }AMLNameWithinAScope;
-
-
 
 class ACPI_AML_CODE
 {
@@ -80,6 +85,7 @@ private:
 	UINT16 GetWord();
 	UINT32 GetDword();
 	UINT64 GetQword();
+	UINT32 DecodeBufferSize();
 	AMLObjRef GetAMLObject(UINT8 opcode);
 
 	AML_Name GetName();
@@ -92,3 +98,15 @@ inline bool operator==(const AML_Name& name1, const AML_Name& name2) {
 }
 
 void InitializeNamespace(AMLScope* root);
+
+class AMLDevice : public AMLScope
+{
+private:
+	AMLNamedObject* _HID;
+public:
+	void Init_HID();
+	AMLNamedObject* Get_HID();
+	static AMLDevice* newScope(const char* name, AMLScope* parent);
+};
+
+UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef);

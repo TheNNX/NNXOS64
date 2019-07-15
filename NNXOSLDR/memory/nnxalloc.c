@@ -27,6 +27,11 @@ void nnxalloc_append(void* memblock, UINT64 memblockSize) {
 }
 
 void* nnxmalloc(UINT64 size) {
+	
+	if (size >= 4096) {
+		PrintT("Searching for a free block of size >= %i (impossible)\n", size);
+		while (1);
+	}
 	MemoryBlock* current = first;
 	
 	while (current) {
@@ -45,12 +50,14 @@ void* nnxmalloc(UINT64 size) {
 		}
 		current = current->next;
 	}
+	PrintT("No free block found\n");
 	return 0;
 }
 
 void* nnxcalloc(UINT64 n, UINT64 size) {
 	void* result = nnxmalloc(n*size);
-	memset(result, 0, size*n);
+	if(result)
+		memset(result, 0, size*n);
 	return result;
 }
 

@@ -97,6 +97,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CompileAsManaged>false</CompileAsManaged>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -176,6 +177,7 @@ compile.bat</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="device\Keyboard.c" />
+    <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\PCI\PCI.c" />

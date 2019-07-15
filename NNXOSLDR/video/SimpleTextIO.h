@@ -20,7 +20,21 @@ extern "C" {
 	UINT8 TextIOGetAlignment();
 	UINT8 TextIOIsInitialized();
 	void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
+#ifdef PRINT_IN_DEBUG_ONLY
+#ifndef DEBUG
+	inline void null(const char* input, ...) {
+		return;
+	}
+#define PrintT null
+#else
 	void PrintT(const char* input, ...);
+#endif
+#else
+	void PrintT(const char* input, ...);
+#endif
+
+	
+	
 	void TextIOClear();
 	UINT64 FrameBufferSize();
 
