@@ -64,8 +64,4 @@ void* nnxcalloc(UINT64 n, UINT64 size) {
 void nnxfree(void* address) {
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
-	while (!(toBeFreed->next->flags & (MEMBLOCK_USED)))
-	{
-		toBeFreed->next = toBeFreed->next->next;
-	}
 }
