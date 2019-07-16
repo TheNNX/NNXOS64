@@ -9,14 +9,15 @@ class AMLNamedObject;
 class AMLScope;
 class AMLBuffer;
 class AMLPackage;
+class AMLMethodDef;
 class AMLDevice;
 
 class AMLNamedObject {
 public:
-	AML_Name name;
+	AMLName name;
 	AMLObjRef object;
-	AMLNamedObject(AML_Name name, AMLObjRef object);
-	static AMLNamedObject* newObject(AML_Name name, AMLObjRef object);
+	AMLNamedObject(AMLName name, AMLObjRef object);
+	static AMLNamedObject* newObject(AMLName name, AMLObjRef object);
 };
 
 class AMLBuffer {
@@ -37,24 +38,25 @@ public:
 
 class AMLScope{
 public:
-	AML_Name name;
+	AMLName name;
 	AMLScope* parent;
 	NNXLinkedList<AMLNamedObject*> namedObjects;
 	NNXLinkedList<AMLScope*> children;
 	NNXLinkedList<AMLDevice*> devices;
+	NNXLinkedList<AMLMethodDef*> methods;
 	AMLScope();
 	static AMLScope* newScope(const char* name, AMLScope* parent);
 };
 
 typedef struct {
-	AML_Name name;
+	AMLName name;
 	AMLScope* scope;
 }AMLNameWithinAScope;
 
-class ACPI_AML_CODE
+class AMLParser
 {
 public:
-	ACPI_AML_CODE(ACPI_DSDT *table);
+	AMLParser(ACPI_DSDT *table);
 	void Parse(AMLScope* scope, UINT32 size);
 	AMLScope* GetRootScope();
 	UINT32 GetSize();
@@ -73,9 +75,10 @@ private:
 
 	AMLBuffer* CreateBuffer();
 	AMLPackage* CreatePackage();
-	AMLScope* FindScope(AML_Name name, AMLScope* current);
+	AMLMethodDef* CreateMethod(AMLName methodName, AMLScope* scope);
+	AMLScope* FindScope(AMLName name, AMLScope* current);
 
-	AMLNameWithinAScope DecodeNameWithinAScope(AMLScope* current);
+	AMLNameWithinAScope GetNameWithinAScope(AMLScope* current);
 
 	UINT32 DecodePkgLenght();
 	UINT8 DecodePackageNumElements();
@@ -88,12 +91,12 @@ private:
 	UINT32 DecodeBufferSize();
 	AMLObjRef GetAMLObject(UINT8 opcode);
 
-	AML_Name GetName();
+	AMLName GetName();
 	AMLScope root;
 };
 
-void PrintName(AML_Name name);
-inline bool operator==(const AML_Name& name1, const AML_Name& name2) {
+void PrintName(AMLName name);
+inline bool operator==(const AMLName& name1, const AMLName& name2) {
 	return (*((DWORD*)name1.name) == *((DWORD*)name2.name));
 }
 
@@ -110,3 +113,14 @@ public:
 };
 
 UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef);
+
+class AMLMethodDef {
+public:
+	AMLNameWithinAScope name;
+	UINT8 parameterNumber;
+	AMLParser* parser;
+	UINT64 codeIndex;
+	UINT64 maxCodeIndex;
+
+	AMLMethodDef(AMLName, AMLParser*, AMLScope*);
+};

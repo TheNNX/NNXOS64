@@ -98,6 +98,7 @@ BOOL verifyACPI_FADT(ACPI_FADT* fadt) {
 }
 
 BOOL verifyACPI_DSDT(ACPI_DSDT* dsdt) {
+	PrintT("Verifying DSDT 0x%X\n",dsdt);
 	UINT32 sum = 0;
 	for (UINT32 index = 0; index < dsdt->Header.Lenght; index++) {
 		sum += ((char*)dsdt)[index];

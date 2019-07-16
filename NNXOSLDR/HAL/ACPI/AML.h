@@ -143,7 +143,7 @@ typedef struct FADT
 	ACPI_GAS X_GPE1Block;
 }ACPI_FADT, ACPI_FACP;
 
-typedef struct { UINT8 name[4]; } AML_Name;
+typedef struct { UINT8 name[4]; } AMLName;
 
 #pragma pack(pop)
 
@@ -339,7 +339,7 @@ BOOL verifyACPI_DSDT(ACPI_DSDT*);
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
 
 	UINT8 ACPI_LastError();
-	AML_Name CreateName(const char* name);
+	AMLName CreateName(const char* name);
 #ifdef __cplusplus 
 }
 #include "AMLCPP.h"
