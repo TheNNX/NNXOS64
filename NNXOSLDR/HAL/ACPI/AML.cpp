@@ -176,6 +176,17 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 				device->Init_HID();
 				PrintT("_HID: %x", GetIntegerFromAMLObjRef(device->Get_HID()->object));
 				break;
+			}case AML_OPCODE_EXTOP_OPREGIONOPCODE: {
+				PrintT("Declaring operation region (pls don't crash)\n");
+				AMLNameWithinAScope name = GetNameWithinAScope(scope);
+				AMLOpetationRegion* prevOpRegion = scope->opRegion;
+				scope->opRegion = CreateOperationRegion(name);
+				scope->opRegion->type = GetByte();
+				scope->opRegion->offset = GetIntegerFromAMLObjRef(GetAMLObject(GetByte()));
+				scope->opRegion->lenght = GetInteger();
+				scope->opRegion->previous = prevOpRegion;
+				PrintT("Done\n");
+				break;
 			}
 			default:
 				PrintT("Error: unimplemented ACPI Machine Language opcode 0x5B 0x%X", extOpcode);
@@ -188,6 +199,14 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			while (1);
 		}
 	}
+}
+
+UINT64 AMLParser::GetInteger() {
+	AMLObjRef objRef = GetAMLObject(GetByte());
+	PrintT("got ref: %x (%x)\n",objRef.pointer,objRef.type);
+	UINT64 res = GetIntegerFromAMLObjRef(objRef);
+	PrintT("result : %x\n",res);
+	return res;
 }
 
 AMLNameWithinAScope AMLParser::GetNameWithinAScope(AMLScope* current) {
@@ -311,7 +330,7 @@ UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef) {
 	case tAMLQword:
 		return *((UINT64*)objRef.pointer);
 	case tAMLString:
-		return *((UINT64*)objRef.pointer);
+		return (UINT64)objRef.pointer;
 	default:
 		return 0;
 	} 
@@ -367,7 +386,7 @@ AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {
 }
 
 AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
-
+	PrintT("opcode: %x\n",opcode);
 	switch (opcode)
 	{
 	case AML_OPCODE_ZEROOPCODE:
@@ -391,7 +410,7 @@ AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
 	case AML_OPCODE_PACKAGEOPCODE:
 		return CreateAMLObjRef(CreatePackage(), tAMLPackage);
 	case AML_OPCODE_ONESOPCODE:
-
+		return CreateAMLObjRef(&(*((UINT8*)nnxmalloc(sizeof(UINT8))) = this->revision < 2 ? 0xFFFFFFFF : 0xFFFFFFFFFFFFFFFF), this->revision < 2 ? tAMLDword : tAMLQword);
 	default:
 		return CreateAMLObjRef(NULL, tAMLInvalid);
 	}
@@ -400,10 +419,6 @@ AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
 AMLBuffer::AMLBuffer(UINT32 size) {
 	this->size = size;
 	this->data = (UINT8*)nnxcalloc(size, 1);
-}
-
-AMLBuffer::~AMLBuffer() {
-	nnxfree(this->data);
 }
 
 AMLScope* AMLParser::GetRootScope() {
@@ -458,6 +473,7 @@ AMLDevice* AMLDevice::newScope(const char* name, AMLScope* parent) {
 	*result = AMLDevice();
 	result->parent = parent;
 	result->name = CreateName(name);
+	result->opRegion = 0;
 	return result;
 }
 
@@ -474,4 +490,11 @@ AMLMethodDef* AMLParser::CreateMethod(AMLName methodName, AMLScope* scope) {
 	method->codeIndex = 0;
 	method->maxCodeIndex = 0;
 	return method;
+}
+
+AMLOpetationRegion* AMLParser::CreateOperationRegion(AMLNameWithinAScope name) {
+	AMLOpetationRegion* opregion = (AMLOpetationRegion*)nnxmalloc(sizeof(AMLOpetationRegion));
+	*opregion = AMLOpetationRegion();
+	opregion->name = name;
+	return opregion;
 }

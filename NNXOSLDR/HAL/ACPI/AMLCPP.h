@@ -11,6 +11,8 @@ class AMLBuffer;
 class AMLPackage;
 class AMLMethodDef;
 class AMLDevice;
+class AMLField;
+class AMLOpetationRegion;
 
 class AMLNamedObject {
 public:
@@ -23,7 +25,6 @@ public:
 class AMLBuffer {
 public:
 	AMLBuffer(UINT32 size);
-	~AMLBuffer();
 	UINT8 *data;
 private:
 	UINT32 size;
@@ -46,6 +47,7 @@ public:
 	NNXLinkedList<AMLMethodDef*> methods;
 	AMLScope();
 	static AMLScope* newScope(const char* name, AMLScope* parent);
+	AMLOpetationRegion *opRegion;
 };
 
 typedef struct {
@@ -88,9 +90,10 @@ private:
 	UINT16 GetWord();
 	UINT32 GetDword();
 	UINT64 GetQword();
+	UINT64 GetInteger();
 	UINT32 DecodeBufferSize();
 	AMLObjRef GetAMLObject(UINT8 opcode);
-
+	AMLOpetationRegion* CreateOperationRegion(AMLNameWithinAScope);
 	AMLName GetName();
 	AMLScope root;
 };
@@ -123,4 +126,19 @@ public:
 	UINT64 maxCodeIndex;
 
 	AMLMethodDef(AMLName, AMLParser*, AMLScope*);
+};
+
+class AMLField {
+public:
+	AMLOpetationRegion* parent;
+};
+
+class AMLOpetationRegion {
+public:
+	UINT8 type;
+	UINT64 offset;
+	UINT64 lenght;
+	NNXLinkedList<AMLField*> fields;
+	AMLOpetationRegion* previous;
+	AMLNameWithinAScope name;
 };

@@ -37,7 +37,7 @@ void* nnxmalloc(UINT64 size) {
 	while (current) {
 		
 		if (!(current->flags & MEMBLOCK_USED)) {
-			if (current->size > size) {
+			if (current->size > size + sizeof(MemoryBlock)) {
 				current->flags |= MEMBLOCK_USED;
 				MemoryBlock* newBlock = (MemoryBlock*)(((UINT64)current) + size + sizeof(MemoryBlock));
 				newBlock->next = current->next;
@@ -62,6 +62,7 @@ void* nnxcalloc(UINT64 n, UINT64 size) {
 }
 
 void nnxfree(void* address) {
+	PrintT("FREEING MEMORY\n");
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 }

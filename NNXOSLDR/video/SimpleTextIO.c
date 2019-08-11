@@ -264,35 +264,6 @@ void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 colo
 }
 
 void TextIOOutputStringGlobal(const char* input) {
-	/*if (!TextIOIsInitialized())
-		return;
-
-	int stringIndex = 0;
-
-	while (input[stringIndex])
-	{
-		if (gCursorX + 8 > gMaxX || input[stringIndex] == '\n') {
-			gCursorX = gMinX;
-			gCursorY += 9;
-		}
-		if (gCursorY + 8 > gMaxY) {
-			TextIOMoveUpARow();
-		}
-
-		if (align)
-		{
-			gCursorX+=(align-1);
-			gCursorX /= align;
-			gCursorX *= align;
-		}
-
-		TextIOOutputCharacterWithinBox(input[stringIndex], gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
-		if (align)
-			gCursorX += align;
-		else
-			gCursorX += 8;
-		stringIndex++;
-	}*/
 	TextIOOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
@@ -355,6 +326,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						TextIOOutputStringGlobal(str);
 						break;
 					}
+					case 'b':
 					case 'B': {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
