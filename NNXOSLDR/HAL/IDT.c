@@ -4,8 +4,8 @@
 
 void ExceptionHandler(UINT32 n, UINT32 errcode) {
 	if (n == 0xe)
-		PrintT("pgf: %x ",GetCR2());
-	PrintT("%x %x\n",(UINT64)n,(UINT64)errcode);
+		PrintT("page fault at address: %x ",GetCR2());
+	PrintT("error: %x %x\n",(UINT64)n,(UINT64)errcode);
 	while (1);
 }
 

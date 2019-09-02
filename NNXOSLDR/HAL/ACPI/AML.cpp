@@ -1,15 +1,10 @@
 /*
-			WORK IN PROGRESS
-		  IT IS NOT FUNCTIONAL
-
-AND THE NAMES OF STRUCTURES AND FUNCTIONS
-ARE VERY BAD, LIKE REALLY BAD. DID YOU
-EXPECT ME TO ACTUALLY READ THE ACPI/AML
-SPECIFIACTION? I'M NOT GOING TO READ THE
-1000 PAGES JUST SO SOME NAMES ARE CORRECT.
-AS LONG AS IT WORKS (WHICH AT THE MOMENT
-IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
-*/
+	I'LL FINISH THE PARSER AFTER
+	DOING SOME MORE INTERESTING 
+	STUFF. IT WORKS IN THE QEMU 
+	VERSION I'M USING SO IT'S 
+	   GOOD ENOUGH FOR NOW.
+								  */
 
 #define PRINT_IN_DEBUG_ONLY
 
@@ -99,7 +94,6 @@ AMLName AMLParser::GetName() {
 void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 	PrintT("Parsing for scope: %x ", scope); PrintName(scope->name); PrintT("\n");
 	UINT64 indexMax = index + size;
-	PrintT("Size: %i (max index: %x)\n\n", size, indexMax);
 	while (index < indexMax) {
 		UINT8 opcode = GetByte();
 		switch (opcode)
@@ -107,7 +101,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 		case AML_OPCODE_ZEROOPCODE:
 		case AML_OPCODE_ONESOPCODE:
 			break;
-		case AML_OPCODE_NAMEOPCODE: 
+		case AML_OPCODE_NAMEOPCODE:
 		{
 			AMLNameWithinAScope nws = this->GetNameWithinAScope(scope);
 			AMLNamedObject *namedObject = AMLNamedObject::newObject(nws.name, CreateAMLObjRef(NULL, tAMLInvalid));
@@ -120,7 +114,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 		{
 			UINT64 index1 = index;
 			UINT32 PkgLenght = this->DecodePkgLenght();
-			
+
 			AMLNameWithinAScope nws = this->GetNameWithinAScope(scope);
 			AMLScope* _scope = FindScope(nws.name, nws.scope);
 			if (_scope == 0) {
@@ -144,14 +138,10 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			UINT64 index2 = this->index;
 			methodDef->codeIndex = index2;
 			methodDef->maxCodeIndex = methodDef->codeIndex + PkgLenght - (index2 - index1);
-			//PrintT("Adding method "); PrintName(methodDef->name.name); PrintT(" of scope "); PrintName(methodDef->name.scope->name); PrintT("\n");
 			methodDef->parameterNumber = flags & 0x7;
-			//PrintT("   Parameter number: %i\n", methodDef->parameterNumber);
-			//PrintT("   Flags: 0b%b\n", flags >> 3);
-			
+
 			//we want to skip the code of the function since this class is only a parser, there will be a separate 'AMLExecutor' class that will deal with the code execution
 			this->index = methodDef->maxCodeIndex;
-			PrintT("jumping to %x\n", this->index);
 
 			break;
 		}
@@ -174,10 +164,9 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 				AMLDevice *device = AMLDevice::newScope((const char*)nws.name.name, scope);
 				this->Parse(device, size);
 				device->Init_HID();
-				PrintT("_HID: %x", GetIntegerFromAMLObjRef(device->Get_HID()->object));
+				PrintT("_HID: %x\n", GetIntegerFromAMLObjRef(device->Get_HID()->object));
 				break;
 			}case AML_OPCODE_EXTOP_OPREGIONOPCODE: {
-				PrintT("Declaring operation region (pls don't crash)\n");
 				AMLNameWithinAScope name = GetNameWithinAScope(scope);
 				AMLOpetationRegion* prevOpRegion = scope->opRegion;
 				scope->opRegion = CreateOperationRegion(name);
@@ -188,6 +177,35 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 				PrintT("Done\n");
 				break;
 			}
+			case AML_OPCODE_EXTOP_FIELDOPCODE: {
+				PrintT("Declaring field\n");
+
+				UINT32 startIndex = this->index;
+				UINT32 pkgLenght = DecodePkgLenght();
+
+				AMLNameWithinAScope fieldName = GetNameWithinAScope(scope);
+				UINT8 fieldFlags = GetByte();
+
+				AMLField* field = this->CreateField(scope->opRegion, fieldFlags & 0xf, (fieldFlags & 0x10) >> 4, (fieldFlags & 0xE0) >> 5);
+
+				INT64 pkgLenghtCounter = pkgLenght - (this->index - startIndex);
+
+				while (pkgLenghtCounter > 0) {
+					startIndex = this->index;
+
+					AMLNameWithinAScope name = GetNameWithinAScope(scope);
+					AMLFieldUnit* fieldUnit = CreateFieldUnit(name.name, GetByte());
+					name.scope->namedObjects.add(AMLNamedObject::newObject(name.name, CreateAMLObjRef(fieldUnit, tAMLFieldUnit)));
+					field->fieldUnits.add(fieldUnit);
+					PrintName(fieldUnit->name);
+
+					pkgLenghtCounter -= (this->index - startIndex);
+				}
+
+				scope->opRegion->fields.add(field);
+				break;
+			}
+
 			default:
 				PrintT("Error: unimplemented ACPI Machine Language opcode 0x5B 0x%X", extOpcode);
 				while (1);
@@ -195,17 +213,21 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			break;
 		}
 		default:
-			PrintT("Error: unimplmeneted ACPI Machine Language opcode: 0x%X\n",opcode);
+			PrintT("Error: unimplmeneted ACPI Machine Language opcode: 0x%X\n", opcode);
 			while (1);
 		}
+	}
+	if (scope != &root) {
+		PrintT("Parsing for scope "); PrintName(scope->name); PrintT(" ended.\n\n");
+	}
+	else {
+		PrintT("Parsing for scope <root> ended.\n\n");
 	}
 }
 
 UINT64 AMLParser::GetInteger() {
 	AMLObjRef objRef = GetAMLObject(GetByte());
-	PrintT("got ref: %x (%x)\n",objRef.pointer,objRef.type);
 	UINT64 res = GetIntegerFromAMLObjRef(objRef);
-	PrintT("result : %x\n",res);
 	return res;
 }
 
@@ -270,7 +292,7 @@ AMLNamedObject::AMLNamedObject(AMLName name, AMLObjRef object) {
 AMLNamedObject* AMLNamedObject::newObject(AMLName name, AMLObjRef object) {
 	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
 	*output = AMLNamedObject(name, object);
-	PrintT("Allocated new named object for name ");PrintName(output->name);PrintT(" at location %x\n", output);
+	//PrintT("Allocated new named object for name ");PrintName(output->name);PrintT(" at location %x\n", output);
 	return output;
 }
 
@@ -297,11 +319,9 @@ UINT32 AMLParser::DecodePkgLenght() {
 		for (int a = 0; a < PkgLengthType; a++) {
 			result |= (((UINT32)GetByte()) << (4 + 8 * a));
 		}
-		PrintT("PKGLENGHT: %x\n",result);
 		return result;
 	}
 	else {
-		PrintT("PKGLENGHT: %x\n", Byte0 & 0x3f);
 		return Byte0 & 0x3f;
 	}
 }
@@ -342,18 +362,74 @@ UINT32 AMLParser::DecodeBufferSize() {
 	return GetIntegerFromAMLObjRef(objRef);
 }
 
-AMLBuffer* AMLParser::CreateBuffer() {
-	UINT32 pkgLength = DecodePkgLenght();
+AMLBuffer* AMLParser::ReadBufferData() {
 	UINT32 bufferSize = DecodeBufferSize();
-	PrintT("Allocating buffer");
 	AMLBuffer* amlBuffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
-	PrintT(" (%x)", amlBuffer);
 	*amlBuffer = AMLBuffer(bufferSize);
-	PrintT(" - Done\n");
 	for (int a = 0; a < bufferSize; a++) {
 		amlBuffer->data[a] = GetByte();
 	}
 	return amlBuffer;
+}
+
+int __strlen(char* string) {
+	int a = 0;
+	while (string[a]) a++;
+	return a;
+}
+
+AMLBuffer* AMLParser::AMLToBuffer(AMLObjRef data) {
+	AMLBuffer* buffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
+	switch (data.type) {
+	case tAMLString:
+		*buffer = AMLBuffer((__strlen((char*)data.pointer))+1);
+		for (int a = 0; a < buffer->size; a++)
+			buffer->data[a] = ((char*)data.pointer)[a];
+		break;
+	case tAMLDword:
+		*buffer = AMLBuffer(4);
+		for (int a = 0; a < 4; a++) 
+			buffer->data[a] = ((UINT8*)data.pointer)[a];
+		break;
+	case tAMLQword:
+		*buffer = AMLBuffer(8);
+		for (int a = 0; a < 8; a++)
+			buffer->data[a] = ((UINT8*)data.pointer)[a];
+		break;
+	case tAMLBuffer:
+		*buffer = AMLBuffer(((AMLBuffer*)data.pointer)->size);
+		for (int a = 0; a < buffer->size; a++) {
+			buffer->data[a] = ((AMLBuffer*)data.pointer)->data[a];
+		}
+		break;
+	default:
+		return 0;
+	}
+	return buffer;
+}
+
+AMLBuffer* AMLParser::CreateBufferFromBufferData() {
+	switch(UINT8 opcode = GetByte()) {
+	case AML_OPCODE_TOBUFFEROPCODE:	//TODO: rest of type 5 opcodes
+		return this->CreateBufferFromType5Opcode(opcode);
+	default:
+		this->index--;
+		return ReadBufferData();
+	}
+}
+
+AMLBuffer* AMLParser::CreateBufferFromType5Opcode(UINT8 opcode) {
+	switch (opcode) {
+	case AML_OPCODE_TOBUFFEROPCODE:
+		return AMLToBuffer(GetAMLObject(GetByte()));
+	}
+	return 0;
+}
+
+
+AMLBuffer* AMLParser::CreateBuffer() {
+	UINT32 pkgLength = DecodePkgLenght();
+	return ReadBufferData();
 }
 
 AMLPackage::AMLPackage(UINT8 numElements) {
@@ -368,11 +444,9 @@ AMLPackage* AMLParser::CreatePackage() {
 	*amlPackage = AMLPackage(numElements);
 
 	amlPackage->elements = (AMLObjRef*)(nnxcalloc(numElements, sizeof(AMLObjRef)));
-	PrintT("Package elements:\n");
 	for (int a = 0; a < numElements; a++) {
 		AMLObjRef element = GetAMLObject(GetByte());
 		amlPackage->elements[a] = element;
-		PrintT("   Type: 0x%x, \n", amlPackage->elements[a].type);
 	}
 
 	return amlPackage;
@@ -386,7 +460,6 @@ AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {
 }
 
 AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
-	PrintT("opcode: %x\n",opcode);
 	switch (opcode)
 	{
 	case AML_OPCODE_ZEROOPCODE:
@@ -436,7 +509,6 @@ void InitializeNamespace(AMLScope* root) {
 	root->children.add(AMLScope::newScope("_SI_", root));
 	root->children.add(AMLScope::newScope("_PR_", root));
 	root->children.add(AMLScope::newScope("_GPE", root));
-	PrintT("Adding predefined scopes ended.\n");
 }
 
 extern "C" AMLName CreateName(const char* name) {
@@ -497,4 +569,22 @@ AMLOpetationRegion* AMLParser::CreateOperationRegion(AMLNameWithinAScope name) {
 	*opregion = AMLOpetationRegion();
 	opregion->name = name;
 	return opregion;
+}
+
+AMLField* AMLParser::CreateField(AMLOpetationRegion *parent, UINT8 access, UINT8 lock, UINT8 updateRule) {
+	AMLField* field = (AMLField*)nnxmalloc(sizeof(AMLField));
+	*field = AMLField();
+	field->lock = lock;
+	field->accessWidth = access;
+	field->parent = parent;
+	field->updateRule = updateRule;
+	return field;
+}
+
+AMLFieldUnit* AMLParser::CreateFieldUnit(AMLName name, UINT8 width) {
+	AMLFieldUnit* fieldUnit = (AMLFieldUnit*)nnxmalloc(sizeof(AMLFieldUnit));
+	*fieldUnit = AMLFieldUnit();
+	fieldUnit->width = width;
+	fieldUnit->name = name;
+	return fieldUnit;
 }

@@ -13,6 +13,7 @@ class AMLMethodDef;
 class AMLDevice;
 class AMLField;
 class AMLOpetationRegion;
+class AMLFieldUnit;
 
 class AMLNamedObject {
 public:
@@ -26,8 +27,7 @@ class AMLBuffer {
 public:
 	AMLBuffer(UINT32 size);
 	UINT8 *data;
-private:
-	UINT32 size;
+	UINT32 size;	
 };
 
 class AMLPackage {
@@ -92,8 +92,14 @@ private:
 	UINT64 GetQword();
 	UINT64 GetInteger();
 	UINT32 DecodeBufferSize();
+	AMLBuffer * ReadBufferData();
+	AMLBuffer * AMLToBuffer(AMLObjRef data);
+	AMLBuffer * CreateBufferFromBufferData();
+	AMLBuffer * CreateBufferFromType5Opcode(UINT8 opcode);
 	AMLObjRef GetAMLObject(UINT8 opcode);
-	AMLOpetationRegion* CreateOperationRegion(AMLNameWithinAScope);
+	AMLOpetationRegion* CreateOperationRegion(AMLNameWithinAScope opRegionName);
+	AMLField* CreateField(AMLOpetationRegion* parent, UINT8 access, UINT8 lock, UINT8 updateRule);
+	AMLFieldUnit* CreateFieldUnit(AMLName fieldUnitName, UINT8 width);
 	AMLName GetName();
 	AMLScope root;
 };
@@ -128,9 +134,19 @@ public:
 	AMLMethodDef(AMLName, AMLParser*, AMLScope*);
 };
 
+class AMLFieldUnit {
+public:
+	AMLName name;
+	UINT8 width;
+};
+
 class AMLField {
 public:
 	AMLOpetationRegion* parent;
+	UINT8 accessWidth;
+	UINT8 lock;
+	UINT8 updateRule;
+	NNXLinkedList<AMLFieldUnit*> fieldUnits;
 };
 
 class AMLOpetationRegion {
