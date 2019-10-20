@@ -5,8 +5,9 @@
 #include "low.h"
 #include "pe/pe.h"
 
-#define MAXIMAL_STAGE2_FILESIZE 64 * 1024 //64KiB
+#define MAXIMAL_STAGE2_FILESIZE 256 * 1024
 
+CHAR8 fileBuffer[MAXIMAL_STAGE2_FILESIZE];
 EFI_BOOT_SERVICES* bs;
 
 void(*stage2_entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
@@ -193,7 +194,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	EFI_FILE_PROTOCOL* fp = GetFile(L"NNXOSLDR.exe");
 
 	int limitBufferSize = MAXIMAL_STAGE2_FILESIZE;
-	CHAR8 fileBuffer[MAXIMAL_STAGE2_FILESIZE];
 	char finfoBuffer[512];
 	UINTN finfoBufferSize = sizeof(finfoBuffer);
 	EFI_FILE_INFO *finfo = (void*)finfoBuffer;

@@ -13,7 +13,7 @@
 void IntTestASM();
 
 void IntTestC() {
-	PrintT("Interrupt test.\n");
+	//PrintT("Interrupt test.\n");
 }
 
 const char version[] = " 0.1";
@@ -137,8 +137,6 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 		nnxalloc_append(PagingAllocatePage(), 4096);
 	}
 
-	EnableInterrupts();
-
 	UINT8 status = 0;
 	ACPI_FACP* facp = GetFADT(rdsp);
 	if (!facp) {
@@ -150,14 +148,11 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 		status = ACPI_ParseDSDT(facp->DSDT);
 	else
 		status = ACPI_ParseDSDT(facp->X_DSDT);
-	if (status) {
-		ACPI_ERROR(status);
-		while (1);
-	}
-
-	PCIScan();
+	
 
 	#ifndef BOCHS
+	TextIOClear();
+	TextIOSetCursorPosition(0, 0);
 	PrintT("NNXOSLDR.exe version %s\n",version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
@@ -172,8 +167,15 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	drawMap();
 
-	TextIOSetCursorPosition(0, 580);
+	TextIOSetCursorPosition(0, 200);
+
+	PCIScan();
+
+	EnableInterrupts();
+
 	#endif
 	
+	
+
 	while (1);
 }

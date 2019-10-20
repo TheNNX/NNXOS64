@@ -11,7 +11,7 @@ void* PagingAllocatePage() {
 	void* result;
 	UINT64**** pml4 = GetCR3();
 	
-	for (UINT64 pdp_number = 64; pdp_number < 512; pdp_number++) {
+	for (UINT64 pdp_number = 128; pdp_number < 512; pdp_number++) {
 		for (UINT64 pd_number = 0; pd_number < 512; pd_number++) {
 			for (UINT64 pt_number = 0; pt_number < 512; pt_number++) {
 				for (UINT64 page_number = 0; page_number < 512; page_number++) {

@@ -302,6 +302,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 				break;
 			case '%':
 				i++;
+
 				switch (input[i])
 				{
 					case '%':
@@ -311,6 +312,18 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						((UINT64*)args) += 1;
 						TextIOOutputStringGlobal(toDisplay);
 						break;
+					case 'S': {
+						char* toDisplay = *((UINT64*)args);
+						((UINT64*)args) += 1;
+						UINT64 lenght = *((UINT64*)args);
+						((UINT64*)args) += 1;
+						for (UINT64 a = 0; a < lenght; a++) {
+							char* string[2] = { 0,0 };
+							string[0] = toDisplay[a];
+							TextIOOutputStringGlobal(string);
+						}
+						break; 
+					}
 					case 'c':;
 						char string[2] = {0,0};
 						string[0] = *((UINT64*)args);
@@ -330,7 +343,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 					case 'B': {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
-						char str[32] = { 0 };
+						char str[65] = { 0 };
 						itoa(c, 2, str);
 						TextIOOutputStringGlobal(str);
 						break;

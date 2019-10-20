@@ -1,5 +1,6 @@
 #pragma once
 #include "nnxint.h"
+#include "../../video/SimpleTextIO.h"
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA 0xCFC
 
@@ -43,12 +44,14 @@
 
 
 UINT16 PCIConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+UINT32 PCIConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
 
 inline UINT16 PCIGetVendor(UINT8 bus, UINT8 slot, UINT8 function) {
 	return PCIConfigReadWord(bus, slot, function, 0);
 }
 
 inline bool PCICheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function) {
+
 	return PCIGetVendor(bus, slot, function) != 0xffff;
 }
 
@@ -67,6 +70,20 @@ inline UINT8 PCIGetClass(UINT8 bus, UINT8 slot, UINT8 function) {
 inline UINT8 PCItoPCIGetSecondaryBus(UINT8 bus, UINT8 slot, UINT8 function) {
 	return PCIConfigReadWord(bus, slot, function, 0x19) & 0xff;
 }
+
+inline UINT8 PCIGetProgIF(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PCIConfigReadWord(bus, slot, function, 0x9) & 0xff;
+}
+
+inline UINT32 PCIGetBAR(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n) {
+	return PCIConfigReadDWord(bus, slot, function, 0x10 + 0x4 * n);
+}
+
+#define PCIGetBAR0(b,s,f) PCIGetBAR(b,s,f,0)
+#define PCIGetBAR1(b,s,f) PCIGetBAR(b,s,f,1)
+#define PCIGetBAR2(b,s,f) PCIGetBAR(b,s,f,2)
+#define PCIGetBAR3(b,s,f) PCIGetBAR(b,s,f,3)
+#define PCIGetBAR4(b,s,f) PCIGetBAR(b,s,f,4)
 
 UINT8 PCIScan();
 void PCIScanBus(UINT8 bus);

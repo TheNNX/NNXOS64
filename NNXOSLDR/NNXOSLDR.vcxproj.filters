@@ -55,6 +55,12 @@
     <Filter Include="Header Files\HAL\ACPI">
       <UniqueIdentifier>{f8f3a94d-9676-4cd9-a625-92c855610905}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\device\hdd">
+      <UniqueIdentifier>{c931ed91-d193-45d1-b8d7-4e55540d6acb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\device\fs">
+      <UniqueIdentifier>{ad3aea25-0472-4565-8cca-8922d73f09b8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -92,6 +98,9 @@
     </ClCompile>
     <ClCompile Include="HAL\ACPI\ACPI.c">
       <Filter>Source Files\HAL\ACPI</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\PCI\PCIIDE.c">
+      <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +151,21 @@
     </ClInclude>
     <ClInclude Include="HAL\ACPI\AMLCPP.h">
       <Filter>Header Files\HAL\ACPI</Filter>
+    </ClInclude>
+    <ClInclude Include="device\hdd\hdd.h">
+      <Filter>Header Files\device\hdd</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\fat32.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\fat.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxerr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\PCI\PCIIDE.h">
+      <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

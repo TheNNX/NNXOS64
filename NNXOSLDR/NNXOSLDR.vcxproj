@@ -181,6 +181,7 @@ compile.bat</Command>
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\PCI\PCI.c" />
+    <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
@@ -190,12 +191,16 @@ compile.bat</Command>
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="device\fs\fat.h" />
+    <ClInclude Include="device\fs\fat32.h" />
+    <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\GDT.h" />
     <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="HAL\PCI\PCI.h" />
+    <ClInclude Include="HAL\PCI\PCIIDE.h" />
     <ClInclude Include="HAL\PIC.h" />
     <ClInclude Include="HAL\Port.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
@@ -203,6 +208,7 @@ compile.bat</Command>
     <ClInclude Include="memory\physical_allocator.h" />
     <ClInclude Include="multitasking\Task.h" />
     <ClInclude Include="nnxarg.h" />
+    <ClInclude Include="nnxerr.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
