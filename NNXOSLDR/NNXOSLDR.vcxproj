@@ -100,15 +100,17 @@
       <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
-      <BaseAddress>0x10000</BaseAddress>
+      <BaseAddress>0x100000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <SubSystem>Native</SubSystem>
+      <AssemblyDebug>true</AssemblyDebug>
+      <MergeSections>.pdata=.data</MergeSections>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -121,6 +123,9 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <CustomBuild>
       <Outputs>$(ProjectDir)%(Filename).obj</Outputs>
     </CustomBuild>
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\buildCopyFiles.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
     <ClCompile>
@@ -137,7 +142,7 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <PreprocessorDefinitions>_MBCS;BOCHS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalDependencies>$(ProjectDir)memory.obj;$(ProjectDir)gdt.obj;$(ProjectDir)idt.obj;$(ProjectDir)pic.obj</AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
       <BaseAddress>0x10000</BaseAddress>
@@ -145,6 +150,7 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <FixedBaseAddress>true</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <SubSystem>Native</SubSystem>
+      <AssemblyDebug>true</AssemblyDebug>
     </Link>
     <PreBuildEvent>
       <Command>cd $(ProjectDir)HAL\

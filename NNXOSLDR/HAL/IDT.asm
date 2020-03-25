@@ -136,9 +136,9 @@ func IRQHandlerInternal
 		jng .end
 	out 0xA0, al
 .end:
-	sub rsp, 8			;M$ weird calling convention reserves 4 bytes (pushing 8, just in case)
+	sub rsp, 32
 	call IRQHandler
-	add rsp, 8
+	add rsp, 32
 	BOCHS_DEBUG
 	ret
 
