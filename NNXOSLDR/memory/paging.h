@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_PAGING_HEADER
+#define NNX_PAGING_HEADER
 #include "nnxint.h"
 
 extern UINT64**** PML4;
@@ -23,3 +24,4 @@ void* PagingAllocatePage();
 #define PAGE_READ 0
 #define PAGE_NOT_PRESENT 0
 #define PG_ALIGN(x) (((UINT64)x)&(~PAGE_ADDRESS_MASK))
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_PCIIDE_HEADER
+#define NNX_PCIIDE_HEADER
 #include "HAL/PCI/PCI.h"
 
 //All consts from https://wiki.osdev.org/PCI_IDE_Controller
@@ -118,3 +119,4 @@ struct PCI_IDE_Controller {
 #define IDE_LBA_SUPPORT 0x200
 
 PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+#endif

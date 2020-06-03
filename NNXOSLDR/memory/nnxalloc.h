@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_ALLOC_HEADER
+#define NNX_ALLOC_HEADER
 #pragma pack(push, 1)
 
 #include "nnxint.h"
@@ -26,6 +27,7 @@ extern "C" {
 
 #ifdef __cplusplus
 }
+#endif
 #endif
 
 

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_PIC_HEADER
+#define NNX_PIC_HEADER
 #define PIC_PRIMARY 0x20
 #define PIC_SECONDARY 0xA0
 
@@ -6,3 +7,4 @@
 #define PIC_SECONDARY_DATA PIC_SECONDARY+1
 
 void PICInitialize();
+#define NNX_PIC_HEADER

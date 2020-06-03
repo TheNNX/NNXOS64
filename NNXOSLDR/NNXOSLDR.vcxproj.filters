@@ -167,6 +167,9 @@
     <ClInclude Include="HAL\PCI\PCIIDE.h">
       <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
+    <ClInclude Include="mbr.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_GDT_HEADER
+#define NNX_GDT_HEADER
 #pragma pack(push)
 #pragma pack(1)
 #include "nnxint.h"
@@ -46,3 +47,4 @@ typedef struct TSSDescriptorEntry {
 void LoadGDT(GDTR*);
 void StoreGDT(GDTR*);
 #pragma pack(pop)
+#endif

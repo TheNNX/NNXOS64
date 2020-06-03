@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_LIST_HEADER
+#define NNX_LIST_HEADER
 #include "video/SimpleTextIO.h"
 #include "memory/nnxalloc.h"
 #ifdef __cplusplus
@@ -286,4 +287,5 @@ public:
 		return array;
 	}
 };
+#endif
 #endif

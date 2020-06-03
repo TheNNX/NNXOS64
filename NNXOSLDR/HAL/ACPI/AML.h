@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_AML_HEADER
+#define NNX_AML_HEADER
 
 /*
 			WORK IN PROGRESS
@@ -348,3 +349,4 @@ BOOL verifyACPI_DSDT(ACPI_DSDT*);
 #include "AMLCPP.h"
 #endif
 
+#endif

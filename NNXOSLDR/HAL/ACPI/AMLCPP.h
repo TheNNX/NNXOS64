@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_AMLCPP_HEADER
+#define NNX_AMLCPP_HEADER
 
 #include "AML.h"
 #include "nnxllist.h"
@@ -158,3 +159,5 @@ public:
 	AMLOpetationRegion* previous;
 	AMLNameWithinAScope name;
 };
+
+#endif

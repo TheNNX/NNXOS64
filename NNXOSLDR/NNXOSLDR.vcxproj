@@ -209,6 +209,7 @@ compile.bat</Command>
     <ClInclude Include="HAL\PCI\PCIIDE.h" />
     <ClInclude Include="HAL\PIC.h" />
     <ClInclude Include="HAL\Port.h" />
+    <ClInclude Include="mbr.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
     <ClInclude Include="memory\paging.h" />
     <ClInclude Include="memory\physical_allocator.h" />

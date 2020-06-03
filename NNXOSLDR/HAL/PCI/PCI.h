@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_PCI_HEADER
+#define NNX_PCI_HEADER
 #include "nnxint.h"
 #include "../../video/SimpleTextIO.h"
 #define CONFIG_ADDRESS 0xCF8
@@ -89,3 +90,4 @@ UINT8 PCIScan();
 void PCIScanBus(UINT8 bus);
 void PCIScanDevice(UINT8 bus, UINT8 device);
 void PCIScanFunction(UINT8 bus, UINT8 device, UINT8 function);
+#endif

@@ -1,9 +1,5 @@
-#pragma once
-#ifndef __NNXARG_H
-#define	__NNXARG_H
-
-#ifndef __NNX_LIST_H
-#define	__NNX_LIST_H
+#ifndef NNX_ARG_HEADER
+#define	NNX_ARG_HEADER
 
 
 #ifdef __cplusplus
@@ -16,14 +12,13 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-typedef struct __bigstruct { int a[2]; }	STACKITEM;
+typedef UINT64 STACKITEM;
 #define	VA_SIZE(TYPE)					\
 	((sizeof(TYPE) + sizeof(STACKITEM) - 1)	\
 		& ~(sizeof(STACKITEM) - 1))
@@ -39,6 +34,4 @@ typedef struct __bigstruct { int a[2]; }	STACKITEM;
 #ifdef __cplusplus
 }
 #endif
-
 #endif
-

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_IDT_HEADER
+#define NNX_IDT_HEADER
 #pragma pack(push)
 #pragma pack(1)
 
@@ -71,3 +72,4 @@ void IRQ14();
 void IRQHandler(UINT32);
 
 #pragma pack(pop)
+#endif

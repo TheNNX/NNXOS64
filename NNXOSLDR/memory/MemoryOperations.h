@@ -1,4 +1,6 @@
-#pragma once
+#ifndef NNX_MEMOP_HEADER
+#define NNX_MEMOP_HEADER
+
 #include "nnxint.h"
 #ifdef  __cplusplus
 extern "C" {
@@ -10,3 +12,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif 
+#endif

@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _NNXINT
-#define _NNXINT
+#ifndef NNX_INT_HEADER
+#define NNX_INT_HEADER
 
 typedef unsigned long long int UINT64;
 typedef long long int INT64;
@@ -34,4 +33,4 @@ typedef void* PVOID;
 
 #define GetBit(num,n) (num >> n) & 1
 
-#endif // !_NNXINT
+#endif

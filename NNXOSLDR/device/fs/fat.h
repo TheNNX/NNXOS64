@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_FAT_HEADER
+#define NNX_FAT_HEADER
 #include "nnxint.h"
 
 typedef struct {
@@ -20,4 +21,5 @@ typedef struct {
 #define FAT_DIRECTORY 16
 #define FAT_ARCHIVE 32
 #define FAT_LFN (1|2|4|8);
+#endif
 

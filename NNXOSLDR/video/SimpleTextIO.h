@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NNX_STIO_HEADER
+#define NNX_STIO_HEADER
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,6 +32,7 @@ extern "C" {
 #endif
 #else
 	void PrintT(const char* input, ...);
+#endif
 #endif
 
 	
