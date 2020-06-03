@@ -33,7 +33,6 @@ extern "C" {
 #else
 	void PrintT(const char* input, ...);
 #endif
-#endif
 
 	
 	
@@ -47,4 +46,5 @@ extern "C" {
 
 #ifdef __cplusplus
 	}
-#endif 
+#endif
+#endif
