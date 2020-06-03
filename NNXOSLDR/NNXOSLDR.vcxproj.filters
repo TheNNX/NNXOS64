@@ -146,9 +146,6 @@
     <ClInclude Include="HAL\ACPI\AML.h">
       <Filter>Header Files\HAL\ACPI</Filter>
     </ClInclude>
-    <ClInclude Include="nnxllist.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HAL\ACPI\AMLCPP.h">
       <Filter>Header Files\HAL\ACPI</Filter>
     </ClInclude>
@@ -167,7 +164,10 @@
     <ClInclude Include="HAL\PCI\PCIIDE.h">
       <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
-    <ClInclude Include="mbr.h">
+    <ClInclude Include="nnxllist.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\mbr.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,7 @@
 #include "HAL/PCI/PCIIDE.h"
 #include "video/SimpleTextIO.h"
 #include "HAL/Port.h"
-
+#include "device/hdd/hdd.h"
 
 #define WAIT_MACRO for (int __ = 0; __ < 100000; __++);
 
@@ -86,7 +86,6 @@ VOID SearchForDevices(PCI_IDE_Controller* pic) {
 			}
 
 			if (error != 0) {
-				PrintT("Error\n");
 				unsigned char LBA1 = IDERead(pic, i, ATA_REG_LBA1);
 				unsigned char LBA2 = IDERead(pic, i, ATA_REG_LBA2);
 
@@ -102,11 +101,8 @@ VOID SearchForDevices(PCI_IDE_Controller* pic) {
 				error = status & ATA_SR_ERR;
 				WAIT_MACRO;
 			}
-
-			PrintT("error i: %x\n",error);
 			
 			IDEReadBuffer(pic, i, ATA_REG_DATA, pic->ide_buffer, 128);
-
 
 			pic->drives[diskCount].reserved = 1;
 			pic->drives[diskCount].type = type;
@@ -184,7 +180,6 @@ UINT8 IDEPoll(PCI_IDE_Controller* controller, UINT8 channel, BOOL setError) {
 		if (!(status & ATA_SR_DRQ))
 			return status;
 	}
-	PrintT("Poll status: %x\n", status);
 	return 0;
 }
 
@@ -193,7 +188,6 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 	BOOL isSlave = drive->drive;
 	PCI_IDE_Controller* controller = drive->controller;
 	UINT16 bus = controller->channels[channel].base;
-	PrintT("%x %x %x %x\n", bus, channel, isSlave, controller->channels->base);
 
 	controller->channels[channel].no_interrupt = 1;
 	IDEWrite(controller, channel, ATA_REG_CONTROL, 0x02);
@@ -225,7 +219,6 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 		
 	}
 	else {
-		PrintT("Using CHS\n");
 		UINT8 sector = lba % drive->geometry.sector;
 		UINT8 head = lba / drive->geometry.sector % drive->geometry.cylinder;
 		UINT16 cylinder = lba / drive->geometry.sector / drive->geometry.cylinder;
@@ -242,19 +235,17 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 		while (IDERead(controller, channel, ATA_REG_CONTROL) & ATA_SR_BSY);
 		if (direction == 0) {
 			for (int i = 0; i < 256; i++) {
-				*((UINT16*)(buffer+i)) = inw(bus);
+				*((UINT16*)(buffer+2*i)) = inw(bus);
 			}
 		}
 		else {
 			for (int i = 0; i < 256; i++) {
-				outw(bus, *((UINT16*)(buffer + i)));
+				outw(bus, *((UINT16*)(buffer + 2*i)));
 			}
 			IDEWrite(controller, channel, ATA_REG_COMMAND, (lba > 0xfffffff) ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 		}
 		buffer += 512;
 	}
-
-	PrintT("DiskIO end\n");
 
 	IDEPoll(controller, channel, 0);
 	return 0;

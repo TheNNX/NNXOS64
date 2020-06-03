@@ -22,7 +22,7 @@ typedef UINT8 BYTE;
 	typedef UINT8 bool;
 	#define true TRUE
 	#define false FALSE
-#endif // !__cplusplus
+#endif
 
 typedef bool BOOL;
 #define TRUE 1

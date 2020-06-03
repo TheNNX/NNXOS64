@@ -6,15 +6,7 @@
 
 typedef struct PCI_IDE_Controller PCI_IDE_Controller;
 
-typedef struct CHS {
-	UINT32 CHS : 24;
-	struct
-	{
-		UINT32 sector : 6;
-		UINT32 head : 4;
-		UINT32 cylinder : 14;
-	};
-}CHS;
+#include "device/hdd/hdd.h"
 
 typedef struct IDEDrive {
 	UINT8 reserved;
@@ -28,7 +20,6 @@ typedef struct IDEDrive {
 	unsigned char model[41];
 	PCI_IDE_Controller* controller;
 	CHS geometry;
-
 } IDEDrive;
 
 UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);

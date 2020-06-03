@@ -2,7 +2,7 @@
 #define NNX_AMLCPP_HEADER
 
 #include "AML.h"
-#include "nnxllist.h"
+#include "nnxllist.hpp"
 
 AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type);
 

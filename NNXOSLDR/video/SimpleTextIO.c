@@ -2,6 +2,14 @@
 #include  "SimpleTextIO.h"
 #include "memory/physical_allocator.h"
 
+#define TIMES8(x) x x x x x x x x
+#define TIMES16(x) TIMES8(x) TIMES8(x)
+#define TIMES32(x) TIMES16(x) TIMES16(x)
+#define TIMES64(x) TIMES32(x) TIMES32(x)
+#define TIMES128(x) TIMES64(x) TIMES64(x)
+
+#define UNKNOWNMARK {0xC7, 0xBB, 0xFB, 0xF7, 0xEF, 0xEF, 0xFF, 0xEF},
+
 UINT32* framebuffer;
 UINT32* framebufferEnd;
 
@@ -22,7 +30,7 @@ UINT32 gMinY = 0, gMaxY = 0;
 
 UINT8 initialized = 0;
 
-UINT8 StaticFont8x8[][8] = { {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}, //unprintables
+UINT8 StaticFont8x8[][8] = { UNKNOWNMARK  UNKNOWNMARK  UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK  //unprintables
 
 //symbols and util
 {0,0,0,0,0,0,0,0} /*space*/, {0x10,0x10,0x10,0x10,0x10,0x10,0x0,0x10}/*!*/, {0x28,0x28,0x28,0,0,0,0,0}/*"*/, {0x28,0x28,0x7C,0x28,0x28,0x7C,0x28,0x28}/*#*/,
@@ -67,7 +75,8 @@ UINT8 StaticFont8x8[][8] = { {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,
 {0x00, 0x00, 0x44, 0x44, 0x28, 0x28, 0x10, 0x10}/*v*/, {0x00, 0x00, 0x92, 0x92, 0x92, 0x54, 0x28, 0x28}/*w*/, {0x00, 0x00, 0x44, 0x28, 0x10, 0x10, 0x28, 0x44}/*x*/,
 {0x00, 0x00, 0x22, 0x22, 0x14, 0x08, 0x10, 0x20}/*y*/, {0x00, 0x00, 0x7C, 0x08, 0x10, 0x10, 0x20, 0x7C}/*z*/,
 //symbols and utils 4
-{0x18, 0x20, 0x20, 0x40, 0x40, 0x20, 0x20, 0x18}/*{*/, {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10}/*|*/, {0x30,0x08,0x8,0x04,0x04,0x8,0x08,0x30}/*}*/, {0,0,0,0x60,0x92,0xC,0,0}/*~*/, {0,0,0,0,0,0,0,0}/*DEL*/
+{0x18, 0x20, 0x20, 0x40, 0x40, 0x20, 0x20, 0x18}/*{*/, {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10}/*|*/, {0x30,0x08,0x8,0x04,0x04,0x8,0x08,0x30}/*}*/, {0,0,0,0x60,0x92,0xC,0,0}/*~*/, {0,0,0,0,0,0,0,0}/*DEL*/,
+TIMES128(UNKNOWNMARK) UNKNOWNMARK
 };
 
 char* itoa(UINT64 i, UINT8 base, char b[]) {
@@ -327,6 +336,8 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 					case 'c':;
 						char string[2] = {0,0};
 						string[0] = *((UINT64*)args);
+						if (string[0] == 0)
+							string[0] = 0xff;
 						((UINT64*)args) += 1;
 						TextIOOutputStringGlobal(string);
 						break;

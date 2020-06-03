@@ -1,6 +1,7 @@
 #include "PCI.h"
 #include "video/SimpleTextIO.h"
 #include "HAL/Port.h"
+#include "device/fs/mbr.h"
 
 UINT16 PCIConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset){
 	UINT32 address = (UINT32)((((UINT32)bus)<<16) | (((UINT32)slot)<<11) | (((UINT32)function)<<8) | (offset & 0xfc) | 0x80000000);
@@ -178,7 +179,7 @@ void PCI_IDE_Enumerate() {
 	UINT8 *s = "uhduwhudhwjhdjwhjdwhjd";
 
 	UINT8 *sO = s;
-	while (*s) buffer[(s - sO)] = *(s++);
+		while (*s) buffer[(s - sO)] = *(s++);
 
 	PrintT("Enumerating PCI IDE devices.\n");
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++) {
@@ -198,17 +199,13 @@ void PCI_IDE_Enumerate() {
 			PrintT("   %x   -  %s Drive [%iMiB]\n", drives[i].signature, (const char*[]){"ATA", "ATAPI"}[drives[i].type], drives[i].size/1024/1024);
 		}
 	}
-	PrintT("Starting disk read to location 0x%x.\n", buffer);
 	
-	PCI_IDE_DiskIO(drives + 1, 1, 0, 1, buffer);
+	PCI_IDE_DiskIO(drives, 1, 0, 1, buffer);
 	UINT8 buffer2[4096];
-	UINT64 a = PCI_IDE_DiskIO(drives + 1, 0, 0, 1, buffer2);
+	UINT64 a = PCI_IDE_DiskIO(drives, 0, 0, 1, buffer2);
 
 	for (int i = 0; i < 512; i++) {
-		if (buffer2[i] >= '!')
-			PrintT("%c", buffer2[i]);
-		else
-			PrintT(".");
+		PrintT("%c", buffer2[i]); 
 	}
 	
 }

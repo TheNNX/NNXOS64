@@ -7,4 +7,4 @@
 #define PIC_SECONDARY_DATA PIC_SECONDARY+1
 
 void PICInitialize();
-#define NNX_PIC_HEADER
+#endif

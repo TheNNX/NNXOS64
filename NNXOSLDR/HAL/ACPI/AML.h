@@ -16,7 +16,7 @@ IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 
 #include "video/SimpleTextIO.h"
 #include "nnxint.h"
-#include "nnxllist.h"
+#include "nnxllist.hpp"
 
 #pragma pack(push, 1)
 
