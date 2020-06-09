@@ -3,6 +3,8 @@
 #include "nnxint.h"
 #pragma pack(push, 1)
 
+void diskCheck();
+
 typedef struct CHS {
 	union {
 		UINT32 CHS;
@@ -18,6 +20,7 @@ typedef struct CHS {
 typedef struct HSC {
 	BYTE bytes[3];
 }HSC;
+
 #pragma pack(pop)
 
 #endif

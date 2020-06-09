@@ -3,7 +3,20 @@
 
 #include "nnxint.h"
 #include "device/hdd/hdd.h"
+
+#define MBR_SIGNATURE 0xaa55
+
 #pragma pack(push, 1)
+
+typedef struct MBRPartitionTableEntry {
+	BYTE attributes;
+	HSC partitionStartCHS;
+	BYTE partitionType;
+	HSC partitionEndCHS;
+	DWORD partitionStartLBA28;
+	DWORD partitionSizeInSectors;
+}MBRPartitionTableEntry;
+
 typedef struct MBRTable {
 	union
 	{
@@ -15,21 +28,11 @@ typedef struct MBRTable {
 		WORD optionalReserved;
 		WORD reserved;
 	};
-	struct PartitionTableEntry {
-		BYTE attributes;
-		HSC partitionStartCHS;
-		BYTE partitionType;
-		HSC partitionEndCHS;
-		DWORD partitionStartLBA28;
-		DWORD partitionSizeInSectors;
-	} tableEntries[4];
+
+	MBRPartitionTableEntry tableEntries[4];
 
 	WORD magicNumber;
 } MBRTable;
-
-#ifdef  __cplusplus
-typedef struct MBRTable::PartitionTableEntry PartitionTableEntry;
-#endif
 
 typedef struct MBR {
 	UINT8 bootstrap[440];
