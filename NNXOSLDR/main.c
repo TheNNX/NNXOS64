@@ -9,6 +9,7 @@
 #include "HAL/PCI/PCI.h"
 #include "HAL/ACPI/AML.h"
 #include "memory/nnxalloc.h"
+#include "device/fs/vfs.h"
 
 void IntTestASM();
 
@@ -169,6 +170,7 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	TextIOSetCursorPosition(0, 200);
 
+	VFSInit();
 	PCIScan();
 
 	EnableInterrupts();

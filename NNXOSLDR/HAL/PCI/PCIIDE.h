@@ -110,4 +110,8 @@ struct PCI_IDE_Controller {
 #define IDE_LBA_SUPPORT 0x200
 
 PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+
+#define MAX_PCI_IDE_CONTROLLERS 32
+extern IDEDrive drives[MAX_PCI_IDE_CONTROLLERS * 4];
+extern PCI_IDE_Controller controllers[MAX_PCI_IDE_CONTROLLERS];
 #endif

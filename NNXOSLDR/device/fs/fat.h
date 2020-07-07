@@ -2,6 +2,8 @@
 #define NNX_FAT_HEADER
 #include "nnxint.h"
 
+#pragma pack(push, 1)
+
 typedef struct {
 	UINT8 year : 7;
 	UINT8 month : 4;
@@ -21,5 +23,34 @@ typedef struct {
 #define FAT_DIRECTORY 16
 #define FAT_ARCHIVE 32
 #define FAT_LFN (1|2|4|8);
-#endif
 
+typedef struct {
+	UINT8 reservedJump[3];
+	UINT8 oemName[8];
+	UINT16 bytesPerSector;
+	UINT8 sectorsPerCluster;
+	UINT16 sectorReservedSize;
+	UINT8 numberOfFATs;
+	UINT16 rootEntryCount;
+	UINT16 sectorTotSize16;
+	UINT8 mediaType;
+	UINT16 sectorFATSize16;
+	UINT16 sectorsPerTrack;
+	UINT16 headsVolumeSize;
+	UINT32 sectorsHidden;
+	UINT32 sectorTotSize32;
+}BPB, BIOSParameterBlock;
+
+typedef struct {
+	BYTE biosIntNumber;
+	BYTE reserved0;
+	BYTE hasNameorID;
+	union {
+		UINT32 volumeSerialNumber;
+		UINT32 volumeID;
+	};
+	BYTE volumeLabel[11];
+	BYTE fatTypeInfo[8];
+}BPB_EXT_FAT1X, BPB1X;
+#pragma pack(pop)
+#endif

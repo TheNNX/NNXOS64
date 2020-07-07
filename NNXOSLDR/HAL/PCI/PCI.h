@@ -90,4 +90,5 @@ UINT8 PCIScan();
 void PCIScanBus(UINT8 bus);
 void PCIScanDevice(UINT8 bus, UINT8 device);
 void PCIScanFunction(UINT8 bus, UINT8 device, UINT8 function);
+
 #endif

@@ -61,6 +61,12 @@
     <Filter Include="Header Files\device\fs">
       <UniqueIdentifier>{ad3aea25-0472-4565-8cca-8922d73f09b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\device\fs">
+      <UniqueIdentifier>{b2973df0-e6fd-44cf-b279-091db8c88b4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\device\hdd">
+      <UniqueIdentifier>{9a8912fa-afee-4496-8859-081c68d2822d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -101,6 +107,12 @@
     </ClCompile>
     <ClCompile Include="HAL\PCI\PCIIDE.c">
       <Filter>Source Files\HAL\PCI</Filter>
+    </ClCompile>
+    <ClCompile Include="device\fs\vfs.c">
+      <Filter>Source Files\device\fs</Filter>
+    </ClCompile>
+    <ClCompile Include="device\hdd\hdd.c">
+      <Filter>Source Files\device\hdd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -168,6 +180,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="device\fs\mbr.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\gpt.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\vfs.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
   </ItemGroup>

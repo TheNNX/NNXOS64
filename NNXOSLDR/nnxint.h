@@ -31,6 +31,7 @@ typedef bool BOOL;
 typedef void VOID;
 typedef void* PVOID;
 
-#define GetBit(num,n) (num >> n) & 1
-
+inline bool GetBit(unsigned int num, unsigned int n) {
+	return ((num >> n) & 1);
+}
 #endif

@@ -83,6 +83,12 @@
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|Win32'">
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'">
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
@@ -182,6 +188,8 @@ compile.bat</Command>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="device\fs\vfs.c" />
+    <ClCompile Include="device\hdd\hdd.c" />
     <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
@@ -199,7 +207,9 @@ compile.bat</Command>
   <ItemGroup>
     <ClInclude Include="device\fs\fat.h" />
     <ClInclude Include="device\fs\fat32.h" />
+    <ClInclude Include="device\fs\gpt.h" />
     <ClInclude Include="device\fs\mbr.h" />
+    <ClInclude Include="device\fs\vfs.h" />
     <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
