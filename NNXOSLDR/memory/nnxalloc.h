@@ -15,19 +15,23 @@ typedef struct MemoryBlock {
 #define MEMBLOCK_FREE 0
 #define MEMBLOCK_USED 1
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
-#endif
 	void nnxalloc_init();
 	void nnxalloc_append(void* memblock, UINT64 sizeofMemblock);
 
 	void* nnxmalloc(UINT64 size);
 	void* nnxcalloc(UINT64 n, UINT64 size);
 	void nnxfree(void* address);
-
-#ifdef __cplusplus
 }
 #endif
+
+void nnxalloc_init();
+void nnxalloc_append(void* memblock, UINT64 sizeofMemblock);
+
+void* nnxmalloc(UINT64 size);
+void* nnxcalloc(UINT64 n, UINT64 size);
+void nnxfree(void* address);
 
 #endif
 

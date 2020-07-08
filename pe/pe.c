@@ -1,7 +1,7 @@
 #include "pe.h"
 
-EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** entrypoint, UINT8* memoryMap) {
-	IMAGE_DOS_HEADER* dos_header = fileBuffer;
+EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap) {
+	IMAGE_DOS_HEADER* dos_header = FileBuffer;
 	IMAGE_PE_HEADER* pe_header = (UINT64)((UINT64)dos_header + (UINT64)dos_header->e_lfanew);
 	
 	if (pe_header->signature != IMAGE_PE_MAGIC) 
@@ -26,19 +26,19 @@ EFI_STATUS LoadPortableExecutable(void* fileBuffer, int bufferSize, UINT64** ent
 	{
 		SECTION_HEADER* SectionHeader = section_table->headers+index;
 
-		CHAR16 name[8];
+		CHAR16 Name[8];
 		for (int a = 0; a < 8; a++) {
-			name[a] = SectionHeader->Name[a];
+			Name[a] = SectionHeader->Name[a];
 		}
 
-		Print(L"  Section '%s': VA:0x%x SoS:0x%x\n", name, SectionHeader->VirtualAddress, SectionHeader->SizeOfSection);
+		Print(L"  Section '%s': VA:0x%x SoS:0x%x\n", Name, SectionHeader->VirtualAddress, SectionHeader->SizeOfSection);
 
 		
 		UINT8* dst = SectionHeader->VirtualAddress + imageBase;
-		UINT8* src = SectionHeader->SectionPointer + (UINT64)fileBuffer;
+		UINT8* src = SectionHeader->SectionPointer + (UINT64)FileBuffer;
 
 		for (int times = 0; times < SectionHeader->SizeOfSection / 4096 + 5; times++) {
-			memoryMap[((UINT64)dst) / 4096 + times - 5] = 0;
+			MemoryMap[((UINT64)dst) / 4096 + times - 5] = 0;
 			Print(L"%d: %x %x [%d]\n",times, dst,SectionHeader->SizeOfSection, ((UINT64)dst) / 4096 + times);
 		}
 

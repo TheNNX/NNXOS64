@@ -44,7 +44,7 @@ typedef struct {
 typedef struct {
 	BYTE biosIntNumber;
 	BYTE reserved0;
-	BYTE hasNameorID;
+	BYTE hasNameOrID;
 	union {
 		UINT32 volumeSerialNumber;
 		UINT32 volumeID;

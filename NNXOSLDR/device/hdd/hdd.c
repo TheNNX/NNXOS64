@@ -4,6 +4,7 @@
 #include "HAL/PCI/PCI.h"
 #include "HAL/PCI/PCIIDE.h"
 #include "../fs/fat.h"
+#include "../fs/fat32.h"
 #include "../fs/vfs.h"
 
 void diskCheck() {
@@ -40,48 +41,61 @@ void diskCheck() {
 						continue;
 
 					int number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors);
-					VirtualFileSystem* filesystem = VFSGetPointerToVFS(number);
+					VirtualFileSystem* Filesystem = VFSGetPointerToVFS(number);
 					BPB* bpb = (BPB*)bpbSource;
 
-					VFSReadSector(filesystem, bpb);
+					VFSReadSector(Filesystem, bpb);
 
-					for (int bpbi = 0; bpbi < 512; bpbi++) {
-						if (0xff & (((char*)bpb)[bpbi]) > ' ' && 0xff & (((char*)bpb)[bpbi]) < 0x7f) {
-							PrintT("%c ", 0xff & (((char*)bpb)[bpbi]));
-						}
-						else {
-							PrintT("%x ", 0xff & (((char*)bpb)[bpbi]));
-						}
-					}
-
+					BYTE *fatTypeInfo = 0, *volumeLabel = 0;
+					UINT32 serialNumber = 0;
+					bool hasNameOrID = false;
 					if (bpb->sectorTotSize16 == 0 && bpb->sectorTotSize32 == 0) {
 						PrintT("No FAT\n");
 						
+
 					}
 					else if (bpb->rootEntryCount == 0)
 					{
-						//FAT32
-						PrintT("FAT32\n");
+						PrintT("FAT32 ");
+						BPB_EXT_FAT32* extBPB = ((UINT64)bpb) + sizeof(BPB);
+						fatTypeInfo = extBPB->fatTypeInfo;
+						if (extBPB->hasNameOrID == 0x29) {
+							serialNumber = extBPB->volumeID;
+							volumeLabel = extBPB->volumeLabel;
+						}
+
 					}
 					else {
-						PrintT("FAT");
+						PrintT("FAT12/16 ");
 						BPB_EXT_FAT1X* extBPB = ((UINT64)bpb) + sizeof(BPB);
-						BYTE nameCopy[12];
-						nameCopy[8] = 0;
-						nameCopy[11] = 0;
+						fatTypeInfo = extBPB->fatTypeInfo;
+						if(extBPB->hasNameOrID == 0x29);
+						{
+							serialNumber = extBPB->volumeID;
+							volumeLabel = extBPB->volumeLabel;
+						}
+					}
+
+					if(fatTypeInfo){
+						BYTE nameCopy[12] = { 0 };
+
 						for (int n = 0; n < 8; n++) {
-							nameCopy[n] = extBPB->fatTypeInfo[n];
+							nameCopy[n] = fatTypeInfo[n];
 						}
 						PrintT("(%s)\n", nameCopy);
-						if (extBPB->hasNameorID == 0x29) {
+
+						if (volumeLabel) {
 							for (int n = 0; n < 11; n++) {
-								nameCopy[n] = extBPB->volumeLabel[n];
+								nameCopy[n] = volumeLabel[n];
 							}
-							PrintT("%s %x\n", nameCopy, extBPB->volumeSerialNumber);
+							PrintT("%s %x\n", nameCopy, serialNumber);
 						}
 						else {
 							PrintT("No volume name/ID info.\n");
 						}
+					}
+					else {
+						PrintT("\n");
 					}
 				}
 			}

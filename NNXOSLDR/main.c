@@ -143,8 +143,9 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	if (!facp) {
 		status = ACPI_LastError();
 		ACPI_ERROR(status);
-		while (1);
+		while (1); 
 	}
+
 	if (rdsp->Revision == 0)
 		status = ACPI_ParseDSDT(facp->DSDT);
 	else

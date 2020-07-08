@@ -59,10 +59,10 @@
     <TargetExt>.efi</TargetExt>
     <GenerateManifest>false</GenerateManifest>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)image\efi\boot\</OutDir>
+    <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>bootx64</TargetName>
-    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'">
     <TargetExt>.efi</TargetExt>
@@ -116,6 +116,7 @@
       <RandomizedBaseAddress />
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile />
+      <MergeSections>.pdata=.data</MergeSections>
     </Link>
     <PreBuildEvent>
       <Command>cd $(SolutionDir)

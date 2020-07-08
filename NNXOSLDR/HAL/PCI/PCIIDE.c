@@ -202,7 +202,7 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 			IDEWrite(controller, channel, ATA_REG_LBA3, (lba >> 24) & 0xFF);
 			IDEWrite(controller, channel, ATA_REG_LBA4, (lba >> 32) & 0xFF);
 			IDEWrite(controller, channel, ATA_REG_LBA5, (lba >> 40) & 0x0F);
-			
+		
 			IDEWrite(controller, channel, ATA_REG_SECCOUNT0, numberOfSectors);
 			IDEWrite(controller, channel, ATA_REG_LBA0, lba & 0xFF);
 			IDEWrite(controller, channel, ATA_REG_LBA1, (lba >> 8) & 0xFF);

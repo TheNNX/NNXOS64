@@ -1,0 +1,5 @@
+rem I created an 100MB MBR Fat32 vdisk using DiskPart, file located at C:\virtual\vdisk.vhd
+
+select vdisk file=C:\virtual\vdisk.vhd
+attach vdisk
+

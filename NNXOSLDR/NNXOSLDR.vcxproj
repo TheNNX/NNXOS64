@@ -74,6 +74,7 @@
     <GenerateManifest>false</GenerateManifest>
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
     <LinkIncremental>false</LinkIncremental>
+    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
     <OutDir>$(SolutionDir)image\</OutDir>
@@ -130,7 +131,8 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <Outputs>$(ProjectDir)%(Filename).obj</Outputs>
     </CustomBuild>
     <PostBuildEvent>
-      <Command>$(ProjectDir)..\buildCopyFiles.bat</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
@@ -255,6 +257,11 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <SubType>
       </SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\.vs\msvc\bootloader.vcxproj">
+      <Project>{6f2688e1-f1df-4d79-8f2e-307772ac6f77}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
