@@ -6,6 +6,8 @@
 #define WAIT_MACRO for (int __ = 0; __ < 10000; __++);
 
 VOID IDEWrite(PCI_IDE_Controller* pic, UINT8 channel, UINT8 reg, UINT8 data) {
+	if (reg > 0x07 && reg < 0x0C)
+		IDEWrite(pic, channel, ATA_REG_CONTROL, 0x80 | pic->channels[channel].no_interrupt);
 	if (reg < 0x08)
 		outb(pic->channels[channel].base + reg - 0x00, data);
 	else if (reg < 0x0C)
@@ -14,9 +16,13 @@ VOID IDEWrite(PCI_IDE_Controller* pic, UINT8 channel, UINT8 reg, UINT8 data) {
 		outb(pic->channels[channel].ctrl + reg - 0x0A, data);
 	else if (reg < 0x16)
 		outb(pic->channels[channel].bus_master_ide + reg - 0x0E, data);
+	if (reg > 0x07 && reg < 0x0C)
+		IDEWrite(pic, channel, ATA_REG_CONTROL, pic->channels[channel].no_interrupt);
 }
 
 UINT8 IDERead(PCI_IDE_Controller* pic, UINT8 channel, UINT8 reg) {
+	if (reg > 0x07 && reg < 0x0C)
+		IDEWrite(pic, channel, ATA_REG_CONTROL, 0x80 | pic->channels[channel].no_interrupt);
 	unsigned char result;
 	if (reg < 0x08)
 		result = inb(pic->channels[channel].base + reg - 0x00);
@@ -26,6 +32,8 @@ UINT8 IDERead(PCI_IDE_Controller* pic, UINT8 channel, UINT8 reg) {
 		result = inb(pic->channels[channel].ctrl + reg - 0x0A);
 	else if (reg < 0x16)
 		result = inb(pic->channels[channel].bus_master_ide + reg - 0x0E);
+	if (reg > 0x07 && reg < 0x0C)
+		IDEWrite(pic, channel, ATA_REG_CONTROL, pic->channels[channel].no_interrupt);
 	return result;
 }
 
@@ -161,7 +169,7 @@ PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function,
 }
 
 UINT8 IDEPoll(PCI_IDE_Controller* controller, UINT8 channel, BOOL setError) {
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 4; i++) {
 		IDERead(controller, channel, ATA_REG_ALTSTATUS);
 	}
 	
@@ -173,12 +181,19 @@ UINT8 IDEPoll(PCI_IDE_Controller* controller, UINT8 channel, BOOL setError) {
 	
 	if (setError) {
 		
-		if (status & ATA_SR_ERR)
+		if (status & ATA_SR_ERR) {
+			PrintTA("ERR\n");
 			return status;
-		if (status & ATA_SR_DF)
+		}
+		if (status & ATA_SR_DF) {
+			PrintTA("DF\n");
 			return status;
-		if (!(status & ATA_SR_DRQ))
+		}
+		if (!(status & ATA_SR_DRQ)) {
+			PrintTA("DRQ\n");
+
 			return status;
+		}
 	}
 	return 0;
 }
@@ -188,7 +203,6 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 	BOOL isSlave = drive->drive;
 	PCI_IDE_Controller* controller = drive->controller;
 	UINT16 bus = controller->channels[channel].base;
-
 	controller->channels[channel].no_interrupt = 1;
 	IDEWrite(controller, channel, ATA_REG_CONTROL, 0x02);
 
@@ -232,13 +246,16 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 	}
 	
 	for (int i = 0; i < numberOfSectors; i++) {
-		while (IDERead(controller, channel, ATA_REG_CONTROL) & ATA_SR_BSY);
-		WAIT_MACRO;
+		UINT8 err = IDEPoll(controller, channel, 1);
+		if (err) {
+			PrintT("Error: %x\n",err);
+			while (1);
+			return err;
+		}
 		if (direction == 0) {
 			for (int i = 0; i < 256; i++) {
 				*((UINT16*)(buffer+2*i)) = inw(bus);
 			}
-			PrintT("\n");
 		}
 		else {
 			for (int i = 0; i < 256; i++) {
