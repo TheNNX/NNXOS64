@@ -41,23 +41,24 @@ void diskCheck() {
 						continue;
 
 					int number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors);
-					VirtualFileSystem* Filesystem = VFSGetPointerToVFS(number);
+					VirtualFileSystem* filesystem = VFSGetPointerToVFS(number);
 					BPB* bpb = (BPB*)bpbSource;
 
-					VFSReadSector(Filesystem, bpb);
+					VFSReadSector(filesystem, 0, bpb);
 
 					BYTE *fatTypeInfo = 0, *volumeLabel = 0;
 					UINT32 serialNumber = 0;
 					bool hasNameOrID = false;
 					if (bpb->sectorTotSize16 == 0 && bpb->sectorTotSize32 == 0) {
 						PrintT("No FAT\n");
-						
+						PrintT("Unsupported filesystem of of %i, partition %i.\n",i, partitionNumber);
+						while (1);
 
 					}
 					else if (bpb->rootEntryCount == 0)
 					{
 						PrintT("FAT32 ");
-						BPB_EXT_FAT32* extBPB = ((UINT64)bpb) + sizeof(BPB);
+						BPB_EXT_FAT32* extBPB = &(bpb->_);
 						fatTypeInfo = extBPB->fatTypeInfo;
 						if (extBPB->hasNameOrID == 0x29) {
 							serialNumber = extBPB->volumeID;
@@ -67,7 +68,7 @@ void diskCheck() {
 					}
 					else {
 						PrintT("FAT12/16 ");
-						BPB_EXT_FAT1X* extBPB = ((UINT64)bpb) + sizeof(BPB);
+						BPB_EXT_FAT1X* extBPB = &(bpb->_);
 						fatTypeInfo = extBPB->fatTypeInfo;
 						if(extBPB->hasNameOrID == 0x29);
 						{
@@ -77,6 +78,7 @@ void diskCheck() {
 					}
 
 					if(fatTypeInfo){
+						filesystem->allocationUnitSize = bpb->sectorsPerCluster * bpb->bytesPerSector;
 						BYTE nameCopy[12] = { 0 };
 
 						for (int n = 0; n < 8; n++) {
@@ -93,6 +95,9 @@ void diskCheck() {
 						else {
 							PrintT("No volume name/ID info.\n");
 						}
+
+						UINT32 freeClusters = FATScanFree(filesystem);
+						PrintT("%i/%i", freeClusters, FATCalculateFATClusterCount(bpb));
 					}
 					else {
 						PrintT("\n");
@@ -103,6 +108,7 @@ void diskCheck() {
 		}
 		else {
 			PrintT("Drive %i not formatted, signature 0x%X\n", i, mbr.mbrtable.magicNumber);
+			while (1);
 		}
 	}
 }

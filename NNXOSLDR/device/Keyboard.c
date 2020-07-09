@@ -111,6 +111,9 @@ UINT8(*ScancodeSet2Keys[])() = {KeyNULL, KeyF9, KeyNULL, KeyF5, KeyF3, KeyF1, Ke
 UINT8 keyboardInitialized = 0;
 
 UINT8 KeyboardInitialize() {
+	outb(KEYBOARD_COMMAND_PORT, 0xFF);
+	UINT8 selfTest = inb(KEYBOARD_PORT);
+	PrintT("kb st: %x\n", selfTest);
 	ScancodeSet = GetScancodeSet();
 	if (ScancodeSet != 2)
 		SetScancodeSet(2);
@@ -132,23 +135,26 @@ UINT8 specialkey() {
 UINT8 KeyboardInterrupt(){
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
+
 	DisableInterrupts();
 	if (!keyboardInitialized)
 		return 0;
 	UINT8 scancode = inb(KEYBOARD_PORT);
-	if(scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
-		return 0;
 
 	UINT8(*key)();
 	if (scancode == 0xf0) {
 		while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 		scancode = inb(KEYBOARD_PORT);
+		if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+			return 0;
 		key = ScancodeSet2Keys[scancode];
 		return key(1);
 	}
 	else if (scancode == 0xe0) {
 		return specialkey();
 	}
+	if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+		return 0;
 	key = ScancodeSet2Keys[scancode];
 	return key(0);
 }

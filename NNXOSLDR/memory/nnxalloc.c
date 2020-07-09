@@ -1,4 +1,5 @@
 #include "nnxalloc.h"
+#include "../video/SimpleTextIO.h"
 #include "MemoryOperations.h"
 
 MemoryBlock* first;
@@ -29,7 +30,7 @@ void nnxalloc_append(void* memblock, UINT64 memblockSize) {
 void* nnxmalloc(UINT64 size) {
 	
 	if (size >= 4096) {
-		PrintT("Searching for a free block of size >= %i (impossible)\n", size);
+		PrintT("Searching for a free block of size = %i (impossible)\n", size);
 		while (1);
 	}
 	MemoryBlock* current = first;
@@ -62,7 +63,6 @@ void* nnxcalloc(UINT64 n, UINT64 size) {
 }
 
 void nnxfree(void* address) {
-	PrintT("FREEING MEMORY\n");
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 }

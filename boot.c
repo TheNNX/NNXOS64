@@ -5,10 +5,6 @@
 #include "low.h"
 #include "pe/pe.h"
 
-#define MAXIMAL_STAGE2_FILESIZE 256 * 1024
-
-CHAR8 FileBuffer[MAXIMAL_STAGE2_FILESIZE];
-
 void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
 
 
@@ -363,18 +359,17 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		return EFI_NOT_FOUND;
 	}
 
-	int LimitBufferSize = MAXIMAL_STAGE2_FILESIZE;
+	
 	char FInfoBuffer[512];
 	UINTN FInfoBufferSize = sizeof(FInfoBuffer);
 	EFI_FILE_INFO *FInfo = (void*)FInfoBuffer;
 	FP->GetInfo(FP, &gEfiFileInfoGuid, &FInfoBufferSize, FInfo);
-	if (LimitBufferSize > FInfo->FileSize)
-		LimitBufferSize = FInfo->FileSize;
-	FP->Read(FP, &LimitBufferSize, FileBuffer);
+	CHAR8 *FileBuffer = AllocateZeroPool(FInfo->FileSize);
+	FP->Read(FP, &FInfo->FileSize, FileBuffer);
 	FP->Close(FP);
 
 	if (FileBuffer[0] == 'M' && FileBuffer[1] == 'Z') {
-		Status = LoadPortableExecutable(FileBuffer, LimitBufferSize, &Stage2entrypoint, NNXMMap);
+		Status = LoadPortableExecutable(FileBuffer, FInfo->FileSize, &Stage2entrypoint, NNXMMap);
 
 		if (EFI_ERROR(Status)) {
 			Print(L"%r\n",Status);

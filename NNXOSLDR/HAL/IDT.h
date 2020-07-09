@@ -29,7 +29,8 @@ void LoadIDT(IDTR*);
 void StoreIDT(IDTR*);
 void EnableInterrupts();
 void DisableInterrupts();
-void ForceInterrupt(UINT8);
+void ForceInterrupt(UINT64);
+void Ack(UINT64);
 
 void Exception0();
 void Exception1();
@@ -52,7 +53,7 @@ void Exception19();
 void Exception20();
 void Exception30();
 void ExceptionReserved();
-void ExceptionHandler(UINT32 number, UINT32 errorCode);
+void ExceptionHandler(UINT64 number, UINT64 errorCode);
 
 void IRQ0();
 void IRQ1();
@@ -69,7 +70,7 @@ void IRQ11();
 void IRQ12();
 void IRQ13();
 void IRQ14();
-void IRQHandler(UINT32);
+void IRQHandler(UINT64);
 
 #pragma pack(pop)
 #endif

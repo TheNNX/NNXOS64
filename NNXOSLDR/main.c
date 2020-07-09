@@ -23,7 +23,7 @@ const char version[] = " 0.1";
 #ifdef BOCHS
 void main(){
 #else
-void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void (*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n, 
+void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
 	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
 #endif
 
@@ -38,7 +38,7 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 										IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 										IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
-	#ifndef BOCHS
+#ifndef BOCHS
 
 	ExitBootServices(imageHandle, n);
 	DisableInterrupts();
@@ -56,19 +56,19 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	PrintT("Initializing memory");
 	PagingInit();
-	
+
 	GDTR* gdtr = 0xc1000000;
 	GDT* gdt = 0xc1000000 + sizeof(GDTR);
 	IDTR* idtr = 0xc1001000;
-	IDT* idt = 0xc1001000+sizeof(IDTR);
+	IDT* idt = 0xc1001000 + sizeof(IDTR);
 	PagingMapPage(gdtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
 	PagingMapPage(idtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
-	#else
+#else
 	GDTR *gdtr = 0x120000;
 	GDT* gdt = 0x120000 + sizeof(GDTR);
 	IDTR *idtr = 0x122000;
 	IDT* idt = 0x122000 + sizeof(IDTR);
-	#endif
+#endif
 
 	gdtr->size = sizeof(GDTEntry) * 5 - 1;
 	gdtr->offset = gdt;
@@ -121,20 +121,21 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 		idt->entries[a].offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
 		idt->entries[a].offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
-		idt->entries[a].offset32to63 = (UINT32)((((UINT64)handler) >> 32)&0xFFFFFFFF);
+		idt->entries[a].offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
 
 		idt->entries[a].type = 0x8E;
 		idt->entries[a].ist = 0;
 	}
 
 	LoadIDT(idtr);
-	PICInitialize();
 	KeyboardInitialize();
-	
+	PICInitialize();
+
+
 	nnxalloc_init();
 	for (int a = 0; a < 64; a++) {
-		if(a % 16 == 0)
-		PrintT("%i/63\n", a);
+		if (a % 16 == 0)
+			PrintT("%i/63\n", a);
 		nnxalloc_append(PagingAllocatePage(), 4096);
 	}
 
@@ -143,19 +144,19 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	if (!facp) {
 		status = ACPI_LastError();
 		ACPI_ERROR(status);
-		while (1); 
+		while (1);
 	}
 
 	if (rdsp->Revision == 0)
 		status = ACPI_ParseDSDT(facp->DSDT);
 	else
 		status = ACPI_ParseDSDT(facp->X_DSDT);
-	
 
-	#ifndef BOCHS
+
+#ifndef BOCHS
 	TextIOClear();
 	TextIOSetCursorPosition(0, 0);
-	PrintT("NNXOSLDR.exe version %s\n",version);
+	PrintT("NNXOSLDR.exe version %s\n", version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
 	PrintT("Memory map: ");
@@ -171,9 +172,10 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 
 	TextIOSetCursorPosition(0, 200);
 
-	VFSInit();
-	PCIScan();
-
+	while(true){
+		VFSInit();
+		PCIScan();
+	}
 	EnableInterrupts();
 
 	#endif

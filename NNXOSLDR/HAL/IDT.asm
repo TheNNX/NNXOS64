@@ -128,13 +128,19 @@ exception_error 30
 ExceptionReserved:
 exception_error 0xffffffffffffffff
 
-[EXTERN IRQHandler]
-func IRQHandlerInternal
+[GLOBAL Ack]
+Ack:
 	mov al, 0x20
 	out 0x20, al
 	cmp rcx, 8
 		jng .end
 	out 0xA0, al
+.end:
+	ret
+
+[EXTERN IRQHandler]
+func IRQHandlerInternal
+	call Ack
 .end:
 	sub rsp, 32
 	call IRQHandler

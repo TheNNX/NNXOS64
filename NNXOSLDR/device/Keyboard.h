@@ -182,7 +182,7 @@ extern struct KeyState state;
 }
 
 
-extern UINT8(*ScancodeSet2Keys[256])();
+extern UINT8(*ScancodeSet2Keys[])();
 
 extern UINT8 ScancodeSet;
 

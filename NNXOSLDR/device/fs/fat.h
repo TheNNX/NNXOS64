@@ -1,19 +1,20 @@
 #ifndef NNX_FAT_HEADER
 #define NNX_FAT_HEADER
 #include "nnxint.h"
+#include "vfs.h"
 
 #pragma pack(push, 1)
 
 typedef struct {
-	UINT8 year : 7;
-	UINT8 month : 4;
-	UINT8 day : 5;
+	UINT16 year : 7;
+	UINT16 month : 4;
+	UINT16 day : 5;
 }FatDate;
 
 typedef struct {
-	UINT8 hour : 5;
-	UINT8 minutes : 6;
-	UINT8 seconds : 5;
+	UINT16 hour : 5;
+	UINT16 minutes : 6;
+	UINT16 seconds : 5;
 }FatTime;
 
 #define FAT_READONLY 1
@@ -39,6 +40,7 @@ typedef struct {
 	UINT16 headsVolumeSize;
 	UINT32 sectorsHidden;
 	UINT32 sectorTotSize32;
+	UINT8 _[476];
 }BPB, BIOSParameterBlock;
 
 typedef struct {
@@ -52,5 +54,15 @@ typedef struct {
 	BYTE volumeLabel[11];
 	BYTE fatTypeInfo[8];
 }BPB_EXT_FAT1X, BPB1X;
+
+UINT32 FATCalculateFATClusterCount(BPB* bpb);
+BOOL FATisFAT16(BPB* bpb);
+BOOL FATisFAT32(BPB* bpb);
+UINT32 FATFileAllocationTableSize(BPB* bpb);
+UINT32 FATVolumeTotalSize(BPB* bpb);
+UINT32 FATScanFree(VFS* filesystem);
+bool FAT16IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+bool FAT32IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+bool FAT12IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
 #pragma pack(pop)
 #endif

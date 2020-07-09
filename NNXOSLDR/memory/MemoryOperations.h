@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-	void memset(void* dst, UINT64 value, UINT64 size);
+	void memset(void* dst, UINT8 value, UINT64 size);
 	void memcpy(void* dst, void* src, UINT64 size);
 
 #ifdef __cplusplus

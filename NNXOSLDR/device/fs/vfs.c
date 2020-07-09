@@ -4,8 +4,9 @@
 VirtualFileSystem virtualFileSystems[VFS_MAX_NUMBER];
 
 void VFSInit() {
+	VFS empty = { 0 };
 	for (int i = 0; i < VFS_MAX_NUMBER; i++)
-		virtualFileSystems[i].drive = 0;
+		virtualFileSystems[i] = empty;
 }
 
 unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize) {
@@ -24,8 +25,8 @@ unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionS
 	return found;
 }
 
-void VFSReadSector(VirtualFileSystem* vfs, BYTE* destination) {
-	PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart, 1, destination);
+void VFSReadSector(VirtualFileSystem* vfs, UINT64 n, BYTE* destination) {
+	PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart + n, 1, destination);
 }
 
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {

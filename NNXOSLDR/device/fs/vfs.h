@@ -13,13 +13,13 @@ typedef struct VirtualFileSystem {
 	IDEDrive* drive;
 	UINT64 lbaStart;
 	UINT64 sizeInSectors;
+	UINT64 allocationUnitSize;
 	VirtualFileSystemOperations operations;
 }VirtualFileSystem, VFS;
 
 void VFSInit();
 unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
-
-void VFSReadSector(VirtualFileSystem*, BYTE* destination);
+void VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
 
 #endif
