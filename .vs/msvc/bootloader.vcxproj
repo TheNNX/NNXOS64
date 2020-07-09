@@ -230,8 +230,6 @@ rmdir /Q /S $(ProjectName)</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\low.h" />
-    <ClInclude Include="..\..\nnxarg.h" />
-    <ClInclude Include="..\..\nnxint.h" />
     <ClInclude Include="..\..\pe\pe.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -28,7 +28,10 @@ typedef bool BOOL;
 #define TRUE 1
 #define FALSE 0
 
-typedef void VOID;
+#ifndef VOID
+	typedef void VOID;
+#endif // !VOID
+
 typedef void* PVOID;
 
 inline bool GetBit(unsigned int num, unsigned int n) {

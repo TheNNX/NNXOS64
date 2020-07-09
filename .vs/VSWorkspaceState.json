@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\NNXOSLDR",
+    "\\NNXOSLDR\\device",
+    "\\NNXOSLDR\\device\\fs",
+    "\\NNXOSLDR\\HAL",
+    "\\NNXOSLDR\\HAL\\ACPI",
+    "\\NNXOSLDR\\HAL\\PCI"
+  ],
+  "SelectedNode": "\\NNXOSLDR\\HAL\\PCI\\PCI.c",
+  "PreviewInSolutionExplorer": false
+}
