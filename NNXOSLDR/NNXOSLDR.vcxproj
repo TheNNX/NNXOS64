@@ -190,6 +190,7 @@ compile.bat</Command>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\vfs.c" />
     <ClCompile Include="device\hdd\hdd.c" />
     <ClCompile Include="device\Keyboard.c" />
@@ -201,7 +202,7 @@ compile.bat</Command>
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
-    <ClCompile Include="memory\nnxalloc.h" />
+    <ClInclude Include="memory\nnxalloc.h" />
     <ClCompile Include="memory\paging.c" />
     <ClCompile Include="memory\physical_allocator.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
