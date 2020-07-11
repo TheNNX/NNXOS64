@@ -171,11 +171,10 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	drawMap();
 
 	TextIOSetCursorPosition(0, 200);
-
-	while(true){
-		VFSInit();
-		PCIScan();
-	}
+		
+	VFSInit();
+	PCIScan();
+	
 	EnableInterrupts();
 
 	#endif

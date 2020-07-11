@@ -18,3 +18,4 @@ gnu-efi/*
 .vs/nnxos64/*
 *.tmp
 *.obj
+*.exe

@@ -25,8 +25,8 @@ unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionS
 	return found;
 }
 
-void VFSReadSector(VirtualFileSystem* vfs, UINT64 n, BYTE* destination) {
-	PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart + n, 1, destination);
+UINT64 VFSReadSector(VirtualFileSystem* vfs, UINT64 n, BYTE* destination) {
+	return PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart + n, 1, destination);
 }
 
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {

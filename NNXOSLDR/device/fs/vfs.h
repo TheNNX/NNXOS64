@@ -20,6 +20,6 @@ typedef struct VirtualFileSystem {
 void VFSInit();
 unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
-void VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
+UINT64 VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
 
 #endif

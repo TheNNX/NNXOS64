@@ -9,13 +9,13 @@ typedef struct {
 	UINT16 year : 7;
 	UINT16 month : 4;
 	UINT16 day : 5;
-}FatDate;
+}FATDate;
 
 typedef struct {
 	UINT16 hour : 5;
 	UINT16 minutes : 6;
 	UINT16 seconds : 5;
-}FatTime;
+}FATTime;
 
 #define FAT_READONLY 1
 #define FAT_HIDDEN 2
@@ -55,14 +55,31 @@ typedef struct {
 	BYTE fatTypeInfo[8];
 }BPB_EXT_FAT1X, BPB1X;
 
+typedef struct{
+	unsigned char filename[8];
+	unsigned char fileExtension[3];
+	BYTE fileAttributes;
+	BYTE reserved;
+	BYTE createTimeHRes;
+	FATTime creationTime;
+	FATDate creationDate;
+	FATDate accessDate;
+	UINT16 highCluster;
+	FATTime modifiedTime;
+	FATDate modifiedDate;
+	UINT16 lowCluster;
+	UINT32 fileSize;
+}FATDirectoryEntry;
+
 UINT32 FATCalculateFATClusterCount(BPB* bpb);
 BOOL FATisFAT16(BPB* bpb);
 BOOL FATisFAT32(BPB* bpb);
 UINT32 FATFileAllocationTableSize(BPB* bpb);
 UINT32 FATVolumeTotalSize(BPB* bpb);
 UINT32 FATScanFree(VFS* filesystem);
-bool FAT16IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
-bool FAT32IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
-bool FAT12IsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+bool FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+UINT32 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
+UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
+void FATDebugDirRoot(VFS* filesystem);
 #pragma pack(pop)
 #endif

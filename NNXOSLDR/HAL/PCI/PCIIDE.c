@@ -3,7 +3,7 @@
 #include "HAL/Port.h"
 #include "device/hdd/hdd.h"
 
-#define WAIT_MACRO for (int __ = 0; __ < 10000; __++);
+#define WAIT_MACRO for (int __ = 0; __ < 100000; __++);
 
 VOID IDEWrite(PCI_IDE_Controller* pic, UINT8 channel, UINT8 reg, UINT8 data) {
 	if (reg > 0x07 && reg < 0x0C)
@@ -247,9 +247,7 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 	
 	for (int i = 0; i < numberOfSectors; i++) {
 		UINT8 err = IDEPoll(controller, channel, 1);
-		if (err) {
-			PrintT("Error: %x\n",err);
-			while (1);
+		if (err & (ATA_SR_ERR || ATA_SR_DF)) {
 			return err;
 		}
 		if (direction == 0) {
