@@ -4,11 +4,11 @@
 
 MemoryBlock* first;
 
-void nnxalloc_init() {
+void NNXAllocatorInitialize() {
 	first = 0;
 }
 
-void nnxalloc_append(void* memblock, UINT64 memblockSize) {
+void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 	if (!first) {
 		first = memblock;
 		first->size = memblockSize - sizeof(MemoryBlock);
@@ -27,7 +27,7 @@ void nnxalloc_append(void* memblock, UINT64 memblockSize) {
 	}
 }
 
-void* nnxmalloc(UINT64 size) {
+void* NNXAllocatorAlloc(UINT64 size) {
 	
 	if (size >= 4096) {
 		PrintT("Searching for a free block of size = %i (impossible)\n", size);
@@ -55,14 +55,14 @@ void* nnxmalloc(UINT64 size) {
 	return 0;
 }
 
-void* nnxcalloc(UINT64 n, UINT64 size) {
-	void* result = nnxmalloc(n*size);
+void* NNXAllocatorAllocArray(UINT64 n, UINT64 size) {
+	void* result = NNXAllocatorAlloc(n*size);
 	if(result)
-		memset(result, 0, size*n);
+		MemSet(result, 0, size*n);
 	return result;
 }
 
-void nnxfree(void* address) {
+void NNXAllocatorFree(void* address) {
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 }

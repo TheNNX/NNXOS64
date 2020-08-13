@@ -21,7 +21,7 @@ AMLName g_HID;
 extern "C" {
 	extern UINT8 localLastError;
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table) {
-		if (!verifyACPI_DSDT(table))
+		if (!ACPIVerifyDSDT(table))
 		{
 			localLastError = ACPI_ERROR_INVALID_DSDT;
 			return localLastError;
@@ -107,7 +107,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			AMLNamedObject *namedObject = AMLNamedObject::newObject(nws.name, CreateAMLObjRef(NULL, tAMLInvalid));
 			AMLObjRef amlObject = this->GetAMLObject(GetByte());
 			namedObject->object = amlObject;
-			nws.scope->namedObjects.add(namedObject);
+			nws.scope->namedObjects.Add(namedObject);
 			break;
 		}
 		case AML_OPCDOE_SCOPEOPCODE:
@@ -133,7 +133,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			UINT32 PkgLenght = DecodePkgLenght();
 			AMLNameWithinAScope name = GetNameWithinAScope(scope);
 			AMLMethodDef* methodDef = CreateMethod(name.name, name.scope);
-			methodDef->name.scope->methods.add(methodDef);
+			methodDef->name.scope->methods.Add(methodDef);
 			UINT8 flags = GetByte();
 			UINT64 index2 = this->index;
 			methodDef->codeIndex = index2;
@@ -195,14 +195,14 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 
 					AMLNameWithinAScope name = GetNameWithinAScope(scope);
 					AMLFieldUnit* fieldUnit = CreateFieldUnit(name.name, GetByte());
-					name.scope->namedObjects.add(AMLNamedObject::newObject(name.name, CreateAMLObjRef(fieldUnit, tAMLFieldUnit)));
-					field->fieldUnits.add(fieldUnit);
+					name.scope->namedObjects.Add(AMLNamedObject::newObject(name.name, CreateAMLObjRef(fieldUnit, tAMLFieldUnit)));
+					field->fieldUnits.Add(fieldUnit);
 					PrintName(fieldUnit->name);
 
 					pkgLenghtCounter -= (this->index - startIndex);
 				}
 
-				scope->opRegion->fields.add(field);
+				scope->opRegion->fields.Add(field);
 				break;
 			}
 
@@ -290,7 +290,7 @@ AMLNamedObject::AMLNamedObject(AMLName name, AMLObjRef object) {
 }
 
 AMLNamedObject* AMLNamedObject::newObject(AMLName name, AMLObjRef object) {
-	AMLNamedObject* output = (AMLNamedObject*)nnxmalloc(sizeof(AMLNamedObject));
+	AMLNamedObject* output = (AMLNamedObject*)NNXAllocatorAlloc(sizeof(AMLNamedObject));
 	*output = AMLNamedObject(name, object);
 	//PrintT("Allocated new named object for name ");PrintName(output->name);PrintT(" at location %x\n", output);
 	return output;
@@ -364,7 +364,7 @@ UINT32 AMLParser::DecodeBufferSize() {
 
 AMLBuffer* AMLParser::ReadBufferData() {
 	UINT32 bufferSize = DecodeBufferSize();
-	AMLBuffer* amlBuffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
+	AMLBuffer* amlBuffer = (AMLBuffer*)NNXAllocatorAlloc(sizeof(AMLBuffer));
 	*amlBuffer = AMLBuffer(bufferSize);
 	for (int a = 0; a < bufferSize; a++) {
 		amlBuffer->data[a] = GetByte();
@@ -379,7 +379,7 @@ int __strlen(char* string) {
 }
 
 AMLBuffer* AMLParser::AMLToBuffer(AMLObjRef data) {
-	AMLBuffer* buffer = (AMLBuffer*)nnxmalloc(sizeof(AMLBuffer));
+	AMLBuffer* buffer = (AMLBuffer*)NNXAllocatorAlloc(sizeof(AMLBuffer));
 	switch (data.type) {
 	case tAMLString:
 		*buffer = AMLBuffer((__strlen((char*)data.pointer))+1);
@@ -434,16 +434,16 @@ AMLBuffer* AMLParser::CreateBuffer() {
 
 AMLPackage::AMLPackage(UINT8 numElements) {
 	this->numElements = numElements;
-	this->elements = (AMLObjRef*)nnxcalloc(numElements, sizeof(AMLObjRef));
+	this->elements = (AMLObjRef*)NNXAllocatorAllocArray(numElements, sizeof(AMLObjRef));
 }
 
 AMLPackage* AMLParser::CreatePackage() {
 	UINT32 pkgLenght = DecodePkgLenght();
 	UINT8 numElements = DecodePackageNumElements();
-	AMLPackage* amlPackage = (AMLPackage*)nnxmalloc(sizeof(AMLPackage));
+	AMLPackage* amlPackage = (AMLPackage*)NNXAllocatorAlloc(sizeof(AMLPackage));
 	*amlPackage = AMLPackage(numElements);
 
-	amlPackage->elements = (AMLObjRef*)(nnxcalloc(numElements, sizeof(AMLObjRef)));
+	amlPackage->elements = (AMLObjRef*)(NNXAllocatorAllocArray(numElements, sizeof(AMLObjRef)));
 	for (int a = 0; a < numElements; a++) {
 		AMLObjRef element = GetAMLObject(GetByte());
 		amlPackage->elements[a] = element;
@@ -464,26 +464,26 @@ AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
 	{
 	case AML_OPCODE_ZEROOPCODE:
 	case AML_OPCODE_ONEOPCODE:
-		return CreateAMLObjRef(&(*((UINT8*)nnxmalloc(sizeof(UINT8))) = opcode), this->revision < 2 ? tAMLDword : tAMLQword);
+		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = opcode), this->revision < 2 ? tAMLDword : tAMLQword);
 	case AML_OPCODE_BYTEPREFIX:
-		return CreateAMLObjRef(&(*((UINT8*)nnxmalloc(sizeof(UINT8))) = GetByte()), tAMLByte);
+		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = GetByte()), tAMLByte);
 	case AML_OPCODE_WORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT16*)nnxmalloc(sizeof(UINT16))) = GetWord()), tAMLWord);
+		return CreateAMLObjRef(&(*((UINT16*)NNXAllocatorAlloc(sizeof(UINT16))) = GetWord()), tAMLWord);
 	case AML_OPCODE_DWORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT32*)nnxmalloc(sizeof(UINT32))) = GetDword()), tAMLDword);
+		return CreateAMLObjRef(&(*((UINT32*)NNXAllocatorAlloc(sizeof(UINT32))) = GetDword()), tAMLDword);
 	case AML_OPCODE_STRINGPREFIX: {
-		UINT8* str = (UINT8*)nnxcalloc(256, 1);
+		UINT8* str = (UINT8*)NNXAllocatorAllocArray(256, 1);
 		GetString(str, 255, 0);
 		return CreateAMLObjRef(str, tAMLString); 
 	}
 	case AML_OPCODE_QWORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT64*)nnxmalloc(sizeof(UINT64))) = GetQword()), tAMLQword);
+		return CreateAMLObjRef(&(*((UINT64*)NNXAllocatorAlloc(sizeof(UINT64))) = GetQword()), tAMLQword);
 	case AML_OPCODE_BUFFEROPCODE:
 		return CreateAMLObjRef(CreateBuffer(), tAMLBuffer);
 	case AML_OPCODE_PACKAGEOPCODE:
 		return CreateAMLObjRef(CreatePackage(), tAMLPackage);
 	case AML_OPCODE_ONESOPCODE:
-		return CreateAMLObjRef(&(*((UINT8*)nnxmalloc(sizeof(UINT8))) = this->revision < 2 ? 0xFFFFFFFF : 0xFFFFFFFFFFFFFFFF), this->revision < 2 ? tAMLDword : tAMLQword);
+		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = this->revision < 2 ? 0xFFFFFFFF : 0xFFFFFFFFFFFFFFFF), this->revision < 2 ? tAMLDword : tAMLQword);
 	default:
 		return CreateAMLObjRef(NULL, tAMLInvalid);
 	}
@@ -491,7 +491,7 @@ AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
 
 AMLBuffer::AMLBuffer(UINT32 size) {
 	this->size = size;
-	this->data = (UINT8*)nnxcalloc(size, 1);
+	this->data = (UINT8*)NNXAllocatorAllocArray(size, 1);
 }
 
 AMLScope* AMLParser::GetRootScope() {
@@ -504,21 +504,21 @@ UINT32 AMLParser::GetSize() {
 
 void InitializeNamespace(AMLScope* root) {
 	PrintT("Adding predefined scopes.\n");
-	root->children.add(AMLScope::newScope("_SB_", root));
-	root->children.add(AMLScope::newScope("_TZ_", root));
-	root->children.add(AMLScope::newScope("_SI_", root));
-	root->children.add(AMLScope::newScope("_PR_", root));
-	root->children.add(AMLScope::newScope("_GPE", root));
+	root->children.Add(AMLScope::newScope("_SB_", root));
+	root->children.Add(AMLScope::newScope("_TZ_", root));
+	root->children.Add(AMLScope::newScope("_SI_", root));
+	root->children.Add(AMLScope::newScope("_PR_", root));
+	root->children.Add(AMLScope::newScope("_GPE", root));
 }
 
 extern "C" AMLName CreateName(const char* name) {
 	AMLName n;
-	memcpy(n.name, (void*)name, 4);
+	MemCopy(n.name, (void*)name, 4);
 	return n;
 }
 
 AMLScope* AMLScope::newScope(const char* name, AMLScope* parent) {
-	AMLScope* result = (AMLScope*)nnxmalloc(sizeof(AMLScope));
+	AMLScope* result = (AMLScope*)NNXAllocatorAlloc(sizeof(AMLScope));
 	*result = AMLScope();
 	result->parent = parent;
 	result->name = CreateName(name);
@@ -541,7 +541,7 @@ void AMLDevice::Init_HID() {
 }
 
 AMLDevice* AMLDevice::newScope(const char* name, AMLScope* parent) {
-	AMLDevice* result = (AMLDevice*)nnxmalloc(sizeof(AMLDevice));
+	AMLDevice* result = (AMLDevice*)NNXAllocatorAlloc(sizeof(AMLDevice));
 	*result = AMLDevice();
 	result->parent = parent;
 	result->name = CreateName(name);
@@ -557,7 +557,7 @@ AMLMethodDef::AMLMethodDef(AMLName name, AMLParser* parser, AMLScope* scope) {
 }
 
 AMLMethodDef* AMLParser::CreateMethod(AMLName methodName, AMLScope* scope) {
-	AMLMethodDef* method = (AMLMethodDef*)nnxmalloc(sizeof(AMLMethodDef));
+	AMLMethodDef* method = (AMLMethodDef*)NNXAllocatorAlloc(sizeof(AMLMethodDef));
 	*method = AMLMethodDef(methodName, this, scope);
 	method->codeIndex = 0;
 	method->maxCodeIndex = 0;
@@ -565,14 +565,14 @@ AMLMethodDef* AMLParser::CreateMethod(AMLName methodName, AMLScope* scope) {
 }
 
 AMLOpetationRegion* AMLParser::CreateOperationRegion(AMLNameWithinAScope name) {
-	AMLOpetationRegion* opregion = (AMLOpetationRegion*)nnxmalloc(sizeof(AMLOpetationRegion));
+	AMLOpetationRegion* opregion = (AMLOpetationRegion*)NNXAllocatorAlloc(sizeof(AMLOpetationRegion));
 	*opregion = AMLOpetationRegion();
 	opregion->name = name;
 	return opregion;
 }
 
 AMLField* AMLParser::CreateField(AMLOpetationRegion *parent, UINT8 access, UINT8 lock, UINT8 updateRule) {
-	AMLField* field = (AMLField*)nnxmalloc(sizeof(AMLField));
+	AMLField* field = (AMLField*)NNXAllocatorAlloc(sizeof(AMLField));
 	*field = AMLField();
 	field->lock = lock;
 	field->accessWidth = access;
@@ -582,7 +582,7 @@ AMLField* AMLParser::CreateField(AMLOpetationRegion *parent, UINT8 access, UINT8
 }
 
 AMLFieldUnit* AMLParser::CreateFieldUnit(AMLName name, UINT8 width) {
-	AMLFieldUnit* fieldUnit = (AMLFieldUnit*)nnxmalloc(sizeof(AMLFieldUnit));
+	AMLFieldUnit* fieldUnit = (AMLFieldUnit*)NNXAllocatorAlloc(sizeof(AMLFieldUnit));
 	*fieldUnit = AMLFieldUnit();
 	fieldUnit->width = width;
 	fieldUnit->name = name;

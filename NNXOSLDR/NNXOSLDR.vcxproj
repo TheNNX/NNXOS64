@@ -110,7 +110,7 @@
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalDependencies>
       </AdditionalDependencies>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>KernelMain</EntryPointSymbol>
       <BaseAddress>0x100000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
@@ -231,6 +231,7 @@ compile.bat</Command>
     <ClInclude Include="nnxerr.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.hpp" />
+    <ClInclude Include="nnxosdbg.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>

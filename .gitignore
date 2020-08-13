@@ -19,3 +19,4 @@ gnu-efi/*
 *.tmp
 *.obj
 *.exe
+final.bin

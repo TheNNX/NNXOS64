@@ -20,14 +20,14 @@ public:
 	}
 
 	NNXLinkedList(T element) {
-		this->first = (NNXLinkedListEntry<T>*)nnxmalloc(sizeof(NNXLinkedListEntry<T>));
+		this->first = (NNXLinkedListEntry<T>*)NNXAllocatorAlloc(sizeof(NNXLinkedListEntry<T>));
 		*this->first = NNXLinkedListEntry<T>();
 		this->first->next = 0;
 		this->first->value = element;
 		this->optimized = this->first;
 	}
 
-	bool contains(T element) {
+	bool Contains(T element) {
 
 		NNXLinkedListEntry<T>* cur = this->first;
 
@@ -42,7 +42,7 @@ public:
 		return false;
 	}
 
-	NNXLinkedListEntry<T>* add(T element) {
+	NNXLinkedListEntry<T>* Add(T element) {
 
 		if (this->optimized == 0)
 			this->optimized = this->first;
@@ -52,7 +52,7 @@ public:
 			cur = &((*cur)->next);
 		}
 
-		*cur = (NNXLinkedListEntry<T>*)nnxmalloc(sizeof(NNXLinkedListEntry<T>));
+		*cur = (NNXLinkedListEntry<T>*)NNXAllocatorAlloc(sizeof(NNXLinkedListEntry<T>));
 		**cur = NNXLinkedListEntry<T>();
 		(*cur)->next = 0;
 		(*cur)->value = element;
@@ -63,7 +63,7 @@ public:
 		return *cur;
 	}
 
-	T remove(T element) {
+	T Remove(T element) {
 		NNXLinkedListEntry<T>* cur = this->first;
 
 		NNXLinkedListEntry<T>* last = 0;
@@ -80,7 +80,7 @@ public:
 
 				this->optimized = this->first;
 				T value = cur->value;
-				nnxfree(cur);
+				NNXAllocatorFree(cur);
 
 				return value;
 			}
@@ -96,7 +96,7 @@ public:
 		return zero;
 	}
 
-	T remove(NNXLinkedListEntry<T>* element) {
+	T Remove(NNXLinkedListEntry<T>* element) {
 		NNXLinkedListEntry<T>* cur = this->first;
 		NNXLinkedListEntry<T>* last = 0;
 
@@ -112,7 +112,7 @@ public:
 
 				this->optimized = this->first;
 				T value = cur->value;
-				nnxfree(cur);
+				NNXAllocatorFree(cur);
 
 				return value;
 			}
@@ -127,7 +127,7 @@ public:
 		return zero;
 	}
 
-	T* toArray(int* size) {
+	T* ToArray(int* size) {
 		NNXLinkedListEntry<T>* cur = this->first;
 		int numberOfElements = 0;
 
@@ -136,7 +136,7 @@ public:
 			cur = cur->next;
 		}
 
-		T* array = nnxcalloc(sizeof(T), numberOfElements);
+		T* array = NNXAllocatorAllocArray(sizeof(T), numberOfElements);
 
 		int indexOfElements = 0;
 		cur = this->first;
@@ -167,14 +167,14 @@ public:
 	}
 
 	NNXDictionary(K key, V element) {
-		this->first = (NNXDictionaryListEntry<K, V>*)nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>))
+		this->first = (NNXDictionaryListEntry<K, V>*)NNXAllocatorAlloc(sizeof(NNXDictionaryListEntry<K, V>))
 		*this->first = NNXDictionaryListEntry<K, V>();
 		this->first->next = 0;
 		this->first->value = element;
 		this->first->key = key;
 	}
 
-	bool containsElement(V element) {
+	bool ContainsElement(V element) {
 		NNXDictionaryListEntry<K, V>* cur = this->first;
 
 		while (cur) {
@@ -188,7 +188,7 @@ public:
 		return false;
 	}
 
-	bool containsKey(K key) {
+	bool ContainsKey(K key) {
 		NNXDictionaryListEntry<K, V>* cur = this->first;
 
 		while (cur) {
@@ -202,14 +202,14 @@ public:
 		return false;
 	}
 
-	NNXDictionaryListEntry<K, V>* add(K key, V element) {
+	NNXDictionaryListEntry<K, V>* Add(K key, V element) {
 		NNXDictionaryListEntry<K, V>** cur = &(this->first);
 
 		while (*cur) {
 			cur = &((*cur)->next);
 		}
 
-		*cur = (NNXDictionaryListEntry<K, V>*)nnxmalloc(sizeof(NNXDictionaryListEntry<K, V>));
+		*cur = (NNXDictionaryListEntry<K, V>*)NNXAllocatorAlloc(sizeof(NNXDictionaryListEntry<K, V>));
 		**cur = NNXDictionaryListEntry<K, V>();
 		(*cur)->next = 0;
 		(*cur)->value = element;
@@ -218,7 +218,7 @@ public:
 		return *cur;
 	}
 
-	V remove(V element) {
+	V Remove(V element) {
 		NNXDictionaryListEntry<K, V>* cur = this->first;
 		NNXDictionaryListEntry<K, V>* last = 0;
 
@@ -233,7 +233,7 @@ public:
 				}
 
 				V value = cur->value;
-				nnxfree(cur);
+				NNXAllocatorFree(cur);
 
 				return value;
 			}
@@ -247,7 +247,7 @@ public:
 		return zero;
 	}
 
-	V getValue(K key) {
+	V GetValue(K key) {
 		NNXDictionaryListEntry<K, V>* cur = this->first;
 
 		while (cur) {
@@ -264,7 +264,7 @@ public:
 	}
 
 
-	V* toArray(int* size) {
+	V* ToArray(int* size) {
 		NNXDictionaryListEntry<K, V>* cur = this->first;
 		int numberOfElements = 0;
 
@@ -273,7 +273,7 @@ public:
 			cur = cur->next;
 		}
 
-		V* array = nnxcalloc(sizeof(V), numberOfElements);
+		V* array = NNXAllocatorAllocArray(sizeof(V), numberOfElements);
 
 		int indexOfElements = 0;
 		cur = this->first;

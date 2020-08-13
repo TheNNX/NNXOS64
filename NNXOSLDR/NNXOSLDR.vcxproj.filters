@@ -191,6 +191,9 @@
     <ClInclude Include="memory\nnxalloc.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
+    <ClInclude Include="nnxosdbg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">

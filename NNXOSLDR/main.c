@@ -21,9 +21,9 @@ const char version[] = " 0.1";
 
 
 #ifdef BOCHS
-void main(){
+void KernelMain(){
 #else
-void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
+void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
 	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
 #endif
 
@@ -132,11 +132,11 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	PICInitialize();
 
 
-	nnxalloc_init();
+	NNXAllocatorInitialize();
 	for (int a = 0; a < 64; a++) {
 		if (a % 16 == 0)
 			PrintT("%i/63\n", a);
-		nnxalloc_append(PagingAllocatePage(), 4096);
+		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 
 	UINT8 status = 0;
@@ -168,7 +168,7 @@ void main(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, vo
 	PrintT(" UTIL ");
 	TextIOSetColorInformation(0xffffffff, 0, 1);
 
-	drawMap();
+	DrawMap();
 
 	TextIOSetCursorPosition(0, 200);
 		

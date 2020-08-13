@@ -79,8 +79,8 @@ UINT8 StaticFont8x8[][8] = { UNKNOWNMARK  UNKNOWNMARK  UNKNOWNMARK UNKNOWNMARK U
 TIMES128(UNKNOWNMARK) UNKNOWNMARK
 };
 
-char* itoa(UINT64 i, UINT8 base, char b[]) {
-	char const digit[] = "0123456789abcdef";
+char* IntegerToASCIIBase(UINT64 i, UINT8 base, char b[], char digit[]) {
+
 	char* p = b;
 
 	UINT64 shifter = i;
@@ -88,9 +88,7 @@ char* itoa(UINT64 i, UINT8 base, char b[]) {
 		++p;
 		shifter = shifter / base;
 	} while (shifter);
-
 	*p = '\0';
-
 	do {
 		*--p = digit[i%base];
 		i = i / base;
@@ -98,21 +96,14 @@ char* itoa(UINT64 i, UINT8 base, char b[]) {
 	return b;
 }
 
-char* itoaC(UINT64 i, UINT8 base, char b[]) {
-	char const digit[] = "0123456789ABCDEF";
-	char* p = b;
+char* IntegerToASCII(UINT64 i, UINT8 base, char b[])
+{
+	return IntegerToASCIIBase(i, base, b, "0123456789abcdef");
+}
 
-	UINT64 shifter = i;
-	do {
-		++p;
-		shifter = shifter / base;
-	} while (shifter);
-	*p = '\0';
-	do {
-		*--p = digit[i%base];
-		i = i / base;
-	} while (i);
-	return b;
+char* IntegerToASCIICapital(UINT64 i, UINT8 base, char b[])
+{
+	return IntegerToASCIIBase(i, base, b, "0123456789ABCDEF");
 }
 
 void TextIOClear() {
@@ -346,7 +337,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
 						char str[32] = { 0 };
-						itoa(c, 10, str);
+						IntegerToASCII(c, 10, str);
 						TextIOOutputStringGlobal(str);
 						break;
 					}
@@ -355,7 +346,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
 						char str[65] = { 0 };
-						itoa(c, 2, str);
+						IntegerToASCII(c, 2, str);
 						TextIOOutputStringGlobal(str);
 						break;
 					}
@@ -363,7 +354,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
 						char str[32] = { 0 };
-						itoaC(c, 16, str);
+						IntegerToASCIICapital(c, 16, str);
 						TextIOOutputStringGlobal(str);
 						break;
 					}
@@ -371,7 +362,7 @@ void TextIOOutputFormatedString(char input[], UINT32 size, va_list args2) {
 						UINT64 c = *((UINT64*)args);
 						((UINT64*)args) += 1;
 						char str[32] = { 0 };
-						itoa(c, 16, str);
+						IntegerToASCII(c, 16, str);
 						TextIOOutputStringGlobal(str);
 						break;
 					}
@@ -418,7 +409,7 @@ void TextIOTest(UINT64 mode) {
 	}
 }
 
-void drawMap() {
+void DrawMap() {
 	int x = 0;
 	int y = 0;
 

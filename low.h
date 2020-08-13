@@ -1,8 +1,8 @@
 #pragma once
 #include "NNXOSLDR/nnxint.h"
 
-UINT64 GET_CR2();
-UINT64 GET_CR3();
-UINT64 GET_CR4();
+UINT64 GetCR2();
+UINT64 GetCR3();
+UINT64 GetCR4();
 
-void SET_CR3(UINT64);
+void SetCR3(UINT64);

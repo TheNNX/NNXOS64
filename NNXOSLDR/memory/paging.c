@@ -52,17 +52,17 @@ void PagingMapPage(void* virtual, void* physical, UINT16 flags) {
 
 	if (pml4[pdp_number] == 0) {
 		pml4[pdp_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
-		memset(PG_ALIGN(pml4[pdp_number]), 0, 4096);
+		MemSet(PG_ALIGN(pml4[pdp_number]), 0, 4096);
 	}
 	UINT64*** pdp = PG_ALIGN(PML4[pdp_number]);
 	if (pdp[pd_number] == 0) {
 		pdp[pd_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
-		memset(PG_ALIGN(pdp[pd_number]), 0, 4096);
+		MemSet(PG_ALIGN(pdp[pd_number]), 0, 4096);
 	}
 	UINT64** pd = PG_ALIGN(pdp[pd_number]);
 	if (pd[pt_number] == 0) {
 		pd[pt_number] = ((UINT64)InternalAllocatePhysicalPage()) | PAGE_PRESENT | PAGE_WRITE;
-		memset(PG_ALIGN(pd[pt_number]), 0, 4096);
+		MemSet(PG_ALIGN(pd[pt_number]), 0, 4096);
 	}
 
 	UINT64* pt = PG_ALIGN(pd[pt_number]);
@@ -78,16 +78,16 @@ void PagingInit() {
 	PML4 = InternalAllocatePhysicalPage();
 	PML4_IdentifyMap = InternalAllocatePhysicalPage();
 
-	memset(PML4, 0, 4096);
-	memset(PML4_IdentifyMap, 0, 4096);
+	MemSet(PML4, 0, 4096);
+	MemSet(PML4_IdentifyMap, 0, 4096);
 
 	for (int a = 0; a < 512; a++) {
 		PML4[a] = InternalAllocatePhysicalPage();
-		memset(PML4[a], 0, 4096);
+		MemSet(PML4[a], 0, 4096);
 		((UINT64*)PML4)[a] |= PAGE_PRESENT | PAGE_WRITE;
 
 		PML4_IdentifyMap[a] = InternalAllocatePhysicalPage();
-		memset(PML4_IdentifyMap[a], 0, 4096);
+		MemSet(PML4_IdentifyMap[a], 0, 4096);
 		((UINT64*)PML4_IdentifyMap)[a] |= PAGE_PRESENT | PAGE_WRITE;
 	}
 

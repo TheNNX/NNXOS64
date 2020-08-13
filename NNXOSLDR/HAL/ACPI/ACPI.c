@@ -7,7 +7,7 @@ UINT8 ACPI_LastError() {
 }
 
 ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp) {
-	if (!verifyACPI_RDSP(rdsp)) {
+	if (!ACPIVerifyRDSP(rdsp)) {
 		localLastError = ACPI_ERROR_INVALID_RDSP;
 		return 0;
 	}
@@ -23,7 +23,7 @@ ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp) {
 		localLastError = ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10;
 		return 0;
 	}
-	if (!verifyACPI_RDSP(rdsp)) {
+	if (!ACPIVerifyRDSP(rdsp)) {
 		localLastError = ACPI_ERROR_INVALID_RDSP;
 		return 0;
 	}
@@ -41,7 +41,7 @@ ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
 		}
-		if (!verifyACPI_RSDT(rsdt)) {
+		if (!ACPIVerifyRSDT(rsdt)) {
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
 		}
@@ -67,7 +67,7 @@ ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
 		}
-		if (!verifyACPI_XSDT(xsdt)) {
+		if (!ACPIVerifyXSDT(xsdt)) {
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
 		}
@@ -89,7 +89,7 @@ ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 	return 0;
 }
 
-BOOL verifyACPI_FADT(ACPI_FADT* fadt) {
+BOOL ACPIVerifyFADT(ACPI_FADT* fadt) {
 	UINT32 sum = 0;
 	for (UINT32 index = 0; index < fadt->Header.Lenght; index++) {
 		sum += ((char*)fadt)[index];
@@ -97,7 +97,7 @@ BOOL verifyACPI_FADT(ACPI_FADT* fadt) {
 	return (sum & 0xFF) == 0;
 }
 
-BOOL verifyACPI_DSDT(ACPI_DSDT* dsdt) {
+BOOL ACPIVerifyDSDT(ACPI_DSDT* dsdt) {
 	PrintT("Verifying DSDT 0x%X\n",dsdt);
 	UINT32 sum = 0;
 	for (UINT32 index = 0; index < dsdt->Header.Lenght; index++) {
@@ -106,7 +106,7 @@ BOOL verifyACPI_DSDT(ACPI_DSDT* dsdt) {
 	return (sum & 0xFF) == 0;
 }
 
-BOOL verifyACPI_XSDT(ACPI_XSDT* xsdt) {
+BOOL ACPIVerifyXSDT(ACPI_XSDT* xsdt) {
 	UINT32 sum = 0;
 	for (UINT32 index = 0; index < xsdt->Header.Lenght; index++) {
 		sum += ((char*)xsdt)[index];
@@ -114,7 +114,7 @@ BOOL verifyACPI_XSDT(ACPI_XSDT* xsdt) {
 	return (sum & 0xFF) == 0;
 }
 
-BOOL verifyACPI_RSDT(ACPI_RSDT* rsdt) {
+BOOL ACPIVerifyRSDT(ACPI_RSDT* rsdt) {
 	UINT32 Lenght = rsdt->Header.Lenght;
 	UINT64 sum = 0;
 	for (UINT32 a = 0; a < Lenght; a++) {
@@ -123,7 +123,7 @@ BOOL verifyACPI_RSDT(ACPI_RSDT* rsdt) {
 	return (sum & 0xFF) == 0;
 }
 
-BOOL verifyACPI_RDSP(ACPI_RDSP* rdsp) {
+BOOL ACPIVerifyRDSP(ACPI_RDSP* rdsp) {
 	UINT32 Lenght = sizeof(ACPI_RDSP) - sizeof(ACPI_RDSPExtension);
 	if (rdsp->Revision > 0) {
 		Lenght = rdsp->v20.Lenght;

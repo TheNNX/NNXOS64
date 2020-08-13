@@ -102,7 +102,7 @@ void PCI_BridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNu
 
 PCI_IDE_Controller controllers[MAX_PCI_IDE_CONTROLLERS] = { 0 };
 
-bool alreadyContainsController(PCI_IDE_Controller* controller) { //pointer used, so only the address is passed on the stack (well, in this case onto RCX), and not the entire structure
+bool AlreadyContainsController(PCI_IDE_Controller* controller) { //pointer used, so only the address is passed on the stack (well, in this case onto RCX), and not the entire structure
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++) {
 		if (controllers[i].channels[0].base == controller->channels[0].base &&
 			controllers[i].channels[0].ctrl == controller->channels[0].ctrl &&
@@ -114,7 +114,7 @@ bool alreadyContainsController(PCI_IDE_Controller* controller) { //pointer used,
 	return false;
 }
 
-UINT64 numberOfControllers() {
+UINT64 NumberOfControllers() {
 	UINT64 result = 0;
 
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
@@ -123,7 +123,7 @@ UINT64 numberOfControllers() {
 	return result;
 }
 
-int addController(PCI_IDE_Controller p_ide_ctrl) {
+int AddController(PCI_IDE_Controller p_ide_ctrl) {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++) {
 		if (!(controllers[i].channels[0].base)) {
 			controllers[i] = p_ide_ctrl;
@@ -137,10 +137,10 @@ void PCI_MassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNum
 	BYTE progIF = PCIGetProgIF(busNumber, deviceNumber, functionNumber);
 
 	if (Subclass == PCI_SUBCLASS_IDE_CONTROLLER) {
-		if (numberOfControllers() < MAX_PCI_IDE_CONTROLLERS - 1) {
+		if (NumberOfControllers() < MAX_PCI_IDE_CONTROLLERS - 1) {
 			PCI_IDE_Controller controller = PCIIDE_InitPCIDevice(busNumber, deviceNumber, functionNumber, PCIGetProgIF(busNumber, deviceNumber, functionNumber));
-			if (!alreadyContainsController(&controller)) {
-				int ID = addController(controller);
+			if (!AlreadyContainsController(&controller)) {
+				int ID = AddController(controller);
 				PrintT("Added controller %d\n", ID);
 				UINT8 commandByte = PCIConfigReadWord(busNumber, deviceNumber, functionNumber, 4) & 0xFF;
 				PrintT("Command word: 0b%b\n",commandByte);
