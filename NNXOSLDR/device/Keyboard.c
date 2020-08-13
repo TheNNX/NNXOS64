@@ -127,7 +127,7 @@ UINT8 KeyboardInitialize() {
 	keyboardInitialized = 1;
 }
 
-UINT8 specialkey() {
+UINT8 SpecialKey() {
 	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
 }
 
@@ -151,7 +151,7 @@ UINT8 KeyboardInterrupt(){
 		return key(1);
 	}
 	else if (scancode == 0xe0) {
-		return specialkey();
+		return SpecialKey();
 	}
 	if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
 		return 0;

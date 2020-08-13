@@ -71,15 +71,20 @@ typedef struct{
 	UINT32 fileSize;
 }FATDirectoryEntry;
 
+BOOL FATisFileOrDir(FATDirectoryEntry* sectorData);
 UINT32 FATCalculateFATClusterCount(BPB* bpb);
+BOOL FATisFAT12(BPB* bpb);
 BOOL FATisFAT16(BPB* bpb);
 BOOL FATisFAT32(BPB* bpb);
 UINT32 FATFileAllocationTableSize(BPB* bpb);
 UINT32 FATVolumeTotalSize(BPB* bpb);
 UINT32 FATScanFree(VFS* filesystem);
-bool FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+BOOL FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
 UINT32 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
 UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
-void FATDebugDirRoot(VFS* filesystem);
+UINT32 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
+
+BOOL NNX_FATAutomaticTest(VFS* filesystem);
+
 #pragma pack(pop)
 #endif

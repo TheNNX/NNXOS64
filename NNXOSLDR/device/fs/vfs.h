@@ -5,17 +5,20 @@
 #include "../../HAL/PCI/PCI.h"
 #define VFS_MAX_NUMBER 64
 
-typedef struct VirtualFileSystemOperations {
-	void (*todo)();
-}VirtualFileSystemOperations, VFSOperations;
-
 typedef struct VirtualFileSystem {
 	IDEDrive* drive;
 	UINT64 lbaStart;
 	UINT64 sizeInSectors;
 	UINT64 allocationUnitSize;
-	VirtualFileSystemOperations operations;
 }VirtualFileSystem, VFS;
+
+#define VFS_ERR_INVALID_FILENAME	0xFFFFFFF1
+#define VFS_ERR_INVALID_PATH		0xFFFFFFF2
+#define VFS_ERR_INACCESSIBLE		0xFFFFFFF3
+#define VFS_ERR_EOF					0xFFFFFFF3
+#define VFS_ERR_NOT_A_DIRECTORY		0xFFFFFFF4
+#define VFS_ERR_NOT_A_FILE			0xFFFFFFF5
+#define VFS_ERR_FILE_NOT_FOUND		0xFFFFFFF6
 
 void VFSInit();
 unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);

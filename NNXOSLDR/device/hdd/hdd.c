@@ -98,7 +98,9 @@ void diskCheck() {
 
 						UINT32 freeClusters = FATScanFree(filesystem);
 						PrintT("%i/%i KiB free\n", freeClusters * bpb->bytesPerSector * bpb->sectorsPerCluster / 1024, FATCalculateFATClusterCount(bpb) * bpb->bytesPerSector * bpb->sectorsPerCluster / 1024);
-						FATDebugDirRoot(filesystem);
+						bool pass = NNX_FATAutomaticTest(filesystem);
+						if (!pass)
+							PrintT("Test failed for %i\n", i);
 					}
 					else {
 						PrintT("\n");
