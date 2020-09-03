@@ -133,7 +133,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 
 	NNXAllocatorInitialize();
-	for (int a = 0; a < 64; a++) {
+	for (int a = 0; a < 8; a++) {
 		if (a % 16 == 0)
 			PrintT("%i/63\n", a);
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
