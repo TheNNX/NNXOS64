@@ -29,6 +29,10 @@ UINT64 VFSReadSector(VirtualFileSystem* vfs, UINT64 n, BYTE* destination) {
 	return PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart + n, 1, destination);
 }
 
+UINT64 VFSWriteSector(VirtualFileSystem* vfs, UINT64 n, BYTE* source) {
+	return PCI_IDE_DiskIO(vfs->drive, 1, vfs->lbaStart + n, 1, source);
+}
+
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {
 	return virtualFileSystems + n;
 }
