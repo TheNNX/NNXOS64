@@ -351,6 +351,8 @@ UINT32 FATCopyFilenameFromPath(char* path, char* filenameCopy) {
 
 	if (endI > 9 || (endI == 0 && slash > 8))
 		return VFS_ERR_INVALID_FILENAME;
+
+	return 0;
 }
 
 UINT32 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parentDirectoryCluster, char* path, FATDirectoryEntry* fileDir) {
@@ -363,6 +365,7 @@ UINT32 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 	UINT64 status = FATCopyFilenameFromPath(path, filenameCopy);
 	if (status)
 		return status;
+
 
 	BYTE* sectorData = NNXAllocatorAlloc(bpb->bytesPerSector);
 
@@ -606,7 +609,7 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	test[i++] = TestFile("efi", filesystem);
 	test[i++] = TestRead("efi\\boot\\NNXOSCFG.TXT", filesystem, 0, 10);
 	test[i++] = TestRead("efi\\boot\\LRGEHALF.TXT", filesystem, 2048, 16);
-	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 160000);
+	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
 	for (int j = 0; j < sizeof(test) / sizeof(*test); j++) {
 		if (!test[j])
 			return false;
