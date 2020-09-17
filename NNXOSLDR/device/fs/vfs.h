@@ -21,7 +21,7 @@ typedef struct VirtualFileSystem {
 #define VFS_ERR_FILE_NOT_FOUND		0xFFFFFFF7
 
 void VFSInit();
-unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);
+UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
 UINT64 VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
 UINT64 VFSWriteSector(VirtualFileSystem*, UINT64 n, BYTE* source);

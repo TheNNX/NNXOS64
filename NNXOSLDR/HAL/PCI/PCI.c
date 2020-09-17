@@ -175,14 +175,10 @@ int AddDrive(IDEDrive* drive) {
 //some debug functionality
 void PCI_IDE_Enumerate() {
 	UINT8 buffer[4096] = {0};
-	UINT8 *s = "uhduwhudhwjhdjwhjdwhjd";
 
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
 		drives[i].reserved = 0;
 	}
-
-	UINT8 *sO = s;
-		while (*s) buffer[(s - sO)] = *(s++);
 
 	PrintT("Enumerating PCI IDE devices.\n");
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++) {
@@ -197,6 +193,6 @@ void PCI_IDE_Enumerate() {
 		}
 	}
 
-	diskCheck();
+	DiskCheck();
 	
 }

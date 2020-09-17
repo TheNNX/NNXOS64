@@ -9,10 +9,10 @@ void VFSInit() {
 		virtualFileSystems[i] = empty;
 }
 
-unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize) {
-	int found = -1;
+UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize) {
+	UINT32 found = -1;
 	
-	for (int i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++) {
+	for (UINT32 i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++) {
 		if (virtualFileSystems[i].drive == 0) {
 			virtualFileSystems[i].drive = drive;
 			virtualFileSystems[i].lbaStart = lbaStart;
@@ -21,7 +21,6 @@ unsigned int VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionS
 		}
 	}
 
-	PrintT("Allocated VFS id %x\n", found);
 	return found;
 }
 

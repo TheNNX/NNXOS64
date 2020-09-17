@@ -3,7 +3,7 @@
 #include "nnxint.h"
 #pragma pack(push, 1)
 
-void diskCheck();
+void DiskCheck();
 
 typedef struct CHS {
 	union {

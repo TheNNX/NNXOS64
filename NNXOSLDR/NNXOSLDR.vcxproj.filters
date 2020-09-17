@@ -114,6 +114,9 @@
     <ClCompile Include="device\fs\fat.c">
       <Filter>Source Files\device\fs</Filter>
     </ClCompile>
+    <ClCompile Include="device\fs\gpt.c">
+      <Filter>Source Files\device\fs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">

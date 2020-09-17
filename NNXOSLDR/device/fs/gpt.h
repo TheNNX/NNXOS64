@@ -9,6 +9,12 @@
 
 typedef struct { QWORD a[2]; } GUID, DQWORD;
 
+BOOL GPTCompareGUID(GUID a1, GUID a2);
+
+extern GUID GPT_MS_BASIC_DISK;
+extern GUID GPT_MS_EFI_DISK;
+extern GUID GPT_EMPTY_TYPE;
+
 typedef struct GPTPartitionHeader {
 	UINT64 signature;
 	DWORD revision;
@@ -32,8 +38,8 @@ typedef struct GPT {
 }GPT;
 
 typedef struct GPTPartitionEntry {
-	UINT16 typeGUID;
-	UINT16 uniqueGUID;
+	GUID typeGUID;
+	GUID uniqueGUID;
 	QWORD lbaPartitionStart;
 	QWORD lbaPartitionEnd;
 	QWORD attributes;

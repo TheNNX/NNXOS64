@@ -191,6 +191,7 @@ compile.bat</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="device\fs\fat.c" />
+    <ClCompile Include="device\fs\gpt.c" />
     <ClCompile Include="device\fs\vfs.c" />
     <ClCompile Include="device\hdd\hdd.c" />
     <ClCompile Include="device\Keyboard.c" />
