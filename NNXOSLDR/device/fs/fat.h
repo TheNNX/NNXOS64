@@ -3,6 +3,10 @@
 #include "nnxint.h"
 #include "vfs.h"
 
+#define FAT32_RESERVED_CLUSTER_START 0xFFFFFF8
+#define FAT16_RESERVED_CLUSTER_START 0xFFF8
+#define FAT12_RESERVED_CLUSTER_START 0xFF8
+
 #pragma pack(push, 1)
 
 typedef struct {
@@ -80,9 +84,10 @@ UINT32 FATFileAllocationTableSize(BPB* bpb);
 UINT32 FATVolumeTotalSize(BPB* bpb);
 UINT32 FATScanFree(VFS* filesystem);
 BOOL FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
-UINT32 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
+UINT64 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
 UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
-UINT32 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
+UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
+UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem);
 
