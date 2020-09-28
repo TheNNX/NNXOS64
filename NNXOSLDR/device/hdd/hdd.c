@@ -124,7 +124,7 @@ void DiskCheck() {
 				}
 			}
 			else {
-				PrintT("An MBR disk, GPT signature: 0x%X, should be (in order to be GPT): 0x%X\n", gpt.header.signature, GPT_SIGNATURE);
+				PrintT("An MBR disk.\n");
 				for (int partitionNumber = 0; partitionNumber < 4; partitionNumber++) {
 					MBRPartitionTableEntry entry = mbr.mbrtable.tableEntries[partitionNumber];
 					
@@ -140,7 +140,6 @@ void DiskCheck() {
 		}
 		else {
 			PrintT("Drive %i not formatted, signature 0x%X\n", i, mbr.mbrtable.magicNumber);
-			while (1);
 		}
 	}
 }
