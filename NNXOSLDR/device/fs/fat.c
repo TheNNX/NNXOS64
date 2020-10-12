@@ -729,6 +729,121 @@ UINT64 FATReadFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, U
 	return 0;
 }
 
+UINT64 FATAPIPseudoOpenFile(VFS* filesystem, char* filename, FATDirectoryEntry* theFile, BPB* bpb) {
+	VFSReadSector(filesystem, 0, bpb);
+	UINT32 rootCluster = FATisFAT32(bpb) ? (((BPB_EXT_FAT32*)&(bpb->_))->firstAccessibleCluster) : 0xFFFFFFFF;
+	UINT64 status = FATReccursivlyReadDirectoryEntry(bpb, filesystem, rootCluster, filename, theFile);
+	return status;
+}
+
+BOOL FATAPICheckIfFileExists(VFS* filesystem, char* path) {
+	FATDirectoryEntry theFile;
+	BPB _bpb, *bpb = &bpb;
+	return !FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+}
+
+UINT64 FATAPIReadFile(VFS* filesystem, char* path, UINT64 position, UINT64 size, VOID* output) {
+	FATDirectoryEntry theFile;
+	BPB _bpb, *bpb = &bpb;
+	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+	if (status)
+		return status;
+	UINT64 read = 0;
+	status = FATReadFile(bpb, filesystem, &theFile, position, size, output, &read);
+	if (status)
+		return status;
+	if (read < size)
+		return VFS_ERR_EOF;
+
+	return 0;
+}
+
+UINT64 FATAPIWriteFile(VFS* filesystem, char* path, UINT64 position, UINT64 size, VOID* input) {
+	FATDirectoryEntry theFile;
+	BPB _bpb, *bpb = &bpb;
+	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+	if (status)
+		return status;
+	UINT64 written = 0;
+	status = FATWriteFile(bpb, filesystem, &theFile, position, size, input, written);
+	if (status)
+		return status;
+	if (written < size)
+		return VFS_ERR_EOF;
+	return 0;
+}
+
+UINT64 FindCharacter(char* string, UINT64 len, char character) {
+	UINT64 current = -1;
+	for (UINT64 i = 0; i < len; i++) {
+		if (string[i] == character) {
+			if (len == -1)
+				return i;
+			current = i;
+		}
+	}
+
+	return current;
+}
+
+UINT64 FATGetFileNameAndExtensionFromPath(char* path, char* name, char* extension) {
+
+	for (UINT64 i = 0; i < 8; i++)
+		name[i] = ' ';
+
+	for (UINT64 i = 0; i < 3; i++)
+		extension[i] = ' ';
+
+	UINT64 length = FindCharacter(path, -1, 0);
+	UINT64 begin = FindCharacter(path, length, '\\');
+	if (begin == -1)
+		begin = FindCharacter(path, length, '/');
+	begin++;
+	UINT64 dot = FindCharacter(path + begin, length - begin, '.');
+	UINT64 filenameEnd = dot == -1 ? length - begin : dot;
+	NNXAssertAndStop(filenameEnd <= 8, "Invalid filename");
+	for (UINT64 i = 0; i < filenameEnd; i++) {
+		name[i] = (path + begin)[i];
+	}
+	if (dot != -1) {
+		NNXAssertAndStop(length - begin - dot - 1 <= 3, "Invalid extension");
+		for (UINT64 i = 0; i < length - begin - dot - 1; i++) {
+			extension[i] = (path + begin + dot + 1)[i];
+		}
+	}
+	return 0;
+}
+
+FATDirectoryEntry FATEntryFromPath(char* path) {
+	FATDirectoryEntry result = { 0 };
+	FATGetFileNameAndExtensionFromPath(path, result.filename, result.fileExtension);
+	return result;
+}
+
+/**
+
+TODO: Implement allocating more space if a directory has insufficient for a new entry
+
+**/
+UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
+	FATDirectoryEntry entry = FATEntryFromPath(path);
+	BPB _bpb, *bpb = &_bpb;
+	VFSReadSector(filesystem, 0, bpb);
+	UINT32 rootCluster = FATisFAT32(bpb) ? (((BPB_EXT_FAT32*)&(bpb->_))->firstAccessibleCluster) : 0xFFFFFFFF;
+	UINT64 status = FATReccursivlyWriteDirectoryEntry(bpb, filesystem, rootCluster, path, &entry);
+	return 0;
+}
+
+FunctionSet FATGetFunctionSet() {
+	FunctionSet functionSet = { 0 };
+	functionSet.CheckIfFileExists = FATAPICheckIfFileExists;
+	functionSet.ReadFile = FATAPIReadFile;
+	functionSet.CreateFile = FATAPICreateFile;
+	functionSet.WriteFile = FATAPIWriteFile;
+	
+	return functionSet;
+}
+
 BOOL Test(char* path, VFS* filesystem, FATDirectoryEntry* file) {
 	BPB _bpb, *bpb = &_bpb;
 	VFSReadSector(filesystem, 0, bpb);
@@ -797,7 +912,7 @@ BOOL TestWrite2(const char* path, VFS* filesystem) {
 	for (UINT32 i = 0; i < 8; i++) {
 		if (i < 3)
 			entry.fileExtension[i] = ("TXT")[i];
-		entry.filename[i] = ("README  ")[i];
+		entry.filename[i] = ("LRGEHALF  ")[i];
 	}
 
 	UINT32 rootCluster = FATisFAT32(bpb) ? (((BPB_EXT_FAT32*)&(bpb->_))->firstAccessibleCluster) : 0xFFFFFFFF;
@@ -824,7 +939,9 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
 	test[i++] = TestWrite("efi\\boot\\LRGE.TXT", filesystem, 0x7000);
 	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
-	test[i++] = TestWrite2("efi\\boot\\README.TXT", filesystem);
+	test[i++] = TestWrite2("efi\\boot\\LRGEHALF.TXT", filesystem);
+
+	FATAPICreateFile(filesystem, "efi\\TEST.TXT");
 
 	for (int j = 0; j < sizeof(test) / sizeof(*test) && test[j] != 2; j++) 
 		PrintT("%s%s", test[j] ? ("True") : ("False"), (sizeof(test) / sizeof(*test) == j + 1 || (test[j+1] == 2)) ? ("\n") : (", "));

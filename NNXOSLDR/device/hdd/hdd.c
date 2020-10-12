@@ -100,7 +100,7 @@ void DiskCheck() {
 			UINT32 number = -1;
 
 			if (gpt.header.signature == GPT_SIGNATURE) {
-				//TODO
+				//TODO: GPT Disks
 				PrintT("An GPT disk. (todo)\n");
 				UINT32 bytesPerEntry = gpt.header.bytesPerEntry;
 				UINT32 numberOfEntries = gpt.header.numberOfPartitionTableEntries;
@@ -117,7 +117,7 @@ void DiskCheck() {
 					for (UINT32 currentEntryPos = entryStartInSector; currentEntryPos < 512; currentEntryPos += bytesPerEntry) {
 						GPTPartitionEntry* entry = (buffer + currentEntryPos);
 						if (!GPTCompareGUID(entry->typeGUID, GPT_EMPTY_TYPE)) {
-							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1);
+							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FATGetFunctionSet());
 						}
 						entryNumber++;
 					}
@@ -131,7 +131,7 @@ void DiskCheck() {
 					if (entry.partitionSizeInSectors == 0)
 						continue;
 
-					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors);
+					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FATGetFunctionSet());
 				}
 			}
 

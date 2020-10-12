@@ -9,7 +9,7 @@ void VFSInit() {
 		virtualFileSystems[i] = empty;
 }
 
-UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize) {
+UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, FunctionSet functions) {
 	UINT32 found = -1;
 	
 	for (UINT32 i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++) {
@@ -17,6 +17,7 @@ UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize) {
 			virtualFileSystems[i].drive = drive;
 			virtualFileSystems[i].lbaStart = lbaStart;
 			virtualFileSystems[i].sizeInSectors = partitionSize;
+			virtualFileSystems[i].functions = functions;
 			found = i;
 		}
 	}
@@ -35,4 +36,3 @@ UINT64 VFSWriteSector(VirtualFileSystem* vfs, UINT64 n, BYTE* source) {
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {
 	return virtualFileSystems + n;
 }
-

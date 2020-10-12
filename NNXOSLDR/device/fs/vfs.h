@@ -5,11 +5,19 @@
 #include "../../HAL/PCI/PCI.h"
 #define VFS_MAX_NUMBER 64
 
+typedef struct FucntionSet {
+	BOOL(*CheckIfFileExists)(struct VirtualFileSystem* filesystem, char* path);
+	UINT64(*ReadFile)(struct VirtualFileSystem* filesystem, char* path, UINT64 position, UINT64 size, VOID* output);
+	UINT64(*WriteFile)(struct VirtualFileSystem* filesystem, char* path, UINT64 position, UINT64 size, VOID* input);
+	UINT64(*CreateFile)(struct VirtualFileSystem* filesystem, char* path);
+} FunctionSet;
+
 typedef struct VirtualFileSystem {
 	IDEDrive* drive;
 	UINT64 lbaStart;
 	UINT64 sizeInSectors;
 	UINT64 allocationUnitSize;
+	FunctionSet functions;
 }VirtualFileSystem, VFS;
 
 #define VFS_ERR_INVALID_FILENAME		0xFFFFFFF1
@@ -22,7 +30,7 @@ typedef struct VirtualFileSystem {
 #define VFS_NOT_ENOUGH_ROOM_FOR_WRITE	0xFFFFFFF8
 
 void VFSInit();
-UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize);
+UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, FunctionSet functionSet);
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
 UINT64 VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
 UINT64 VFSWriteSector(VirtualFileSystem*, UINT64 n, BYTE* source);

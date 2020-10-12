@@ -89,6 +89,8 @@ UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
 UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
 UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
 
+FunctionSet FATGetFunctionSet();
+
 BOOL NNX_FATAutomaticTest(VFS* filesystem);
 
 #pragma pack(pop)
