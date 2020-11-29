@@ -64,6 +64,94 @@ UINT32 FATLocateNthFAT(BPB* bpb, UINT32 n) {
 	return (bpb->numberOfFATs > n) ? (bpb->sectorReservedSize + FATFileAllocationTableSize(bpb) * n) : 0;
 }
 
+VOID FAT32WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorData, UINT32 value) {
+	UINT32 entriesPerSector = bpb->bytesPerSector / 4;
+	((UINT32*)sectorData)[n % entriesPerSector] = value;
+}
+
+VOID FAT16WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorData, UINT16 value) {
+	UINT32 entriesPerSector = bpb->bytesPerSector / 2;
+	((UINT16*)sectorData)[n % entriesPerSector] = value;
+}
+
+/**
+
+TODO: Check if it actually works.
+
+**/
+VOID FAT12WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorsData, UINT16 value) {
+	UINT32 byteOffset = (n * 3) % bpb->bytesPerSector;
+	sectorsData += byteOffset;
+	*((UINT16*)sectorsData) &= ~0xfff;
+	*((UINT16*)sectorsData) |= value;
+}
+
+UINT64 FATWriteFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
+	FATReadFATEntry(bpb, filesystem, n, sectorsData, currentSector);
+	UINT32 mainFAT = FATLocateMainFAT(bpb);
+	if (FATisFAT12(bpb)) {
+		FAT12WriteFATEntry(bpb, filesystem, n, sectorsData, (UINT16)(entry & 0xfff));
+		VFSWriteSector(filesystem, (*currentSector) + 1, sectorsData + bpb->bytesPerSector);
+	}
+	else if (FATisFAT32(bpb)) {
+		FAT32WriteFATEntry(bpb, filesystem, n, sectorsData, entry);
+	}
+	else {
+		FAT16WriteFATEntry(bpb, filesystem, n, sectorsData, (UINT16)entry);
+	}
+
+	VFSWriteSector(filesystem, *currentSector, sectorsData);
+}
+
+UINT32 FAT12ReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 mainFAT, BYTE* sectorsData, UINT32* currentSector, UINT32 n) {
+	UINT16 bytesContainingTheEntry;
+	UINT32 entryBitOffset = n * 12;
+	UINT32 entryByteOffset = entryBitOffset / 8;
+
+	UINT32 relativeLowByteOffset = entryByteOffset % bpb->bytesPerSector;
+	UINT32 desiredLowSector = entryByteOffset / bpb->bytesPerSector + mainFAT;
+
+	if (*currentSector != desiredLowSector) {
+		UINT64 status = 0;
+		status |= VFSReadSector(filesystem, desiredLowSector, sectorsData);
+		status |= VFSReadSector(filesystem, desiredLowSector + 1, sectorsData + bpb->bytesPerSector);
+
+		if (status) {
+			return 0;
+		}
+
+		*currentSector = desiredLowSector;
+	}
+
+	bytesContainingTheEntry = *((UINT16*)(sectorsData + relativeLowByteOffset));
+
+	if (entryBitOffset % 8) {
+		bytesContainingTheEntry = bytesContainingTheEntry << 4;
+	}
+
+	return bytesContainingTheEntry & 0xfff0;
+}
+
+UINT32 FAT16or32ReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 mainFAT, BYTE* sectorsData, UINT32* currentSector, UINT32 n) {
+	UINT32 entryByteOffset = n * 2 * (FATisFAT32(bpb) + 1);
+	UINT32 relativeByteOffset = entryByteOffset % bpb->bytesPerSector;
+	UINT32 desiredLowSector = entryByteOffset / bpb->bytesPerSector + mainFAT;
+
+	if (*currentSector != desiredLowSector) {
+		UINT64 status;
+		if (status = VFSReadSector(filesystem, desiredLowSector, sectorsData)) {
+			return 0;
+		}
+
+		*currentSector = desiredLowSector;
+	}
+
+	if (FATisFAT16(bpb))
+		return (UINT16)(*((UINT16*)(sectorsData + relativeByteOffset)));
+	else
+		return (UINT32)(*((UINT32*)(sectorsData + relativeByteOffset)));
+}
+
 UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector) {
 	UINT32 mainFAT = FATLocateMainFAT(bpb);
 	UINT32 entry;
@@ -74,58 +162,18 @@ UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, U
 	}
 
 	if (FATisFAT32(bpb) || FATisFAT16(bpb)) {
-		UINT32 entryByteOffset = n * 2 * (FATisFAT32(bpb) + 1);
-
-		UINT32 relativeByteOffset = entryByteOffset % bpb->bytesPerSector;
-		UINT32 desiredLowSector = entryByteOffset / bpb->bytesPerSector + mainFAT;
-
-		if (*currentSector != desiredLowSector) {
-			UINT64 status;
-			if (status = VFSReadSector(filesystem, desiredLowSector, sectorsData)) {
-				if (currentSector == &altCurSec) {
-					NNXAllocatorFree(sectorsData);
-				}
-				return 0;
-			}
-
-			*currentSector = desiredLowSector;
-		}
-
-		if(FATisFAT16(bpb))
-			entry = (UINT16)(*((UINT16*)(sectorsData + relativeByteOffset)));
-		else
-			entry = (UINT32)(*((UINT32*)(sectorsData + relativeByteOffset)));
+		entry = FAT16or32ReadFATEntry(bpb, filesystem, mainFAT, sectorsData, currentSector, n);
 	}
 	else {	
-		UINT16 bytesContainingTheEntry;
-		UINT32 entryBitOffset = n * 12;
-		UINT32 entryByteOffset = entryBitOffset / 8;
+		entry = FAT12ReadFATEntry(bpb, filesystem, mainFAT, sectorsData, currentSector, n);
+	}
 
-		UINT32 relativeLowByteOffset = entryByteOffset % bpb->bytesPerSector;
-		UINT32 desiredLowSector = entryByteOffset / bpb->bytesPerSector + mainFAT;
-
-		if (*currentSector != desiredLowSector) {
-			UINT64 status = 0;
-			status |= VFSReadSector(filesystem, desiredLowSector, sectorsData);
-			status |= VFSReadSector(filesystem, desiredLowSector + 1, sectorsData + bpb->bytesPerSector);
-
-			if (status) {
-				if (currentSector == &altCurSec) {
-					NNXAllocatorFree(sectorsData);
-				}
-				return 0;
-			}
-
-			*currentSector = desiredLowSector;
+	if (entry == 0)
+	{
+		if (currentSector == &altCurSec) {
+			NNXAllocatorFree(sectorsData);
 		}
-
-		bytesContainingTheEntry = *((UINT16*)(sectorsData + relativeLowByteOffset));
-
-		if (entryBitOffset % 8) {
-			bytesContainingTheEntry = bytesContainingTheEntry << 4;
-		}
-
-		entry = bytesContainingTheEntry & 0xfff0;
+		return 0;
 	}
 
 	if (currentSector == &altCurSec) {
@@ -133,52 +181,6 @@ UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, U
 	}
 
 	return entry;
-}
-
-BOOL FATWriteFATEntryToCacheSectors(BPB* bpb, UINT32 n, UINT32 value, UINT8* buffer, UINT64 bufferSize) {
-	if (FATisFAT32(bpb)) {
-		if (n * sizeof(UINT64) > bufferSize)
-			return false;
-		((UINT64*)buffer)[n] = value;
-	}
-	else if (FATisFAT16(bpb)){
-		if (n * sizeof(UINT32) > bufferSize)
-			return false;
-		((UINT16*)buffer)[n] = (UINT16)(value);
-	}
-	else {
-
-		UINT64 byteOffset = n * 12 / 8;
-		UINT64 relativeByteOffset = byteOffset % bpb->bytesPerSector;
-
-		if (bufferSize <= 512 && relativeByteOffset >= 511) {
-			return false;
-		}
-
-		if ((n * 12) % 8) {
-			*((UINT16*)(buffer + relativeByteOffset)) &= ~(0x0fff);
-			*((UINT16*)(buffer + relativeByteOffset)) |= ((value >> 4) & 0x0fff);
-		}
-		else {
-			*((UINT16*)(buffer + relativeByteOffset)) &= ~(0xfff0);
-			*((UINT16*)(buffer + relativeByteOffset)) |= ((value) & 0xfff0);
-		}
-	}
-
-	return true;
-}
-
-UINT64 FATCommitSectorToAllFATs(BPB* bpb, VFS* filesystem, UINT32 secNum, UINT8* data) {
-	UINT32 fatLocation;
-	UINT32 i = 0;
-	
-	while (fatLocation = FATLocateNthFAT(bpb, i++)) {
-		UINT64 status;
-		if (status = VFSWriteSector(filesystem, secNum, data))
-			return status;
-	}
-
-	return 0;
 }
 
 BOOL FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector) {
@@ -423,7 +425,6 @@ UINT64 FATReccursivlyWriteDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 paren
 		}
 		NNXAllocatorFree(sectorData);
 		if (rootDirSectors == 0) {
-			SHOWCODEPOS;
 			return VFS_ERR_FILE_NOT_FOUND;
 		}
 
@@ -464,8 +465,6 @@ UINT64 FATReccursivlyWriteDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 paren
 				return 0;
 			}
 			else if(status == VFS_ERR_EOF){
-				PrintT("%i %X %X\n", slash, status, status2);
-				SHOWCODEPOS;
 				NNXAllocatorFree(sectorData);
 				NNXAllocatorFree(dirEntry);
 				return VFS_NOT_ENOUGH_ROOM_FOR_WRITE;
@@ -476,7 +475,6 @@ UINT64 FATReccursivlyWriteDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 paren
 
 	NNXAllocatorFree(sectorData);
 	NNXAllocatorFree(dirEntry);
-	SHOWCODEPOS;
 	return VFS_ERR_FILE_NOT_FOUND;
 }
 
@@ -530,8 +528,6 @@ UINT64 FATReccursivlyReadDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		for (UINT32 sectorIndex = 0; sectorIndex < bpb->sectorsPerCluster; sectorIndex++) {
 			FATReadSectorOfCluster(bpb, filesystem, parentDirectoryCluster, sectorIndex, sectorData);
 			UINT32 status = FATSearchForFileInDirectory(sectorData, bpb, filesystem, filenameCopy, dirEntry);
-			
-			PrintT("Test");
 
 			if (status == VFS_ERR_EOF) {
 				NNXAllocatorFree(sectorData);
@@ -636,7 +632,6 @@ UINT64 FATReadSectorFromFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32
 	}
 
 	return 0;
-
 }
 
 UINT64 FATWriteSectorsToFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 index, PVOID input, UINT32 sectorsCount) {
@@ -738,13 +733,15 @@ UINT64 FATAPIPseudoOpenFile(VFS* filesystem, char* filename, FATDirectoryEntry* 
 
 BOOL FATAPICheckIfFileExists(VFS* filesystem, char* path) {
 	FATDirectoryEntry theFile;
-	BPB _bpb, *bpb = &bpb;
-	return !FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+	BPB _bpb, *bpb = &_bpb;
+	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+
+	return !status;
 }
 
 UINT64 FATAPIReadFile(VFS* filesystem, char* path, UINT64 position, UINT64 size, VOID* output) {
 	FATDirectoryEntry theFile;
-	BPB _bpb, *bpb = &bpb;
+	BPB _bpb, *bpb = &_bpb;
 	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
 	if (status)
 		return status;
@@ -760,7 +757,7 @@ UINT64 FATAPIReadFile(VFS* filesystem, char* path, UINT64 position, UINT64 size,
 
 UINT64 FATAPIWriteFile(VFS* filesystem, char* path, UINT64 position, UINT64 size, VOID* input) {
 	FATDirectoryEntry theFile;
-	BPB _bpb, *bpb = &bpb;
+	BPB _bpb, *bpb = &_bpb;
 	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
 	if (status)
 		return status;
@@ -852,13 +849,13 @@ BOOL Test(char* path, VFS* filesystem, FATDirectoryEntry* file) {
 
 	UINT32 status = 0;
 	if (status = FATReccursivlyReadDirectoryEntry(bpb, filesystem, rootCluster, path, &theFile)) {
-		return false;
+		return FALSE;
 	}
 	else {
 		if (file)
 			*file = theFile;
 		
-		return true;
+		return TRUE;
 	}
 }
 
@@ -904,22 +901,6 @@ BOOL TestRead(char* path, VFS* filesystem, UINT32 offset, UINT32 size) {
 	return true;
 }
 
-BOOL TestWrite2(const char* path, VFS* filesystem) {
-	BPB _bpb, *bpb = &_bpb;
-	VFSReadSector(filesystem, 0, bpb);
-	FATDirectoryEntry entry = { 0 };
-
-	for (UINT32 i = 0; i < 8; i++) {
-		if (i < 3)
-			entry.fileExtension[i] = ("TXT")[i];
-		entry.filename[i] = ("LRGEHALF  ")[i];
-	}
-
-	UINT32 rootCluster = FATisFAT32(bpb) ? (((BPB_EXT_FAT32*)&(bpb->_))->firstAccessibleCluster) : 0xFFFFFFFF;
-	UINT64 status = FATReccursivlyWriteDirectoryEntry(bpb, filesystem, rootCluster, path, &entry);
-	PrintT("File creation status 0x%X\n", status);
-	return !status;
-}
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	
@@ -939,9 +920,11 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
 	test[i++] = TestWrite("efi\\boot\\LRGE.TXT", filesystem, 0x7000);
 	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
-	test[i++] = TestWrite2("efi\\boot\\LRGEHALF.TXT", filesystem);
 
-	FATAPICreateFile(filesystem, "efi\\TEST.TXT");
+	if(FATAPICheckIfFileExists(filesystem, "efi\\TEST.TXT"))
+		FATAPICreateFile(filesystem, "efi\\EXISTS.TXT");
+	else
+		FATAPICreateFile(filesystem, "efi\\TEST.TXT");
 
 	for (int j = 0; j < sizeof(test) / sizeof(*test) && test[j] != 2; j++) 
 		PrintT("%s%s", test[j] ? ("True") : ("False"), (sizeof(test) / sizeof(*test) == j + 1 || (test[j+1] == 2)) ? ("\n") : (", "));
