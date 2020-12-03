@@ -3,12 +3,15 @@
 #include "MemoryOperations.h"
 
 MemoryBlock* first;
-BOOL dirty = false;
+BOOL dirty = FALSE;
+BOOL noMerge = FALSE;
 
 
 void NNXAllocatorInitialize() {
 	first = 0;
 }
+
+
 
 void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 	if (!first) {
@@ -31,13 +34,24 @@ void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 }
 
 void TryMerge() {
-	PrintT("System memory allocation utility is attempting to merge free memory blocks\n");
+	if (noMerge == TRUE)
+	{
+		PrintT("Merge failed. Blocks:\n");
+		MemoryBlock* current = first;
+		while (current) {
+			if(current->size > 8)
+				PrintT("Block %i %x %x %x\n", current->size, current, current->next, current->flags);
+			current = current->next;
+		}
+		while (1);
+	}
+	PrintT("System memory allocation utility is attempting to merge free memory blocks (%i dirty)\n", dirty);
 	MemoryBlock* current = first;
 
 	if (current == 0)
 		return 0;
 
-	dirty = false;
+	dirty = FALSE;
 
 	while (current->next) {
 
@@ -66,9 +80,9 @@ void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
 
 		if (!(current->flags & MEMBLOCK_USED)) {
 			
-			if (current->size == size + sizeof(MemoryBlock)) {
+			if (current->size == size) {
 				current->flags |= MEMBLOCK_USED;
-				dirty = true;
+				dirty = TRUE;
 				return (void*)(((UINT64)current) + sizeof(MemoryBlock));
 			}
 			else if (current->size > size + sizeof(MemoryBlock)) {
@@ -79,7 +93,7 @@ void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
 				newBlock->size = current->size - (size + sizeof(MemoryBlock));
 				current->size = size;
 				newBlock->flags = MEMBLOCK_FREE;
-				dirty = true;
+				dirty = TRUE;
 				return (void*)(((UINT64)current) + sizeof(MemoryBlock));
 			}
 		}
@@ -88,7 +102,9 @@ void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
 	
 	if (dirty) {
 		TryMerge();
+		noMerge = TRUE;
 		return NNXAllocatorAllocH(size, verbose);
+		noMerge = FALSE;
 	}
 	PrintT("No memory block of size %iB found, system halted.\n", size);
 	while (1);
