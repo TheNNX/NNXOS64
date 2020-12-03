@@ -20,12 +20,17 @@ UINT32 FATFileAllocationTableSize(BPB* bpb) {
 	return fatSize;
 }
 
-BOOL FATIsClusterEOF(BPB* bpb, UINT32 cluster) {
-	if(FATisFAT32(bpb))
-		return cluster >= FAT32_RESERVED_CLUSTER_START;
+UINT32 FATGetClusterEOF(BPB* bpb) {
+	if (FATisFAT32(bpb))
+		return FAT32_RESERVED_CLUSTER_START;
 	if (FATisFAT16(bpb))
-		return cluster >= FAT16_RESERVED_CLUSTER_START;
-	return cluster >= FAT12_RESERVED_CLUSTER_START;
+		return FAT16_RESERVED_CLUSTER_START;
+	return FAT12_RESERVED_CLUSTER_START;
+}
+
+BOOL FATIsClusterEOF(BPB* bpb, UINT32 cluster) {
+	UINT32 maxCluster = FATGetClusterEOF(bpb);
+	return cluster >= maxCluster;
 }
 
 UINT32 FATCalculateFirstClusterPosition(BPB* bpb) {
@@ -76,7 +81,7 @@ VOID FAT16WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorData, UINT16 v
 
 /**
 
-TODO: Check if it actually works.
+TODO #1: Check if it actually works.
 
 **/
 VOID FAT12WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorsData, UINT16 value) {
@@ -86,12 +91,16 @@ VOID FAT12WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorsData, UINT16 
 	*((UINT16*)sectorsData) |= value;
 }
 
-UINT64 FATWriteFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
+
+UINT64 FATWriteFATEntryInternal(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
+	UINT64 status;
+	
 	FATReadFATEntry(bpb, filesystem, n, sectorsData, currentSector);
 	UINT32 mainFAT = FATLocateMainFAT(bpb);
 	if (FATisFAT12(bpb)) {
 		FAT12WriteFATEntry(bpb, filesystem, n, sectorsData, (UINT16)(entry & 0xfff));
-		VFSWriteSector(filesystem, (*currentSector) + 1, sectorsData + bpb->bytesPerSector);
+		if (status = VFSWriteSector(filesystem, (*currentSector) + 1, sectorsData + bpb->bytesPerSector))
+			return VFS_ERR_READONLY;
 	}
 	else if (FATisFAT32(bpb)) {
 		FAT32WriteFATEntry(bpb, filesystem, n, sectorsData, entry);
@@ -100,7 +109,25 @@ UINT64 FATWriteFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, 
 		FAT16WriteFATEntry(bpb, filesystem, n, sectorsData, (UINT16)entry);
 	}
 
-	VFSWriteSector(filesystem, *currentSector, sectorsData);
+	if (status = VFSWriteSector(filesystem, *currentSector, sectorsData))
+		return VFS_ERR_READONLY;
+}
+
+UINT64 FATWriteFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
+	BOOL manualAllocation = FALSE;
+	UINT32 dummy = 0;
+	if (currentSector == 0 || sectorsData == 0) {
+		manualAllocation = TRUE;
+		currentSector = &dummy;
+		sectorsData = NNXAllocatorAlloc(bpb->bytesPerSector * 2);
+	}
+	UINT64 result = FATWriteFATEntryInternal(bpb, filesystem, n, sectorsData, currentSector, entry);
+
+	if (manualAllocation) {
+		NNXAllocatorFree(sectorsData);
+	}
+
+	return result;
 }
 
 UINT32 FAT12ReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 mainFAT, BYTE* sectorsData, UINT32* currentSector, UINT32 n) {
@@ -323,8 +350,8 @@ UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS*
 }
 
 
-UINT16 FindFirstSlash(char* path) {
-	UINT16 index = 0;
+UINT32 FindFirstSlash(char* path) {
+	UINT32 index = 0;
 	
 	while (*path) {
 		if (*path == '\\' || *path == '/')
@@ -393,7 +420,10 @@ BOOL FATWriteDirectoryEntryToSectors(FATDirectoryEntry* sectorData, BPB* bpb, VF
 	return FALSE;
 }
 
+
+
 UINT64 FATReccursivlyWriteDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parentDirectoryCluster, char* path, FATDirectoryEntry* fileDir) {
+	
 	while (*path == '\\' || *path == '/') //skip all initial \ or /
 		path++;
 
@@ -458,19 +488,26 @@ UINT64 FATReccursivlyWriteDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 paren
 				return FATReccursivlyWriteDirectoryEntry(bpb, filesystem, fisrtClusterOfFile, path + slash + 1, fileDir);
 			}
 			else if(status2 = FATWriteDirectoryEntryToSectors(sectorData, bpb, filesystem, path, fileDir)){
-				FATWriteSectorOfCluster(bpb, filesystem, parentDirectoryCluster, sectorIndex, sectorData);
+				status = FATWriteSectorOfCluster(bpb, filesystem, parentDirectoryCluster, sectorIndex, sectorData);
 				NNXAllocatorFree(sectorData);
 				NNXAllocatorFree(dirEntry);
 
-				return 0;
+				return status;
 			}
 			else if(status == VFS_ERR_EOF){
 				NNXAllocatorFree(sectorData);
 				NNXAllocatorFree(dirEntry);
-				return VFS_NOT_ENOUGH_ROOM_FOR_WRITE;
+				return VFS_ERR_FILE_NOT_FOUND;
 			}
 		}
-		parentDirectoryCluster = FATFollowClusterChain(bpb, filesystem, parentDirectoryCluster);
+
+		UINT32 nextCluster = FATFollowClusterChain(bpb, filesystem, parentDirectoryCluster);
+
+		if (slash == false && FATIsClusterEOF(bpb, nextCluster)) {
+				
+		}
+
+		parentDirectoryCluster = nextCluster;
 	}
 
 	NNXAllocatorFree(sectorData);
@@ -590,7 +627,7 @@ UINT32 FATScanFree(VFS* filesystem) {
 UINT32 FATFindFreeCluster(BPB* bpb, VFS* vfs) {
 	UINT32 clusterCount = FATCalculateFATClusterCount(bpb);
 	UINT32 currentSector = 0;
-	UINT8 *sectorsData = NNXAllocatorAlloc(((bpb->rootEntryCount == 0 || ((bpb->rootEntryCount != 0) && FATisFAT16(bpb))) ? 1 : 2) * bpb->bytesPerSector);
+	UINT8 *sectorsData = NNXAllocatorAlloc((FATisFAT12(bpb) ? 2 : 1) * bpb->bytesPerSector);
 
 	for (int currentEntry = 1; currentEntry < clusterCount + 2; currentEntry++) {
 		if (FATIsFree(currentEntry, bpb, vfs, sectorsData, &currentSector)) {
@@ -602,6 +639,7 @@ UINT32 FATFindFreeCluster(BPB* bpb, VFS* vfs) {
 	NNXAllocatorFree(sectorsData);
 	return -1;
 }
+
 
 UINT64 FATReadSectorFromFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offsetSector, PVOID output) {
 	if (file == 0) {
@@ -635,19 +673,23 @@ UINT64 FATReadSectorFromFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32
 }
 
 UINT64 FATWriteSectorsToFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 index, PVOID input, UINT32 sectorsCount) {
-	UINT32 clusterStart = index / (bpb->sectorsPerCluster * bpb->bytesPerSector);
 	UINT32 curCluster = FATGetFirstClusterOfFile(bpb, file);
 	UINT32 firstClusterPosition = FATCalculateFirstClusterPosition(bpb);
 
-	UINT32 currentSector = 0;
+	UINT32 currentSector = 0, currentClusterSector = 0;
 
 	sectorsCount += index;
 
+	PrintT("%i %i %i\n", currentSector, sectorsCount, index);
+
 	while (currentSector < sectorsCount) {
-		if (currentSector >= index) {
+		if (currentSector + bpb->sectorsPerCluster > index) {
+			//PrintT("YES %i %i\n", currentSector, sectorsCount);
 			for (UINT32 i = 0; i < bpb->sectorsPerCluster && currentSector < sectorsCount; i++) {
-				VFSWriteSector(vfs, currentSector % (bpb->sectorsPerCluster) + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster, input);
+				PrintT("Writing sector %i\n", currentClusterSector + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster);
+				VFSWriteSector(vfs, currentClusterSector + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster, (QWORD)input);
 				currentSector++;
+				currentClusterSector++;
 			}
 
 			if (sectorsCount == currentSector)
@@ -657,8 +699,10 @@ UINT64 FATWriteSectorsToFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32
 			currentSector += bpb->sectorsPerCluster;
 		}
 
+		currentClusterSector = 0;
 		curCluster = FATFollowClusterChain(bpb, vfs, curCluster);
 		
+		//PrintT("-> %i\n",curCluster);
 		if (FATIsClusterEOF(bpb, curCluster)) {
 			return VFS_ERR_EOF;
 		}
@@ -678,18 +722,23 @@ UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, 
 	UINT32 endSector = (offset + size) / bpb->bytesPerSector;
 
 	for (UINT32 i = startSector; i <= endSector; i++) {
-		UINT32 lowReadLimit = 0, highReadLimit = bpb->bytesPerSector;
-		if (i == startSector) {
-			lowReadLimit = offset % bpb->bytesPerSector;
-		}
-		if (i == endSector)
-		{
-			highReadLimit = (offset + size) % bpb->bytesPerSector;
-		}
+
+		/**
+		
+		TODO #6: Make it so the write can be anywhere in the file, not just sector aligned
+
+		**/
+
 		UINT32 status;
-		if (status = FATWriteSectorsToFile(bpb, vfs, file, i, (((UINT64)input) + bpb->bytesPerSector * i), 1)) {
+		
+		
+
+		PrintT("Writing sector %i\n", i);
+		if (status = FATWriteSectorsToFile(bpb, vfs, file, i, (((UINT64)input) + (*writtenBytes)), 1)) {
 			return status;
 		}
+
+		(*writtenBytes) += 512;
 	}
 
 	return 0;
@@ -759,14 +808,18 @@ UINT64 FATAPIWriteFile(VFS* filesystem, char* path, UINT64 position, UINT64 size
 	FATDirectoryEntry theFile;
 	BPB _bpb, *bpb = &_bpb;
 	UINT64 status = FATAPIPseudoOpenFile(filesystem, path, &theFile, bpb);
+	PrintT("%i: %x\n", __LINE__, status);
 	if (status)
 		return status;
 	UINT64 written = 0;
-	status = FATWriteFile(bpb, filesystem, &theFile, position, size, input, written);
+	status = FATWriteFile(bpb, filesystem, &theFile, position, size, input, &written);
+	PrintT("%i: %x\n", __LINE__, status);
 	if (status)
 		return status;
-	if (written < size)
+	if (written < size) {
+		PrintT("%i %i\n", written, size);
 		return VFS_ERR_EOF;
+	}
 	return 0;
 }
 
@@ -817,9 +870,135 @@ FATDirectoryEntry FATEntryFromPath(char* path) {
 	return result;
 }
 
+UINT32 FATPathParser(char* path, UINT32 currentIndex) {
+	path += currentIndex;
+	
+	UINT32 position = FindFirstSlash(path);
+	if (position == 0)
+		return -1;
+
+	return position + 1;
+}
+
+UINT32 FATFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 endIndex) {
+	UINT32 lastCluster = start;
+	UINT32 numberOfClustersScanned = 0;
+	while (FATIsClusterEOF(bpb, start) == false && numberOfClustersScanned < endIndex) {
+		lastCluster = start;
+		start = FATFollowClusterChain(bpb, vfs, start);
+		numberOfClustersScanned++;
+	}
+
+	return lastCluster;
+}
+
+UINT32 FATFollowClusterChainToEnd(BPB* bpb, VFS* vfs, UINT32 start) {
+	return FATFollowClusterChainToAPoint(bpb, vfs, start, 0xFFFFFFFF);
+}
+
+
+UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 removeFrom) {
+	/**
+		
+		TODO #5: DONE?
+
+	**/
+	UINT64 status;
+	UINT32 clusterChainEnd = FATFollowClusterChainToAPoint(bpb, vfs, start, removeFrom); //cluster number of cluster preeceding the first one to be removed
+	
+	PrintT("removeFrom %x\n", removeFrom);
+
+	UINT32 clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainEnd);
+	
+	if (status = FATWriteFATEntry(bpb, vfs, clusterChainEnd, 0, 0, FATGetClusterEOF(bpb))) //mark the last cluster as EOF
+		return status;
+
+	PrintT("Cluster %x now marks the end of the chain, %x is next.\n", clusterChainEnd, clusterToBeRemoved);
+
+	while (FATIsClusterEOF(bpb, clusterToBeRemoved) == false) {
+
+		UINT32 clusterChainCurrent = clusterToBeRemoved;
+		clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainCurrent); //store the next cluster
+		if (status = FATWriteFATEntry(bpb, vfs, clusterChainCurrent, 0, 0, 0)) //mark the cluster as empty
+			return status;
+			
+		PrintT("Removed cluster %x -> %x\n", clusterChainCurrent, clusterToBeRemoved);
+	}
+
+	return 0;
+}
+
+UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 n) {
+	UINT64 status = 0;
+	UINT32 lastCluster = FATFollowClusterChainToEnd(bpb, vfs, start);
+
+	for (UINT32 i = 0; i < n; i++) {
+		UINT32 cluster = FATFindFreeCluster(bpb, vfs);
+
+		if(status = FATWriteFATEntry(bpb, vfs, cluster, 0, 0, FATGetClusterEOF(bpb)))
+			return status;
+		if (status = FATWriteFATEntry(bpb, vfs, lastCluster, 0, 0, cluster))
+			return status;
+		lastCluster = cluster;
+	}
+
+	lastCluster = FATFollowClusterChainToEnd(bpb, vfs, start);
+
+	return 0;
+}
+
+UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, char* filename, UINT32 newSize) {
+	FATDirectoryEntry file;
+	UINT64 status = FATReccursivlyReadDirectoryEntry(bpb, filesystem, FATGetFirstClusterOfFile(bpb, parentFile), filename, &file);
+	PrintT("Opening file %X\n", status);
+	if (status)
+		return status;
+
+	UINT32 cluster = FATGetFirstClusterOfFile(bpb, &file);
+	PrintT("1");
+	UINT32 oldSize = file.fileSize, clusterSize = (bpb->bytesPerSector * bpb->sectorsPerCluster);
+	PrintT("2");
+	UINT32 oldSizeCluster = (file.fileSize + clusterSize - 1) / clusterSize;
+	PrintT("3");
+	UINT32 newSizeCluster = (newSize + clusterSize - 1) / clusterSize;
+	PrintT("4\n");
+
+	PrintT("File %S.%S %x\n%i %i\n%i %i\n", file.filename, 8, file.fileExtension, 3, cluster, oldSize, oldSizeCluster, newSize, newSizeCluster);
+
+	INT64 changeInClusters = ((INT64)newSizeCluster) - ((INT64)oldSizeCluster);
+
+	if (oldSizeCluster == 0 && changeInClusters > 0) {
+		PrintT("TODO\n");
+		while (1);
+		//TODO #3: add one manually
+	}
+
+	PrintT("%i -%i\n", changeInClusters, -changeInClusters);
+
+	if (changeInClusters > 0) {
+		if (status = FATAppendTrailingClusters(bpb, filesystem, FATGetFirstClusterOfFile(bpb, &file), changeInClusters))
+			return status;
+	}
+	else if (changeInClusters < -1) {
+		PrintT("Trying to remove trailing clusters from %x\n", FATGetFirstClusterOfFile(bpb, &file));
+		if (status = FATRemoveTrailingClusters(bpb, filesystem, FATGetFirstClusterOfFile(bpb, &file), newSizeCluster))
+			return status;
+	}
+
+	if (newSizeCluster == 0 && changeInClusters < 0) {
+		PrintT("TODO\n");
+		while (1);
+		//TODO #4: remove one manually
+	}
+
+	file.fileSize = newSize;
+
+	return FATReccursivlyWriteDirectoryEntry(bpb, filesystem, FATGetFirstClusterOfFile(bpb, parentFile), filename, &file);
+}
+
 /**
 
-TODO: Implement allocating more space if a directory has insufficient for a new entry
+TODO #2: Implement allocating more space if a directory has insufficient for a new entry
 
 **/
 UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
@@ -904,6 +1083,9 @@ BOOL TestRead(char* path, VFS* filesystem, UINT32 offset, UINT32 size) {
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	
+	BPB _bpb, *bpb = &_bpb;
+	VFSReadSector(filesystem, 0, bpb);
+
 	bool test[32];
 	for (int j = 0; j < sizeof(test) / sizeof(*test); j++)
 		test[j] = 2;
@@ -921,10 +1103,28 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	test[i++] = TestWrite("efi\\boot\\LRGE.TXT", filesystem, 0x7000);
 	test[i++] = TestRead("efi\\boot\\LRGE.TXT", filesystem, 0x7000, 16);
 
-	if(FATAPICheckIfFileExists(filesystem, "efi\\TEST.TXT"))
-		FATAPICreateFile(filesystem, "efi\\EXISTS.TXT");
-	else
-		FATAPICreateFile(filesystem, "efi\\TEST.TXT");
+
+	FATDirectoryEntry parent;
+	char teststr[512] = "This is a string, which's role is to show, that the writer capabilities of this filesystem driver do in fact exist. "
+		"It is not very good that the operating system stores junk data from after this string to this very file, nontheless it is still quite an improvement "
+		"over previous versions.";
+
+	FATAPIPseudoOpenFile(filesystem, "efi", &parent, bpb);
+
+	/**
+	
+	TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	CHECK 1024 INSTEAD OF 512 ETC.
+	
+	**/
+
+	FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 1024);
+
+	while (1);
+
+	UINT64 status = FATAPIWriteFile(filesystem, "efi\\TEST.TXT", 512, FindCharacter(teststr, -1, 0), teststr);
+	PrintT("Resize status = %x\n", status);
+
 
 	for (int j = 0; j < sizeof(test) / sizeof(*test) && test[j] != 2; j++) 
 		PrintT("%s%s", test[j] ? ("True") : ("False"), (sizeof(test) / sizeof(*test) == j + 1 || (test[j+1] == 2)) ? ("\n") : (", "));
@@ -936,6 +1136,8 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 			return false;
 		}
 	}
+
+	while (1);
 
 	return true;
 }
