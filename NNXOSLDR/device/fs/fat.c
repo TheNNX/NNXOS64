@@ -1100,7 +1100,7 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 1024);
 		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 0);
 
-		PrintT("%ikiB memory free.\n", NNXAllocatorGetFreeMemory());
+		PrintT("%iB memory free.\n", NNXAllocatorGetFreeMemory());
 		PrintT("%i clusters free.\n\n", FATScanFree(filesystem));
 
 		for (int j = 0; j < 1024 * 1024 * 256; j++); // wait
