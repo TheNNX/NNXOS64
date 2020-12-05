@@ -219,7 +219,7 @@ UINT32 FATFollowClusterChain(BPB* bpb, VFS* filesystem, UINT32 cluster) {
 }
 
 /**
-	WARNING: not recommended for cluster sizes > 4KB (NNXAllocator cannot allocate memory above 4KB page size)
+	WARNING: not recommended for cluster sizes > 4KiB (NNXAllocator cannot allocate memory above 4KB page size)
 	Recommended way of reading clusters is to read each sector individually using FATReadSectorOfCluster
 **/
 UINT64 FATReadCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, BYTE* data) {
@@ -680,13 +680,10 @@ UINT64 FATWriteSectorsToFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32
 
 	sectorsCount += index;
 
-	PrintT("%i %i %i\n", currentSector, sectorsCount, index);
-
 	while (currentSector < sectorsCount) {
 		if (currentSector + bpb->sectorsPerCluster > index) {
 			//PrintT("YES %i %i\n", currentSector, sectorsCount);
 			for (UINT32 i = 0; i < bpb->sectorsPerCluster && currentSector < sectorsCount; i++) {
-				PrintT("Writing sector %i\n", currentClusterSector + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster);
 				VFSWriteSector(vfs, currentClusterSector + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster, (QWORD)input);
 				currentSector++;
 				currentClusterSector++;
@@ -898,22 +895,12 @@ UINT32 FATFollowClusterChainToEnd(BPB* bpb, VFS* vfs, UINT32 start) {
 
 
 UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 removeFrom) {
-	/**
-		
-		TODO #5: DONE?
-
-	**/
 	UINT64 status;
 	UINT32 clusterChainEnd = FATFollowClusterChainToAPoint(bpb, vfs, start, removeFrom); //cluster number of cluster preeceding the first one to be removed
-	
-	PrintT("removeFrom %x\n", removeFrom);
-
 	UINT32 clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainEnd);
 	
 	if (status = FATWriteFATEntry(bpb, vfs, clusterChainEnd, 0, 0, FATGetClusterEOF(bpb))) //mark the last cluster as EOF
 		return status;
-
-	PrintT("Cluster %x now marks the end of the chain, %x is next.\n", clusterChainEnd, clusterToBeRemoved);
 
 	while (FATIsClusterEOF(bpb, clusterToBeRemoved) == false) {
 
@@ -921,8 +908,6 @@ UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove
 		clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainCurrent); //store the next cluster
 		if (status = FATWriteFATEntry(bpb, vfs, clusterChainCurrent, 0, 0, 0)) //mark the cluster as empty
 			return status;
-			
-		PrintT("Removed cluster %x -> %x\n", clusterChainCurrent, clusterToBeRemoved);
 	}
 
 	return 0;
@@ -950,45 +935,43 @@ UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 n) {
 UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, char* filename, UINT32 newSize) {
 	FATDirectoryEntry file;
 	UINT64 status = FATReccursivlyReadDirectoryEntry(bpb, filesystem, FATGetFirstClusterOfFile(bpb, parentFile), filename, &file);
-	PrintT("Opening file %X\n", status);
 	if (status)
 		return status;
 
 	UINT32 cluster = FATGetFirstClusterOfFile(bpb, &file);
-	PrintT("1");
 	UINT32 oldSize = file.fileSize, clusterSize = (bpb->bytesPerSector * bpb->sectorsPerCluster);
-	PrintT("2");
 	UINT32 oldSizeCluster = (file.fileSize + clusterSize - 1) / clusterSize;
-	PrintT("3");
 	UINT32 newSizeCluster = (newSize + clusterSize - 1) / clusterSize;
-	PrintT("4\n");
 
-	PrintT("File %S.%S %x\n%i %i\n%i %i\n", file.filename, 8, file.fileExtension, 3, cluster, oldSize, oldSizeCluster, newSize, newSizeCluster);
+	PrintT("Resizing file from %i to %i\n", oldSize, newSize);
 
 	INT64 changeInClusters = ((INT64)newSizeCluster) - ((INT64)oldSizeCluster);
-
-	if (oldSizeCluster == 0 && changeInClusters > 0) {
-		PrintT("TODO\n");
-		while (1);
-		//TODO #3: add one manually
-	}
-
-	PrintT("%i -%i\n", changeInClusters, -changeInClusters);
+	UINT32 firstCluster = FATGetFirstClusterOfFile(bpb, &file);
 
 	if (changeInClusters > 0) {
-		if (status = FATAppendTrailingClusters(bpb, filesystem, FATGetFirstClusterOfFile(bpb, &file), changeInClusters))
-			return status;
+		if (oldSizeCluster == 0 && !firstCluster) {
+			firstCluster = FATFindFreeCluster(bpb, filesystem);
+			if (status = FATWriteFATEntry(bpb, filesystem, firstCluster, 0, 0, FATGetClusterEOF(bpb)))
+				return status;
+			file.lowCluster = firstCluster & 0xFFFF;
+			file.highCluster = (firstCluster & 0xFFFF0000) >> 16;
+			changeInClusters--;
+		}
+		if (changeInClusters > 0) {
+			if (status = FATAppendTrailingClusters(bpb, filesystem, firstCluster, changeInClusters))
+				return status;
+		}
 	}
-	else if (changeInClusters < -1) {
-		PrintT("Trying to remove trailing clusters from %x\n", FATGetFirstClusterOfFile(bpb, &file));
-		if (status = FATRemoveTrailingClusters(bpb, filesystem, FATGetFirstClusterOfFile(bpb, &file), newSizeCluster))
+	else if (changeInClusters < 0) {
+		if (status = FATRemoveTrailingClusters(bpb, filesystem, firstCluster, newSizeCluster))
 			return status;
-	}
 
-	if (newSizeCluster == 0 && changeInClusters < 0) {
-		PrintT("TODO\n");
-		while (1);
-		//TODO #4: remove one manually
+		if (newSizeCluster == 0) {
+			if(status = FATWriteFATEntry(bpb, filesystem, firstCluster, 0, 0, 0))
+				return status;
+			file.highCluster = 0;
+			file.lowCluster = 0;
+		}	
 	}
 
 	file.fileSize = newSize;
@@ -1105,25 +1088,27 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 
 
 	FATDirectoryEntry parent;
-	char teststr[512] = "This is a string, which's role is to show, that the writer capabilities of this filesystem driver do in fact exist. "
-		"It is not very good that the operating system stores junk data from after this string to this very file, nontheless it is still quite an improvement "
-		"over previous versions.";
+	char teststr[512] = "a";
 
 	FATAPIPseudoOpenFile(filesystem, "efi", &parent, bpb);
 
-	/**
-	
-	TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	CHECK 1024 INSTEAD OF 512 ETC.
-	
-	**/
+	//STRESS TEST
+	for (int i = 0; i < 0xFFFF; i++) {
+		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 1024);
+		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 2048);
+		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 4096);
+		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 1024);
+		FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 0);
 
-	FATResizeFile(bpb, filesystem, &parent, "TEST.TXT", 1024);
+		PrintT("%ikiB memory free.\n", NNXAllocatorGetFreeMemory());
+		PrintT("%i clusters free.\n\n", FATScanFree(filesystem));
 
+		for (int j = 0; j < 1024 * 1024 * 256; j++); // wait
+	}
 	while (1);
 
 	UINT64 status = FATAPIWriteFile(filesystem, "efi\\TEST.TXT", 512, FindCharacter(teststr, -1, 0), teststr);
-	PrintT("Resize status = %x\n", status);
+	PrintT("Write status = %x\n", status);
 
 
 	for (int j = 0; j < sizeof(test) / sizeof(*test) && test[j] != 2; j++) 
