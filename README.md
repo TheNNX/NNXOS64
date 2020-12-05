@@ -2,7 +2,7 @@
 
 # NNXOS64
 
-NNXOS64 is an 64 bit hobbyist operating system.  
+NNXOS64 is a 64 bit hobbyist operating system.  
 More features to be added soon(ish).
 I have a general goal of implementing at least some parts of Windows API (both 64 bit and 32 bit).
 
