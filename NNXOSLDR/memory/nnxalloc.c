@@ -11,7 +11,30 @@ void NNXAllocatorInitialize() {
 	first = 0;
 }
 
+UINT64 CountBlockSize(UINT8 flags) {
+	UINT64 result = 0;
 
+	MemoryBlock* current = first;
+	while (current) {
+		if (current->flags == flags || flags & 0x80)
+			result += current->size;
+		current = current->next;
+	}
+
+	return result;
+}
+
+UINT64 NNXAllocatorGetTotalMemory() {
+	return CountBlockSize(0xFF);
+}
+
+UINT64 NNXAllocatorGetUsedMemory() {
+	return CountBlockSize(0);
+}
+
+UINT64 NNXAllocatorGetFreeMemory() {
+	return NNXAllocatorGetTotalMemory() - NNXAllocatorGetUsedMemory();
+}
 
 void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 	if (!first) {
@@ -130,3 +153,4 @@ void NNXAllocatorFree(void* address) {
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 }
+

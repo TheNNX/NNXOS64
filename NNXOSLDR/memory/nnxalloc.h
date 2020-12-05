@@ -25,6 +25,10 @@ extern "C" {
 	void* NNXAllocatorAllocArray(UINT64 n, UINT64 size);
 	void NNXAllocatorFree(void* address);
 	void* NNXAllocatorAllocVerbose(UINT64 size);
+
+	UINT64 NNXAllocatorGetTotalMemory();
+	UINT64 NNXAllocatorGetUsedMemory();
+	UINT64 NNXAllocatorGetFreeMemory();
 #ifdef __cplusplus
 }
 #endif
