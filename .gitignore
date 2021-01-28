@@ -20,3 +20,4 @@ gnu-efi/*
 *.obj
 *.exe
 final.bin
+*.aps
