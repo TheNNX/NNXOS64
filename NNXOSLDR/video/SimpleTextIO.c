@@ -203,7 +203,6 @@ void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY,
 					framebuffer[(7 - x) + posX + (y + posY) * width] = backdrop;
 				}
 			}
-
 		}
 	}
 }
@@ -269,7 +268,7 @@ void TextIOOutputStringGlobal(const char* input) {
 
 unsigned int __strlen(const char* input) {
 	unsigned int result = 0;
-	while (input[result]) 
+	while (input[result])
 		result++;
 	return result;
 }

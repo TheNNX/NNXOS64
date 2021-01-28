@@ -88,6 +88,9 @@ UINT64 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UI
 UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
 UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
 UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
+UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
+UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
+UINT64 FATGetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
 
 FunctionSet FATGetFunctionSet();
 

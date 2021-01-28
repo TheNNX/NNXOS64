@@ -229,7 +229,6 @@ compile.bat</Command>
     <ClInclude Include="memory\physical_allocator.h" />
     <ClInclude Include="multitasking\Task.h" />
     <ClInclude Include="nnxarg.h" />
-    <ClInclude Include="nnxerr.h" />
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxosdbg.h" />

@@ -173,9 +173,6 @@
     <ClInclude Include="device\fs\fat.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="nnxerr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HAL\PCI\PCIIDE.h">
       <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
