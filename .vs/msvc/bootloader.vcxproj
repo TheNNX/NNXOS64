@@ -31,7 +31,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'" Label="Configuration">
@@ -231,6 +231,14 @@ rmdir /Q /S $(ProjectName)</Command>
   <ItemGroup>
     <ClInclude Include="..\..\low.h" />
     <ClInclude Include="..\..\pe\pe.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\NNXOSLDR\NNXOSLDR.vcxproj">
+      <Project>{3c2ebf37-3efd-491a-87fe-3b590f3e32a2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="gnu-efi.vcxproj">
+      <Project>{3135d563-9596-4584-9ed6-616adec52974}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

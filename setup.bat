@@ -1,0 +1,1 @@
+powershell -command start-process -verb runas -file "cmd.exe" -ArgumentList "/c","pushd","%CD%","`&","createdisk.bat"

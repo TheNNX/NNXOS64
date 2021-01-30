@@ -1,0 +1,1 @@
+powershell.exe -command start-process -verb runas -file "cmd.exe" -ArgumentList "/c","pushd","%CD%","`&","debug.bat"
