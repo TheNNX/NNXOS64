@@ -7,6 +7,8 @@
 #define FAT16_RESERVED_CLUSTER_START 0xFFF8
 #define FAT12_RESERVED_CLUSTER_START 0xFF8
 
+#define FAT_FILE_DELETED 0xE5
+
 #pragma pack(push, 1)
 
 typedef struct {

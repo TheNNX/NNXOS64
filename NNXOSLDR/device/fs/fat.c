@@ -813,11 +813,11 @@ UINT64 FATAPIWriteFile(VFS* filesystem, char* path, UINT64 position, UINT64 size
 		return status;
 	UINT64 written = 0;
 	status = FATWriteFile(bpb, filesystem, &theFile, position, size, input, &written);
-	PrintT("%i: %x\n", __LINE__, status);
+	PrintT("%i, %i/%i: %x\n", __LINE__, written, size, status);
 	if (status)
 		return status;
 	if (written < size) {
-		PrintT("%i %i\n", written, size);
+		PrintT("written %i/%i\n", written, size);
 		return VFS_ERR_EOF;
 	}
 	return 0;
@@ -826,19 +826,19 @@ UINT64 FATAPIWriteFile(VFS* filesystem, char* path, UINT64 position, UINT64 size
 UINT64 FATAddDirectoryEntry(BPB* bpb, VFS* filesystem, char* path, FATDirectoryEntry* fileEntry) {
 	PrintT("File: %s\n", path);
 	char* buffer = NNXAllocatorAlloc(bpb->bytesPerSector);
-	UINT64 status;
+	UINT64 status = 0;
 	UINT32 offset = 0;
 	BOOL done = FALSE;
-	while (((status = FATAPIReadFile(filesystem, path, offset, bpb->bytesPerSector, buffer)) == 0) && !done) {
+	while (!done && ((status = FATAPIReadFile(filesystem, path, offset, bpb->bytesPerSector, buffer)) == 0)) {
 
 		for (FATDirectoryEntry* currentEntry = buffer;
 			currentEntry < ((FATDirectoryEntry*)buffer) + (bpb->bytesPerSector) / sizeof(FATDirectoryEntry);
 			currentEntry++)
 		{
-			if (currentEntry->filename[0] == 0) {
+			if (currentEntry->filename[0] == 0 || currentEntry->filename[0] == FAT_FILE_DELETED) {
 				*currentEntry = *fileEntry;
 				status = FATAPIWriteFile(filesystem, path, offset, bpb->bytesPerSector, buffer);
-				PrintT("STATUS %x\n", status);
+				PrintT("STATUS %x, FILE WRITTEN\n", status);
 				done = TRUE;
 				break;
 			}
