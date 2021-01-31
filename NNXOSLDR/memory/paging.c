@@ -124,6 +124,6 @@ void PagingInit() {
 	for (int i = 0; i < FrameBufferSize()/4096+1; i++) {
 		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION+i*4096, ((UINT64)framebuffer)+i*4096, 0x3);
 	}
-	TextIOInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + ((FrameBufferSize()/4096)+1)*4096, 800, 600);
+	TextIOInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + ((FrameBufferSize()/4096)+1)*4096, 0, 0, 0);
 	TextIOClear();
 }

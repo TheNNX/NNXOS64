@@ -14,7 +14,7 @@ extern "C" {
 	void TextIOSetColorInformation(UINT32 color, UINT32 background, UINT8 renderBack);
 	void TextIOGetColorInformation(UINT32 *color, UINT32* background, UINT8 *renderBack);
 	void TextIOSetAlignment(UINT8 alignment);
-	void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h);
+	void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
 	void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop);
 	void TextIOOutputFormatedString(const char* input, UINT32 size, va_list args);
 	void TextIOTest(UINT64 mode);

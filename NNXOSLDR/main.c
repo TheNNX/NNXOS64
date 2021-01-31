@@ -23,7 +23,7 @@ const char version[] = " 0.1";
 #ifdef BOCHS
 void KernelMain(){
 #else
-void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
+void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
 	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
 #endif
 
@@ -51,7 +51,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	MemorySize = memorySize;
 
-	TextIOInitialize(framebuffer, framebufferEnd, width, height);
+	TextIOInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
 	TextIOClear();
 
 	PrintT("Initializing memory");

@@ -19,6 +19,7 @@ UINT64 FrameBufferSize() {
 
 UINT32 width;
 UINT32 height;
+UINT32 pixelsPerScanline;
 
 UINT8 align = 0;
 
@@ -109,7 +110,7 @@ char* IntegerToASCIICapital(UINT64 i, UINT8 base, char b[])
 void TextIOClear() {
 	for (int y = gMinY; y < gMaxY; y++) {
 		for (int x = gMinX; x < gMaxX; x++) {
-			framebuffer[x + y * width] = 0;
+			framebuffer[x + y * pixelsPerScanline] = 0;
 		}
 	}
 }
@@ -153,7 +154,16 @@ void TextIOSetAlignment(UINT8 alignment) {
 	align = alignment;
 }
 
-void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h) {
+void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p) {
+	if (initialized && w == 0)
+		w = width;
+
+	if (initialized && h == 0)
+		h = height;
+
+	if (initialized && p == 0)
+		p = pixelsPerScanline;
+
 	framebuffer = framebufferIn;
 	framebufferEnd = framebufferEndIn;
 	
@@ -165,6 +175,7 @@ void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT3
 	
 	width = w;
 	height = h;
+	pixelsPerScanline = p;
 	initialized = 0xFF;
 	
 	TextIOSetAlignment(0);
@@ -197,10 +208,10 @@ void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY,
 		for (int x = 0; x < 8; x++) {
 			if ((7 - x) + posX <= maxX && (7 - x) + posX >= minX && y + posY <= maxY && y + posY >= minY) {
 				if (GetBit(rowData, x)) {
-					framebuffer[(7 - x) + posX + (y + posY) * width] = color;
+					framebuffer[(7 - x) + posX + (y + posY) * pixelsPerScanline] = color;
 				}
 				else if (renderBackdrop) {
-					framebuffer[(7 - x) + posX + (y + posY) * width] = backdrop;
+					framebuffer[(7 - x) + posX + (y + posY) * pixelsPerScanline] = backdrop;
 				}
 			}
 		}
@@ -211,8 +222,8 @@ void TextIOMoveUpARow() {
 	
 	for (UINT64 y = gMinY; y < gMaxY-9; y++) {
 		for (UINT64 x = gMinX; x < gMaxX; x++) {
-			framebuffer[width*y + x] = framebuffer[width*(y+9) + x];
-			framebuffer[width*(y + 9) + x] = gBackdrop;
+			framebuffer[pixelsPerScanline*y + x] = framebuffer[pixelsPerScanline*(y+9) + x];
+			framebuffer[pixelsPerScanline*(y + 9) + x] = gBackdrop;
 		}
 	}
 	gCursorY -= 9;
@@ -419,11 +430,11 @@ void DrawMap() {
 
 	for (int a = 0; a < GlobalPhysicalMemoryMapSize; a++) {
 		if (GlobalPhysicalMemoryMap[a] == 1)
-			framebuffer[x + y * width] = 0xFF007F00;
+			framebuffer[x + y * pixelsPerScanline] = 0xFF007F00;
 		else if (GlobalPhysicalMemoryMap[a] == 2)
-			framebuffer[x + y * width] = 0xFFAFAF00;
+			framebuffer[x + y * pixelsPerScanline] = 0xFFAFAF00;
 		else
-			framebuffer[x + y * width] = 0xFF7F0000;
+			framebuffer[x + y * pixelsPerScanline] = 0xFF7F0000;
 		x++;
 		if (x > width)
 		{

@@ -5,7 +5,7 @@
 #include "low.h"
 #include "pe/pe.h"
 
-void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
+void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
 
 
 EFI_FILE_PROTOCOL* GetFile(EFI_FILE* Root, CHAR16* Name) {
@@ -377,7 +377,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 		
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
-		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, (void *)gBS->ExitBootServices, ImageHandle, MapKey, 
+		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, GOP->Mode->Info->PixelsPerScanLine, (void *)gBS->ExitBootServices, ImageHandle, MapKey, 
 			NNXMMap, NNXMMapIndex, Pages * 4096, pAcpiPointer);
 	}
 	else {
