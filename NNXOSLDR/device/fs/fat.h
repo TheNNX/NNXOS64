@@ -93,6 +93,9 @@ UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
 UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
 UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
 UINT64 FATGetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
+UINT64 FATDeleteFileEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
+UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
+BOOL FATCompareEntries(FATDirectoryEntry entry1, FATDirectoryEntry entry2);
 
 FunctionSet FATGetFunctionSet();
 
