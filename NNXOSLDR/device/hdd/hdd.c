@@ -117,7 +117,7 @@ void DiskCheck() {
 					for (UINT32 currentEntryPos = entryStartInSector; currentEntryPos < 512; currentEntryPos += bytesPerEntry) {
 						GPTPartitionEntry* entry = (buffer + currentEntryPos);
 						if (!GPTCompareGUID(entry->typeGUID, GPT_EMPTY_TYPE)) {
-							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FATGetFunctionSet());
+							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FATAPIGetFunctionSet());
 						}
 						entryNumber++;
 					}
@@ -131,7 +131,7 @@ void DiskCheck() {
 					if (entry.partitionSizeInSectors == 0)
 						continue;
 
-					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FATGetFunctionSet());
+					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FATAPIGetFunctionSet());
 				}
 			}
 

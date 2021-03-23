@@ -92,12 +92,22 @@ UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS*
 UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
 UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
 UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
-UINT64 FATGetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
+UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
 UINT64 FATDeleteFileEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
 UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
-BOOL FATCompareEntries(FATDirectoryEntry entry1, FATDirectoryEntry entry2);
+BOOL FATCompareEntries(FATDirectoryEntry* entry1, FATDirectoryEntry* entry2);
+UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, char* filename, UINT64 newSize);
+VFSFile* FATAPIOpenFile(VFS* vfs, char* path);
+VOID FATAPICloseFile(VFSFile* file);
+UINT64 FATAPIWriteFile(VFSFile* file, UINT64 size, VOID* buffer);
+UINT64 FATAPIReadFile(VFSFile* file, UINT64 size, VOID* buffer);
+UINT64 FATAPIAppendFile(VFSFile* file, UINT64 size, VOID* buffer);
+UINT64 FATAPIResizeFile(VFSFile* file, UINT64 newsize);
+UINT64 FATAPIDeleteFile(VFSFile* file);
+UINT64 FATAPIDeleteAndCloseFile(VFSFile* file);
+UINT64 FATAPIRecreateDeletedFile(VFSFile* file);
 
-FunctionSet FATGetFunctionSet();
+VFSFunctionSet FATAPIGetFunctionSet();
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem);
 

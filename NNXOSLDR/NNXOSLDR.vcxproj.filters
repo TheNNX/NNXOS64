@@ -117,6 +117,9 @@
     <ClCompile Include="device\fs\gpt.c">
       <Filter>Source Files\device\fs</Filter>
     </ClCompile>
+    <ClCompile Include="text.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">
@@ -201,6 +204,9 @@
     </None>
     <None Include="multitasking\Task.asm">
       <Filter>Source Files\multitasking</Filter>
+    </None>
+    <None Include="text.h">
+      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

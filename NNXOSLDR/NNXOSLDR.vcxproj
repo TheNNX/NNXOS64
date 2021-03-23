@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{3C2EBF37-3EFD-491A-87FE-3B590F3E32A2}</ProjectGuid>
     <RootNamespace>NNXOSLDR</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'" Label="Configuration">
@@ -40,7 +40,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'" Label="Configuration">
@@ -206,6 +206,7 @@ compile.bat</Command>
     <ClInclude Include="memory\nnxalloc.h" />
     <ClCompile Include="memory\paging.c" />
     <ClCompile Include="memory\physical_allocator.c" />
+    <ClCompile Include="text.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
@@ -259,6 +260,7 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <SubType>
       </SubType>
     </None>
+    <None Include="text.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
