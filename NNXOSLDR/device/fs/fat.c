@@ -489,7 +489,6 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		parentDirectoryCluster = FATFollowClusterChain(bpb, filesystem, parentDirectoryCluster);
 	}
 	NNXAllocatorFree(sectorData);
-	PrintT("NO FILE\n");
 	return VFS_ERR_FILE_NOT_FOUND;
 }
 
@@ -793,7 +792,7 @@ UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
 		return status;
 	}
 	else {
-
+		PrintT("Cannot create file in the root directory yet. %s\n", path);
 		NNXAssertAndStop(0, "Unimplemented");
 	}
 }
@@ -1017,7 +1016,8 @@ UINT64 FATAPIChangeDirectoryEntry(VFS* vfs, char* path, FATDirectoryEntry* desir
 	UINT64 parentPathLength, status;
 	FATDirectoryEntry fileEntry;
 
-	VFSReadSector(vfs, 0, bpb);
+	if (status = FATAPIGetDirectoryEntry(vfs, path, &fileEntry, bpb))
+		return status;
 
 	parentPathLength = GetParentPathLength(path);
 	if (parentPathLength > 0) {
@@ -1026,16 +1026,19 @@ UINT64 FATAPIChangeDirectoryEntry(VFS* vfs, char* path, FATDirectoryEntry* desir
 		GetParentPath(path, parentPath);
 		if (status = FATAPIGetDirectoryEntry(vfs, parentPath, &parentFile, bpb)) {
 			NNXAllocatorFree(parentPath);
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 
 		if (status = FATChangeDirectoryEntry(bpb, vfs, &parentFile, &fileEntry, desiredFileEntry)) {
 			NNXAllocatorFree(parentPath);
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 	}
 	else {
 		if (status = FATChangeDirectoryEntry(bpb, vfs, 0, &fileEntry, desiredFileEntry)) {
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 	}
@@ -1050,12 +1053,14 @@ UINT64 FATAPIChangeFileAttributes(VFS* vfs, char* path, BYTE attributes) {
 
 	if (status = FATAPIGetDirectoryEntry(vfs, path, &fileEntry, bpb))
 	{
+		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 		return status;
 	}
 
 	fileEntry.fileAttributes = attributes;
 
 	if (status = FATAPIChangeDirectoryEntry(vfs, path, &fileEntry, bpb)) {
+		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 		return status;
 	}
 
@@ -1079,24 +1084,33 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 	UINT64 status, parentPathLength, parentCluster;
 
 	char* pathCopy = NNXAllocatorAlloc(pathLength + 1);
+
 	pathCopy[pathLength] = 0;
 	while (pathLength & (pathCopy[pathLength - 1] == '/' || pathCopy[pathLength - 1] == '\\')) {
-		pathLength--;
 		pathCopy[pathLength - 1] = 0;
+		pathLength--;
+	}
+
+	for (UINT64 i = 0; i < pathLength; i++) {
+		pathCopy[i] = path[i];
 	}
 	/* Ignore the original path, replace the pointer with the pointer to the local (trailing-slashless) copy */
 	path = pathCopy;
 
 
+	PrintT("pathCopy: %s\n", pathCopy);
+
 	if (status = FATAPICreateFile(vfs, path))
 	{
 		NNXAllocatorFree(path);
+		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 		return status;
 	}
 
 	if (status = FATAPIChangeFileAttributes(vfs, path, FAT_DIRECTORY))
 	{
 		NNXAllocatorFree(path);
+		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 		return status;
 	}
 
@@ -1104,14 +1118,17 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 		UINT64 status2;
 		if (status2 = FATAPIChangeFileAttributes(vfs, path, 0)) {
 			NNXAllocatorFree(path);
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 		if (status2 = FATAPIDeleteFileFromPath(vfs, path)) {
 			NNXAllocatorFree(path);
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 
 		NNXAllocatorFree(path);
+		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 		return status;
 	}
 
@@ -1132,6 +1149,7 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 
 		if (status = FATAPIGetDirectoryEntry(vfs, parentPath, &tempParent, bpb)) {
 			NNXAllocatorFree(parentPath);
+			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 			return status;
 		}
 
@@ -1149,6 +1167,7 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 	FATAddDirectoryEntry(bpb, vfs, &fileEntry, &parentEntry);
 	
 	NNXAllocatorFree(path);
+	PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 	return status;
 }
 
@@ -1301,31 +1320,109 @@ UINT64 FATDeleteFileEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory
 	return 0;
 }
 
-UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename) {
+UINT64 FATDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, FATDirectoryEntry* fatEntry) {
 	UINT64 status;
-	FATDirectoryEntry fatEntry, empty;
-	for (UINT32 i = 0; i < sizeof(empty); i++) {
+	FATDirectoryEntry empty;
+	char filename[14];
+	UINT64 filenameIndex = 0;
+	UINT64 filenameLength = 0;
+	UINT64 extensionLength = 0;
+	UINT64 i, readBytes;
+
+	PrintT("%X\n", fatEntry->filename[0]);
+
+	PrintT("Deleting file %S.", fatEntry->filename, 8);
+	PrintT("%S\n",fatEntry->fileExtension,3);
+
+	filenameLength = FindCharacterFirst(fatEntry->filename, 8, ' ');
+	extensionLength = FindCharacterFirst(fatEntry->fileExtension, 3, ' ');
+
+	if (filenameLength == -1)
+		filenameLength = 8;
+
+	if (extensionLength == -1)
+		extensionLength = 3;
+
+	for (i = 0; i < sizeof(empty); i++) {
 		((char*)(&empty))[i] = 0;
 	}
 
-	if (status = FATResizeFile(bpb, vfs, parentDirectory, filename, 0)) 
+	if (fatEntry->fileAttributes & FAT_DIRECTORY) {
+		FATDirectoryEntry previous = { "..      ", "   " };
+		FATDirectoryEntry self = { ".       ", "   " };
+		UINT64 currentCluster = FATGetFirstClusterOfFile(bpb, fatEntry);
+		BYTE* sectorData = NNXAllocatorAlloc(bpb->bytesPerSector);
+
+		FATChangeDirectoryEntry(bpb, vfs, fatEntry, &previous, &empty);
+		FATChangeDirectoryEntry(bpb, vfs, fatEntry, &self, &empty);
+
+		while (currentCluster > 0 && !FATIsClusterEOF(bpb, currentCluster)) {
+			UINT64 sectorIndex = 0;
+			for (sectorIndex = 0; sectorIndex < bpb->sectorsPerCluster; sectorIndex++) {
+				UINT64 currentEntry = 0;
+				FATReadSectorOfCluster(bpb, vfs, currentCluster, sectorIndex, sectorData);
+				for (currentEntry = 0; currentEntry < bpb->bytesPerSector / 32; currentEntry++) {
+					FATDirectoryEntry* current = ((FATDirectoryEntry*)sectorData) + currentEntry;
+					if (current->filename[0] != 0x00 && current->filename[0] != FAT_FILE_DELETED) {
+						FATDeleteDirectoryEntry(bpb, vfs, fatEntry, current);
+					}
+				}
+			}
+			currentCluster = FATFollowClusterChain(bpb, vfs, currentCluster);
+		}
+
+		NNXAllocatorFree(sectorData);
+	}
+
+	for (i = 0; i < filenameLength; i++) {
+		filename[filenameIndex++] = fatEntry->filename[i];
+	}
+
+	if (extensionLength)
+		filename[filenameIndex++] = '.';
+
+	for (i = 0; i < extensionLength; i++) {
+		filename[filenameIndex++] = fatEntry->fileExtension[i];
+	}
+
+	filename[filenameIndex] = 0;
+
+	if (status = FATResizeFile(bpb, vfs, parentDirectory, filename, 0))
 		return status;
 	if (status = FATReccursivlyFindDirectoryEntry(bpb, vfs, FATGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
 		return status;
-	if (status = FATChangeDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry, &empty))
+	if (status = FATChangeDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry, &empty)) {
+		PrintT("[%s:%i] 0x%X\n", __FUNCTION__, __LINE__, status);
+		return status;
+	}
+
+	return 0;
+}
+
+UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename) {
+	UINT64 status;
+	FATDirectoryEntry fatEntry;
+
+	if (status = FATReccursivlyFindDirectoryEntry(bpb, vfs, FATGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
+		return status;
+
+	if (status = FATDeleteDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry))
 		return status;
 
 	return 0;
 }
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
-	for (UINT64 i = 0; i < 100; i++) {
+	//TODO: FAT16/FAT12 TESTS AND SUPPORT FOR FILESYSTEM OPERATIONS ON THE ROOT DIRECTORY
+
+	for (UINT64 i = 0; i < 1; i++) {
 		UINT64 status;
 		char logFilepath[] = "efi\\LOG.TXT";
 		char secondFilePath[] = "efi\\TEST.TXT";
 
 		char log1[] = "0123456789abcdef";
 		char log2[] = ")!@#$%^&*(ABCDEF";
+
 
 		if (!filesystem->functions.CheckIfFileExists(filesystem, logFilepath)) {
 			if (status = filesystem->functions.CreateFile(filesystem, logFilepath)) {
@@ -1353,12 +1450,26 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 
 			if (file)
 				filesystem->functions.DeleteAndCloseFile(file);
-			else
+			else {
+				PrintT("Cannot open file for deletion\n");
 				return FALSE;
+			}
 		}
 
-		if (filesystem->functions.CreateFile(filesystem, secondFilePath))
+		if (status = filesystem->functions.CreateFile(filesystem, secondFilePath)) {
+			PrintT("Cannot create file %x\n", status);
 			return FALSE;
+		}
+
+		if (filesystem->functions.CheckIfFileExists(filesystem, "efi\\DIRECTOR.Y")) {
+			VFSFile* dir = filesystem->functions.OpenFile(filesystem, "efi\\DIRECTOR.Y");
+			filesystem->functions.DeleteAndCloseFile(dir);
+		}
+
+		if (status = filesystem->functions.CreateDirectory(filesystem, "efi\\DIRECTOR.Y")) {
+			PrintT("Cannot create the directory. 0x%X\n", status);
+			return FALSE;
+		}
 	}
 
 	PrintT("[%s] Test success\n", __FUNCTION__);
