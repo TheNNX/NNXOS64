@@ -53,7 +53,6 @@ UINT64 FindLastSlash(char* path) {
 	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
 	UINT64 forwardSlash = FindCharacterLast(path, pathLenght, '/');
 	UINT64 backSlash = FindCharacterLast(path, pathLenght, '\\');
-	PrintT("F%i B%i\n", forwardSlash, backSlash);
 	return (((forwardSlash != -1) && ((forwardSlash > backSlash) || (backSlash == -1))) ? (forwardSlash) : (backSlash));
 }
 

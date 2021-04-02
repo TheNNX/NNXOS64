@@ -42,6 +42,9 @@ typedef struct VFSFucntionSet {
 	UINT64(*WriteFile)(VFSFile* file, UINT64 size, VOID* buffer);
 	UINT64(*ReadFile)(VFSFile* file, UINT64 size, VOID* buffer);
 
+	UINT64(*CreateDirectory)(struct VirtualFileSystem* filesystem, char* path);
+	UINT64(*MoveFile)(char* oldPath, char* newPath);
+	UINT64(*RenameFile)(VFSFile* file, char* newFileName);
 } VFSFunctionSet;
 
 typedef struct VirtualFileSystem {
