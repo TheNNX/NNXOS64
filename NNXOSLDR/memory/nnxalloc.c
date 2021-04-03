@@ -24,16 +24,16 @@ UINT64 CountBlockSize(UINT8 flags) {
 	return result;
 }
 
-UINT64 NNXAllocatorGetTotalMemory() {
-	return CountBlockSize(0xFF);
-}
-
 UINT64 NNXAllocatorGetUsedMemory() {
-	return CountBlockSize(0);
+	return CountBlockSize(MEMBLOCK_USED);
 }
 
 UINT64 NNXAllocatorGetFreeMemory() {
 	return NNXAllocatorGetTotalMemory() - NNXAllocatorGetUsedMemory();
+}
+
+UINT64 NNXAllocatorGetTotalMemory() {
+	return CountBlockSize(0xFF);
 }
 
 void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
@@ -62,7 +62,7 @@ void TryMerge() {
 		PrintT("Merge failed. Blocks:\n");
 		MemoryBlock* current = first;
 		while (current) {
-			if(current->size > 8)
+			if(current->size > 256)
 				PrintT("Block %i %x %x %x\n", current->size, current, current->next, current->flags);
 			current = current->next;
 		}
@@ -91,7 +91,6 @@ void TryMerge() {
 }
 
 void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
-	
 	MemoryBlock* current = first;
 	
 	while (current) {
@@ -127,7 +126,6 @@ void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
 		TryMerge();
 		noMerge = TRUE;
 		return NNXAllocatorAllocH(size, verbose);
-		noMerge = FALSE;
 	}
 	PrintT("No memory block of size %iB found, system halted.\n", size);
 	while (1);
@@ -154,3 +152,6 @@ void NNXAllocatorFree(void* address) {
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 }
 
+VOID NNXAllocatorF() {
+	PrintT("Total memory: %i\nUsed memory: %i\nFree memory: %i\nFirst memory block: 0x%X\n", NNXAllocatorGetTotalMemory(), NNXAllocatorGetUsedMemory(), NNXAllocatorGetFreeMemory(), first);
+}
