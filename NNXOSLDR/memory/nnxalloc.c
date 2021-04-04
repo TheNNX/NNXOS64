@@ -17,7 +17,7 @@ UINT64 CountBlockSize(UINT8 flags) {
 	MemoryBlock* current = first;
 	while (current) {
 		if (current->flags == flags || flags & 0x80)
-			result += current->size;
+			result += current->size + (flags & 0x80) ? sizeof(MemoryBlock) : 0;
 		current = current->next;
 	}
 
