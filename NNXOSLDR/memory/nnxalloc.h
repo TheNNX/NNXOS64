@@ -29,8 +29,37 @@ extern "C" {
 	UINT64 NNXAllocatorGetTotalMemory();
 	UINT64 NNXAllocatorGetUsedMemory();
 	UINT64 NNXAllocatorGetFreeMemory();
+
 #ifdef __cplusplus
 }
+#endif
+
+
+#ifdef DEBUG
+
+#define SaveStateOfMemory(c)\
+		__caller = c;\
+		__lastMemory = NNXAllocatorGetUsedMemory()
+
+#define CheckMemory()\
+		__currentMemory = NNXAllocatorGetUsedMemory();\
+		if (__lastMemory < __currentMemory) {\
+			PrintT("----------------\n");\
+			if (__caller)\
+				PrintT("%s: Potential memory leak of %i bytes\n", __caller, __currentMemory - __lastMemory);\
+			PrintT("Total memory: %i, Used memory: %i, Free memory: %i\n", NNXAllocatorGetTotalMemory(), NNXAllocatorGetUsedMemory(), NNXAllocatorGetFreeMemory());\
+		}\
+		else if (__lastMemory > __currentMemory) {\
+			PrintT("----------------\n");\
+			if (__caller)\
+				PrintT("%s: Somehow we have more memory.\n", __caller);\
+			PrintT("Investigate... %i\n", __lastMemory - __currentMemory);\
+		}\
+		__caller = 0
+#else 
+#define SaveStateOfMemory(c)
+#define CheckMemory()
+
 #endif
 
 #endif
