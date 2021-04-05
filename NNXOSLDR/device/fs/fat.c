@@ -427,7 +427,7 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 
 	BYTE* sectorData = NNXAllocatorAlloc(bpb->bytesPerSector);
 
-	if (FATisFAT32(bpb) == false && parentDirectoryCluster == 0xFFFFFFFF) { //we need to find first directory entry manually
+	if (FATisFAT32(bpb) == false && (parentDirectoryCluster == 0 || parentDirectoryCluster == 0xFFFFFFFF)) { //we need to find first directory entry manually
 		UINT32 fatSize = FATFileAllocationTableSize(bpb);
 		UINT32 rootDirStart = bpb->sectorReservedSize + bpb->numberOfFATs * fatSize;
 		UINT32 rootDirSectors = ((bpb->rootEntryCount * 32) + (bpb->bytesPerSector - 1)) / bpb->bytesPerSector;
@@ -436,12 +436,12 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 			VFSReadSector(filesystem, rootDirStart + i, sectorData);
 			
 			UINT64 status = FATSearchForFileInDirectory(sectorData, bpb, filesystem, filenameCopy, &directory);
-			if (status == VFS_ERR_FILE_NOT_FOUND) {
-				continue;
-			}
-			if (status == VFS_ERR_EOF) {
+			if (status == VFS_ERR_EOF || (status && i == rootDirSectors - 1)) {
 				rootDirSectors = 0;
 				break;
+			}
+			if (status == VFS_ERR_FILE_NOT_FOUND) {
+				continue;
 			}
 
 		}
@@ -449,12 +449,16 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		if (rootDirSectors == 0) {
 			return VFS_ERR_FILE_NOT_FOUND;
 		}
-		
-		if ((directory.fileAttributes & FAT_DIRECTORY) == 0) {
-			return VFS_ERR_NOT_A_DIRECTORY;	
+		if (slash != -1) {
+			if ((directory.fileAttributes & FAT_DIRECTORY) == 0) {
+				return VFS_ERR_NOT_A_DIRECTORY;
+			}
+			return FATReccursivlyFindDirectoryEntry(bpb, filesystem, directory.lowCluster, path + slash + 1, fileDir);
 		}
-		return FATReccursivlyFindDirectoryEntry(bpb, filesystem, directory.lowCluster, path + slash + 1, fileDir);
-		
+		else {
+			*fileDir = directory;
+			return 0;
+		}
 	}
 
 	if (parentDirectoryCluster == 0xFFFFFFFF) {
@@ -855,7 +859,7 @@ VFSFile* FATAPIOpenFile(VFS* vfs, char* path) {
 	UINT64 status;
 
 	if (status = FATAPIGetDirectoryEntry(vfs, path, &direntry, bpb)) {
-		PrintT("[%s:%i] Pseudoopen failed\n", __FILE__, __LINE__);
+		PrintT("[%i] Pseudoopen failed\n", __LINE__);
 		return 0;
 	}
 
@@ -1477,37 +1481,37 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	UINT32 i = 0;
 	PrintT("FAT Test for filesystem 0x%X\n", filesystem);
 
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 2; i++) {
 		UINT64 status, __lastMemory, __currentMemory;
 		char* __caller;
 
-		if (!filesystem->functions.CheckIfFileExists(filesystem, logFilepath)) {
-			if (status = filesystem->functions.CreateFile(filesystem, logFilepath)) {
+		if (!FATAPICheckIfFileExists(filesystem, logFilepath)) {
+			if (status = FATAPICreateFile(filesystem, logFilepath)) {
 				PrintT("[%s] File creation failed.\n", __FUNCTION__);
 				return FALSE;
 			}
 		}
 
-		VFSFile* file = filesystem->functions.OpenFile(filesystem, logFilepath);
+		VFSFile* file = FATAPIOpenFile(filesystem, logFilepath);
 
-		if (status = filesystem->functions.AppendFile(file, sizeof(log1) - 1, log1)) {
+		if (status = FATAPIAppendFile(file, sizeof(log1) - 1, log1)) {
 			PrintT("[%s] Append file 1 failed\n", __FUNCTION__);
 			return FALSE;
 		}
 
-		if (status = filesystem->functions.AppendFile(file, sizeof(log2) - 1, log2)) {
+		if (status = FATAPIAppendFile(file, sizeof(log2) - 1, log2)) {
 			PrintT("[%s] Append file 2 failed\n", __FUNCTION__);
 			return FALSE;
 		}
 
-		filesystem->functions.CloseFile(file);
+		FATAPICloseFile(file);
 		
 		SaveStateOfMemory("Open");
-		if (filesystem->functions.CheckIfFileExists(filesystem, secondFilePath)) {
-			VFSFile* file = filesystem->functions.OpenFile(filesystem, secondFilePath);
+		if (FATAPICheckIfFileExists(filesystem, secondFilePath)) {
+			VFSFile* file = FATAPIOpenFile(filesystem, secondFilePath);
 
 			if (file) {
-				filesystem->functions.DeleteAndCloseFile(file);
+				FATAPIDeleteAndCloseFile(file);
 			}
 			else {
 				PrintT("Cannot open file for deletion\n");
@@ -1518,19 +1522,19 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 		
 		
 		SaveStateOfMemory("Create");
-		if (status = filesystem->functions.CreateFile(filesystem, secondFilePath)) {
+		if (status = FATAPICreateFile(filesystem, secondFilePath)) {
 			PrintT("Cannot create file %x\n", status);
 			return FALSE;
 		}
 		CheckMemory();
 		
 		SaveStateOfMemory("DIRECTOR.Y");
-		if (filesystem->functions.CheckIfFileExists(filesystem, "efi\\DIRECTOR.Y")) {
-			VFSFile* dir = filesystem->functions.OpenFile(filesystem, "efi\\DIRECTOR.Y");
-			filesystem->functions.DeleteAndCloseFile(dir);
+		if (FATAPICheckIfFileExists(filesystem, "efi\\DIRECTOR.Y")) {
+			VFSFile* dir = FATAPIOpenFile(filesystem, "efi\\DIRECTOR.Y");
+			FATAPIDeleteAndCloseFile(dir);
 		}
 
-		if (status = filesystem->functions.CreateDirectory(filesystem, "efi\\DIRECTOR.Y")) {
+		if (status = FATAPICreateDirectory(filesystem, "efi\\DIRECTOR.Y")) {
 			PrintT("Cannot create the directory. 0x%X\n", status);
 			return FALSE;
 		}
