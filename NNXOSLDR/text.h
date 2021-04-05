@@ -1,5 +1,5 @@
-#ifndef _NNX_TEXT
-#define _NNX_TEXT
+#ifndef NNX_TEXT_H
+#define NNX_TEXT_H
 
 #include "nnxint.h"
 #include "nnxosdbg.h"
