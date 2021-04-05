@@ -29,7 +29,7 @@ extern "C" {
 	UINT64 NNXAllocatorGetTotalMemory();
 	UINT64 NNXAllocatorGetUsedMemory();
 	UINT64 NNXAllocatorGetFreeMemory();
-
+	UINT64 NNXAllocatorGetUsedMemoryInBlocks();
 #ifdef __cplusplus
 }
 #endif
@@ -39,10 +39,10 @@ extern "C" {
 
 #define SaveStateOfMemory(c)\
 		__caller = c;\
-		__lastMemory = NNXAllocatorGetUsedMemory()
+		__lastMemory = NNXAllocatorGetUsedMemoryInBlocks()
 
 #define CheckMemory()\
-		__currentMemory = NNXAllocatorGetUsedMemory();\
+		__currentMemory = NNXAllocatorGetUsedMemoryInBlocks();\
 		if (__lastMemory < __currentMemory) {\
 			PrintT("----------------\n");\
 			if (__caller)\

@@ -16,17 +16,14 @@ extern "C" {
 	void TextIOSetAlignment(UINT8 alignment);
 	void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
 	void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop);
-	void TextIOOutputFormatedString(const char* input, UINT32 size, va_list args);
+	void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2);
 	void TextIOTest(UINT64 mode);
 	UINT8 TextIOGetAlignment();
 	UINT8 TextIOIsInitialized();
 	void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
 	void PrintTA(const char* input, ...);
-
-
-	char* IntegerToASCII(UINT64 i, UINT8 base, char b[]);
-	char* IntegerToASCIICapital(UINT64 i, UINT8 base, char b[]);
-
+	void TextIOOutputStringGlobal(const char* input);
+	void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
 #ifdef VERBOSE
 #define PrintT PrintTA("<%s %i>: ",__FILE__, __LINE__);PrintTA
 #else
@@ -49,6 +46,8 @@ extern "C" {
 
 	extern UINT32* framebuffer;
 	extern UINT32* framebufferEnd;
+	extern UINT32 TextIODeltaX;
+	extern UINT32 TextIODeltaY;
 
 #define FRAMEBUFFER_DESIRED_LOCATION 0x80000000
 

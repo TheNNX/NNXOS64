@@ -19,6 +19,11 @@ void IntTestC() {
 
 const char version[] = " 0.1";
 
+UINT32* gFramebuffer;
+UINT32* gFramebufferEnd;
+UINT32 gPixelsPerScanline;
+UINT32 gWidth;
+UINT32 gHeight;
 
 #ifdef BOCHS
 void KernelMain(){
@@ -26,6 +31,12 @@ void KernelMain(){
 void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
 	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
 #endif
+
+	gFramebuffer = framebuffer;
+	gFramebufferEnd = framebufferEnd;
+	gPixelsPerScanline = pixelsPerScanline;
+	gWidth = width;
+	gHeight = height;
 
 	void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
 										Exception4, Exception5, Exception6, Exception7,
@@ -52,9 +63,11 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	MemorySize = memorySize;
 
 	TextIOInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
+	UINT32 box[] = { 0, width, 20, height - 20 };
+	TextIOSetBoundingBox(box);
 	TextIOClear();
 
-	PrintT("Initializing memory");
+	PrintT("Initializing memory\n");
 	PagingInit();
 
 	GDTR* gdtr = 0xc1000000;
@@ -153,7 +166,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 #ifndef BOCHS
 	TextIOClear();
-	TextIOSetCursorPosition(0, 0);
+	TextIOSetCursorPosition(0, 20);
 	PrintT("NNXOSLDR.exe version %s\n", version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
@@ -168,8 +181,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	DrawMap();
 
-	TextIOSetCursorPosition(0, 200);
-		
+	TextIOSetCursorPosition(0, 220);
+
 	VFSInit();
 	PCIScan();
 	
