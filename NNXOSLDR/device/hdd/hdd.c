@@ -86,7 +86,7 @@ void DiskCheck() {
 
 	UINT8 diskReadBuffer[4096];
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
-		if (!drives[i].reserved)
+		if (!drives[i].reserved || drives[i].type)
 			continue;
 		PrintT("---------------------------------------------\nTesting %s drive %i of size = %iMiB\n", (const char*[]) { "ATA", "ATAPI" }[drives[i].type], i, drives[i].size / 1024 / 1024);
 		MBR mbr;
