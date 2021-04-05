@@ -106,6 +106,7 @@ UINT64 FATAPIResizeFile(VFSFile* file, UINT64 newsize);
 UINT64 FATAPIDeleteFile(VFSFile* file);
 UINT64 FATAPIDeleteAndCloseFile(VFSFile* file);
 UINT64 FATAPIRecreateDeletedFile(VFSFile* file);
+UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
 
 VFSFunctionSet FATAPIGetFunctionSet();
 

@@ -6,6 +6,8 @@
 #include "../../nnxosdbg.h"
 #include "../../text.h"
 
+#define DEBUG_STATUS PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+
 UINT32 FATVolumeTotalSize(BPB* bpb) {
 	UINT32 volumeTotalSize = bpb->sectorTotSize16;
 	if (volumeTotalSize == 0)
@@ -55,7 +57,7 @@ BOOL FATisFAT16(BPB* bpb) {
 	if (FATisFAT32(bpb))
 		return FALSE;
 
-	return FATCalculateFATClusterCount(bpb, 0) > 4084;
+	return FATCalculateFATClusterCount(bpb) > 4084;
 }
 
 BOOL FATisFAT12(BPB* bpb) {
@@ -99,7 +101,6 @@ VOID FAT12WriteFATEntry(BPB* bpb, VFS* vfs, UINT32 n, BYTE* sectorsData, UINT16 
 
 UINT64 FATWriteFATEntryInternal(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
 	UINT64 status;
-	
 	FATReadFATEntry(bpb, filesystem, n, sectorsData, currentSector);
 	UINT32 mainFAT = FATLocateMainFAT(bpb);
 	if (FATisFAT12(bpb)) {
@@ -116,6 +117,8 @@ UINT64 FATWriteFATEntryInternal(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* secto
 
 	if (status = VFSWriteSector(filesystem, *currentSector, sectorsData))
 		return VFS_ERR_READONLY;
+
+	return 0;
 }
 
 UINT64 FATWriteFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector, UINT32 entry) {
@@ -232,7 +235,7 @@ UINT64 FATReadCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, BYTE* data
 	for (int sectorIndex = 0; sectorIndex < bpb->sectorsPerCluster; sectorIndex++) {
 		UINT64 status = VFSReadSector(filesystem, firstSectorOfCluster + sectorIndex, data);
 		if (status) {
-			return status | (sectorIndex << 32);
+			return status | (((UINT64)sectorIndex) << 32);
 		}
 		data += bpb->bytesPerSector;
 	}
@@ -240,7 +243,7 @@ UINT64 FATReadCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, BYTE* data
 }
 
 UINT64 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data) {
-	UINT32 firstSectorOfCluster = bpb->sectorsPerCluster * (clusterIndex - 2) + FATCalculateFirstClusterPosition(bpb);
+	UINT32 firstSectorOfCluster = bpb->sectorsPerCluster * clusterIndex + FATCalculateFirstClusterPosition(bpb) - 2 * bpb->sectorsPerCluster;
 	
 	UINT64 status = VFSReadSector(filesystem, firstSectorOfCluster + sectorIndex, data);
 	if (status) {
@@ -251,7 +254,7 @@ UINT64 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UI
 }
 
 UINT64 FATWriteSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data) {
-	UINT32 firstSectorOfCluster = bpb->sectorsPerCluster * (clusterIndex - 2) + FATCalculateFirstClusterPosition(bpb);
+	UINT32 firstSectorOfCluster = bpb->sectorsPerCluster * clusterIndex + FATCalculateFirstClusterPosition(bpb) - 2 * bpb->sectorsPerCluster;
 
 	UINT64 status = VFSWriteSector(filesystem, firstSectorOfCluster + sectorIndex, data);
 	if (status) {
@@ -352,7 +355,7 @@ UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS*
 }
 
 UINT32 FATGetFirstClusterOfFile(BPB* bpb, FATDirectoryEntry* dirEntry) {
-	if (dirEntry == 0) {
+	if (dirEntry == 0 || dirEntry == -1) {
 		return 0xFFFFFFFF;
 	}
 	return dirEntry->lowCluster | (FATisFAT32(bpb) ? (dirEntry->highCluster << 16) : 0);
@@ -415,16 +418,16 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 
 	UINT64 slash = FindFirstSlash(path);
 	char filenameCopy[13];
+	FATDirectoryEntry dirEntry;
 
 	UINT64 status = FATCopyFirstFilenameFromPath(path, filenameCopy);
-	if (status) {
-		
+	if (status) {	
 		return status;
 	}
 
 	BYTE* sectorData = NNXAllocatorAlloc(bpb->bytesPerSector);
 
-	if (FATisFAT32(bpb) == false && parentDirectoryCluster == 0) { //we need to find first directory entry manually
+	if (FATisFAT32(bpb) == false && parentDirectoryCluster == 0xFFFFFFFF) { //we need to find first directory entry manually
 		UINT32 fatSize = FATFileAllocationTableSize(bpb);
 		UINT32 rootDirStart = bpb->sectorReservedSize + bpb->numberOfFATs * fatSize;
 		UINT32 rootDirSectors = ((bpb->rootEntryCount * 32) + (bpb->bytesPerSector - 1)) / bpb->bytesPerSector;
@@ -432,7 +435,7 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		for (int i = 0; i < rootDirSectors; i++) {
 			VFSReadSector(filesystem, rootDirStart + i, sectorData);
 			
-			UINT32 status = FATSearchForFileInDirectory(sectorData, bpb, filesystem, filenameCopy, &directory);
+			UINT64 status = FATSearchForFileInDirectory(sectorData, bpb, filesystem, filenameCopy, &directory);
 			if (status == VFS_ERR_FILE_NOT_FOUND) {
 				continue;
 			}
@@ -453,7 +456,10 @@ UINT64 FATReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		return FATReccursivlyFindDirectoryEntry(bpb, filesystem, directory.lowCluster, path + slash + 1, fileDir);
 		
 	}
-	FATDirectoryEntry dirEntry;
+
+	if (parentDirectoryCluster == 0xFFFFFFFF) {
+		parentDirectoryCluster = FATGetRootCluster(bpb);
+	}
 
 	while (!FATIsClusterEOF(bpb, parentDirectoryCluster)) {
 		for (UINT32 sectorIndex = 0; sectorIndex < bpb->sectorsPerCluster; sectorIndex++) {
@@ -524,7 +530,7 @@ UINT32 FATFindFreeCluster(BPB* bpb, VFS* vfs) {
 	}
 
 	NNXAllocatorFree(sectorsData);
-	return -1;
+	return 0xFFFFFFFF;
 }
 
 
@@ -560,41 +566,49 @@ UINT64 FATReadSectorFromFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32
 }
 
 UINT64 FATWriteSectorsToFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 index, PVOID input, UINT32 sectorsCount) {
-	UINT32 curCluster = FATGetFirstClusterOfFile(bpb, file);
-	UINT32 firstClusterPosition = FATCalculateFirstClusterPosition(bpb);
+	UINT32 currentCluster = FATGetFirstClusterOfFile(bpb, file);
+	UINT64 status;
+	UINT32 firstSector = index;
+	UINT32 lastSector = index + sectorsCount - 1;
 
-	UINT32 currentSector = 0, currentClusterSector = 0;
+	UINT32 firstCluster = firstSector / bpb->sectorsPerCluster;
+	UINT32 lastCluster = lastSector / bpb->sectorsPerCluster;
+	UINT32 currentClusterIndex = firstCluster;
+	
+	UINT64 inputOffset = 0;
 
-	sectorsCount += index;
+	currentCluster = FATFollowClusterChainToAPoint(bpb, vfs, currentCluster, firstCluster);
 
-	while (currentSector < sectorsCount) {
-		if (currentSector + bpb->sectorsPerCluster > index) {
-			for (UINT32 i = 0; i < bpb->sectorsPerCluster && currentSector < sectorsCount; i++) {
-				VFSWriteSector(vfs, currentClusterSector + firstClusterPosition + (curCluster - 2)*bpb->sectorsPerCluster, (QWORD)input);
-				currentSector++;
-				currentClusterSector++;
-			}
+	while (currentClusterIndex <= lastCluster) {
 
-			if (sectorsCount == currentSector)
-				return 0;
-		}
-		else {
-			currentSector += bpb->sectorsPerCluster;
-		}
-
-		currentClusterSector = 0;
-		curCluster = FATFollowClusterChain(bpb, vfs, curCluster);
-		
-		if (FATIsClusterEOF(bpb, curCluster)) {
+		if (FATIsClusterEOF(bpb, currentCluster)) {
+			status = VFS_ERR_EOF;
+			DEBUG_STATUS;
 			return VFS_ERR_EOF;
 		}
+
+		UINT32 i;
+
+		for (i = 0; i < bpb->sectorsPerCluster; i++) {
+			if (i + currentClusterIndex * bpb->sectorsPerCluster > lastSector)
+				return 0;
+			if (i + currentClusterIndex * bpb->sectorsPerCluster >= firstSector) {
+				if (status = FATWriteSectorOfCluster(bpb, vfs, currentCluster, i, ((UINT64)input) + inputOffset)) {
+					DEBUG_STATUS;
+				}
+
+				inputOffset += bpb->bytesPerSector;
+			}
+		}
+
+		currentClusterIndex++;
+		currentCluster = FATFollowClusterChain(bpb, vfs, currentCluster);
 	}
 
 	return 0;
-
 }
 
-UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, UINT32 size, PVOID input, UINT32* writtenBytes) {
+UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT64 offset, UINT64 size, PVOID input, UINT32* writtenBytes) {
 	UINT32 startSector = offset / bpb->bytesPerSector;
 	UINT32 endSector = (offset + size - 1) / bpb->bytesPerSector;
 	UINT32 sectorOffset = offset % bpb->bytesPerSector;
@@ -602,8 +616,10 @@ UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, 
 	UINT8 *temporarySectorData = NNXAllocatorAlloc(bpb->bytesPerSector);
 	UINT32 i, localWrittenBytes;
 
-	if (file == 0)
+	if (file == 0) {
+		NNXAllocatorFree(temporarySectorData);
 		return VFS_ERR_FILE_NOT_FOUND;
+	}
 
 	if (writtenBytes == 0)
 		writtenBytes = &localWrittenBytes;
@@ -614,12 +630,6 @@ UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, 
 
 	for (i = startSector; i <= endSector; i++) {
 
-		/**
-		
-		TODO #6: TEST: Make it so the write can be anywhere in the file, not just sector aligned.
-
-		**/
-
 		UINT32 status;
 		if (i == endSector || (i == startSector && sectorOffset)) {
 			UINT32 lowerBound, upperBound, j;
@@ -627,15 +637,19 @@ UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, 
 			
 			lowerBound = (i == startSector) ? sectorOffset : 0;
 			upperBound = (i == endSector) ? lastSectorEndOffset + 1: bpb->bytesPerSector;
+
 			for (j = 0; j < upperBound - lowerBound; j++) {
-				temporarySectorData[j + lowerBound] = ((UINT8*)input)[(i - startSector) * bpb->bytesPerSector + j];
-				(*writtenBytes)++;
+				temporarySectorData[j + lowerBound] = ((UINT8*)input)[(*writtenBytes)++];
 			}
 			status = FATWriteSectorsToFile(bpb, vfs, file, i, temporarySectorData, 1);
+			if(status)
+				DEBUG_STATUS;
 			
 		}
 		else {
-			status = FATWriteSectorsToFile(bpb, vfs, file, i, ((UINT8*)input) + (i - startSector) * bpb->bytesPerSector, 1);
+			status = FATWriteSectorsToFile(bpb, vfs, file, i, ((UINT8*)input) + *writtenBytes, 1);
+			if(status)
+				DEBUG_STATUS;
 			(*writtenBytes) += 512;
 		}
 		
@@ -714,6 +728,21 @@ UINT64 FATChangeDirectoryEntry(BPB* bpb, VFS* filesystem, FATDirectoryEntry* par
 	UINT64 status = 0;
 	UINT32 offset = 0;
 	BOOL done = FALSE;
+	FATDirectoryEntry pseudoParent;
+
+	if (!parent || parent == 0xFFFFFFFF) {
+		if (FATisFAT32(bpb)) {
+			parent = &pseudoParent;
+			parent->highCluster = (WORD)((FATGetRootCluster(bpb) & 0xFFFF0000) >> 16);
+			parent->lowCluster = (WORD)(FATGetRootCluster(bpb) & 0xFFFF);
+		}
+		else {
+			//TODO
+			PrintT("Unimplemented\n");
+			DEBUG_STATUS;
+			while (1);
+		}
+	}
 
 	while (!done && ((status = FATReadFile(bpb, filesystem, parent, offset, bpb->bytesPerSector, buffer, 0)) == 0)) {
 		for (FATDirectoryEntry* currentEntry = buffer;
@@ -733,7 +762,7 @@ UINT64 FATChangeDirectoryEntry(BPB* bpb, VFS* filesystem, FATDirectoryEntry* par
 
 		offset += bpb->bytesPerSector;
 	}
-
+	
 	NNXAllocatorFree(buffer);
 	return status;
 }
@@ -744,17 +773,17 @@ UINT64 FATAddDirectoryEntry(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parent
 }
 
 UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
-	if (FATAPICheckIfFileExists(filesystem, path))
-		return VFS_ERR_FILE_ALREADY_EXISTS;
-
-	BPB _bpb, *bpb = &_bpb;
-
 	FATDirectoryEntry fileEntry = { 0 };
 	UINT64 borderPoint = GetFileNameAndExtensionFromPath(path, fileEntry.filename, fileEntry.fileExtension);
 	UINT64 filenameLength = FindCharacterFirst(fileEntry.filename, -1, 0);
 	UINT64 extensionLength = FindCharacterFirst(fileEntry.fileExtension, -1, 0);
 
 	FATDirectoryEntry parent = { 0 };
+	
+	if (FATAPICheckIfFileExists(filesystem, path))
+		return VFS_ERR_FILE_ALREADY_EXISTS;
+
+	BPB _bpb, *bpb = &_bpb;
 
 	if (borderPoint) {
 		char *parentPath = NNXAllocatorAlloc(borderPoint);
@@ -784,7 +813,7 @@ UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
 			}
 			else {
 				status = VFS_ERR_NOT_ENOUGH_ROOM_FOR_WRITE;
-				PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+				DEBUG_STATUS;
 			}
 		}
 
@@ -825,45 +854,33 @@ UINT64 FATAPIDeleteFileFromPath(VFS* filesystem, char* path) {
 	BPB _bpb, *bpb = &_bpb;
 	UINT64 status;
 	FATDirectoryEntry theFile, parentFile;
+	UINT64 parentPathLength = GetParentPathLength(path) + 1;
 
 	if (status = FATAPIGetDirectoryEntry(filesystem, path, &theFile, bpb)) {
 		return status;
 	}
 
-	UINT64 pathLength = FindCharacterFirst(path, -1, 0);
-	char* parentPath = NNXAllocatorAlloc(pathLength);
-	UINT64 index = pathLength;
-	while (index) {
-		if (path[index - 1] == '\\' || path[index - 1] == '/')
-			break;
-		index--;
-	}
-	if (index != 0) {
-		UINT64 i, filenameLength;
-		for (i = 0; i < index - 1; i++) {
-			parentPath[i] = path[i];
-			parentPath[i + 1] = 0;
-		}
+	if (parentPathLength != 0) {
+		char* parentPath = NNXAllocatorAlloc(parentPathLength);
+		GetParentPath(path, parentPath);
 
 		if (status = FATAPIGetDirectoryEntry(filesystem, parentPath, &parentFile, bpb)) {
 			NNXAllocatorFree(parentPath);
 			return status;
 		}
 
-		if (status = FATDeleteFile(bpb, filesystem, &parentFile, path + index)) {
+		if (status = FATDeleteFile(bpb, filesystem, &parentFile, path + parentPathLength)) {
 			NNXAllocatorFree(parentPath);
 			return status;
 		}
+		NNXAllocatorFree(parentPath);
 	}
 	else {
-
 		if (status = FATDeleteFile(bpb, filesystem, 0, path)) {
-			NNXAllocatorFree(parentPath);
 			return status;
 		}
 	}
 
-	NNXAllocatorFree(parentPath);
 	return 0;
 }
 
@@ -873,12 +890,9 @@ UINT64 FATAPIDeleteFile(VFSFile* file) {
 }
 
 UINT64 FATAPIDeleteAndCloseFile(VFSFile* file) {
-	UINT64 status;
-	if (status = FATAPIDeleteFile(file))
-		return status;
+	UINT64 status = FATAPIDeleteFile(file);
 	FATAPICloseFile(file);
-
-	return 0;
+	return status;
 }
 
 UINT64 Checks(VFSFile* file, UINT64 size, VOID* buffer) {
@@ -904,19 +918,22 @@ UINT64 FATAPIWriteFile(VFSFile* file, UINT64 size, VOID* buffer) {
 	UINT64 status;
 	UINT32 written;
 
-	if (status = Checks(file, size, buffer))
+	if (status = Checks(file, size, buffer)) {
+		DEBUG_STATUS;
 		return status;
+	}
 
-	if (status = FATAPIGetDirectoryEntry(file->filesystem, file->path, &direntry, bpb))
+	if (status = FATAPIGetDirectoryEntry(file->filesystem, file->path, &direntry, bpb)) {
+		DEBUG_STATUS;
 		return status;
+	}
 	
 	status = FATWriteFile(bpb, file->filesystem, &direntry, file->filePointer, size, buffer, &written);
 	file->filePointer += written;
 	
-	if (status)
-		return status;
-
-	return 0;
+	if(status)
+		DEBUG_STATUS;
+	return status;
 }
 
 UINT64 FATAPIReadFile(VFSFile* file, UINT64 size, VOID* buffer) {
@@ -951,7 +968,6 @@ UINT64 FATAPIAppendFile(VFSFile* file, UINT64 size, VOID* buffer) {
 		return status;
 	}
 
-	PrintT("Resizing to %i\n", file->fileSize + size);
 	if (status = FATAPIResizeFile(file, file->fileSize + size)) {
 		PrintT("[%s] Resize failed\n", __FUNCTION__);
 		return status;
@@ -966,14 +982,15 @@ UINT64 FATAPIAppendFile(VFSFile* file, UINT64 size, VOID* buffer) {
 }
 
 UINT64 FATAPIResizeFile(VFSFile* file, UINT64 newsize) {
-	
-FATDirectoryEntry direntry, parentDirentry;
+	FATDirectoryEntry direntry, parentDirentry;
 	BPB _bpb, *bpb = &_bpb;
 	UINT64 status;
+	VFSReadSector(file->filesystem, 0, bpb);
 
-	UINT64 parentPathLength = GetParentPathLength(file->path);
+	UINT64 parentPathLength = GetParentPathLength(file->path) + 1;
+
 	if (parentPathLength > 0) {
-		char* parentPath = NNXAllocatorAlloc(parentPathLength + 1);
+		char* parentPath = NNXAllocatorAlloc(parentPathLength);
 		GetParentPath(file->path, parentPath);
 		status = FATAPIGetDirectoryEntry(file->filesystem, parentPath, &parentDirentry, bpb);
 		if (status) {
@@ -1026,19 +1043,20 @@ UINT64 FATAPIChangeDirectoryEntry(VFS* vfs, char* path, FATDirectoryEntry* desir
 		GetParentPath(path, parentPath);
 		if (status = FATAPIGetDirectoryEntry(vfs, parentPath, &parentFile, bpb)) {
 			NNXAllocatorFree(parentPath);
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
 
 		if (status = FATChangeDirectoryEntry(bpb, vfs, &parentFile, &fileEntry, desiredFileEntry)) {
 			NNXAllocatorFree(parentPath);
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
+		NNXAllocatorFree(parentPath);
 	}
 	else {
 		if (status = FATChangeDirectoryEntry(bpb, vfs, 0, &fileEntry, desiredFileEntry)) {
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
 	}
@@ -1053,14 +1071,14 @@ UINT64 FATAPIChangeFileAttributes(VFS* vfs, char* path, BYTE attributes) {
 
 	if (status = FATAPIGetDirectoryEntry(vfs, path, &fileEntry, bpb))
 	{
-		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+		DEBUG_STATUS;
 		return status;
 	}
 
 	fileEntry.fileAttributes = attributes;
 
 	if (status = FATAPIChangeDirectoryEntry(vfs, path, &fileEntry, bpb)) {
-		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+		DEBUG_STATUS;
 		return status;
 	}
 
@@ -1098,19 +1116,17 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 	path = pathCopy;
 
 
-	PrintT("pathCopy: %s\n", pathCopy);
-
 	if (status = FATAPICreateFile(vfs, path))
 	{
 		NNXAllocatorFree(path);
-		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+		DEBUG_STATUS;
 		return status;
 	}
 
 	if (status = FATAPIChangeFileAttributes(vfs, path, FAT_DIRECTORY))
 	{
 		NNXAllocatorFree(path);
-		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+		DEBUG_STATUS;
 		return status;
 	}
 
@@ -1118,17 +1134,17 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 		UINT64 status2;
 		if (status2 = FATAPIChangeFileAttributes(vfs, path, 0)) {
 			NNXAllocatorFree(path);
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
 		if (status2 = FATAPIDeleteFileFromPath(vfs, path)) {
 			NNXAllocatorFree(path);
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
 
 		NNXAllocatorFree(path);
-		PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+		DEBUG_STATUS;
 		return status;
 	}
 
@@ -1149,7 +1165,7 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 
 		if (status = FATAPIGetDirectoryEntry(vfs, parentPath, &tempParent, bpb)) {
 			NNXAllocatorFree(parentPath);
-			PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+			DEBUG_STATUS;
 			return status;
 		}
 
@@ -1167,7 +1183,8 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 	FATAddDirectoryEntry(bpb, vfs, &fileEntry, &parentEntry);
 	
 	NNXAllocatorFree(path);
-	PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
+	if(status)
+		DEBUG_STATUS;
 	return status;
 }
 
@@ -1205,41 +1222,46 @@ UINT32 FATPathParser(char* path, UINT32 currentIndex) {
 }
 
 UINT32 FATFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 endIndex) {
-	UINT32 lastCluster = start;
 	UINT32 numberOfClustersScanned = 0;
 	while (FATIsClusterEOF(bpb, start) == false && numberOfClustersScanned < endIndex) {
-		lastCluster = start;
 		start = FATFollowClusterChain(bpb, vfs, start);
 		numberOfClustersScanned++;
 	}
 
-	return lastCluster;
+	return start;
 }
 
 UINT32 FATFollowClusterChainToEnd(BPB* bpb, VFS* vfs, UINT32 start) {
-	return FATFollowClusterChainToAPoint(bpb, vfs, start, 0xFFFFFFFF);
-}
-
-
-UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 removeFrom) {
-	UINT64 status;
-	UINT32 clusterChainEnd = FATFollowClusterChainToAPoint(bpb, vfs, start, removeFrom); //cluster number of cluster preeceding the first one to be removed
-	UINT32 clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainEnd);
-	
-	if (status = FATWriteFATEntry(bpb, vfs, clusterChainEnd, 0, 0, FATGetClusterEOF(bpb))) //mark the last cluster as EOF
-		return status;
-
-	while (FATIsClusterEOF(bpb, clusterToBeRemoved) == false) {
-
-		UINT32 clusterChainCurrent = clusterToBeRemoved;
-		clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, clusterChainCurrent); //store the next cluster
-		if (status = FATWriteFATEntry(bpb, vfs, clusterChainCurrent, 0, 0, 0)) //mark the cluster as empty
-			return status;
+	UINT32 last = 0;
+	while (FATIsClusterEOF(bpb, start) == false) {
+		last = start;
+		start = FATFollowClusterChain(bpb, vfs, start);
 	}
 
+	return last;
+}
+
+UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 removeFrom) {
+	UINT64 status = 0;
+	UINT32 clusterChainEnd = FATFollowClusterChainToAPoint(bpb, vfs, start, removeFrom - (removeFrom != 0));
+	UINT32 clusterToBeRemoved = (removeFrom != 0) ? FATFollowClusterChain(bpb, vfs, clusterChainEnd) : clusterChainEnd;
+
+	if (removeFrom) {
+		if (status = FATWriteFATEntry(bpb, vfs, clusterChainEnd, 0, 0, FATGetClusterEOF(bpb))) //mark the last cluster as EOF
+			return status;
+	}
+	while (FATIsClusterEOF(bpb, clusterToBeRemoved) == false) {
+		UINT32 currentCluster = clusterToBeRemoved;
+		clusterToBeRemoved = FATFollowClusterChain(bpb, vfs, currentCluster); //store the next cluster
+		if (status = FATWriteFATEntry(bpb, vfs, currentCluster, 0, 0, 0)) //mark the cluster as empty
+			return status;
+	}
 	return 0;
 }
 
+// TODO: This is slow, make it fast
+// Cache the FAT table current sector and flush it when needed
+// Same (but without the flushing of course) applies to FATRemoveTraliningClusters too
 UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 n) {
 	UINT64 status = 0;
 	UINT32 lastCluster = FATFollowClusterChainToEnd(bpb, vfs, start);
@@ -1261,8 +1283,9 @@ UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 n) {
 
 UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, char* filename, UINT64 newSize) {
 	FATDirectoryEntry file, oldfile;
+
 	UINT64 status = FATReccursivlyFindDirectoryEntry(bpb, filesystem, FATGetFirstClusterOfFile(bpb, parentFile), filename, &file);
-	
+
 	if (status)
 		return status;
 
@@ -1273,9 +1296,11 @@ UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, c
 	UINT32 oldSizeCluster = (file.fileSize + clusterSize - 1) / clusterSize;
 	UINT32 newSizeCluster = (newSize + clusterSize - 1) / clusterSize;
 
-
 	INT64 changeInClusters = ((INT64)newSizeCluster) - ((INT64)oldSizeCluster);
-	UINT32 firstCluster = FATGetFirstClusterOfFile(bpb, &file);
+	UINT32 firstCluster = cluster;
+
+	if (FATIsClusterEOF(bpb, cluster))
+		return VFS_ERR_EOF;
 
 	if (changeInClusters > 0) {
 		if (oldSizeCluster == 0 && !firstCluster) {
@@ -1329,11 +1354,6 @@ UINT64 FATDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDire
 	UINT64 extensionLength = 0;
 	UINT64 i, readBytes;
 
-	PrintT("%X\n", fatEntry->filename[0]);
-
-	PrintT("Deleting file %S.", fatEntry->filename, 8);
-	PrintT("%S\n",fatEntry->fileExtension,3);
-
 	filenameLength = FindCharacterFirst(fatEntry->filename, 8, ' ');
 	extensionLength = FindCharacterFirst(fatEntry->fileExtension, 3, ' ');
 
@@ -1346,6 +1366,8 @@ UINT64 FATDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDire
 	for (i = 0; i < sizeof(empty); i++) {
 		((char*)(&empty))[i] = 0;
 	}
+
+	((char*)&empty)[0] = FAT_FILE_DELETED;
 
 	if (fatEntry->fileAttributes & FAT_DIRECTORY) {
 		FATDirectoryEntry previous = { "..      ", "   " };
@@ -1389,8 +1411,10 @@ UINT64 FATDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDire
 
 	if (status = FATResizeFile(bpb, vfs, parentDirectory, filename, 0))
 		return status;
+
 	if (status = FATReccursivlyFindDirectoryEntry(bpb, vfs, FATGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
 		return status;
+
 	if (status = FATChangeDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry, &empty)) {
 		PrintT("[%s:%i] 0x%X\n", __FUNCTION__, __LINE__, status);
 		return status;
@@ -1412,17 +1436,23 @@ UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, cha
 	return 0;
 }
 
+char logFilepath[] = "efi\\LOG.TXT";
+char secondFilePath[] = "efi\\TEST.TXT";
+char rootDirPath[] = "ROOT.DIR";
+
+char log1[] = "123456789";
+char log2[] = "ABCDEFGHIJKLMNOPQ";
+
+UINT64 lastMemory = 0, currentMemory = 0;
+char* caller = 0;
+
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 	//TODO: FAT16/FAT12 TESTS AND SUPPORT FOR FILESYSTEM OPERATIONS ON THE ROOT DIRECTORY
-
-	for (UINT64 i = 0; i < 1; i++) {
-		UINT64 status;
-		char logFilepath[] = "efi\\LOG.TXT";
-		char secondFilePath[] = "efi\\TEST.TXT";
-
-		char log1[] = "0123456789abcdef";
-		char log2[] = ")!@#$%^&*(ABCDEF";
-
+	UINT32 i = 0;
+	
+	for (i = 0; i < 1; i++) {
+		UINT64 status, __lastMemory, __currentMemory;
+		char* __caller;
 
 		if (!filesystem->functions.CheckIfFileExists(filesystem, logFilepath)) {
 			if (status = filesystem->functions.CreateFile(filesystem, logFilepath)) {
@@ -1444,23 +1474,30 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 		}
 
 		filesystem->functions.CloseFile(file);
-
+		
+		SaveStateOfMemory("Open");
 		if (filesystem->functions.CheckIfFileExists(filesystem, secondFilePath)) {
-			file = filesystem->functions.OpenFile(filesystem, secondFilePath);
+			VFSFile* file = filesystem->functions.OpenFile(filesystem, secondFilePath);
 
-			if (file)
+			if (file) {
 				filesystem->functions.DeleteAndCloseFile(file);
+			}
 			else {
 				PrintT("Cannot open file for deletion\n");
 				return FALSE;
 			}
 		}
-
+		CheckMemory();
+		
+		
+		SaveStateOfMemory("Create");
 		if (status = filesystem->functions.CreateFile(filesystem, secondFilePath)) {
 			PrintT("Cannot create file %x\n", status);
 			return FALSE;
 		}
-
+		CheckMemory();
+		
+		SaveStateOfMemory("DIRECTOR.Y");
 		if (filesystem->functions.CheckIfFileExists(filesystem, "efi\\DIRECTOR.Y")) {
 			VFSFile* dir = filesystem->functions.OpenFile(filesystem, "efi\\DIRECTOR.Y");
 			filesystem->functions.DeleteAndCloseFile(dir);
@@ -1470,8 +1507,56 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 			PrintT("Cannot create the directory. 0x%X\n", status);
 			return FALSE;
 		}
-	}
+		CheckMemory();
 
+
+		SaveStateOfMemory("rootDirPath");
+		if (FATAPICheckIfFileExists(filesystem, rootDirPath)) {
+			char readBuffer[9];
+			readBuffer[8] = 0;
+			VFSFile* rootDir = FATAPIOpenFile(filesystem, rootDirPath);
+			rootDir->filePointer = 0;
+			if (!(status = FATAPIWriteFile(rootDir, sizeof(log1), log1))) {
+				if (!(status = FATAPIReadFile(rootDir, 8, readBuffer))) {
+					PrintT("Read: %S\n", readBuffer, 8);
+
+					if (FATAPIResizeFile(rootDir, 65536))
+						PrintT("Resize 1 failed\n");
+
+					if (FATAPIResizeFile(rootDir, 65536 / 2))
+						PrintT("Resize 2 failed\n");
+				}
+				else {
+					PrintT("Root read failed %x\n", status);
+				}
+			}
+			else {
+				PrintT("Root write failed %x\n", status);
+			}
+
+			FATAPICloseFile(rootDir);
+		}
+		else {
+			PrintT("%s does not exist\n", rootDirPath);
+		}
+		CheckMemory();
+
+
+		SaveStateOfMemory("DELETE.TST");
+		if (FATAPICheckIfFileExists(filesystem, "DELETE.TST")) {
+			if (status = FATAPIDeleteFileFromPath(filesystem, "DELETE.TST")) {
+				PrintT("Failed to delete DELETE.TST %x\n", status);
+			}
+			else {
+				PrintT("Deleted DELETE.TST");
+			}
+		}
+		else {
+			PrintT("DELETE.TST does not exist\n");
+		}
+		CheckMemory();
+		
+	}
 	PrintT("[%s] Test success\n", __FUNCTION__);
 	return TRUE;
 }
