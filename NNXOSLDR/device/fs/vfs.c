@@ -116,6 +116,11 @@ UINT64 GetParentPath(char* path, char* dst) {
 }
 
 UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension) {
+	UINT64 length = FindCharacterFirst(path, -1, 0);
+	UINT64 begin = FindLastSlash(path) + 1;
+	UINT64 dot = FindCharacterLast(path + begin, length - begin, '.');
+	UINT64 filenameEnd = dot == -1 ? length - begin : dot;
+	NNXAssertAndStop(filenameEnd <= 8, "Invalid filename");
 
 	for (UINT64 i = 0; i < 8; i++)
 		name[i] = ' ';
@@ -123,14 +128,6 @@ UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension) 
 	for (UINT64 i = 0; i < 3; i++)
 		extension[i] = ' ';
 
-	UINT64 length = FindCharacterFirst(path, -1, 0);
-	UINT64 begin = FindCharacterLast(path, length, '\\');
-	if (begin == -1)
-		begin = FindCharacterLast(path, length, '/');
-	begin++;
-	UINT64 dot = FindCharacterLast(path + begin, length - begin, '.');
-	UINT64 filenameEnd = dot == -1 ? length - begin : dot;
-	NNXAssertAndStop(filenameEnd <= 8, "Invalid filename");
 	for (UINT64 i = 0; i < filenameEnd; i++) {
 		name[i] = (path + begin)[i];
 	}

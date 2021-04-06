@@ -6,6 +6,10 @@
 #include "../../memory/nnxalloc.h"
 #define VFS_MAX_NUMBER 64
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 typedef struct VFSFile {
 	char* name;
 	char* path;
@@ -21,7 +25,7 @@ typedef struct VFSFucntionSet {
 	VFSFile* (*OpenFile)(struct VirtualFileSystem* filesystem, char* path);
 
 	/* Deallocate VFSFile structure */
-	VOID (*CloseFile)(char* path);
+	VOID (*CloseFile)(VFSFile* file);
 
 	/* Delete the file without closing the structure */
 	UINT64(*DeleteFile)(VFSFile* file);
@@ -88,5 +92,9 @@ UINT64 GetParentPathLength(char* path);
 UINT64 GetParentPath(char* path, char* dst);
 
 UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

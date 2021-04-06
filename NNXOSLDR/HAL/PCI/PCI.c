@@ -153,7 +153,7 @@ void PCI_MassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNum
 			}
 		}
 		else {
-			PrintT("To many controllers!\n");
+			PrintT("Too many controllers!\n");
 		}
 	}
 	

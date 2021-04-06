@@ -285,13 +285,6 @@ void TextIOOutputStringGlobal(const char* input) {
 	TextIOOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
-unsigned int __strlen(const char* input) {
-	unsigned int result = 0;
-	while (input[result])
-		result++;
-	return result;
-}
-
 void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 	
 	void* args = args2;
@@ -399,12 +392,12 @@ display:
 	}
 }
 
-void PrintTA(char input[], ...) {
+void PrintTA(char* input, ...) {
 
 	va_list		args;
 	va_start(args, input);
 	
-	TextIOOutputFormatedString(input, __strlen(input), args);
+	TextIOOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
 	
 	va_end(args);
 }

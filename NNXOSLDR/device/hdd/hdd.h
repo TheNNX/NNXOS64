@@ -7,7 +7,7 @@ void DiskCheck();
 
 typedef struct CHS {
 	union {
-		UINT32 CHS;
+		UINT32 chs;
 		struct
 		{
 			UINT32 sector : 6;

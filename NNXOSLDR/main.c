@@ -10,6 +10,7 @@
 #include "HAL/ACPI/AML.h"
 #include "memory/nnxalloc.h"
 #include "device/fs/vfs.h"
+#include "nnxlog.h"
 
 void IntTestASM();
 
@@ -187,6 +188,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PCIScan();
 	
 	EnableInterrupts();
+
+	NNXLoggerTest(VFSGetPointerToVFS(0));
 
 	#endif
 	

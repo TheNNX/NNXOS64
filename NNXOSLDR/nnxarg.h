@@ -18,7 +18,7 @@ extern "C"
 {
 #endif
 
-typedef UINT64 STACKITEM;
+typedef INT64 STACKITEM;
 #define	VA_SIZE(TYPE)					\
 	((sizeof(TYPE) + sizeof(STACKITEM) - 1)	\
 		& ~(sizeof(STACKITEM) - 1))

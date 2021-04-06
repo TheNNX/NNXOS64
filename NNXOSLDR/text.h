@@ -1,8 +1,12 @@
-#ifndef NNX_TEXT_H
-#define NNX_TEXT_H
+#ifndef NNX_TEXT_HEADER
+#define NNX_TEXT_HEADER
 
 #include "nnxint.h"
 #include "nnxosdbg.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 UINT64 FindCharacterLast(char* string, UINT64 len, char character);
 
@@ -11,8 +15,11 @@ len can be 0xFFFFFFFF/-1 if length is undefined, for ex. you can use FindCharact
 */
 UINT64 FindCharacterFirst(char* string, UINT64 len, char character);
 
-UINT64 IntegerToASCII(UINT64 i, UINT8 base, char* b);
-UINT64 IntegerToASCIICapital(UINT64 i, UINT8 base, char* b);
+UINT64 IntegerToASCII(UINT64 i, INT8 base, char* b);
+UINT64 IntegerToASCIICapital(UINT64 i, INT8 base, char* b);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

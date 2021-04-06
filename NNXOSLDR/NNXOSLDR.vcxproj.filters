@@ -120,6 +120,9 @@
     <ClCompile Include="text.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="nnxlog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h">
@@ -195,6 +198,9 @@
       <Filter>Header Files\memory</Filter>
     </ClInclude>
     <ClInclude Include="nnxosdbg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxlog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

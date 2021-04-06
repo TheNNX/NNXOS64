@@ -200,9 +200,11 @@ compile.bat</Command>
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
+    <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
+    <ClInclude Include="nnxlog.h" />
     <ClInclude Include="memory\nnxalloc.h" />
     <ClCompile Include="memory\paging.c" />
     <ClCompile Include="memory\physical_allocator.c" />

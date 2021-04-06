@@ -14,13 +14,6 @@ inline void NNXAssert(BOOL x, char* s) {
 		PrintT("%s", s);
 }
 
-#ifdef __cplusplus
-
-inline void NNXAssert(BOOL x, const char* s) {
-	NNXAssert(x, (char*)s);
-}
-#endif
-
 inline void NNXAssertAndStop(BOOL x, char* s) {
 	NNXAssert(x, s);
 	if (!x) {
@@ -29,15 +22,18 @@ inline void NNXAssertAndStop(BOOL x, char* s) {
 	}
 }
 
+
 #ifdef __cplusplus
+}
+
+inline void NNXAssert(BOOL x, const char* s) {
+	NNXAssert(x, (char*)s);
+}
 
 inline void NNXAssertAndStop(BOOL x, const char* s) {
 	NNXAssertAndStop(x, (char*)s);
 }
-#endif
 
-#ifdef __cplusplus
-}
 #endif
 
 #define SHOWCODEPOS PrintT("%i %s\n",__LINE__,__FUNCSIG__);
