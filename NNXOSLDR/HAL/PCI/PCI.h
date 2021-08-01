@@ -77,7 +77,7 @@ inline UINT8 PCIGetProgIF(UINT8 bus, UINT8 slot, UINT8 function) {
 }
 
 inline UINT32 PCIGetBAR(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n) {
-	return PCIConfigReadDWord(bus, slot, function, 0x10 + 0x4 * n);
+	return PCIConfigReadDWord(bus, slot, function, (UINT8)(0x10 + 0x4 * n));
 }
 
 #define PCIGetBAR0(b,s,f) PCIGetBAR(b,s,f,0)

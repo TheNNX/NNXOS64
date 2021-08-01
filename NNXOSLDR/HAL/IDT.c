@@ -1,11 +1,15 @@
 #include "IDT.h"
 #include "video/SimpleTextIO.h"
 #include "device/Keyboard.h"
+#include "registers.h"
 
 void ExceptionHandler(UINT32 n, UINT32 errcode) {
 	if (n == 0xe)
-		PrintT("page fault at address: %x ",GetCR2());
-	PrintT("error: %x %x\n",(UINT64)n,(UINT64)errcode);
+		PrintT("page fault, CR2: %x\n",GetCR2());
+	PrintT("error: %x %x\n\nRegisters:\nRAX %X  RBX %X  RCX %X  RDX %X\nRDI %X  RSI %X  RSP %X  RBP %X\n",(UINT64)n,(UINT64)errcode, 
+		GetRAX(), GetRBX(), GetRCX(), GetRDX(), 
+		GetRDI(), GetRSI(), GetRSP(), GetRBP()
+	);
 	while (1);
 }
 

@@ -76,9 +76,7 @@ func LoadIDT
 	lidt [rcx]
 	ret
 
-[EXTERN IntTestC]
 func IntTestASM
-	call IntTestC
 	iretq
 
 func StoreIDT
@@ -94,7 +92,10 @@ func DisableInterrupts
 	ret
 
 func ForceInterrupt
-	mov byte [intID], cl
+	push qword rdi
+	mov rdi, intID
+	mov byte [rdi], cl
+	pop qword rdi
 	db 0xcd		;INT
 intID: db 0x0	;immediate8
 	ret

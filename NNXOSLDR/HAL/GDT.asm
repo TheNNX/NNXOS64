@@ -1,6 +1,7 @@
 [BITS 64]
 [SECTION .text]
 [GLOBAL LoadGDT]
+[GLOBAL returnPoint]
 %define retfq o64 retf
 LoadGDT:
 	lgdt [rcx]
@@ -12,9 +13,13 @@ LoadGDT:
 	mov ss, ax
 	
 	push qword 8
-	push qword returnPoint
+	call .next
+.next:
+	mov qword rax, [rsp]
+	add qword rax, .returnPoint - .next
+	mov qword [rsp], rax
 	retfq
-returnPoint:
+.returnPoint:
 	ret
 
 [GLOBAL StoreGDT]
