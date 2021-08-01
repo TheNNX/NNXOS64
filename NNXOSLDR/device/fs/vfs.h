@@ -57,6 +57,7 @@ typedef struct VirtualFileSystem {
 	UINT64 sizeInSectors;
 	UINT64 allocationUnitSize;
 	VFSFunctionSet functions;
+	VOID* filesystemSpecificData;
 }VirtualFileSystem, VFS;
 
 #define VFS_ERR_INVALID_FILENAME			0xFFFF0001

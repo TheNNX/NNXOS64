@@ -107,10 +107,15 @@ UINT64 FATAPIDeleteFile(VFSFile* file);
 UINT64 FATAPIDeleteAndCloseFile(VFSFile* file);
 UINT64 FATAPIRecreateDeletedFile(VFSFile* file);
 UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
-
+VOID FATInitVFS(VFS* partition);
 VFSFunctionSet FATAPIGetFunctionSet();
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem);
+
+typedef struct FATFilesystemSpecificData {
+	VOID* cachedFATSector;
+	UINT32 cachedFATSectorNumber;
+}FATFilesystemSpecificData;
 
 #pragma pack(pop)
 #endif

@@ -25,7 +25,7 @@ BOOL RegisterPartition(UINT64 number) {
 	}
 	else if (bpb->rootEntryCount == 0)
 	{
-		PrintT("FAT32 ");
+		PrintT("FAT32 disk detected\n");
 		BPB_EXT_FAT32* extBPB = &(bpb->_);
 		fatTypeInfo = extBPB->fatTypeInfo;
 		if (extBPB->hasNameOrID == 0x29) {
@@ -35,7 +35,7 @@ BOOL RegisterPartition(UINT64 number) {
 
 	}
 	else {
-		PrintT("FAT12/16 ");
+		PrintT("FAT12/16 disk detected\n");
 		BPB_EXT_FAT1X* extBPB = &(bpb->_);
 		fatTypeInfo = extBPB->fatTypeInfo;
 		if (extBPB->hasNameOrID == 0x29);
@@ -78,22 +78,15 @@ BOOL RegisterPartition(UINT64 number) {
 }
 
 void DiskCheck() {
-	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
-		if (drives[i].reserved) {
-			PrintT("   %x   -  %s Drive [%iMiB]\n", drives[i].signature, (const char*[]) { "ATA", "ATAPI" }[drives[i].type], drives[i].size / 1024 / 1024);
-		}
-	}
 
 	UINT8 diskReadBuffer[4096];
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
 		if (!drives[i].reserved || drives[i].type)
 			continue;
-		PrintT("---------------------------------------------\nTesting %s drive %i of size = %iMiB\n", (const char*[]) { "ATA", "ATAPI" }[drives[i].type], i, drives[i].size / 1024 / 1024);
 		MBR mbr;
 		PCI_IDE_DiskIO(drives + i, 0, 0, 1, &diskReadBuffer);
 		mbr = *((MBR*)diskReadBuffer);
 		if (mbr.mbrtable.magicNumber == MBR_SIGNATURE) {
-			PrintT("Found drive signature: 0x%X\n\nPartitions:\n", MBR_SIGNATURE);
 			GPT gpt;
 			PCI_IDE_DiskIO(drives + i, 0, 1, 1, &gpt);
 			
@@ -118,6 +111,7 @@ void DiskCheck() {
 						GPTPartitionEntry* entry = (buffer + currentEntryPos);
 						if (!GPTCompareGUID(entry->typeGUID, GPT_EMPTY_TYPE)) {
 							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FATAPIGetFunctionSet());
+							FATInitVFS(VFSGetPointerToVFS(number));
 						}
 						entryNumber++;
 					}
@@ -132,6 +126,7 @@ void DiskCheck() {
 						continue;
 
 					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FATAPIGetFunctionSet());
+					FATInitVFS(VFSGetPointerToVFS(number));
 				}
 			}
 
