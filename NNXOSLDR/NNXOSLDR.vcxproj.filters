@@ -203,6 +203,15 @@
     <ClInclude Include="nnxlog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="nnxosldr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxcfg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\registers.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">
@@ -229,6 +238,9 @@
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\PIC.asm">
+      <Filter>Source Files\HAL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\registers.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
   </ItemGroup>

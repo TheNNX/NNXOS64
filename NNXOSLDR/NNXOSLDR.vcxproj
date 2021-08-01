@@ -1,20 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Bochs|Win32">
-      <Configuration>Bochs</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Bochs|x64">
-      <Configuration>Bochs</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="QEMU|Win32">
-      <Configuration>QEMU</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="QEMU|x64">
-      <Configuration>QEMU</Configuration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -25,25 +13,7 @@
     <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
@@ -54,43 +24,22 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'" Label="PropertySheets">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>NNXOSLDR</TargetName>
     <GenerateManifest>false</GenerateManifest>
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
     <LinkIncremental>false</LinkIncremental>
-    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
-    <OutDir>$(SolutionDir)image\</OutDir>
-    <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
-    <TargetName>NNXOSLDR</TargetName>
-    <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|Win32'">
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'">
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
@@ -134,60 +83,10 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <Command>
       </Command>
     </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|x64'">
-    <ClCompile>
-      <WarningLevel>Level1</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>false</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-      <DebugInformationFormat>None</DebugInformationFormat>
-      <SupportJustMyCode>false</SupportJustMyCode>
-      <ExceptionHandling>false</ExceptionHandling>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <PreprocessorDefinitions>_MBCS;BOCHS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <Link>
-      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>$(ProjectDir)memory.obj;$(ProjectDir)gdt.obj;$(ProjectDir)idt.obj;$(ProjectDir)pic.obj</AdditionalDependencies>
-      <EntryPointSymbol>main</EntryPointSymbol>
-      <BaseAddress>0x10000</BaseAddress>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <FixedBaseAddress>true</FixedBaseAddress>
-      <DataExecutionPrevention>false</DataExecutionPrevention>
-      <SubSystem>Native</SubSystem>
-      <AssemblyDebug>true</AssemblyDebug>
-    </Link>
-    <PreBuildEvent>
-      <Command>cd $(ProjectDir)HAL\
-nasm -f win64 memory.asm -o ..\memory.obj
-nasm -f win64 gdt.asm -o ..\gdt.obj
-nasm -f win64 idt.asm -o ..\idt.obj
-nasm -f win64 pic.asm -o ..\pic.obj</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(SolutionDir)..\..\X -proc64\X -proc\filesystem\"
-cd "$(SolutionDir)..\..\X -proc64\X -proc\"
-compile.bat</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='QEMU|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Bochs|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="device\fs\fat.c" />
@@ -204,6 +103,8 @@ compile.bat</Command>
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
+    <ClInclude Include="HAL\registers.h" />
+    <ClInclude Include="nnxcfg.h" />
     <ClInclude Include="nnxlog.h" />
     <ClInclude Include="memory\nnxalloc.h" />
     <ClCompile Include="memory\paging.c" />
@@ -235,6 +136,7 @@ compile.bat</Command>
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxosdbg.h" />
+    <ClInclude Include="nnxosldr.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
@@ -244,10 +146,10 @@ compile.bat</Command>
     </CustomBuild>
     <CustomBuild Include="HAL\GDT.asm">
       <FileType>Document</FileType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">false</ExcludedFromBuild>
-      <Command Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">cd $(ProjectDir)HAL
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd $(ProjectDir)HAL
 nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='QEMU|x64'">$(ProjectDir)%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)%(Filename).obj</Outputs>
     </CustomBuild>
     <CustomBuild Include="HAL\IDT.asm">
       <FileType>Document</FileType>
@@ -256,6 +158,11 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="HAL\PIC.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\registers.asm">
+      <SubType>
+      </SubType>
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="multitasking\Task.asm">

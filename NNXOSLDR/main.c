@@ -11,12 +11,100 @@
 #include "memory/nnxalloc.h"
 #include "device/fs/vfs.h"
 #include "nnxlog.h"
+#include "nnxcfg.h"
+#include "nnxosldr.h"
+#include "../pe/pe.h" // from bootloader
+
+VOID DebugX(UINT64 n) {
+	PrintT("0x%X\n", n);
+}
+
+VOID DebugD(UINT64 n) {
+	PrintT("%d\n", n);
+}
+
+void LoadKernel() {
+	MZ_FILE_TABLE MZFileTable;
+	VFS* vfs = VFSGetPointerToVFS(0);
+	VFSFile* file = vfs->functions.OpenFile(vfs, "efi\\boot\\NNXOSKRN.EXE");
+	PE_FILE_TABLE PEFileTable;
+	DATA_DIRECTORY *dataDirectories;
+	INT64 i;
+	UINT64 imageBase;
+	UINT64(*EntryPoint)(LdrKernelInitializationData*);
+
+	if (file == 0) {
+		PrintT("Error loading kernel.\n");
+		return;
+	}
+
+	vfs->functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
+	file->filePointer = MZFileTable.e_lfanew;
+
+	if (MZFileTable.signature != IMAGE_MZ_MAGIC) {
+		PrintT("Invalid PE file %x %X\n", MZFileTable.signature, IMAGE_MZ_MAGIC);
+		return;
+	}
+
+	vfs->functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
+
+	if (PEFileTable.signature != IMAGE_PE_MAGIC) {
+		PrintT("Invalid PE header\n");
+		return;
+	}
+
+	dataDirectories = NNXAllocatorAlloc(sizeof(DATA_DIRECTORY) * PEFileTable.optionalHeader.NumberOfDataDirectories);
+	vfs->functions.ReadFile(file, sizeof(dataDirectories) * PEFileTable.optionalHeader.NumberOfDataDirectories, dataDirectories);
+	NNXAllocatorFree(dataDirectories);
+
+	imageBase = PEFileTable.optionalHeader.ImageBase;
+	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++) {
+		SECTION_HEADER sHeader;
+		UINT64 tempFP, status;
+		int j;
+
+		if (status = vfs->functions.ReadFile(file, sizeof(SECTION_HEADER), &sHeader))
+			return;
+
+		tempFP = file->filePointer;
+		file->filePointer = sHeader.SectionPointer;
+
+		if (status = vfs->functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64)sHeader.VirtualAddress) + imageBase))
+			return;
+
+		if (sHeader.VirtualSize > sHeader.SizeOfSection) {
+			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++) {
+				((UINT8*)(((UINT64)sHeader.VirtualAddress) + imageBase + sHeader.SizeOfSection))[j] = 0;
+			}
+		}
+
+		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64)sHeader.VirtualAddress) + imageBase);
+
+		file->filePointer = tempFP;
+	}
+
+	vfs->functions.CloseFile(file);
+
+	LdrKernelInitializationData data;
+	data.Framebuffer = gFramebuffer;
+	data.FramebufferEnd = gFramebufferEnd;
+	data.FramebufferHeight = gHeight;
+	data.FramebufferWidth = gWidth;
+	data.FramebufferPixelsPerScanline = gPixelsPerScanline;
+	data.PML4 = PML4;
+	data.PML4_IdentifyMap = PML4_IdentifyMap;
+	data.PhysicalMemoryMap = GlobalPhysicalMemoryMap;
+	data.PhysicalMemoryMapSize = GlobalPhysicalMemoryMapSize;
+	data.DebugD = DebugD;
+	data.DebugX = DebugX;
+
+	EntryPoint = PEFileTable.optionalHeader.EntrypointRVA + imageBase;
+	PrintT("Kernel at 0x%X\n", EntryPoint);
+	EntryPoint(&data);
+}
+
 
 void IntTestASM();
-
-void IntTestC() {
-	//PrintT("Interrupt test.\n");
-}
 
 const char version[] = " 0.1";
 
@@ -50,7 +138,6 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 										IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 										IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
-#ifndef BOCHS
 
 	ExitBootServices(imageHandle, n);
 	DisableInterrupts();
@@ -61,6 +148,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 		GlobalPhysicalMemoryMap[a] = 0;
 	}
 
+
 	MemorySize = memorySize;
 
 	TextIOInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
@@ -69,20 +157,15 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	TextIOClear();
 
 	PrintT("Initializing memory\n");
+
 	PagingInit();
 
-	GDTR* gdtr = 0xc1000000;
-	GDT* gdt = 0xc1000000 + sizeof(GDTR);
-	IDTR* idtr = 0xc1001000;
-	IDT* idt = 0xc1001000 + sizeof(IDTR);
+	GDTR* gdtr = GDT_VIRTUAL_ADDRESS;
+	GDT* gdt = GDT_VIRTUAL_ADDRESS + sizeof(GDTR);
+	IDTR* idtr = IDT_VIRTUAL_ADDRESS;
+	IDT* idt = IDT_VIRTUAL_ADDRESS + sizeof(IDTR);
 	PagingMapPage(gdtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
 	PagingMapPage(idtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
-#else
-	GDTR *gdtr = 0x120000;
-	GDT* gdt = 0x120000 + sizeof(GDTR);
-	IDTR *idtr = 0x122000;
-	IDT* idt = 0x122000 + sizeof(IDTR);
-#endif
 
 	gdtr->size = sizeof(GDTEntry) * 5 - 1;
 	gdtr->offset = gdt;
@@ -164,21 +247,19 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	else
 		status = ACPI_ParseDSDT(facp->X_DSDT);
 
-
-#ifndef BOCHS
 	TextIOClear();
 	TextIOSetCursorPosition(0, 20);
 	PrintT("NNXOSLDR.exe version %s\n", version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
 	PrintT("Memory map: ");
-	TextIOSetColorInformation(0xffffffff, 0xff007f00, 1);
+	TextIOSetColorInformation(0xFFFFFFFF, 0xFF007F00, 1);
 	PrintT(" FREE ");
-	TextIOSetColorInformation(0xffffffff, 0xff7f0000, 1);
+	TextIOSetColorInformation(0xFFFFFFFF, 0xFF7F0000, 1);
 	PrintT(" USED ");
-	TextIOSetColorInformation(0xff000000, 0xffAfAf00, 1);
+	TextIOSetColorInformation(0xFF000000, 0xFFAFAF00, 1);
 	PrintT(" UTIL ");
-	TextIOSetColorInformation(0xffffffff, 0, 1);
+	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
 
 	DrawMap();
 
@@ -191,9 +272,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	NNXLoggerTest(VFSGetPointerToVFS(0));
 
-	#endif
+	PrintT("LdrData: %x %x %x %x\n", PML4, GlobalPhysicalMemoryMap, gFramebuffer, gFramebufferEnd);
+	LoadKernel();
 	
-	
-
 	while (1);
 }

@@ -32,8 +32,8 @@ UINT64 IntegerToASCIIBase(UINT64 i, INT8 base, char *b, const char *digit) {
 	if (base == 0)
 		return 0;
 
-	if (base < 0 && i < 0) {
-		i = -i;
+	if (base < 0 && ((INT64)i) < 0) {
+		i = (-((INT64)i));
 		if (b) {
 			*b++ = '-';
 		}
@@ -84,4 +84,16 @@ UINT64 IntegerToASCII(UINT64 i, INT8 base, char *b)
 UINT64 IntegerToASCIICapital(UINT64 i, INT8 base, char *b)
 {
 	return IntegerToASCIIBase(i, base, b, "0123456789ABCDEF");
+}
+
+char ToUppercase(char c) {
+	if (c >= 'a' && c <= 'z')
+		return c + ('A' - 'a');
+	return c;
+}
+
+char ToLowercase(char c) {
+	if (c >= 'A' && c <= 'Z')
+		return c - ('A' - 'a');
+	return c;
 }

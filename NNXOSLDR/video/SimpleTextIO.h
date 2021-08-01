@@ -6,6 +6,7 @@ extern "C" {
 
 #include "nnxint.h"
 #include "nnxarg.h"
+#include "../nnxcfg.h"
 
 	void TextIOSetBoundingBox(UINT32 *boundingBox);
 	void TextIOGetBoundingBox(UINT32 *boundingBox);
@@ -14,7 +15,7 @@ extern "C" {
 	void TextIOSetColorInformation(UINT32 color, UINT32 background, UINT8 renderBack);
 	void TextIOGetColorInformation(UINT32 *color, UINT32* background, UINT8 *renderBack);
 	void TextIOSetAlignment(UINT8 alignment);
-	void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
+	void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
 	void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop);
 	void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2);
 	void TextIOTest(UINT64 mode);
@@ -44,12 +45,15 @@ extern "C" {
 	void TextIOClear();
 	UINT64 FrameBufferSize();
 
-	extern UINT32* framebuffer;
-	extern UINT32* framebufferEnd;
+	extern UINT32* gFramebuffer;
+	extern UINT32* gFramebufferEnd;
+	extern UINT32 gWidth;
+	extern UINT32 gHeight;
+	extern UINT32 gPixelsPerScanline;
+
 	extern UINT32 TextIODeltaX;
 	extern UINT32 TextIODeltaY;
 
-#define FRAMEBUFFER_DESIRED_LOCATION 0x80000000
 
 #ifdef __cplusplus
 	}

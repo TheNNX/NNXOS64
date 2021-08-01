@@ -171,8 +171,11 @@ extern "C" void NNXLoggerTest(VFS* filesystem) {
 	}
 
 	loggerFile = filesystem->functions.OpenFile(filesystem, (char*)"LOG.TXT");
-	if(loggerFile)
+	if (loggerFile) {
+		if (gLogger)
+			delete gLogger;
 		gLogger = new NNXLogger(loggerFile);
+	}
 
 	gLogger->Log("%s started!\n\n", __FUNCDNAME__);
 	gLogger->Log("Numbers:\n Hex: 0x%x 0x%X \n Decimal: %i %d \n Octal: %u\n Binary: %b\n\n", 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL);
@@ -180,6 +183,5 @@ extern "C" void NNXLoggerTest(VFS* filesystem) {
 	gLogger->Log("Characters: \n %c %c %c %c\n\n", 'a', 'b', 'c', 'd');
 	gLogger->Log("This will be flushed now...?\n\n");
 	gLogger->Flush();
-
 	PrintT("DONE\n");
 }

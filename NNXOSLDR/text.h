@@ -18,6 +18,9 @@ UINT64 FindCharacterFirst(char* string, UINT64 len, char character);
 UINT64 IntegerToASCII(UINT64 i, INT8 base, char* b);
 UINT64 IntegerToASCIICapital(UINT64 i, INT8 base, char* b);
 
+char ToUppercase(char);
+char ToLowercase(char);
+
 #ifdef __cplusplus
 }
 #endif

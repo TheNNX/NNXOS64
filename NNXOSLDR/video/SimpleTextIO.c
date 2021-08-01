@@ -11,16 +11,9 @@
 
 #define UNKNOWNMARK {0xC7, 0xBB, 0xFB, 0xF7, 0xEF, 0xEF, 0xFF, 0xEF},
 
-UINT32* framebuffer;
-UINT32* framebufferEnd;
-
 UINT64 FrameBufferSize() {
-	return (((UINT64)framebufferEnd) - ((UINT64)framebuffer));
+	return (((UINT64)gFramebufferEnd) - ((UINT64)gFramebuffer));
 }
-
-UINT32 width;
-UINT32 height;
-UINT32 pixelsPerScanline;
 
 UINT32 TextIODeltaX = 0;
 UINT32 deltaY = 0;
@@ -36,6 +29,7 @@ UINT32 gMinX = 0, gMaxX = 0;
 UINT32 gMinY = 0, gMaxY = 0;
 
 UINT8 initialized = 0;
+BOOL memoryAllocated = FALSE;
 
 UINT8 StaticFont8x8[][8] = { UNKNOWNMARK  UNKNOWNMARK  UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK  //unprintables
 
@@ -89,7 +83,7 @@ TIMES128(UNKNOWNMARK) UNKNOWNMARK
 void TextIOClear() {
 	for (int y = gMinY; y < gMaxY; y++) {
 		for (int x = gMinX; x < gMaxX; x++) {
-			framebuffer[x + y * pixelsPerScanline] = 0;
+			gFramebuffer[x + y * gPixelsPerScanline] = 0;
 		}
 	}
 }
@@ -133,43 +127,42 @@ void TextIOSetAlignment(UINT8 alignment) {
 	align = alignment;
 }
 
-void TextIOInitialize(int* framebufferIn, int* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p) {
+void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p) {
 	if (initialized && w == 0)
-		w = width;
+		w = gWidth;
 
 	if (initialized && h == 0)
-		h = height;
+		h = gHeight;
 
 	if (initialized && p == 0)
-		p = pixelsPerScanline;
+		p = gPixelsPerScanline;
 
 	if (!initialized) {
-		UINT32 defBoundingBox[4] = { 0 };
-		defBoundingBox[1] = width;
-		defBoundingBox[3] = height;
+		UINT32 defBoundingBox[] = { 0, gWidth, 0, gHeight };
 		TextIOSetBoundingBox(defBoundingBox);
 	}
-
-
-	framebuffer = framebufferIn;
-	framebufferEnd = framebufferEndIn;
 	
-	for (int a = 0; a < FrameBufferSize() / 4096 + 1; a++) {
-		if (a + ((UINT64)framebuffer) / 4096 > GlobalPhysicalMemoryMapSize / 4096)
-			break;
-		GlobalPhysicalMemoryMap[a + ((UINT64)framebuffer) / 4096] = 0;
+	gFramebuffer = framebufferIn;
+	gFramebufferEnd = framebufferEndIn;
+
+	if (memoryAllocated == FALSE) {
+		for (int a = 0; a < FrameBufferSize() / 4096 + 1; a++) {
+			if (a + ((UINT64)gFramebuffer) / 4096 > GlobalPhysicalMemoryMapSize / 4096)
+				break;
+			GlobalPhysicalMemoryMap[a + ((UINT64)gFramebuffer) / 4096] = 0;
+		}
+		memoryAllocated = TRUE;
 	}
-	
-	width = w;
-	height = h;
-	pixelsPerScanline = p;
+
+	gWidth = w;
+	gHeight = h;
+	gPixelsPerScanline = p;
 	initialized = 0xFF;
-	
+
 	TextIOSetAlignment(0);
 	TextIOSetCursorPosition(1,1);
 	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
 }
-
 
 UINT8 TextIOGetAlignment() {
 	return align;
@@ -191,10 +184,10 @@ void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY,
 		for (int x = 0; x < 8; x++) {
 			if ((7 - x) + posX <= maxX && (7 - x) + posX >= minX && y + posY <= maxY && y + posY >= minY) {
 				if (GetBit(rowData, x)) {
-					framebuffer[(7 - x) + posX + (y + posY) * pixelsPerScanline] = color;
+					gFramebuffer[(7 - x) + posX + (y + posY) * gPixelsPerScanline] = color;
 				}
 				else if (renderBackdrop) {
-					framebuffer[(7 - x) + posX + (y + posY) * pixelsPerScanline] = backdrop;
+					gFramebuffer[(7 - x) + posX + (y + posY) * gPixelsPerScanline] = backdrop;
 				}
 			}
 		}
@@ -205,8 +198,8 @@ void TextIOMoveUpARow() {
 	
 	for (UINT64 y = gMinY; y < gMaxY-9; y++) {
 		for (UINT64 x = gMinX; x < gMaxX; x++) {
-			framebuffer[pixelsPerScanline*y + x] = framebuffer[pixelsPerScanline*(y+9) + x];
-			framebuffer[pixelsPerScanline*(y + 9) + x] = gBackdrop;
+			gFramebuffer[gPixelsPerScanline*y + x] = gFramebuffer[gPixelsPerScanline*(y+9) + x];
+			gFramebuffer[gPixelsPerScanline*(y + 9) + x] = gBackdrop;
 		}
 	}
 	gCursorY -= 9;
@@ -412,9 +405,9 @@ void TextIOTest(UINT64 mode) {
 		TextIOOutputCharacter('~', 28, 20, 0xFFFFFFFF, 0, 1);
 		TextIOOutputCharacter('}', 36, 20, 0xFF000000, 0, 0);
 
-		TextIOOutputString("test of the new ............................................................................................................................................\nhhh", 500, 20, 0xFFBFBFBF, 0, 1, 0, 550, 0, height);
+		TextIOOutputString("test of the new ............................................................................................................................................\nhhh", 500, 20, 0xFFBFBFBF, 0, 1, 0, 550, 0, gHeight);
 	
-		TextIOOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, width, 0, height);
+		TextIOOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, gWidth, 0, gHeight);
 		PrintT("test %i 0x%X %x %x %c '%s' %i '%s'\n",185,0x666666,0x12345678,0xabcdef00, '*', "g", 0x69LL, "mn");
 	
 	}
@@ -431,13 +424,13 @@ void DrawMap() {
 
 	for (int a = 0; a < GlobalPhysicalMemoryMapSize; a++) {
 		if (GlobalPhysicalMemoryMap[a] == 1)
-			framebuffer[x + y * pixelsPerScanline] = 0xFF007F00;
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
 		else if (GlobalPhysicalMemoryMap[a] == 2)
-			framebuffer[x + y * pixelsPerScanline] = 0xFFAFAF00;
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAF00;
 		else
-			framebuffer[x + y * pixelsPerScanline] = 0xFF7F0000;
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
 		x++;
-		if (x > width)
+		if (x > gWidth)
 		{
 			y++;
 			x = 0;

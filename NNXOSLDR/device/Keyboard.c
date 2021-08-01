@@ -131,7 +131,6 @@ UINT8 SpecialKey() {
 	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
 }
 
-
 UINT8 KeyboardInterrupt(){
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
