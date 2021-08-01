@@ -3,26 +3,25 @@
 #ifndef _PE_H
 #define _PE_H 
 
-#include "efi.h"
-#include "efilib.h"
-#include "efibind.h"
+#include "../NNXOSLDR/nnxint.h"
 
-EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap);
+UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap);
 
 
 #define IMAGE_PE_MAGIC 0x4550
-
+#define IMAGE_MZ_MAGIC 0x5A4D
 #define IMAGE_MACHINE_X32 0x14c
 #define IMAGE_MACHINE_X64 0x8664
 #define IMAGE_MACHINE_IA64 0x200
 #define IMAGE_MACHINE_EFI 0xebc
 
 typedef UINT32 RVA;
+typedef UINT8 CHAR8;
 
 typedef struct _MZ_FILE_TABLE {
-	UINT8 signature[2];
+	UINT16 signature;
 	UINT8 nc[58];
-	RVA e_lfanew;
+	UINT32 e_lfanew;
 }_MZ, MZ_FILE_TABLE, DOS_EXECUTABLE_TABLE, IMAGE_DOS_HEADER;
 
 typedef struct _FILE_HEADER_TABLE {
@@ -167,7 +166,7 @@ typedef struct _PE_FILE_TABLE {
 typedef struct _SECTION_HEADER
 {
 	UINT8 Name[8];
-	UINT32 Misc;
+	UINT32 VirtualSize;
 	UINT32 VirtualAddress;
 	UINT32 SizeOfSection;
 	RVA SectionPointer;

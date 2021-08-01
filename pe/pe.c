@@ -1,5 +1,9 @@
 #include "pe.h"
 
+#include "efi.h"
+#include "efilib.h"
+#include "efibind.h"
+
 EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap) {
 	IMAGE_DOS_HEADER* dos_header = FileBuffer;
 	IMAGE_PE_HEADER* pe_header = (UINT64)((UINT64)dos_header + (UINT64)dos_header->e_lfanew);
