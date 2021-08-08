@@ -54,6 +54,7 @@
       <CompileAsManaged>false</CompileAsManaged>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
@@ -67,6 +68,11 @@
       <SubSystem>Native</SubSystem>
       <AssemblyDebug>true</AssemblyDebug>
       <MergeSections>.pdata=.data</MergeSections>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <StackReserveSize>
+      </StackReserveSize>
+      <StackCommitSize>
+      </StackCommitSize>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -94,11 +100,10 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <ClCompile Include="device\fs\vfs.c" />
     <ClCompile Include="device\hdd\hdd.c" />
     <ClCompile Include="device\Keyboard.c" />
-    <ClCompile Include="HAL\ACPI\ACPI.c" />
-    <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
+    <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
@@ -120,8 +125,6 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <ClInclude Include="device\fs\vfs.h" />
     <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
-    <ClInclude Include="HAL\ACPI\AML.h" />
-    <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\GDT.h" />
     <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="HAL\PCI\PCI.h" />
@@ -136,7 +139,7 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxosdbg.h" />
-    <ClInclude Include="nnxosldr.h" />
+    <ClInclude Include="nnxoskldr.h" />
     <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>

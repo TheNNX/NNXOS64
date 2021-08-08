@@ -3,6 +3,8 @@
 #include "device/Keyboard.h"
 #include "registers.h"
 
+BOOL gInteruptInitialized;
+
 void ExceptionHandler(UINT32 n, UINT32 errcode) {
 	if (n == 0xe)
 		PrintT("page fault, CR2: %x\n",GetCR2());

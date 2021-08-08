@@ -177,6 +177,7 @@ extern "C" void NNXLoggerTest(VFS* filesystem) {
 		gLogger = new NNXLogger(loggerFile);
 	}
 
+	gLogger->Log("the system is alive for sure...");
 	gLogger->Log("%s started!\n\n", __FUNCDNAME__);
 	gLogger->Log("Numbers:\n Hex: 0x%x 0x%X \n Decimal: %i %d \n Octal: %u\n Binary: %b\n\n", 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL);
 	gLogger->Log("Strings:\n normal %%s: %s \n fixed size %%S: %S\n\n", "hello i am a string and i am very happy to be able to be shown in all of my length", "hello i am a fixed size string and i'll be cut probably", 26LL);

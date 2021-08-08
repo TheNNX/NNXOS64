@@ -7,8 +7,8 @@
 EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap) {
 	IMAGE_DOS_HEADER* dos_header = FileBuffer;
 	IMAGE_PE_HEADER* pe_header = (UINT64)((UINT64)dos_header + (UINT64)dos_header->e_lfanew);
-	
-	if (pe_header->signature != IMAGE_PE_MAGIC) 
+
+	if (pe_header->signature != IMAGE_PE_MAGIC)
 	{
 		Print(L"No magic, 0x%x\n", pe_header->signature);
 		return EFI_LOAD_ERROR;
@@ -25,10 +25,10 @@ EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** ent
 	}
 	UINT64 imageBase = optionalHeader->ImageBase;
 	IMAGE_SECTION_TABLE_HEADER* section_table = (UINT64)(((UINT64)optionalHeader->NumberOfDataDirectories) * ((UINT64)sizeof(DataDirectory)) + ((UINT64)optionalHeader) + ((UINT64)sizeof(IMAGE_OPTIONAL_HEADER64)));
-	
+
 	for (int index = 0; index < fileHeader->NumberOfSections; index++)
 	{
-		SECTION_HEADER* SectionHeader = section_table->headers+index;
+		SECTION_HEADER* SectionHeader = section_table->headers + index;
 
 		CHAR16 Name[8];
 		for (int a = 0; a < 8; a++) {
@@ -37,13 +37,13 @@ EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** ent
 
 		Print(L"  Section '%s': VA:0x%x SoS:0x%x\n", Name, SectionHeader->VirtualAddress, SectionHeader->SizeOfSection);
 
-		
+
 		UINT8* dst = SectionHeader->VirtualAddress + imageBase;
 		UINT8* src = SectionHeader->SectionPointer + (UINT64)FileBuffer;
 
 		for (int times = 0; times < SectionHeader->SizeOfSection / 4096 + 5; times++) {
 			MemoryMap[((UINT64)dst) / 4096 + times - 5] = 0;
-			Print(L"%d: %x %x [%d]\n",times, dst,SectionHeader->SizeOfSection, ((UINT64)dst) / 4096 + times);
+			Print(L"%d: %x %x [%d]\n", times, dst, SectionHeader->SizeOfSection, ((UINT64)dst) / 4096 + times);
 		}
 
 		for (int memory = 0; memory < SectionHeader->SizeOfSection; memory++) {
@@ -59,20 +59,20 @@ EFI_STATUS LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** ent
 	RVA importTableRVA = optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_IMPORT].virtualAddress;
 	RVA exportTableRVA = optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_EXPORT].virtualAddress;
 
-	Print(L"%d\n",numberOfDataEntries);
+	Print(L"%d\n", numberOfDataEntries);
 
 	if (numberOfDataEntries > IMAGE_DIRECTORY_ENTRY_IMPORT && importTableRVA) {
 		Print(L"Import directory exists\n");
-		int entryIndex = 0; 
+		int entryIndex = 0;
 
 		while (importTable->entries[entryIndex].OriginalFirstThunk)
 		{
-			Print(L" | Import: %a\n", imageBase+importTable->entries[entryIndex].Name);
+			Print(L" | Import: %a\n", imageBase + importTable->entries[entryIndex].Name);
 			while (*((RVA**)(imageBase + importTable->entries[entryIndex].FirstThunk))) {
 
 				IMAGE_IMPORT_BY_NAME* importByName = (imageBase + *((RVA**)(imageBase + importTable->entries[entryIndex].FirstThunk)));
 
-				Print(L" |--> %a\n",imageBase+importByName->Name);
+				Print(L" |--> %a\n", imageBase + importByName->Name);
 
 				importTable->entries[entryIndex].FirstThunk += sizeof(RVA*);
 			}

@@ -49,12 +49,6 @@
     <Filter Include="Header Files\HAL\PCI">
       <UniqueIdentifier>{a0e03c1f-a76c-4a18-9b72-96cbbdd7f946}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\HAL\ACPI">
-      <UniqueIdentifier>{bd4222f6-d384-43e9-95b9-bc5599d4371a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\HAL\ACPI">
-      <UniqueIdentifier>{f8f3a94d-9676-4cd9-a625-92c855610905}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\device\hdd">
       <UniqueIdentifier>{c931ed91-d193-45d1-b8d7-4e55540d6acb}</UniqueIdentifier>
     </Filter>
@@ -93,14 +87,8 @@
     <ClCompile Include="HAL\PCI\PCI.c">
       <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\ACPI\AML.cpp">
-      <Filter>Source Files\HAL\ACPI</Filter>
-    </ClCompile>
     <ClCompile Include="memory\nnxalloc.c">
       <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\ACPI\ACPI.c">
-      <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
     <ClCompile Include="HAL\PCI\PCIIDE.c">
       <Filter>Source Files\HAL\PCI</Filter>
@@ -122,6 +110,9 @@
     </ClCompile>
     <ClCompile Include="nnxlog.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxalloccpp.cpp">
+      <Filter>Source Files\memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -164,12 +155,6 @@
     <ClInclude Include="HAL\PCI\PCI.h">
       <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\ACPI\AML.h">
-      <Filter>Header Files\HAL\ACPI</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\ACPI\AMLCPP.h">
-      <Filter>Header Files\HAL\ACPI</Filter>
-    </ClInclude>
     <ClInclude Include="device\hdd\hdd.h">
       <Filter>Header Files\device\hdd</Filter>
     </ClInclude>
@@ -203,14 +188,14 @@
     <ClInclude Include="nnxlog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxosldr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="nnxcfg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HAL\registers.h">
       <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxoskldr.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

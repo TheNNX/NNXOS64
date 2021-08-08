@@ -7,12 +7,11 @@
 #include "HAL/PIC.h"
 #include "device/Keyboard.h"
 #include "HAL/PCI/PCI.h"
-#include "HAL/ACPI/AML.h"
 #include "memory/nnxalloc.h"
 #include "device/fs/vfs.h"
 #include "nnxlog.h"
 #include "nnxcfg.h"
-#include "nnxosldr.h"
+#include "nnxoskldr.h"
 #include "../pe/pe.h" // from bootloader
 
 VOID DebugX(UINT64 n) {
@@ -22,6 +21,8 @@ VOID DebugX(UINT64 n) {
 VOID DebugD(UINT64 n) {
 	PrintT("%d\n", n);
 }
+
+VOID* gRDSP;
 
 void LoadKernel() {
 	MZ_FILE_TABLE MZFileTable;
@@ -91,16 +92,16 @@ void LoadKernel() {
 	data.FramebufferHeight = gHeight;
 	data.FramebufferWidth = gWidth;
 	data.FramebufferPixelsPerScanline = gPixelsPerScanline;
-	data.PML4 = PML4;
-	data.PML4_IdentifyMap = PML4_IdentifyMap;
 	data.PhysicalMemoryMap = GlobalPhysicalMemoryMap;
 	data.PhysicalMemoryMapSize = GlobalPhysicalMemoryMapSize;
 	data.DebugD = DebugD;
 	data.DebugX = DebugX;
+	data.rdsp = gRDSP;
 
 	EntryPoint = PEFileTable.optionalHeader.EntrypointRVA + imageBase;
 	PrintT("Kernel at 0x%X\n", EntryPoint);
-	EntryPoint(&data);
+	while (1); 
+	EntryPoint(&data); /* TODO: This crashes */
 }
 
 
@@ -113,19 +114,21 @@ UINT32* gFramebufferEnd;
 UINT32 gPixelsPerScanline;
 UINT32 gWidth;
 UINT32 gHeight;
+extern BOOL gInteruptInitialized;
 
 #ifdef BOCHS
 void KernelMain(){
 #else
-void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, void(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
-	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, ACPI_RDSP* rdsp) {
+void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, UINT64(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
+	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp) {
 #endif
-
+	gInteruptInitialized = FALSE;
 	gFramebuffer = framebuffer;
 	gFramebufferEnd = framebufferEnd;
 	gPixelsPerScanline = pixelsPerScanline;
 	gWidth = width;
 	gHeight = height;
+	gRDSP = rdsp;
 
 	void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
 										Exception4, Exception5, Exception6, Exception7,
@@ -144,28 +147,25 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	GlobalPhysicalMemoryMap = nnxMMap;
 	GlobalPhysicalMemoryMapSize = nnxMMapSize;
 
-	for (int a = 128; a < 384; a++) {
-		GlobalPhysicalMemoryMap[a] = 0;
-	}
-
-
 	MemorySize = memorySize;
 
 	TextIOInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
 	UINT32 box[] = { 0, width, 20, height - 20 };
 	TextIOSetBoundingBox(box);
+	TextIOSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
 	TextIOClear();
+	TextIOSetCursorPosition(0, 20);
 
 	PrintT("Initializing memory\n");
-
+	
 	PagingInit();
 
 	GDTR* gdtr = GDT_VIRTUAL_ADDRESS;
 	GDT* gdt = GDT_VIRTUAL_ADDRESS + sizeof(GDTR);
 	IDTR* idtr = IDT_VIRTUAL_ADDRESS;
 	IDT* idt = IDT_VIRTUAL_ADDRESS + sizeof(IDTR);
-	PagingMapPage(gdtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
-	PagingMapPage(idtr, InternalAllocatePhysicalPage(), PAGE_PRESENT | PAGE_WRITE);
+	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_KERNEL), PAGE_PRESENT | PAGE_WRITE);
+	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_KERNEL), PAGE_PRESENT | PAGE_WRITE);
 
 	gdtr->size = sizeof(GDTEntry) * 5 - 1;
 	gdtr->offset = gdt;
@@ -225,27 +225,21 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	}
 
 	LoadIDT(idtr);
+	/* TODO: Implement page-fault handler capable of dealing with page invalidation if a faulty address is mapped in the paging structures, but not in the TLB */
+	gInteruptInitialized = TRUE;
+	
 	KeyboardInitialize();
+	PrintT("Keyboard initialized.\n");
 	PICInitialize();
 
 
 	NNXAllocatorInitialize();
+	PrintT("NNXAllocator Initialization\n");
 	for (int a = 0; a < 8; a++) {
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 
 	UINT8 status = 0;
-	ACPI_FACP* facp = GetFADT(rdsp);
-	if (!facp) {
-		status = ACPI_LastError();
-		ACPI_ERROR(status);
-		while (1);
-	}
-
-	if (rdsp->Revision == 0)
-		status = ACPI_ParseDSDT(facp->DSDT);
-	else
-		status = ACPI_ParseDSDT(facp->X_DSDT);
 
 	TextIOClear();
 	TextIOSetCursorPosition(0, 20);
@@ -259,6 +253,10 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PrintT(" USED ");
 	TextIOSetColorInformation(0xFF000000, 0xFFAFAF00, 1);
 	PrintT(" UTIL ");
+	TextIOSetColorInformation(0xFF000000, 0xFF00FFFF, 1);
+	PrintT(" PERM ");
+	TextIOSetColorInformation(0xFF000000, 0xFFFF00FF, 1);
+	PrintT(" KERNEL ");
 	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
 
 	DrawMap();
@@ -267,12 +265,11 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	VFSInit();
 	PCIScan();
-	
+
 	EnableInterrupts();
 
 	NNXLoggerTest(VFSGetPointerToVFS(0));
-
-	PrintT("LdrData: %x %x %x %x\n", PML4, GlobalPhysicalMemoryMap, gFramebuffer, gFramebufferEnd);
+	
 	LoadKernel();
 	
 	while (1);

@@ -31,11 +31,13 @@ ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp) {
 	return rdsp->v20.XSDTAddress;
 }
 
+VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
+	UINT32 numberOfEntries;
+	ACPI_RSDT* rsdt = 0;
+	ACPI_XSDT* xsdt = 0;
 
-
-ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 	if (rdsp->Revision == 0) {
-		ACPI_RSDT* rsdt = GetRSDT(rdsp);
+		rsdt = GetRSDT(rdsp);
 		if (!rsdt)
 		{
 			localLastError = ACPI_ERROR_INVALID_RSDT;
@@ -45,23 +47,11 @@ ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
 		}
-		UINT32 numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
-		for (UINT32 a = 0; a < numberOfEntries; a++) {
-			UINT32 tableAddress = rsdt->OtherSDTs[a];
-			ACPI_SDTHeader* sdt = (ACPI_SDTHeader*)tableAddress;
-			const UINT8 dsdt[] = { 'F','A','C','P' };
-			if (*((UINT32*)dsdt) == *((UINT32*)sdt->Signature))
-			{
-				PrintT("FACP: %i\n", a);
-				return (ACPI_FADT*)tableAddress;
-			}
-			else {
-				PrintT("%i: %s\n", a, sdt->Signature);
-			}
-		}
+
+		UINT32 numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 8;
 	}
 	else {
-		ACPI_XSDT* xsdt = GetXSDT(rdsp);
+		xsdt = GetXSDT(rdsp);
 		if (!xsdt)
 		{
 			localLastError = ACPI_ERROR_INVALID_XSDT;
@@ -71,22 +61,40 @@ ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
 		}
-		UINT32 numberOfEntries = (xsdt->Header.Lenght - sizeof(xsdt->Header)) / 8;
-		for (UINT32 a = 0; a < numberOfEntries; a++) {
-			ACPI_SDTHeader* tableAddress = xsdt->OtherSDTs[a];
-			const UINT8 dsdt[] = { 'F','A','C','P' };
-			if (*((UINT32*)dsdt) == *((UINT32*)tableAddress->Signature))
-			{
-				PrintT("FACP: %i\n", a);
-				return (ACPI_FADT*)tableAddress;
-			}
-			else {
-				PrintT("%i: %s\n", a, tableAddress->Signature);
-			}
+
+		numberOfEntries = (xsdt->Header.Lenght - sizeof(xsdt->Header)) / 8;
+	}
+
+	for (UINT32 a = 0; a < numberOfEntries; a++) {
+		ACPI_SDTHeader* tableAddress = (xsdt == 0) ? ((ACPI_SDTHeader*)rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
+
+		if (*((UINT32*)name) == *((UINT32*)tableAddress->Signature))
+		{
+			PrintT("%s: %i\n", name, a);
+			return (ACPI_FADT*)tableAddress;
+		}
+		else {
+			PrintT("%i: %s\n", a, tableAddress->Signature);
 		}
 	}
-	localLastError = ACPI_ERROR_INVALID_FADT;
+
+	localLastError = ACPI_ERROR_SDT_NOT_FOUND;
 	return 0;
+}
+
+ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
+	ACPI_FADT* result = (ACPI_FADT*)GetACPITable(rdsp, (const UINT8*)"FACP");
+	if (result == 0) {
+		localLastError = ACPI_ERROR_SDT_NOT_FOUND;
+		return 0;
+	}
+
+	if (!ACPIVerifyFADT(result)) {
+		localLastError = ACPI_ERROR_INVALID_FADT;
+		return 0;
+	}
+
+	return result;
 }
 
 BOOL ACPIVerifyFADT(ACPI_FADT* fadt) {

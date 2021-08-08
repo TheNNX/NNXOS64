@@ -33,14 +33,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-inline void* operator new(size_t a) {
-	return NNXAllocatorAlloc(a);
-}
-
-inline void operator delete(void* a) {
-	NNXAllocatorFree(a);
-}
-
 #endif
 
 

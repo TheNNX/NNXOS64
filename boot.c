@@ -1,4 +1,6 @@
-﻿
+﻿/*
+	TODO: CLEANUP THE WHOLE FILE!
+*/
 #include "gnu-efi/inc/efi.h"
 #include "gnu-efi/inc/efilib.h"
 #include "gnu-efi/inc/efishellintf.h"
@@ -25,61 +27,32 @@ UINTN MapSize = 0, MapKey, DescriptorSize = 0;
 EFI_MEMORY_DESCRIPTOR *MemoryMap = NULL;
 UINT32 DescriptorVersion;
 
-void ScanAndPrintMemoryMap(UINT64* FreePages, UINT64* TotPages, UINT64* OutMapKey) {
-
+void ScanMemoryMap(UINT64* FreePages, UINT64* TotPages, UINT64* OutMapKey) {
 	EFI_STATUS Status;
-	while (EFI_SUCCESS != (Status = uefi_call_wrapper((void *)gBS->GetMemoryMap, 5, &MapSize,
+
+	if (MemoryMap) {
+		MapSize = 0;
+		MapKey = 0;
+		gBS->FreePool(MemoryMap);
+		MemoryMap = 0;
+	}
+
+	while (EFI_SUCCESS != (Status = gBS->GetMemoryMap(&MapSize,
 		MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion)))
 	{
 		if (Status == EFI_BUFFER_TOO_SMALL)
 		{
 			MapSize += 2 * DescriptorSize;
-			uefi_call_wrapper((void *)gBS->AllocatePool, 3, EfiLoaderData, MapSize, (void **)&MemoryMap);
+			gBS->AllocatePool(EfiLoaderData, MapSize, (void **)&MemoryMap);
 		}
 	}
 
-
-	UINT64 StartOfMemoryMap = MemoryMap;
-	UINT64 EndOfMemoryMap = StartOfMemoryMap + MapSize;
-
-	UINT64 Offset = StartOfMemoryMap;
-
-	UINT64 Index = 0;
-	int PrintN = 61;
+	UINT64 Offset = MemoryMap;
+	UINT64 EndOfMemoryMap = Offset + MapSize;
 
 	while (Offset < EndOfMemoryMap)
 	{
 		EFI_MEMORY_DESCRIPTOR *Desc = (EFI_MEMORY_DESCRIPTOR *)Offset;
-
-		for (int a = 0; a < 1 + (Desc->NumberOfPages / 64); a++) {
-			if (PrintN > 60)
-			{
-				PrintN = 0;
-				Print(L"\n%ll016X: ", Desc->PhysicalStart + a * 64 * 4096);
-			}
-			if (Desc->Type == EfiConventionalMemory)
-				Print(L"_");
-			else if (Desc->Type == EfiMemoryMappedIO || Desc->Type == EfiMemoryMappedIOPortSpace)
-				Print(L"I");
-			else if (Desc->Type == EfiReservedMemoryType)
-				Print(L"█");
-			else if (Desc->Type == EfiUnusableMemory)
-				Print(L"U");
-			else if (Desc->Type == EfiLoaderCode || Desc->Type == EfiLoaderData)
-				Print(L"░");
-			else if (Desc->Type == EfiBootServicesCode || Desc->Type == EfiBootServicesData)
-				Print(L"░");
-			else if (Desc->Type == EfiRuntimeServicesCode || Desc->Type == EfiRuntimeServicesData)
-				Print(L"R");
-			else if (Desc->Type == EfiACPIMemoryNVS || Desc->Type == EfiACPIReclaimMemory)
-				Print(L"A");
-			else if (Desc->Type == EfiPalCode)
-				Print(L"P");
-			else
-				Print(L"?");
-			PrintN++;
-			for (UINT64 timer = 0; timer < 0xFFF; timer++);
-		}
 
 		Offset += DescriptorSize;
 		*TotPages += Desc->NumberOfPages;
@@ -87,9 +60,7 @@ void ScanAndPrintMemoryMap(UINT64* FreePages, UINT64* TotPages, UINT64* OutMapKe
 		if (Desc->Type == EfiConventionalMemory || Desc->Type == EfiLoaderCode || Desc->Type == EfiLoaderData || Desc->Type == EfiBootServicesCode || Desc->Type == EfiBootServicesData)
 			*FreePages += Desc->NumberOfPages;
 
-		Index++;
 	}
-	Print(L"\n");
 	*OutMapKey = MapKey;
 }
 
@@ -100,16 +71,16 @@ void BackspaceChar() {
 	UINTN Columns, Rows;
 
 	Output->QueryMode(Output, Output->Mode, &Columns, &Rows);
-	
+
 	X = Output->Mode->CursorColumn;
 	Y = Output->Mode->CursorRow;
 
-	if(X)
+	if (X)
 		X--;
 	else {
 		X = Columns - 1;
 
-		if(Y)
+		if (Y)
 			Y--;
 	}
 	PrintAt(X, Y, L" ");
@@ -134,7 +105,7 @@ UINTN AskUserForNumber() {
 					BackspaceChar();
 				}
 			}
-			else if(Keydata.UnicodeChar >= L'0' && Keydata.UnicodeChar <= L'9' && CurrentNumber < 100){
+			else if (Keydata.UnicodeChar >= L'0' && Keydata.UnicodeChar <= L'9' && CurrentNumber < 100) {
 				UINTN Inserted = Keydata.UnicodeChar - L'0';
 				CurrentNumber *= 10;
 				CurrentNumber += Inserted;
@@ -166,14 +137,14 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
 	void* pAcpiPointer;
 	LibGetSystemConfigurationTable(&AcpiTableGuid, (VOID*)&pAcpiPointer);
-	
+
 	EFI_STATUS Status;
-	
+
 	gBS = SystemTable->BootServices;
 
 	UINT64 Pages = 0, FreePages = 0;
-	
-	ScanAndPrintMemoryMap(&FreePages, &Pages, &MapKey);
+
+	ScanMemoryMap(&FreePages, &Pages, &MapKey);
 
 	UINT8* NNXMMap = 0;
 	Status = gBS->AllocatePool(EfiBootServicesData, Pages, &NNXMMap);
@@ -188,12 +159,12 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	{
 		EFI_MEMORY_DESCRIPTOR *Desc = (EFI_MEMORY_DESCRIPTOR *)Offset;
 		for (UINT64 a = 0; a < Desc->NumberOfPages; a++) {
-			if (NNXMMapIndex*4096 >= NNXMMap && NNXMMapIndex*4096 <= (((UINT64)NNXMMap) + Pages)) {
+			if (NNXMMapIndex * 4096 >= NNXMMap && NNXMMapIndex * 4096 <= (((UINT64)NNXMMap) + Pages)) {
 				NNXMMap[NNXMMapIndex] = 0;
 				NNXMMapIndex++;
 				continue;
 			}
-			
+
 			if (Desc->Type == EfiConventionalMemory)
 				NNXMMap[NNXMMapIndex] = 1;
 			else if (Desc->Type == EfiLoaderCode || Desc->Type == EfiLoaderData || Desc->Type == EfiBootServicesCode || Desc->Type == EfiBootServicesData)
@@ -204,9 +175,9 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 		Offset += DescriptorSize;
 	}
-	Print(L"Memory map has been filled up to index %d\n",NNXMMapIndex);
-	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n",FreePages*4096,FreePages/256,Pages*4096,Pages/256);
-	Print(L"%lf%% memory free to use.\n",((double)FreePages)/((double)Pages)*100.0);
+	Print(L"Memory map has been filled up to index %d\n", NNXMMapIndex);
+	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n", FreePages * 4096, FreePages / 256, Pages * 4096, Pages / 256);
+	Print(L"%lf%% memory free to use.\n", ((double)FreePages) / ((double)Pages)*100.0);
 
 	UINT32* Framebuffer;
 	UINT32* FramebufferEnd;
@@ -229,7 +200,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	FramebufferEnd = GOP->Mode->FrameBufferSize + GOP->Mode->FrameBufferBase;
 
 	for (UINT64 Times = 0; Times < GOP->Mode->FrameBufferSize / 4096; Times++) {
-		NNXMMap[Times + ((UINT64)Framebuffer)/4096] = 0;
+		NNXMMap[Times + ((UINT64)Framebuffer) / 4096] = 0;
 	}
 
 	EFI_HANDLE* Filesystems;
@@ -256,7 +227,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SF;
 		Status = gBS->HandleProtocol(Filesystems[i], &gEfiSimpleFileSystemProtocolGuid, (VOID**)&SF);
 		Print(L"Enumerating handle no. %d\n", i);
-		
+
 		if (EFI_ERROR(Status))
 		{
 			Print(L"Error: Device %d not found\n", i);
@@ -311,7 +282,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 			Current = &((*Current)->Next);
 
 		*Current = AllocateZeroPool(sizeof(BootmenuItem));
-		CopyMem((*Current)->Name, Info16, 16*sizeof(CHAR16));
+		CopyMem((*Current)->Name, Info16, 16 * sizeof(CHAR16));
 		(*Current)->Filesystem = SF;
 	}
 
@@ -339,8 +310,9 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 		Print(L"%x selected\n", ChoiceArray[Number - 1]);
 		SelectedSF = ChoiceArray[Number - 1];
-		
-	}else{
+
+	}
+	else {
 		return EFI_NOT_FOUND;
 	}
 
@@ -359,7 +331,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		return EFI_NOT_FOUND;
 	}
 
-	
 	char FInfoBuffer[512];
 	UINTN FInfoBufferSize = sizeof(FInfoBuffer);
 	EFI_FILE_INFO *FInfo = (void*)FInfoBuffer;
@@ -372,12 +343,13 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		Status = LoadPortableExecutable(FileBuffer, FInfo->FileSize, &Stage2entrypoint, NNXMMap);
 
 		if (EFI_ERROR(Status)) {
-			Print(L"%r\n",Status);
+			Print(L"%r\n", Status);
 			return Status;
 		}
-		
+
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
-		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, GOP->Mode->Info->PixelsPerScanLine, (void *)gBS->ExitBootServices, ImageHandle, MapKey, 
+		ScanMemoryMap(&FreePages, &Pages, &MapKey);
+		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, GOP->Mode->Info->PixelsPerScanLine, (void *)gBS->ExitBootServices, ImageHandle, MapKey,
 			NNXMMap, NNXMMapIndex, Pages * 4096, pAcpiPointer);
 	}
 	else {
@@ -386,6 +358,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 
 	while (1);
-	
+
 	return EFI_ABORTED;
 }

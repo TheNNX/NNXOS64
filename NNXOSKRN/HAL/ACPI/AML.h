@@ -287,6 +287,7 @@ BOOL ACPIVerifyDSDT(ACPI_DSDT*);
 #define ACPI_ERROR_INVALID_FADT 4
 #define ACPI_ERROR_INVALID_SDT 0x10
 #define ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10 0x11
+#define ACPI_ERROR_SDT_NOT_FOUND 0x12
 
 #define ACPI_ERROR_AML_OBJECT_NOT_FOUND 0x89
 #define ACPI_ERROR_AML_BUFFER_INVALID_SIZE 0x8a
@@ -333,6 +334,8 @@ BOOL ACPIVerifyDSDT(ACPI_DSDT*);
 		case ACPI_ERROR_AML_BUFFER_INVALID_SIZE:
 			ACPI_ERROR_MSG("The buffer exceeds the limits.");
 			break;
+		case ACPI_ERROR_SDT_NOT_FOUND:
+			ACPI_ERROR_MSG("Requested ACPI SDT not found.");
 		default:
 			break;
 		}
@@ -340,6 +343,7 @@ BOOL ACPIVerifyDSDT(ACPI_DSDT*);
 	ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
 	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
 	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
+	VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name);
 	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
 
 	UINT8 ACPI_LastError();

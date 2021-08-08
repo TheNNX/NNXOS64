@@ -5,7 +5,7 @@
 
 #include "../NNXOSLDR/nnxint.h"
 
-UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap);
+UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint);
 
 
 #define IMAGE_PE_MAGIC 0x4550

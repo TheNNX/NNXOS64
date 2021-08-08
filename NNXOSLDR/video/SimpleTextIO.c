@@ -29,7 +29,6 @@ UINT32 gMinX = 0, gMaxX = 0;
 UINT32 gMinY = 0, gMaxY = 0;
 
 UINT8 initialized = 0;
-BOOL memoryAllocated = FALSE;
 
 UINT8 StaticFont8x8[][8] = { UNKNOWNMARK  UNKNOWNMARK  UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK UNKNOWNMARK  //unprintables
 
@@ -83,7 +82,7 @@ TIMES128(UNKNOWNMARK) UNKNOWNMARK
 void TextIOClear() {
 	for (int y = gMinY; y < gMaxY; y++) {
 		for (int x = gMinX; x < gMaxX; x++) {
-			gFramebuffer[x + y * gPixelsPerScanline] = 0;
+			gFramebuffer[x + y * gPixelsPerScanline] = gBackdrop;
 		}
 	}
 }
@@ -144,15 +143,6 @@ void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w,
 	
 	gFramebuffer = framebufferIn;
 	gFramebufferEnd = framebufferEndIn;
-
-	if (memoryAllocated == FALSE) {
-		for (int a = 0; a < FrameBufferSize() / 4096 + 1; a++) {
-			if (a + ((UINT64)gFramebuffer) / 4096 > GlobalPhysicalMemoryMapSize / 4096)
-				break;
-			GlobalPhysicalMemoryMap[a + ((UINT64)gFramebuffer) / 4096] = 0;
-		}
-		memoryAllocated = TRUE;
-	}
 
 	gWidth = w;
 	gHeight = h;
@@ -423,10 +413,16 @@ void DrawMap() {
 	y += 10;
 
 	for (int a = 0; a < GlobalPhysicalMemoryMapSize; a++) {
-		if (GlobalPhysicalMemoryMap[a] == 1)
+		if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_FREE)
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
-		else if (GlobalPhysicalMemoryMap[a] == 2)
+		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_UTIL)
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAF00;
+		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_USED_PERM)
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF00FFFF;
+		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_KERNEL)
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFFF00FF;
+		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_OLD_KERNEL)
+			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAFAF;
 		else
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
 		x++;

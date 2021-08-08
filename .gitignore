@@ -14,6 +14,7 @@ image
 image/*
 temp/*
 x64/*
+NNXOSKRN/x64/*
 gnu-efi/*
 .vs/nnxos64/*
 *.tmp
@@ -21,3 +22,10 @@ gnu-efi/*
 *.exe
 final.bin
 *.aps
+attach.txt
+attach2.txt
+detach.txt
+detach2.txt
+fat16
+fat16/*
+create.txt
