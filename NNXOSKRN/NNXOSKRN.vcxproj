@@ -88,7 +88,6 @@
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="memory\paging_kernel.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h" />

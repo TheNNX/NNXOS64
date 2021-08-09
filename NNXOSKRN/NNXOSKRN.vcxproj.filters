@@ -25,9 +25,6 @@
     <Filter Include="Header Files\HAL\ACPI">
       <UniqueIdentifier>{11c3447c-9905-4af9-bedc-f7e4cd9812ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\memory">
-      <UniqueIdentifier>{b92fdf55-3647-4c8a-aa25-2a35f45f59b2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -38,9 +35,6 @@
     </ClCompile>
     <ClCompile Include="HAL\ACPI\AML.cpp">
       <Filter>Source Files\HAL\ACPI</Filter>
-    </ClCompile>
-    <ClCompile Include="memory\paging_kernel.c">
-      <Filter>Source Files\memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

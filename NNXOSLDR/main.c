@@ -100,7 +100,6 @@ void LoadKernel() {
 
 	EntryPoint = PEFileTable.optionalHeader.EntrypointRVA + imageBase;
 	PrintT("Kernel at 0x%X\n", EntryPoint);
-	while (1); 
 	EntryPoint(&data); /* TODO: This crashes */
 }
 
@@ -164,8 +163,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	GDT* gdt = GDT_VIRTUAL_ADDRESS + sizeof(GDTR);
 	IDTR* idtr = IDT_VIRTUAL_ADDRESS;
 	IDT* idt = IDT_VIRTUAL_ADDRESS + sizeof(IDTR);
-	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_KERNEL), PAGE_PRESENT | PAGE_WRITE);
-	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_KERNEL), PAGE_PRESENT | PAGE_WRITE);
+	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
+	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
 
 	gdtr->size = sizeof(GDTEntry) * 5 - 1;
 	gdtr->offset = gdt;

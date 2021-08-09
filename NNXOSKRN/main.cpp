@@ -58,24 +58,21 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 
 	DrawMap();
 
-	PagingInit();
-	PagingMapPage(0x1000, 0x2000, 0x3);
-	PagingAllocatePage();
-
-	while (1);
-
 	UINT8 status;
-	ACPI_FACP* facp = GetFADT(data->rdsp);
+	ACPI_FADT* facp = (ACPI_FADT*)GetACPITable(data->rdsp, "FACP");
+
 	if (!facp) {
-		status = ACPI_LastError();
+		status = ACPILastError();
 		ACPI_ERROR(status);
 		while (1);
 	}
 
+	PrintT("ACPI FADT at %x", facp);
+
 	if (data->rdsp->Revision == 0)
-		status = ACPI_ParseDSDT((ACPI_DSDT*)facp->DSDT);
+		status = ACPIParseDSDT((ACPI_DSDT*)facp->DSDT);
 	else
-		status = ACPI_ParseDSDT((ACPI_DSDT*)facp->X_DSDT);
+		status = ACPIParseDSDT((ACPI_DSDT*)facp->X_DSDT);
 
 	VOID* MADT = GetACPITable(data->rdsp, "APIC");
 	PrintT("Found MADT on %x\n", MADT);

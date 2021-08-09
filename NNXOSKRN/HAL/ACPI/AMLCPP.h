@@ -87,10 +87,10 @@ private:
 	UINT8 DecodePackageNumElements();
 	VOID GetString(UINT8* output, UINT32 lenght);
 	VOID GetString(UINT8* output, UINT32 lenght, UINT8 terminator);
-	UINT8 GetByte();
-	UINT16 GetWord();
-	UINT32 GetDword();
-	UINT64 GetQword();
+	UINT8 GetBYTE();
+	UINT16 GetWORD();
+	UINT32 GetDWORD();
+	UINT64 GetQWORD();
 	UINT64 GetInteger();
 	UINT32 DecodeBufferSize();
 	AMLBuffer * ReadBufferData();

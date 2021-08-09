@@ -148,13 +148,6 @@ typedef struct { UINT8 name[4]; } AMLName;
 
 #pragma pack(pop)
 
-
-BOOL ACPIVerifyRDSP(ACPI_RDSP*);
-BOOL ACPIVerifyXSDT(ACPI_XSDT*);
-BOOL ACPIVerifyRSDT(ACPI_RSDT*);
-BOOL ACPIVerifyFADT(ACPI_FADT*);
-BOOL ACPIVerifyDSDT(ACPI_DSDT*);
-
 #define AML_OPCODE_ZEROOPCODE 0
 #define AML_OPCODE_ONEOPCODE 1
 #define AML_OPCODE_ALIASOPCODE 0X6
@@ -344,10 +337,17 @@ BOOL ACPIVerifyDSDT(ACPI_DSDT*);
 	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
 	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
 	VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name);
-	UINT8 ACPI_ParseDSDT(ACPI_DSDT* table);
+	UINT8 ACPIParseDSDT(ACPI_DSDT* table);
 
-	UINT8 ACPI_LastError();
+	UINT8 ACPILastError();
 	AMLName CreateName(const char* name);
+
+	BOOL ACPIVerifyRDSP(ACPI_RDSP*);
+	BOOL ACPIVerifyXSDT(ACPI_XSDT*);
+	BOOL ACPIVerifyRSDT(ACPI_RSDT*);
+	BOOL ACPIVerifyFADT(ACPI_FADT*);
+	BOOL ACPIVerifyDSDT(ACPI_DSDT*);
+
 #ifdef __cplusplus 
 }
 #include "AMLCPP.h"
