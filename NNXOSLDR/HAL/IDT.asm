@@ -1,6 +1,7 @@
 [BITS 64]
 [SECTION .text]
-%include "func.inc"
+%strcat INC_FUNC __FILE__,"/../func.inc"
+%include INC_FUNC
 
 %macro pushstate 0
 	push rdx
@@ -44,6 +45,7 @@ Exception%1:
 	pushstate
 	mov rcx, %1
 	mov rdx, [rsp+120]
+	mov r8, [rsp+128]
 	call ExceptionHandler
 	popstate
 	add rsp, 8
@@ -56,6 +58,7 @@ Exception%1:
 	pushstate
 	mov rcx, %1
 	mov rdx, 0
+	mov r8, [rsp+120]
 	call ExceptionHandler
 	popstate
 	iretq

@@ -10,7 +10,8 @@
 ;
 ;
 
-%include "func.inc"
+%strcat INC_FUNC __FILE__,"/../func.inc"
+%include INC_FUNC
 
 func inb
 	push rdx

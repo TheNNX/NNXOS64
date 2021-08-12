@@ -50,31 +50,32 @@ void ForceScreenUpdate() {
 	TextIOSetCursorPosition(minX + 8, minY + 6);
 	TextIOSetColorInformation(0xFF000000, controlColor, 0);
 
-	PrintT("Allocator usage: %i%%, total: %iKiB", (NNXAllocatorGetUsedMemory() * 100) / NNXAllocatorGetTotalMemory(), (NNXAllocatorGetTotalMemory() + 1) / 1024);
+	if (first) {
+		PrintT("Allocator usage: %i%%, total: %iKiB", (NNXAllocatorGetUsedMemory() * 100) / NNXAllocatorGetTotalMemory(), (NNXAllocatorGetTotalMemory() + 1) / 1024);
 
-	TextIOGetCursorPosition(&currentPosX, &currentPosY);
-	
-	cFramebuffer = gFramebuffer + (currentPosX + pad) + currentPosY * gPixelsPerScanline;
+		TextIOGetCursorPosition(&currentPosX, &currentPosY);
 
-	for (i = 0; i < progressBarLength; i++) {
-		gFramebuffer[gPixelsPerScanline * (currentPosY - 1) + currentPosX + 10 + i] = controlBckgrd;
-		gFramebuffer[gPixelsPerScanline * (currentPosY + 8) + currentPosX + 10 + i] = controlBckgrd;
-	}
+		cFramebuffer = gFramebuffer + (currentPosX + pad) + currentPosY * gPixelsPerScanline;
 
-	pixelsUsed = (NNXAllocatorGetUsedMemory() * progressBarLength) / NNXAllocatorGetTotalMemory();
-
-	for (i = 0; i < 8; i++) {
-		UINT32 j;
-		gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad - 1] = controlBckgrd;
-		gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad + progressBarLength] = controlBckgrd;
-		for (j = 0; j < progressBarLength; j++) {
-			cFramebuffer[j] = (j < pixelsUsed) ? usedColor : freeColor;
+		for (i = 0; i < progressBarLength; i++) {
+			gFramebuffer[gPixelsPerScanline * (currentPosY - 1) + currentPosX + 10 + i] = controlBckgrd;
+			gFramebuffer[gPixelsPerScanline * (currentPosY + 8) + currentPosX + 10 + i] = controlBckgrd;
 		}
-		cFramebuffer += gPixelsPerScanline;
+
+		pixelsUsed = (NNXAllocatorGetUsedMemory() * progressBarLength) / NNXAllocatorGetTotalMemory();
+
+		for (i = 0; i < 8; i++) {
+			UINT32 j;
+			gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad - 1] = controlBckgrd;
+			gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad + progressBarLength] = controlBckgrd;
+			for (j = 0; j < progressBarLength; j++) {
+				cFramebuffer[j] = (j < pixelsUsed) ? usedColor : freeColor;
+			}
+			cFramebuffer += gPixelsPerScanline;
+		}
+
+		lastX = currentPosX + pad + progressBarLength + 1;
 	}
-
-	lastX = currentPosX + pad + progressBarLength + 1;
-
 	TextIOSetColorInformation(oldColor, oldBackground, oldRenderBack);
 	TextIOSetCursorPosition(cursorX, cursorY);
 	TextIOSetBoundingBox(oldBoundingBox);
@@ -83,23 +84,21 @@ void ForceScreenUpdate() {
 
 void UpdateScreen() {
 #ifdef DEBUG
-	
-	if (times++ % required == 0) {
+	if ((times % required) == 0) {
 		times = 0;
 		ForceScreenUpdate();
 	}
+	times++;
 #endif
 }
 
 void InitializeScreen() {
-#ifdef DEBUG
 	minX = 0;
 	maxX = gWidth;
 	maxY = 19;
 	minY = 0;
 	times = 0;
 	lastX = maxX;
-#endif
 }
 
 void NNXAllocatorInitialize() {
@@ -146,9 +145,12 @@ void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 	}
 	else {
 		MemoryBlock* current = first;
+		UINT64 i = 0;
 		while (current->next) {
+			i++;
 			current = current->next;
 		}
+
 		current->next = memblock;
 		current->next->size = memblockSize - sizeof(MemoryBlock);
 		current->next->next = 0;
@@ -194,7 +196,7 @@ void TryMerge() {
 	UpdateScreen();
 }
 
-void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
+void* NNXAllocatorAlloc(UINT64 size) {
 	MemoryBlock* current = first;
 	
 	while (current) {
@@ -232,18 +234,10 @@ void* NNXAllocatorAllocH(UINT64 size, UINT8 verbose) {
 		TryMerge();
 		noMerge = TRUE;
 		UpdateScreen();
-		return NNXAllocatorAllocH(size, verbose);
+		return NNXAllocatorAlloc(size);
 	}
 	PrintT("No memory block of size %iB found, system halted.\n", size);
 	while (1);
-}
-
-void* NNXAllocatorAlloc(UINT64 size) {
-	return NNXAllocatorAllocH(size, 0);
-}
-
-void* NNXAllocatorAllocVerbose(UINT64 size) {
-	return NNXAllocatorAllocH(size, 1);
 }
 
 void* NNXAllocatorAllocArray(UINT64 n, UINT64 size) {

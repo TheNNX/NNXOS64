@@ -25,6 +25,12 @@
     <Filter Include="Header Files\HAL\ACPI">
       <UniqueIdentifier>{11c3447c-9905-4af9-bedc-f7e4cd9812ec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HAL\APIC">
+      <UniqueIdentifier>{55971f77-cec4-4297-99e1-7d35cff3f398}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HAL\APIC">
+      <UniqueIdentifier>{e2d0935f-90cf-484b-be17-4890cf632633}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,6 +42,9 @@
     <ClCompile Include="HAL\ACPI\AML.cpp">
       <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\APIC\APIC.CPP">
+      <Filter>Source Files\HAL\APIC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -43,6 +52,9 @@
     </ClInclude>
     <ClInclude Include="HAL\ACPI\AMLCPP.h">
       <Filter>Header Files\HAL\ACPI</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\APIC\APIC.h">
+      <Filter>Header Files\HAL\APIC</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

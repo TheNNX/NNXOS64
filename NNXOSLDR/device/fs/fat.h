@@ -83,6 +83,7 @@ BOOL FATisFAT12(BPB* bpb);
 BOOL FATisFAT16(BPB* bpb);
 BOOL FATisFAT32(BPB* bpb);
 UINT32 FATFileAllocationTableSize(BPB* bpb);
+UINT32 FATFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 endIndex);
 UINT32 FATVolumeTotalSize(BPB* bpb);
 UINT32 FATScanFree(VFS* filesystem);
 BOOL FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);

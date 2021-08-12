@@ -21,13 +21,12 @@ AMLName gHID;
 extern "C" {
 	extern UINT8 localLastError;
 	UINT8 ACPIParseDSDT(ACPI_DSDT* table) {
-		if (!ACPIVerifyDSDT(table))
+		if (!ACPIVerifySDT((ACPI_SDT*)table))
 		{
 			localLastError = ACPI_ERROR_INVALID_DSDT;
 			return localLastError;
 		}
 		AMLParser acpi = AMLParser(table);
-		PrintT("ACPI_AML_CODE class initialized\n");
 		acpi.Parse(acpi.GetRootScope(), acpi.GetSize());
 	}
 }

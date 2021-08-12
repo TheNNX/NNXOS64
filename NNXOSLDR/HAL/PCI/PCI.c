@@ -4,6 +4,8 @@
 #include "device/fs/mbr.h"
 #include "device/fs/gpt.h"
 
+#pragma warning(disable : 4189)
+
 UINT16 PCIConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset){
 	UINT32 address = (UINT32)((((UINT32)bus)<<16) | (((UINT32)slot)<<11) | (((UINT32)function)<<8) | (offset & 0xfc) | 0x80000000);
 	outd(CONFIG_ADDRESS, address);
@@ -174,8 +176,6 @@ int AddDrive(IDEDrive* drive) {
 
 //some debug functionality
 void PCI_IDE_Enumerate() {
-	UINT8 buffer[4096] = {0};
-
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
 		drives[i].reserved = 0;
 	}

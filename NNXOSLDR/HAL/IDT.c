@@ -5,12 +5,12 @@
 
 BOOL gInteruptInitialized;
 
-void ExceptionHandler(UINT32 n, UINT32 errcode) {
-	if (n == 0xe)
-		PrintT("page fault, CR2: %x\n",GetCR2());
-	PrintT("error: %x %x\n\nRegisters:\nRAX %X  RBX %X  RCX %X  RDX %X\nRDI %X  RSI %X  RSP %X  RBP %X\n",(UINT64)n,(UINT64)errcode, 
-		GetRAX(), GetRBX(), GetRCX(), GetRDX(), 
-		GetRDI(), GetRSI(), GetRSP(), GetRBP()
+void ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 rip) {
+
+	PrintT("error: %x %x at RIP 0x%X\n\nRegisters:\nRAX %X  RBX %X  RCX %X  RDX %X\nRDI %X  RSI %X  RSP %X  RBP %X\nCR2 %X", n, errcode, rip,
+		GetRAX(), GetRBX(), GetRCX(), GetRDX(),
+		GetRDI(), GetRSI(), GetRSP(), GetRBP(),
+		GetCR2()
 	);
 	while (1);
 }

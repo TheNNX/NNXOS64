@@ -52,7 +52,7 @@
       <SubSystem>Native</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)temp\NNXOSLDR\*.obj;$(SolutionDir)NNXOSLDR\*.obj</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)temp\NNXOSLDR\*.obj</AdditionalDependencies>
       <EntryPointSymbol>KeEntry</EntryPointSymbol>
       <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -87,11 +87,13 @@
   <ItemGroup>
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
+    <ClCompile Include="HAL\APIC\APIC.CPP" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
+    <ClInclude Include="HAL\APIC\APIC.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

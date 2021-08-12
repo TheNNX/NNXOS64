@@ -100,7 +100,7 @@ void LoadKernel() {
 
 	EntryPoint = PEFileTable.optionalHeader.EntrypointRVA + imageBase;
 	PrintT("Kernel at 0x%X\n", EntryPoint);
-	EntryPoint(&data); /* TODO: This crashes */
+	EntryPoint(&data);
 }
 
 
@@ -121,6 +121,7 @@ void KernelMain(){
 void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, UINT64(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
 	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp) {
 #endif
+	UINT64 i;
 	gInteruptInitialized = FALSE;
 	gFramebuffer = framebuffer;
 	gFramebufferEnd = framebufferEnd;
@@ -145,6 +146,14 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	DisableInterrupts();
 	GlobalPhysicalMemoryMap = nnxMMap;
 	GlobalPhysicalMemoryMapSize = nnxMMapSize;
+
+	for(i = ((UINT64)GlobalPhysicalMemoryMap) / 4096; i < (((UINT64)GlobalPhysicalMemoryMap) + GlobalPhysicalMemoryMapSize + 4095) / 4096; i++){
+		GlobalPhysicalMemoryMap[i] = MEM_TYPE_USED_PERM;
+	}
+
+	for (i = 0; i < FrameBufferSize() / PAGE_SIZE + 1; i++) {
+		GlobalPhysicalMemoryMap[((UINT64)gFramebuffer) / 4096 + i] = MEM_TYPE_USED_PERM;
+	}
 
 	MemorySize = memorySize;
 
@@ -233,8 +242,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 
 	NNXAllocatorInitialize();
-	PrintT("NNXAllocator Initialization\n");
-	for (int a = 0; a < 8; a++) {
+	for (i = 0; i < 8; i++) {
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 
@@ -254,8 +262,6 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PrintT(" UTIL ");
 	TextIOSetColorInformation(0xFF000000, 0xFF00FFFF, 1);
 	PrintT(" PERM ");
-	TextIOSetColorInformation(0xFF000000, 0xFFFF00FF, 1);
-	PrintT(" KERNEL ");
 	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
 
 	DrawMap();

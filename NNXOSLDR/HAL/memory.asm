@@ -15,3 +15,9 @@ SetStack:
 PagingInvalidatePage:
 	INVLPG [RCX]
 	RET
+
+[GLOBAL PagingTLBFlush]
+PagingTLBFlush:
+	MOV RAX, CR3
+	MOV CR3, RAX
+	RET

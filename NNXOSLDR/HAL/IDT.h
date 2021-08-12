@@ -57,7 +57,7 @@ extern "C" {
 	void Exception20();
 	void Exception30();
 	void ExceptionReserved();
-	void ExceptionHandler(UINT64 number, UINT64 errorCode);
+	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 rip);
 
 	void IRQ0();
 	void IRQ1();

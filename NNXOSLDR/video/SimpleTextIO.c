@@ -303,14 +303,14 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 						goto display;
 					case 's':;
 						char* toDisplay = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						TextIOOutputStringGlobal(toDisplay);
 						break;
 					case 'S': {
 						char* toDisplay = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						UINT64 lenght = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						for (UINT64 a = 0; a < lenght; a++) {
 							char* string[2] = { 0,0 };
 							string[0] = toDisplay[a];
@@ -329,7 +329,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 					case 'd':
 					case 'i': {
 						UINT64 c = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
 						IntegerToASCII(c, 10, str);
 						TextIOOutputStringGlobal(str);
@@ -338,7 +338,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 					case 'b':
 					case 'B': {
 						UINT64 c = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						char str[65] = { 0 };
 						IntegerToASCII(c, 2, str);
 						TextIOOutputStringGlobal(str);
@@ -346,7 +346,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 					}
 					case 'X': {
 						UINT64 c = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
 						IntegerToASCIICapital(c, 16, str);
 						TextIOOutputStringGlobal(str);
@@ -354,7 +354,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 					}
 					case 'x': {
 						UINT64 c = *((UINT64*)args);
-						((UINT64*)args) += 1;
+						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
 						IntegerToASCII(c, 16, str);
 						TextIOOutputStringGlobal(str);
@@ -419,10 +419,6 @@ void DrawMap() {
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAF00;
 		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_USED_PERM)
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF00FFFF;
-		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_KERNEL)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFFF00FF;
-		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_OLD_KERNEL)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAFAF;
 		else
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
 		x++;

@@ -1,6 +1,7 @@
 [BITS 64]
 [SECTION .text]
-%include "func.inc"
+%strcat INC_FUNC __FILE__,"/../func.inc"
+%include INC_FUNC
 
 func GetRAX
 	RET

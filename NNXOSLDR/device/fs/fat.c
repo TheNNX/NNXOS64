@@ -520,7 +520,7 @@ UINT32 FATScanFree(VFS* filesystem) {
 	UINT32 fatSize = FATFileAllocationTableSize(bpb);
 	bool isFAT16 = FATisFAT16(bpb);
 	
-	UINT8 *sectorsData = NNXAllocatorAllocVerbose(((bpb->rootEntryCount == 0 || ((bpb->rootEntryCount != 0) && isFAT16)) ? 1 : 2) * bpb->bytesPerSector);
+	UINT8 *sectorsData = NNXAllocatorAlloc(((bpb->rootEntryCount == 0 || ((bpb->rootEntryCount != 0) && isFAT16)) ? 1 : 2) * bpb->bytesPerSector);
 	UINT32 currentSector = 0;
 	UINT32 clusterCount = FATCalculateFATClusterCount(bpb);
 	UINT32 freeClusters = 0;
@@ -702,7 +702,6 @@ UINT64 FATWriteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT64 offset, 
 }
 
 UINT64 FATReadFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* file, UINT32 offset, UINT32 size, PVOID output, UINT32* readBytes) {
-	UINT32 curCluster = FATGetFirstClusterOfFile(bpb, file);
 	UINT32 startSector = offset / bpb->bytesPerSector;
 	UINT32 endSector = (offset + size - 1) / bpb->bytesPerSector;
 	UINT8 buffer[4096];
@@ -829,8 +828,6 @@ UINT64 FATAddDirectoryEntry(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parent
 UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
 	FATDirectoryEntry fileEntry = { 0 };
 	UINT64 borderPoint = GetFileNameAndExtensionFromPath(path, fileEntry.filename, fileEntry.fileExtension);
-	UINT64 filenameLength = FindCharacterFirst(fileEntry.filename, -1, 0);
-	UINT64 extensionLength = FindCharacterFirst(fileEntry.fileExtension, -1, 0);
 
 	FATDirectoryEntry parent = { 0 };
 	
@@ -1047,7 +1044,7 @@ UINT64 FATAPIAppendFile(VFSFile* file, UINT64 size, VOID* buffer) {
 }
 
 UINT64 FATAPIResizeFile(VFSFile* file, UINT64 newsize) {
-	FATDirectoryEntry direntry, parentDirentry;
+	FATDirectoryEntry parentDirentry;
 	BPB _bpb, *bpb = &_bpb;
 	UINT64 status;
 	VFSReadSector(file->filesystem, 0, bpb);
@@ -1152,7 +1149,7 @@ UINT64 FATAPIChangeDirectoryEntry(VFS* vfs, char* path, FATDirectoryEntry* desir
 }
 
 UINT64 FATAPIChangeFileAttributes(VFS* vfs, char* path, BYTE attributes) {
-	UINT64 parentPathLength, status;
+	UINT64 status;
 	BPB _bpb, *bpb = &_bpb;
 	FATDirectoryEntry fileEntry;
 
@@ -1531,7 +1528,6 @@ char log1[] = "123456789";
 char log2[] = "ABCDEFGHIJKLMNOPQ";
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
-	return TRUE;
 	//TODO: FAT16/FAT12 TESTS AND SUPPORT FOR FILESYSTEM OPERATIONS ON THE ROOT DIRECTORY
 	UINT32 i = 0;
 	PrintT("FAT Test for filesystem 0x%X\n", filesystem);

@@ -79,11 +79,10 @@
       </Command>
     </PreBuildEvent>
     <CustomBuild>
-      <Command>cd $(ProjectDir)HAL
-nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
     </CustomBuild>
     <CustomBuild>
-      <Outputs>$(ProjectDir)%(Filename).obj</Outputs>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
     </CustomBuild>
     <PostBuildEvent>
       <Command>

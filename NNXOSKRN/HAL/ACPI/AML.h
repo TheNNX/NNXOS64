@@ -41,7 +41,7 @@ typedef struct SDTHeader {
 	UINT32 OEMRevision;
 	UINT32 CreatorID;
 	UINT32 CreatorRevision;
-}ACPI_SDTHeader;
+}ACPI_SDTHeader, ACPI_SDT;
 
 typedef struct GAS {
 	UINT8 AddressSpace;
@@ -143,6 +143,68 @@ typedef struct FADT
 	ACPI_GAS X_GPE0Block;
 	ACPI_GAS X_GPE1Block;
 }ACPI_FADT, ACPI_FACP;
+
+typedef struct ACPI_MADT_ENTRY {
+	UINT8 Type;
+	UINT8 Length;
+}ACPI_MADT_ENTRY;
+
+typedef struct MADT{
+	ACPI_SDTHeader Header;
+	UINT32 LAPICBase32;
+	UINT32 Flags;
+	ACPI_MADT_ENTRY InteruptControlerStruct;
+}ACPI_MADT, ACPI_APIC;
+
+#define ACPI_MADT_TYPE_LAPIC				0x00
+#define ACPI_MADT_TYPE_IOAPIC				0x01
+#define ACPI_MADT_TYPE_SOURCE_OVERRIDE		0x02
+#define ACPI_MADT_TYPE_IOAPIC_NMI_SOURCE	0x03
+#define ACPI_MADT_TYPE_LAPIC_NMI_SOURCE		0x04
+#define ACPI_MADT_TYPE_LAPIC_ADDRESS_64		0x05
+
+typedef struct ACPI_MADT_LAPIC {
+	ACPI_MADT_ENTRY Header;
+	UINT8 ProcessorUID;
+	UINT8 LapicID;
+	UINT32 Flags;
+}ACPI_MADT_LAPIC;
+
+typedef struct ACPI_MADT_IOAPIC {
+	ACPI_MADT_ENTRY Header;
+	UINT8 IoApicID;
+	UINT8 Reserved;
+	UINT32 IoApicAddress;
+	UINT32 IoApicInterruptBase;
+}ACPI_MADT_IOAPIC;
+
+typedef struct ACPI_MADT_SOURCE_OVERRIDE {
+	ACPI_MADT_ENTRY Header;
+	UINT8 Bus;
+	UINT8 Source;
+	UINT32 GlobalSystemInterrupt;
+	UINT16 Flags;
+}ACPI_MADT_SOURCE_OVERRIDE;
+
+typedef struct ACPI_MADT_IOAPIC_NMI_SOURCE {
+	ACPI_MADT_ENTRY Header;
+	UINT16 Flags;
+	UINT32 GlobalSystemInterrupt;
+}ACPI_MADT_IOAPIC_NMI_SOURCE;
+
+typedef struct ACPI_MADT_LAPIC_NMI_SOURCE {
+	ACPI_MADT_ENTRY Header;
+	UINT8 ProcessorUID;
+	UINT16 Flags;
+	UINT8 LapicLintN;
+}ACPI_MADT_LAPIC_NMI_SOURCE;
+
+typedef struct ACPI_MADT_LAPIC_ADDRESS_64 {
+	ACPI_MADT_ENTRY Header;
+	UINT16 Reserved;
+	UINT64 AddressOverride;
+}ACPI_MADT_LAPIC_ADDRESS_64;
+
 
 typedef struct { UINT8 name[4]; } AMLName;
 
@@ -335,7 +397,7 @@ typedef struct { UINT8 name[4]; } AMLName;
 	}
 	ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
 	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
-	ACPI_FADT* GetFADT(ACPI_RDSP* rdsp);
+
 	VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name);
 	UINT8 ACPIParseDSDT(ACPI_DSDT* table);
 
@@ -343,10 +405,7 @@ typedef struct { UINT8 name[4]; } AMLName;
 	AMLName CreateName(const char* name);
 
 	BOOL ACPIVerifyRDSP(ACPI_RDSP*);
-	BOOL ACPIVerifyXSDT(ACPI_XSDT*);
-	BOOL ACPIVerifyRSDT(ACPI_RSDT*);
-	BOOL ACPIVerifyFADT(ACPI_FADT*);
-	BOOL ACPIVerifyDSDT(ACPI_DSDT*);
+	BOOL ACPIVerifySDT(ACPI_SDTHeader*);
 
 #ifdef __cplusplus 
 }

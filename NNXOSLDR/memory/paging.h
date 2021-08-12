@@ -11,6 +11,7 @@ extern "C" {
 
 	void PagingTest();
 	void PagingInit();
+	void PagingKernelInit();
 	void* PagingAllocatePage();
 	void* PagingAllocatePageFromRange(UINT64 min, UINT64 max);
 	void PagingMapPage(UINT64 v, UINT64 p, UINT16 f);

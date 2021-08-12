@@ -38,17 +38,17 @@ VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
 
 	if (rdsp->Revision == 0) {
 		rsdt = GetRSDT(rdsp);
-		if (!rsdt || !ACPIVerifyRSDT(rsdt))
+		if (!rsdt || !ACPIVerifySDT(rsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
 		}
 
-		numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 8;
+		numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
 	}
 	else {
 		xsdt = GetXSDT(rdsp);
-		if (!xsdt || !ACPIVerifyXSDT(xsdt))
+		if (!xsdt || !ACPIVerifySDT(xsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
@@ -62,59 +62,23 @@ VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
 
 		if (*((UINT32*)name) == *((UINT32*)tableAddress->Signature))
 			return (ACPI_FADT*)tableAddress;
+		else {
+			PrintT("%S %S\n", name, 4, tableAddress->Signature, 4);
+		}
 	}
 
 	localLastError = ACPI_ERROR_SDT_NOT_FOUND;
 	return 0;
 }
 
-ACPI_FADT* GetFADT(ACPI_RDSP* rdsp) {
-	ACPI_FADT* result = (ACPI_FADT*)GetACPITable(rdsp, (const UINT8*)"FACP");
-	if (result == 0) {
-		localLastError = ACPI_ERROR_SDT_NOT_FOUND;
-		return 0;
-	}
-
-	if (!ACPIVerifyFADT(result)) {
-		localLastError = ACPI_ERROR_INVALID_FADT;
-		return 0;
-	}
-
-	return result;
-}
-
-BOOL ACPIVerifyFADT(ACPI_FADT* fadt) {
+BOOL ACPIVerifySDT(ACPI_SDTHeader* sdt) {
 	UINT32 sum = 0;
-	for (UINT32 index = 0; index < fadt->Header.Lenght; index++) {
-		sum += ((char*)fadt)[index];
+	for (UINT32 index = 0; index < sdt->Lenght; index++) {
+		sum += ((char*)sdt)[index];
 	}
 	return (sum & 0xFF) == 0;
 }
 
-BOOL ACPIVerifyDSDT(ACPI_DSDT* dsdt) {
-	UINT32 sum = 0;
-	for (UINT32 index = 0; index < dsdt->Header.Lenght; index++) {
-		sum += ((char*)dsdt)[index];
-	}
-	return (sum & 0xFF) == 0;
-}
-
-BOOL ACPIVerifyXSDT(ACPI_XSDT* xsdt) {
-	UINT32 sum = 0;
-	for (UINT32 index = 0; index < xsdt->Header.Lenght; index++) {
-		sum += ((char*)xsdt)[index];
-	}
-	return (sum & 0xFF) == 0;
-}
-
-BOOL ACPIVerifyRSDT(ACPI_RSDT* rsdt) {
-	UINT32 Lenght = rsdt->Header.Lenght;
-	UINT64 sum = 0;
-	for (UINT32 a = 0; a < Lenght; a++) {
-		sum += ((UINT8*)rsdt)[a];
-	}
-	return (sum & 0xFF) == 0;
-}
 
 BOOL ACPIVerifyRDSP(ACPI_RDSP* rdsp) {
 	UINT32 Lenght = sizeof(ACPI_RDSP) - sizeof(ACPI_RDSPExtension);

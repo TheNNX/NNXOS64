@@ -19,8 +19,6 @@ extern "C" {
 #define MEM_TYPE_FREE 1
 #define MEM_TYPE_UTIL 2
 #define MEM_TYPE_USED_PERM 3
-#define MEM_TYPE_KERNEL 4
-#define MEM_TYPE_OLD_KERNEL 5
 #ifdef __cplusplus
 }
 #endif
