@@ -116,7 +116,7 @@ NNXLogger::NNXLogger(VFSFile* file) {
 void NNXLogger::Log(const char* str, ...) {
 	va_list args;
 	va_start(args, str);
-	gLogger->Log(str, args);
+	this->Log(str, args);
 	va_end(args);
 }
 
@@ -127,6 +127,7 @@ void NNXLogger::Clear() {
 }
 
 NNXLogger::~NNXLogger() {
+	this->Flush();
 	this->filesystem->functions.CloseFile(this->loggerFile);
 }
 
