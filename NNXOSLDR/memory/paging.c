@@ -8,7 +8,7 @@
 
 	PML4:
 	PDPs 0-509 : pages
-	PDP  510   : pointer to PML4
+	PDP  510   : paging structures
 	PDP  511   : kernel space
 
 	Thus, the memory layout looks like this (fig. not to scale, of course):
@@ -39,49 +39,53 @@
 
 extern BOOL gInteruptInitialized;
 
-void PagingTLBFlushPage(UINT64 page) {
+VOID PagingTLBFlushPage(UINT64 page) {
 	/* TODO: inform other processors if neccessary */
 	PagingInvalidatePage(ToCanonicalAddress(page));
 }
 
-void* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType) {
+VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage) {
 	UINT64 i, result = (UINT64)-1LL;
 	min &= 0xFFFFFFFFFFFF;
 	max &= 0xFFFFFFFFFFFF;
 
 	for (i = min / PAGE_SIZE; i < max / PAGE_SIZE; i++) {
-		if ((RecursivePagingPML4Base[i / (512 * 512 * 512)] & PAGE_PRESENT) == 0) {
+		if ((RecursivePagingPML4Base[i / (512 * 512 * 512)]) == 0) {
 			result = i;
 			break;
 		}
-		if ((RecursivePagingPDPsBase[i / (512 * 512)] & PAGE_PRESENT) == 0) {
+		if ((RecursivePagingPDPsBase[i / (512 * 512)]) == 0) {
 			result = i;
 			break;
 		}
-		if ((RecursivePagingPDsBase[i / 512] & PAGE_PRESENT) == 0) {
+		if ((RecursivePagingPDsBase[i / 512]) == 0) {
 			result = i;
 			break;
 		}
 
-		if ((RecursivePagingPTsBase[i] & PAGE_PRESENT) == 0) {	
+		if ((RecursivePagingPTsBase[i]) == 0) {
 			result = i;
 			break;
 		}
 	}
 
-	PagingMapPage(result * PAGE_SIZE, InternalAllocatePhysicalPageWithType(physMemType), flags);
+	PagingMapPage(result * PAGE_SIZE, physPage, flags);
 	return ToCanonicalAddress(result * PAGE_SIZE);
 }
 
-void* PagingAllocatePageFromRange(UINT64 min, UINT64 max) {
+VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType) {
+	return PagingAllocatePageWithPhysicalAddress(min, max, flags, InternalAllocatePhysicalPageWithType(physMemType));
+}
+
+VOID* PagingAllocatePageFromRange(UINT64 min, UINT64 max) {
 	return PagingAllocatePageEx(min, max, PAGE_PRESENT | PAGE_WRITE, MEM_TYPE_USED);
 }
 
-void* PagingAllocatePage() {
+VOID* PagingAllocatePage() {
 	return PagingAllocatePageFromRange(0, (PML4EntryForRecursivePaging - 1) * PDP_COVERED_SIZE - 1);
 }
 
-void PagingMapPage(void* v, void* p, UINT16 f) {
+VOID PagingMapPage(VOID* v, VOID* p, UINT16 f) {
 	UINT64 ptIndex, pdIndex, pdpIndex, pml4Index, vUINT;
 	UINT64* const cRecursivePagingPML4Base = RecursivePagingPML4Base;
 	UINT64* const cRecursivePagingPDPsBase = RecursivePagingPDPsBase;
@@ -95,25 +99,25 @@ void PagingMapPage(void* v, void* p, UINT16 f) {
 	pdpIndex = vUINT >> 30;
 	pml4Index = vUINT >> 39;
 
-	if (!(cRecursivePagingPML4Base[pml4Index] & PAGE_PRESENT)) {
+	if (!(cRecursivePagingPML4Base[pml4Index])) {
 		cRecursivePagingPML4Base[pml4Index] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPDPsBase + 512 * pml4Index);
 		MemSet(cRecursivePagingPDPsBase + 512 * pml4Index, 0, PAGE_SIZE);
 	}
 
-	if (!(cRecursivePagingPDPsBase[pdpIndex] & PAGE_PRESENT)) {
+	if (!(cRecursivePagingPDPsBase[pdpIndex])) {
 		cRecursivePagingPDPsBase[pdpIndex] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPDsBase + 512 * pdpIndex);
 		MemSet(cRecursivePagingPDsBase + 512 * pdpIndex, 0, PAGE_SIZE);
 	}
 
-	if (!(cRecursivePagingPDsBase[pdIndex] & PAGE_PRESENT)) {
+	if (!(cRecursivePagingPDsBase[pdIndex])) {
 		cRecursivePagingPDsBase[pdIndex] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPTsBase + 512 * pdIndex);
 		MemSet(cRecursivePagingPTsBase + 512 * pdIndex, 0, PAGE_SIZE);
 	}
 
-	if (cRecursivePagingPTsBase[ptIndex] & PAGE_PRESENT) {
+	if (cRecursivePagingPTsBase[ptIndex]) {
 		if(gInteruptInitialized)
 			PrintT("Warning: page overriden");
 	}
@@ -128,13 +132,13 @@ void PagingMapPage(void* v, void* p, UINT16 f) {
 	}
 }
 
-void SetupCR4() {
+VOID SetupCR4() {
 	UINT64 CR4 = GetCR4();
 	CR4 &= (~4096); /* ensure level 5 paging is disabled */
 	SetCR4(CR4);
 }
 
-void SetupCR0() {
+VOID SetupCR0() {
 	UINT64 CR0 = GetCR0();
 	CR0 &= (~65536);
 	SetCR0(CR0);
@@ -152,7 +156,7 @@ UINT64 PhysicalAddressFunctionGlobalMemoryMap(UINT64 address, UINT64 relativeAdd
 	return PAGE_ALIGN((UINT64)GlobalPhysicalMemoryMap) + relativeAddrss;
 }
 
-void InternalPagingAllocatePagingStructures(
+VOID InternalPagingAllocatePagingStructures(
 	UINT64* PML4, UINT64 PML4Index, UINT64 PDPIndex, 
 	UINT64 initialPageTable, UINT64 howManyPageTables, 
 	UINT64(*PhysicalAddressFunction)(UINT64, UINT64, UINT8), 
@@ -203,7 +207,7 @@ const UINT64 loaderTemporaryKernelPTSize = 32;
 	the pointer to the updated value. Later, upon (X/R)SDT's
 	first usage, map them, change their pointer in the RDSP
 	(ACPI doesn't use the tables once it creates them, right?? right??)*/
-void PagingInit() {
+VOID PagingInit() {
 	UINT64 i, *PML4, const pageTableKernelReserve = 16, RSP;
 	const UINT64 virtualGlobalPhysicalMemoryMapSize = ToCanonicalAddress((KERNEL_PML4_ENTRY * 512 * 512 + pageTableKernelReserve) * 512 * 4096);
 	SetupCR0();
@@ -240,7 +244,7 @@ void PagingInit() {
 	TextIOSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
 }
 
-void PagingKernelInit() {
+VOID PagingKernelInit() {
 	UINT64 i;
 	for (i = loaderTemporaryKernelPTStart; i < loaderTemporaryKernelPTSize + loaderTemporaryKernelPTStart; i++) {
 		PagingMapPage(RecursivePagingPTsBase + i * 4096, 0, 0);

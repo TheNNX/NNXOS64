@@ -3,21 +3,21 @@
 #include "nnxint.h"
 #include "../HAL/registers.h"
 
-void PrintTA(const char* i, ...);
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-	void PagingTest();
-	void PagingInit();
-	void PagingKernelInit();
-	void* PagingAllocatePage();
-	void* PagingAllocatePageFromRange(UINT64 min, UINT64 max);
-	void PagingMapPage(UINT64 v, UINT64 p, UINT16 f);
+	VOID PagingInit();
+	VOID PagingKernelInit();
 
-	void PagingTLBFlush();
-	void PagingTLBFlushPage(UINT64 page);
+	/* Scans the current virtual address space for a free page and maps it to a given physical page */
+	VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage);
+	VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType);
+	VOID* PagingAllocatePage();
+	VOID* PagingAllocatePageFromRange(UINT64 min, UINT64 max);
+	VOID PagingMapPage(VOID* v, VOID* p, UINT16 f);
+	VOID PagingTLBFlush();
+	VOID PagingTLBFlushPage(UINT64 page);
 
 	inline UINT64 ToCanonicalAddress(UINT64 address) {
 		return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
