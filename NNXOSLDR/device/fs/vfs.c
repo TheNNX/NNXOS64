@@ -41,6 +41,11 @@ VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {
 	return virtualFileSystems + n;
 }
 
+VirtualFileSystem* VFSGetSystemVFS() {
+	// TODO
+	return VFSGetPointerToVFS(0);
+}
+
 UINT64 FindFirstSlash(char* path) {
 	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
 	UINT64 forwardSlash = FindCharacterFirst(path, pathLenght, '/');

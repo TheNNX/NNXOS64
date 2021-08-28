@@ -33,7 +33,8 @@
     <IncludePath>$(VC_IncludePath);$(SolutionDir)NNXOSLDR</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
-    <CustomBuildAfterTargets>Link</CustomBuildAfterTargets>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -83,17 +84,32 @@
     <PreLinkEvent>
       <Command>cmd.exe /C "del $(SolutionDir)temp\NNXOSLDR\main.obj"</Command>
     </PreLinkEvent>
+    <CustomBuild>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\APIC\APIC.CPP" />
+    <ClCompile Include="HAL\MP\MP.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\APIC\APIC.h" />
+    <ClInclude Include="HAL\MP\MP.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="HAL\MP\ApEntry.asm">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">nasm -f bin %(FullPath) -o $(IntDir)..\..\image\APSTART.BIN</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)..\..\image\APSTART.BIN</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatOutputAsContent>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

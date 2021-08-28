@@ -107,6 +107,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="memory\nnxalloc.c" />
     <ClCompile Include="memory\MemoryOperations.c" />
+    <ClInclude Include="HAL\PIT.h" />
     <ClInclude Include="HAL\registers.h" />
     <ClInclude Include="nnxcfg.h" />
     <ClInclude Include="nnxlog.h" />
@@ -165,6 +166,9 @@ nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
     <CustomBuild Include="HAL\registers.asm">
       <SubType>
       </SubType>
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIT.asm">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="multitasking\Task.asm">

@@ -2,6 +2,11 @@
 #define NNX_PCI_HEADER
 #include "nnxint.h"
 #include "../../video/SimpleTextIO.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA 0xCFC
 
@@ -90,5 +95,9 @@ UINT8 PCIScan();
 void PCIScanBus(UINT8 bus);
 void PCIScanDevice(UINT8 bus, UINT8 device);
 void PCIScanFunction(UINT8 bus, UINT8 device, UINT8 function);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

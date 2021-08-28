@@ -197,6 +197,9 @@
     <ClInclude Include="nnxoskldr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\PIT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="HAL\func.inc">
@@ -226,6 +229,9 @@
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\registers.asm">
+      <Filter>Source Files\HAL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -24,6 +24,9 @@ typedef struct VFSFucntionSet {
 	/* Allocate and initialize VFSFile structure */
 	VFSFile* (*OpenFile)(struct VirtualFileSystem* filesystem, char* path);
 
+	/* Create if file does not exist */
+	VFSFile* (*OpenOrCreateFile)(struct VirtualFileSystem* filesystem, char* path);
+
 	/* Deallocate VFSFile structure */
 	VOID (*CloseFile)(VFSFile* file);
 
@@ -77,9 +80,9 @@ typedef struct VirtualFileSystem {
 void VFSInit();
 UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, VFSFunctionSet functionSet);
 VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
+VirtualFileSystem* VFSGetSystemVFS();
 UINT64 VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
 UINT64 VFSWriteSector(VirtualFileSystem*, UINT64 n, BYTE* source);
-
 VFSFile* VFSAllocateVFSFile(VFS* filesystem, char* path);
 VOID VFSDeallocateVFSFile(VFSFile* vfsFile);
 

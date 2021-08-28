@@ -4,25 +4,29 @@
 
 //All consts from https://wiki.osdev.org/PCI_IDE_Controller
 
-typedef struct PCI_IDE_Controller PCI_IDE_Controller;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	typedef struct PCI_IDE_Controller PCI_IDE_Controller;
 
 #include "device/hdd/hdd.h"
 
-typedef struct IDEDrive {
-	UINT8 reserved;
-	UINT8 channel;
-	UINT8 drive;
-	UINT16 type;
-	UINT16 signature;
-	UINT16 capabilities;
-	UINT32 commandSets;
-	UINT64 size;
-	unsigned char model[41];
-	PCI_IDE_Controller* controller;
-	CHS geometry;
-} IDEDrive;
+	typedef struct IDEDrive {
+		UINT8 reserved;
+		UINT8 channel;
+		UINT8 drive;
+		UINT16 type;
+		UINT16 signature;
+		UINT16 capabilities;
+		UINT32 commandSets;
+		UINT64 size;
+		unsigned char model[41];
+		PCI_IDE_Controller* controller;
+		CHS geometry;
+	} IDEDrive;
 
-UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
+	UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
 
 #define ATA_REG_DATA       0x00
 #define ATA_REG_ERROR      0x01
@@ -79,39 +83,44 @@ UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numbe
 #define      ATAPI_CMD_READ       0xA8
 #define      ATAPI_CMD_EJECT      0x1B
 
-struct PCI_IDE_Controller {
-	UINT8 functionNumber;
-	UINT8 deviceNumber;
-	UINT8 busNumber;
-	UINT8 progIf;
+	struct PCI_IDE_Controller {
+		UINT8 functionNumber;
+		UINT8 deviceNumber;
+		UINT8 busNumber;
+		UINT8 progIf;
 
-	UINT32 BAR0;
-	UINT32 BAR1;
-	UINT32 BAR2;
-	UINT32 BAR3;
-	UINT32 BAR4;
+		UINT32 BAR0;
+		UINT32 BAR1;
+		UINT32 BAR2;
+		UINT32 BAR3;
+		UINT32 BAR4;
 
-	struct IDE_Channels {
-		unsigned short base;
-		unsigned short ctrl;
-		unsigned short bus_master_ide;
-		bool no_interrupt;
-	} channels[2];
+		struct IDE_Channels {
+			unsigned short base;
+			unsigned short ctrl;
+			unsigned short bus_master_ide;
+			bool no_interrupt;
+		} channels[2];
 
-	unsigned char ide_irq_invoked;
-	unsigned char atapi_packet[12];
-	unsigned char ide_buffer[2048];
+		unsigned char ide_irq_invoked;
+		unsigned char atapi_packet[12];
+		unsigned char ide_buffer[2048];
 
-	unsigned char interrupt_number;
+		unsigned char interrupt_number;
 
-	IDEDrive drives[4];
-};
+		IDEDrive drives[4];
+	};
 
 #define IDE_LBA_SUPPORT 0x200
 
-PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+	PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
 
 #define MAX_PCI_IDE_CONTROLLERS 32
-extern IDEDrive drives[MAX_PCI_IDE_CONTROLLERS * 4];
-extern PCI_IDE_Controller controllers[MAX_PCI_IDE_CONTROLLERS];
+	extern IDEDrive drives[MAX_PCI_IDE_CONTROLLERS * 4];
+	extern PCI_IDE_Controller controllers[MAX_PCI_IDE_CONTROLLERS];
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

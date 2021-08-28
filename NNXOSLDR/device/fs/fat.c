@@ -828,7 +828,6 @@ UINT64 FATAddDirectoryEntry(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parent
 UINT64 FATAPICreateFile(VFS* filesystem, char* path) {
 	FATDirectoryEntry fileEntry = { 0 };
 	UINT64 borderPoint = GetFileNameAndExtensionFromPath(path, fileEntry.filename, fileEntry.fileExtension);
-
 	FATDirectoryEntry parent = { 0 };
 	
 	if (FATAPICheckIfFileExists(filesystem, path))
@@ -959,8 +958,6 @@ UINT64 FATAPIDeleteAndCloseFile(VFSFile* file) {
 
 UINT64 Checks(VFSFile* file, UINT64 size, VOID* buffer) {
 	if (size == 0)
-		return VFS_ERR_ARGUMENT_INVALID;
-	if (buffer == 0)
 		return VFS_ERR_ARGUMENT_INVALID;
 	if (file == 0)
 		return VFS_ERR_ARGUMENT_INVALID;
@@ -1272,10 +1269,20 @@ UINT64 FATAPICreateDirectory(VFS* vfs, char* path) {
 	return status;
 }
 
+VFSFile* FATAPIOpenOrCreateFile(VFS* vfs, char* path) {
+	if (!FATAPICheckIfFileExists(vfs, path)) {
+		if (FATAPICreateFile(vfs, path))
+			return 0;
+	}
+
+	return FATAPIOpenFile(vfs, path);
+}
+
 VFSFunctionSet FATAPIGetFunctionSet() {
 	VFSFunctionSet functionSet = { 0 };
 	functionSet.CheckIfFileExists = FATAPICheckIfFileExists;
 	functionSet.OpenFile = FATAPIOpenFile;
+	functionSet.OpenOrCreateFile = FATAPIOpenOrCreateFile;
 	functionSet.CloseFile = FATAPICloseFile;
 	functionSet.ReadFile = FATAPIReadFile;
 	functionSet.WriteFile = FATAPIWriteFile;
@@ -1528,6 +1535,7 @@ char log1[] = "123456789";
 char log2[] = "ABCDEFGHIJKLMNOPQ";
 
 BOOL NNX_FATAutomaticTest(VFS* filesystem) {
+#ifdef __FAT_TEST
 	//TODO: FAT16/FAT12 TESTS AND SUPPORT FOR FILESYSTEM OPERATIONS ON THE ROOT DIRECTORY
 	UINT32 i = 0;
 	PrintT("FAT Test for filesystem 0x%X\n", filesystem);
@@ -1683,5 +1691,6 @@ BOOL NNX_FATAutomaticTest(VFS* filesystem) {
 		CheckMemory();
 	}
 	PrintT("[%s] Test success\n", __FUNCTION__);
+#endif
 	return TRUE;
 }

@@ -6,5 +6,17 @@
 #define PIC_PRIMARY_DATA PIC_PRIMARY+1
 #define PIC_SECONDARY_DATA PIC_SECONDARY+1
 
-void PICInitialize();
+#include "../nnxint.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	VOID PicInitialize();
+	VOID PicDisableForApic();
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

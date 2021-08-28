@@ -5,6 +5,7 @@
 #include "HAL/GDT.h"
 #include "HAL/IDT.h"
 #include "HAL/PIC.h"
+#include "HAL/PIT.h"
 #include "device/Keyboard.h"
 #include "HAL/PCI/PCI.h"
 #include "memory/nnxalloc.h"
@@ -151,7 +152,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 		GlobalPhysicalMemoryMap[i] = MEM_TYPE_USED_PERM;
 	}
 
-	for (i = 0; i < FrameBufferSize() / PAGE_SIZE + 1; i++) {
+	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++) {
 		GlobalPhysicalMemoryMap[((UINT64)gFramebuffer) / 4096 + i] = MEM_TYPE_USED_PERM;
 	}
 
@@ -238,8 +239,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	
 	KeyboardInitialize();
 	PrintT("Keyboard initialized.\n");
-	PICInitialize();
-
+	PicInitialize();
 
 	NNXAllocatorInitialize();
 	for (i = 0; i < 8; i++) {
@@ -270,10 +270,9 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	VFSInit();
 	PCIScan();
+	PitUniprocessorInitialize();
 
 	EnableInterrupts();
-
-	NNXLoggerTest(VFSGetPointerToVFS(0));
 	
 	LoadKernel();
 	

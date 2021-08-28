@@ -151,7 +151,7 @@ typedef struct ACPI_MADT_ENTRY {
 
 typedef struct MADT{
 	ACPI_SDTHeader Header;
-	UINT32 LAPICBase32;
+	UINT32 LapicBase32;
 	UINT32 Flags;
 	ACPI_MADT_ENTRY InteruptControlerStruct;
 }ACPI_MADT, ACPI_APIC;
@@ -162,17 +162,18 @@ typedef struct MADT{
 #define ACPI_MADT_TYPE_IOAPIC_NMI_SOURCE	0x03
 #define ACPI_MADT_TYPE_LAPIC_NMI_SOURCE		0x04
 #define ACPI_MADT_TYPE_LAPIC_ADDRESS_64		0x05
+#define ACPI_MADT_TYPE_X2LAPIC				0X09
 
 typedef struct ACPI_MADT_LAPIC {
 	ACPI_MADT_ENTRY Header;
-	UINT8 ProcessorUID;
+	UINT8 ProcessorUid;
 	UINT8 LapicID;
 	UINT32 Flags;
 }ACPI_MADT_LAPIC;
 
 typedef struct ACPI_MADT_IOAPIC {
 	ACPI_MADT_ENTRY Header;
-	UINT8 IoApicID;
+	UINT8 IoApicId;
 	UINT8 Reserved;
 	UINT32 IoApicAddress;
 	UINT32 IoApicInterruptBase;
@@ -194,7 +195,7 @@ typedef struct ACPI_MADT_IOAPIC_NMI_SOURCE {
 
 typedef struct ACPI_MADT_LAPIC_NMI_SOURCE {
 	ACPI_MADT_ENTRY Header;
-	UINT8 ProcessorUID;
+	UINT8 ProcessorUid;
 	UINT16 Flags;
 	UINT8 LapicLintN;
 }ACPI_MADT_LAPIC_NMI_SOURCE;
@@ -205,6 +206,13 @@ typedef struct ACPI_MADT_LAPIC_ADDRESS_64 {
 	UINT64 AddressOverride;
 }ACPI_MADT_LAPIC_ADDRESS_64;
 
+typedef struct ACPI_MADT_X2LAPIC {
+	ACPI_MADT_ENTRY Header;
+	UINT16 Reserved;
+	UINT32 X2LapicId;
+	UINT32 Flags;
+	UINT32 ProcessorUid;
+}ACPI_MADT_X2LAPIC;
 
 typedef struct { UINT8 name[4]; } AMLName;
 

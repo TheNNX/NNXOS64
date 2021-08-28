@@ -25,6 +25,8 @@
 #include "../NNXOSLDR/memory/physical_allocator.h"
 #include "../NNXOSLDR/HAL/IDT.h"
 #include "HAL/APIC/APIC.h"
+#include "../NNXOSLDR/device/fs/vfs.h"
+#include "HAL/MP/MP.h"
 
 int basicallyATest = 0;
 
@@ -59,13 +61,15 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 	PagingKernelInit();
 
 	/* TODO: free temp-kernel physical memory here */
-
 	DrawMap();
 
 	NNXAllocatorInitialize();
 	for (int i = 0; i < 64; i++) {
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
+
+	VFSInit();
+	PCIScan();
 
 	PrintT("Beginnign ACPI stuff\n");
 	UINT8 status;
@@ -88,6 +92,8 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 	PrintT("Found MADT on %x\n", MADT);
 
 	ApicInit(MADT);
+	EnableInterrupts();
+	MpInitialize();
 
 	while(1);
 }
