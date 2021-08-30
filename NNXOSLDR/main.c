@@ -176,11 +176,11 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
 	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
 
-	gdtr->size = sizeof(GDTEntry) * 5 - 1;
-	gdtr->offset = gdt;
+	gdtr->Size = sizeof(GDTEntry) * 5 - 1;
+	gdtr->Base = gdt;
 
-	idtr->size = sizeof(IDTEntry) * 128 - 1;
-	idtr->offset = idt;
+	idtr->Size = sizeof(IDTEntry) * 128 - 1;
+	idtr->Base = idt;
 
 	((UINT64*)gdt->entries)[0] = 0;		//NULL DESCRIPTOR
 

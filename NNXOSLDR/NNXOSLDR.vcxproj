@@ -150,9 +150,6 @@
     <CustomBuild Include="HAL\GDT.asm">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd $(ProjectDir)HAL
-nasm -f win64 %(FullPath) -o $(ProjectDir)%(Filename).obj</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)%(Filename).obj</Outputs>
     </CustomBuild>
     <CustomBuild Include="HAL\IDT.asm">
       <FileType>Document</FileType>

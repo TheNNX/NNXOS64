@@ -4,10 +4,10 @@
 ApStartup:
 .SpinWait:
 	pause
-	test word [ApSpinlock], 0
+	test WORD [ApSpinlock], 0
 	jnz .SpinWait
 .SpinAcquire:
-	lock bts word [ApSpinlock], 0
+	lock bts WORD [ApSpinlock], 0
 	jc .SpinWait
 .EnterLongMode:
 
@@ -25,7 +25,6 @@ ApStartup:
 	or eax, 0x00000100
 	wrmsr
 
-	jmp $
 	mov eax, cr0
 	or eax, 0x80000001
 	mov cr0, eax
@@ -63,7 +62,39 @@ TempGDT:
 	dw (.GdtEnd - TempGDT)
 	dd TempGDT
 
+BITS 64
 LongModeEntry:
+	mov ax, 0x10
+	mov ds, ax
+	mov ss, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+
+	lidt [ApIdtr64]
+	lgdt [ApGdtr64]
+
+	; get the LAPIC ID into RBX and RCX
+	mov rax, 0x0000000000000001
+	cpuid
+	shr rbx, 24
+	and rbx, 0x00000000000000FF
+	mov rcx, rbx
+
+	; set the stack for this AP
+	; jmp $
+	mov QWORD rsi, [ApStackPointerArray]
+	shl rbx, 3
+	add rsi, rbx
+	mov rsp, [rsi]
+
+	; release the ApSpinlock before going to the C function
+	lock btr WORD [ApSpinlock], 0
+
+	mov QWORD rax, [ApProcessorInit]
+	call rax
+
+	; shouldn't return, if it did, do a cli+hlt loop
 	jmp Error
 
 Error:
@@ -79,11 +110,19 @@ ApSpinlock: DW 0x0000
 .End:
 align 64
 
-ApCurrentlyBeingInitialized: db 0x00 
-ApGdtrPointer:		dw 0x0000
-ApIdtrPointer:		dw 0x0000
-ApCR3:				dq 0x0000000000000000
-ApStackPointer16:	dw 0x0000
-ApStackPointer64:	dq 0x0000000000000000
+ApCurrentlyBeingInitialized:
+								db 0x00 
+ApCR3:
+								dq 0x0000000000000000
+ApStackPointerArray:
+								dq 0x0000000000000000
+ApProcessorInit:
+								dq 0x0000000000000000
+ApGdtr64:						
+.Size:							dw 0x0000
+.Base:							dq 0x0000000000000000
+ApIdtr64:
+.Size:							dw 0x0000
+.Base:							dq 0x0000000000000000
 
 times 4096 - ($ - ApStartup) db 0x00

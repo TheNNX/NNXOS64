@@ -1,8 +1,8 @@
 [BITS 64]
 [SECTION .text]
-[GLOBAL LoadGDT]
-[GLOBAL returnPoint]
 %define retfq o64 retf
+
+[GLOBAL LoadGDT]
 LoadGDT:
 	lgdt [rcx]
 	mov ax, 0x10
@@ -25,7 +25,7 @@ LoadGDT:
 [GLOBAL StoreGDT]
 StoreGDT:
 	sgdt [rcx]
-	ret
+	ret 
 
 [GLOBAL LoadTSS]
 LoadTSS:

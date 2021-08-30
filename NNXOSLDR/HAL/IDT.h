@@ -11,8 +11,8 @@ extern "C" {
 
 	struct IDT;
 	typedef struct IDTR {
-		UINT16 size;
-		struct IDT* offset;
+		UINT16 Size;
+		struct IDT* Base;
 	}IDTR;
 
 	typedef struct IDTEntry {

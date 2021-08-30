@@ -4,11 +4,15 @@
 #pragma pack(1)
 #include "nnxint.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct GDT;
 
 typedef struct GDTR {
-	UINT16 size;
-	struct GDT* offset;
+	UINT16 Size;
+	struct GDT* Base;
 }GDTR;
 
 typedef struct GDTEntry {
@@ -46,5 +50,10 @@ typedef struct TSSDescriptorEntry {
 
 void LoadGDT(GDTR*);
 void StoreGDT(GDTR*);
+
+#ifdef __cplusplus
+}
+#endif
+
 #pragma pack(pop)
 #endif
