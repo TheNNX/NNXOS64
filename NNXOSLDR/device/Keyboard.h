@@ -142,8 +142,8 @@
 #define K_BACKSLASH 0xdc
 #define K_QUOTE 0xde
 
-struct KeyState;
-extern struct KeyState state;
+struct KEY_STATE;
+extern struct KEY_STATE state;
 
 #define keyname(x) Key ## x
 #define KEY(name,numval,baseChar,shiftChar,capsChar,shiftCapsChar) UINT8 keyname(name)(UINT8 released){\
@@ -193,7 +193,7 @@ UINT8 SetScancodeSet(UINT8);
 
 #pragma pack(push, 1)
 //designed to be compatible with MS virtual key mappings
-typedef struct KeyState {
+typedef struct KEY_STATE {
 	union {
 		UINT8 KeyState[256];
 		struct {
@@ -495,6 +495,6 @@ typedef struct KeyState {
 			UINT8 KEYFF;
 		};
 	};
-}KeyState;
+}KEY_STATE;
 
 #pragma pack(pop)

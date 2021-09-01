@@ -82,7 +82,6 @@ LongModeEntry:
 	mov rcx, rbx
 
 	; set the stack for this AP
-	; jmp $
 	mov QWORD rsi, [ApStackPointerArray]
 	shl rbx, 3
 	add rsi, rbx
@@ -91,11 +90,17 @@ LongModeEntry:
 	; release the ApSpinlock before going to the C function
 	lock btr WORD [ApSpinlock], 0
 
+	; jmp $
+
 	mov QWORD rax, [ApProcessorInit]
+	; mov rax, FuckYou
 	call rax
 
 	; shouldn't return, if it did, do a cli+hlt loop
 	jmp Error
+
+; FuckYou:
+;	jmp $
 
 Error:
 	cli

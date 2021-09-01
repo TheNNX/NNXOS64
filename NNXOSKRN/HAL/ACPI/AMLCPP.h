@@ -18,10 +18,10 @@ class AMLFieldUnit;
 
 class AMLNamedObject {
 public:
-	AMLName name;
+	AML_NAME name;
 	AMLObjRef object;
-	AMLNamedObject(AMLName name, AMLObjRef object);
-	static AMLNamedObject* newObject(AMLName name, AMLObjRef object);
+	AMLNamedObject(AML_NAME name, AMLObjRef object);
+	static AMLNamedObject* newObject(AML_NAME name, AMLObjRef object);
 };
 
 class AMLBuffer {
@@ -40,7 +40,7 @@ public:
 
 class AMLScope{
 public:
-	AMLName name;
+	AML_NAME name;
 	AMLScope* parent;
 	NNXLinkedList<AMLNamedObject*> namedObjects;
 	NNXLinkedList<AMLScope*> children;
@@ -52,9 +52,9 @@ public:
 };
 
 typedef struct {
-	AMLName name;
+	AML_NAME name;
 	AMLScope* scope;
-}AMLNameWithinAScope;
+}AML_NAME_WITHIN_SCOPE;
 
 class AMLParser
 {
@@ -78,35 +78,35 @@ private:
 
 	AMLBuffer* CreateBuffer();
 	AMLPackage* CreatePackage();
-	AMLMethodDef* CreateMethod(AMLName methodName, AMLScope* scope);
-	AMLScope* FindScope(AMLName name, AMLScope* current);
+	AMLMethodDef* CreateMethod(AML_NAME methodName, AMLScope* scope);
+	AMLScope* FindScope(AML_NAME name, AMLScope* current);
 
-	AMLNameWithinAScope GetNameWithinAScope(AMLScope* current);
+	AML_NAME_WITHIN_SCOPE GetNameWithinAScope(AMLScope* current);
 
 	UINT32 DecodePkgLenght();
 	UINT8 DecodePackageNumElements();
 	VOID GetString(UINT8* output, UINT32 lenght);
 	VOID GetString(UINT8* output, UINT32 lenght, UINT8 terminator);
-	UINT8 GetBYTE();
-	UINT16 GetWORD();
-	UINT32 GetDWORD();
-	UINT64 GetQWORD();
+	UINT8 GetByte();
+	UINT16 GetWord();
+	UINT32 GetDword();
+	UINT64 GetQword();
 	UINT64 GetInteger();
 	UINT32 DecodeBufferSize();
 	AMLBuffer * ReadBufferData();
-	AMLBuffer * AMLToBuffer(AMLObjRef data);
+	AMLBuffer * AmlToBuffer(AMLObjRef data);
 	AMLBuffer * CreateBufferFromBufferData();
 	AMLBuffer * CreateBufferFromType5Opcode(UINT8 opcode);
-	AMLObjRef GetAMLObject(UINT8 opcode);
-	AMLOpetationRegion* CreateOperationRegion(AMLNameWithinAScope opRegionName);
+	AMLObjRef GetAmlObject(UINT8 opcode);
+	AMLOpetationRegion* CreateOperationRegion(AML_NAME_WITHIN_SCOPE opRegionName);
 	AMLField* CreateField(AMLOpetationRegion* parent, UINT8 access, UINT8 lock, UINT8 updateRule);
-	AMLFieldUnit* CreateFieldUnit(AMLName fieldUnitName, UINT8 width);
-	AMLName GetName();
+	AMLFieldUnit* CreateFieldUnit(AML_NAME fieldUnitName, UINT8 width);
+	AML_NAME GetName();
 	AMLScope root;
 };
 
-void PrintName(AMLName name);
-inline bool operator==(const AMLName& name1, const AMLName& name2) {
+void PrintName(AML_NAME name);
+inline bool operator==(const AML_NAME& name1, const AML_NAME& name2) {
 	return (*((DWORD*)name1.name) == *((DWORD*)name2.name));
 }
 
@@ -117,27 +117,27 @@ class AMLDevice : public AMLScope
 private:
 	AMLNamedObject* _HID;
 public:
-	void Init_HID();
-	AMLNamedObject* Get_HID();
+	void InitHid();
+	AMLNamedObject* GetHid();
 	static AMLDevice* newScope(const char* name, AMLScope* parent);
 };
 
-UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef);
+UINT64 GetIntegerFromAmlObjRef(AMLObjectReference objRef);
 
 class AMLMethodDef {
 public:
-	AMLNameWithinAScope name;
+	AML_NAME_WITHIN_SCOPE name;
 	UINT8 parameterNumber;
 	AMLParser* parser;
 	UINT64 codeIndex;
 	UINT64 maxCodeIndex;
 
-	AMLMethodDef(AMLName, AMLParser*, AMLScope*);
+	AMLMethodDef(AML_NAME, AMLParser*, AMLScope*);
 };
 
 class AMLFieldUnit {
 public:
-	AMLName name;
+	AML_NAME name;
 	UINT8 width;
 };
 
@@ -157,7 +157,7 @@ public:
 	UINT64 lenght;
 	NNXLinkedList<AMLField*> fields;
 	AMLOpetationRegion* previous;
-	AMLNameWithinAScope name;
+	AML_NAME_WITHIN_SCOPE name;
 };
 
 #endif

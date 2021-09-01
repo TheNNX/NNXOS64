@@ -18,7 +18,7 @@
 */
 
 #include "HAL/ACPI/AML.h"
-#include "../NNXOSLDR/video/SimpleTextIO.h"
+#include "../NNXOSLDR/video/SimpleTextIo.h"
 #include "../NNXOSLDR/nnxoskldr.h"
 #include "../NNXOSLDR/nnxcfg.h"
 #include "../NNXOSLDR/memory/paging.h"
@@ -41,7 +41,7 @@ extern "C" {
 	extern UINT32 gMinX;
 	extern UINT32 gMaxY;
 	extern UINT32 gMaxX;
-	extern UINT8 initialized;
+	extern UINT8 Initialized;
 }
 
 extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
@@ -55,8 +55,8 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 	GlobalPhysicalMemoryMap = data->PhysicalMemoryMap;
 	GlobalPhysicalMemoryMapSize = data->PhysicalMemoryMapSize;
 
-	TextIOInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
-	TextIOClear();
+	TextIoInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
+	TextIoClear();
 
 	PagingKernelInit();
 
@@ -68,27 +68,19 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 
-	VFSInit();
-	PCIScan();
+	VfsInit();
+	PciScan();
 
-	PrintT("Beginnign ACPI stuff\n");
 	UINT8 status;
-	ACPI_FADT* facp = (ACPI_FADT*)GetACPITable(data->rdsp, "FACP");
+	ACPI_FADT* facp = (ACPI_FADT*)AcpiGetTable(data->rdsp, "FACP");
 
 	if (!facp) {
-		status = ACPILastError();
+		status = AcpiLastError();
 		ACPI_ERROR(status);
 		while (1);
 	}
 
-	PrintT("ACPI FADT at %x\n", facp);
-
-	if (data->rdsp->Revision == 0)
-		status = ACPIParseDSDT((ACPI_DSDT*)facp->DSDT);
-	else
-		status = ACPIParseDSDT((ACPI_DSDT*)facp->X_DSDT);
-
-	ACPI_MADT* MADT = (ACPI_MADT*)GetACPITable(data->rdsp, "APIC");
+	ACPI_MADT* MADT = (ACPI_MADT*)AcpiGetTable(data->rdsp, "APIC");
 	PrintT("Found MADT on %x\n", MADT);
 
 	ApicInit(MADT);

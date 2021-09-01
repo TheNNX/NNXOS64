@@ -1,5 +1,5 @@
 #include "paging.h"
-#include "video/SimpleTextIO.h"
+#include "video/SimpleTextIo.h"
 #include "physical_allocator.h"
 #include "MemoryOperations.h"
 
@@ -243,8 +243,8 @@ VOID PagingInit() {
 		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION + i * PAGE_SIZE_SMALL, ((UINT64)gFramebuffer) + i * PAGE_SIZE_SMALL, 0x3);
 	}
 
-	TextIOInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize(), 0, 0, 0);
-	TextIOSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
+	TextIoInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize(), 0, 0, 0);
+	TextIoSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
 }
 
 VOID PagingKernelInit() {

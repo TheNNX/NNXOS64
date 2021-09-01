@@ -4,23 +4,23 @@
 #include "../../text.h"
 #include "../../memory/MemoryOperations.h"
 
-VirtualFileSystem virtualFileSystems[VFS_MAX_NUMBER];
+VIRTUAL_FILE_SYSTEM virtualFileSystems[VFS_MAX_NUMBER];
 
-void VFSInit() {
+void VfsInit() {
 	VFS empty = { 0 };
 	for (int i = 0; i < VFS_MAX_NUMBER; i++)
 		virtualFileSystems[i] = empty;
 }
 
-UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, VFSFunctionSet functions) {
+UINT32 VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functions) {
 	UINT32 found = -1;
 	
 	for (UINT32 i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++) {
-		if (virtualFileSystems[i].drive == 0) {
-			virtualFileSystems[i].drive = drive;
-			virtualFileSystems[i].lbaStart = lbaStart;
-			virtualFileSystems[i].sizeInSectors = partitionSize;
-			virtualFileSystems[i].functions = functions;
+		if (virtualFileSystems[i].Drive == 0) {
+			virtualFileSystems[i].Drive = drive;
+			virtualFileSystems[i].LbaStart = lbaStart;
+			virtualFileSystems[i].SizeInSectors = partitionSize;
+			virtualFileSystems[i].Functions = functions;
 			found = i;
 			break;
 		}
@@ -29,21 +29,21 @@ UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, V
 	return found;
 }
 
-UINT64 VFSReadSector(VirtualFileSystem* vfs, UINT64 n, BYTE* destination) {
-	return PCI_IDE_DiskIO(vfs->drive, 0, vfs->lbaStart + n, 1, destination);
+UINT64 VfsReadSector(VIRTUAL_FILE_SYSTEM* vfs, UINT64 n, BYTE* destination) {
+	return PciIdeDiskIo(vfs->Drive, 0, vfs->LbaStart + n, 1, destination);
 }
 
-UINT64 VFSWriteSector(VirtualFileSystem* vfs, UINT64 n, BYTE* source) {
-	return PCI_IDE_DiskIO(vfs->drive, 1, vfs->lbaStart + n, 1, source);
+UINT64 VfsWriteSector(VIRTUAL_FILE_SYSTEM* vfs, UINT64 n, BYTE* source) {
+	return PciIdeDiskIo(vfs->Drive, 1, vfs->LbaStart + n, 1, source);
 }
 
-VirtualFileSystem* VFSGetPointerToVFS(unsigned int n) {
+VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(unsigned int n) {
 	return virtualFileSystems + n;
 }
 
-VirtualFileSystem* VFSGetSystemVFS() {
+VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs() {
 	// TODO
-	return VFSGetPointerToVFS(0);
+	return VfsGetPointerToVfs(0);
 }
 
 UINT64 FindFirstSlash(char* path) {
@@ -61,8 +61,8 @@ UINT64 FindLastSlash(char* path) {
 	return (((forwardSlash != -1) && ((forwardSlash > backSlash) || (backSlash == -1))) ? (forwardSlash) : (backSlash));
 }
 
-VFSFile* VFSAllocateVFSFile(VFS* filesystem, char* path) {
-	VFSFile* file = NNXAllocatorAlloc(sizeof(VFSFile));
+VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path) {
+	VFS_FILE* file = NNXAllocatorAlloc(sizeof(VFS_FILE));
 	if (!file)
 		return 0;
 
@@ -74,37 +74,37 @@ VFSFile* VFSAllocateVFSFile(VFS* filesystem, char* path) {
 		return 0;
 	}
 
-	file->path = NNXAllocatorAlloc(pathLength);
+	file->Path = NNXAllocatorAlloc(pathLength);
 
-	if (!file->path) {
+	if (!file->Path) {
 		NNXAllocatorFree(file);
 		return 0;
 	}
 
-	MemCopy(file->path, path, pathLength);
+	MemCopy(file->Path, path, pathLength);
 
 	UINT64 lastSlash = FindLastSlash(path) + 1;
 	UINT64 fileNameLenght = pathLength - lastSlash;
 
-	file->name = NNXAllocatorAlloc(fileNameLenght);
-	if (!file->name) {
+	file->Name = NNXAllocatorAlloc(fileNameLenght);
+	if (!file->Name) {
 		NNXAllocatorFree(file);
-		NNXAllocatorFree(file->path);
+		NNXAllocatorFree(file->Path);
 		return 0;
 	}
 
-	MemCopy(file->name, path + lastSlash, fileNameLenght);
+	MemCopy(file->Name, path + lastSlash, fileNameLenght);
 
-	file->filesystem = filesystem;
-	file->filePointer = 0;
-	file->fileSize = 0;
+	file->Filesystem = filesystem;
+	file->FilePointer = 0;
+	file->FileSize = 0;
 
 	return file;
 }
 
-VOID VFSDeallocateVFSFile(VFSFile* file) {
-	NNXAllocatorFree(file->path);
-	NNXAllocatorFree(file->name);
+VOID VfsDeallocateVfsFile(VFS_FILE* file) {
+	NNXAllocatorFree(file->Path);
+	NNXAllocatorFree(file->Name);
 	NNXAllocatorFree(file);
 }
 

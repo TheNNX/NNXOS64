@@ -2,12 +2,12 @@
 
 UINT8 localLastError = 0;
 
-UINT8 ACPILastError() {
+UINT8 AcpiLastError() {
 	return localLastError;
 }
 
-ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp) {
-	if (!ACPIVerifyRDSP(rdsp)) {
+ACPI_RSDT* GetRsdt(ACPI_RDSP* rdsp) {
+	if (!AcpiVerifyRdsp(rdsp)) {
 		localLastError = ACPI_ERROR_INVALID_RDSP;
 		return 0;
 	}
@@ -17,13 +17,13 @@ ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp) {
 	return (ACPI_RSDT*)result;
 }
 
-ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp) {
+ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp) {
 	if (rdsp->Revision == 0)
 	{
 		localLastError = ACPI_ERROR_NOT_SUPPORTED_BY_ACPI_10;
 		return 0;
 	}
-	if (!ACPIVerifyRDSP(rdsp)) {
+	if (!AcpiVerifyRdsp(rdsp)) {
 		localLastError = ACPI_ERROR_INVALID_RDSP;
 		return 0;
 	}
@@ -31,14 +31,14 @@ ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp) {
 	return rdsp->v20.XSDTAddress;
 }
 
-VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
+VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name) {
 	UINT32 numberOfEntries;
 	ACPI_RSDT* rsdt = 0;
 	ACPI_XSDT* xsdt = 0;
 
 	if (rdsp->Revision == 0) {
-		rsdt = GetRSDT(rdsp);
-		if (!rsdt || !ACPIVerifySDT(rsdt))
+		rsdt = GetRsdt(rdsp);
+		if (!rsdt || !AcpiVerifySdt(rsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
@@ -47,8 +47,8 @@ VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
 		numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
 	}
 	else {
-		xsdt = GetXSDT(rdsp);
-		if (!xsdt || !ACPIVerifySDT(xsdt))
+		xsdt = GetXsdt(rdsp);
+		if (!xsdt || !AcpiVerifySdt(xsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
@@ -58,12 +58,12 @@ VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
 	}
 
 	for (UINT32 a = 0; a < numberOfEntries; a++) {
-		ACPI_SDTHeader* tableAddress = (xsdt == 0) ? ((ACPI_SDTHeader*)rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
+		ACPI_SDT_HEADER* tableAddress = (xsdt == 0) ? ((ACPI_SDT_HEADER*)rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
 
 		if (*((UINT32*)name) == *((UINT32*)tableAddress->Signature))
 			return (ACPI_FADT*)tableAddress;
 		else {
-			PrintT("%S %S\n", name, 4, tableAddress->Signature, 4);
+			PrintT("not matched %S %S\n", name, 4LL, tableAddress->Signature, 4LL);
 		}
 	}
 
@@ -71,7 +71,7 @@ VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name) {
 	return 0;
 }
 
-BOOL ACPIVerifySDT(ACPI_SDTHeader* sdt) {
+BOOL AcpiVerifySdt(ACPI_SDT_HEADER* sdt) {
 	UINT32 sum = 0;
 	for (UINT32 index = 0; index < sdt->Lenght; index++) {
 		sum += ((char*)sdt)[index];
@@ -80,7 +80,7 @@ BOOL ACPIVerifySDT(ACPI_SDTHeader* sdt) {
 }
 
 
-BOOL ACPIVerifyRDSP(ACPI_RDSP* rdsp) {
+BOOL AcpiVerifyRdsp(ACPI_RDSP* rdsp) {
 	UINT32 Lenght = sizeof(ACPI_RDSP) - sizeof(ACPI_RDSPExtension);
 	if (rdsp->Revision > 0) {
 		Lenght = rdsp->v20.Lenght;

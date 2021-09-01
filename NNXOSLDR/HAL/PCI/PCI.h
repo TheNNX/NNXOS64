@@ -1,7 +1,7 @@
 #ifndef NNX_PCI_HEADER
 #define NNX_PCI_HEADER
 #include "nnxint.h"
-#include "../../video/SimpleTextIO.h"
+#include "../../video/SimpleTextIo.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -49,52 +49,66 @@ extern "C"{
 #define PCI_SUBCLASS_OTHER 0x80
 
 
-UINT16 PCIConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
-UINT32 PCIConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
 
 inline UINT16 PCIGetVendor(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0);
+	return PciConfigReadWord(bus, slot, function, 0);
 }
 
-inline bool PCICheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function) {
+inline bool PciCheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function) {
 
 	return PCIGetVendor(bus, slot, function) != 0xffff;
 }
 
-inline UINT8 PCIGetHeader(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0xe) & 0xff;
+inline UINT8 PciGetHeader(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciConfigReadWord(bus, slot, function, 0xe) & 0xff;
 }
 
-inline UINT8 PCIGetSubclass(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0xa) & 0xff;
+inline UINT8 PciGetSubclass(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciConfigReadWord(bus, slot, function, 0xa) & 0xff;
 }
 
 inline UINT8 PCIGetClass(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0xb) & 0xff;
+	return PciConfigReadWord(bus, slot, function, 0xb) & 0xff;
 }
 
-inline UINT8 PCItoPCIGetSecondaryBus(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0x19) & 0xff;
+inline UINT8 PciToPciGetSecondaryBus(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciConfigReadWord(bus, slot, function, 0x19) & 0xff;
 }
 
-inline UINT8 PCIGetProgIF(UINT8 bus, UINT8 slot, UINT8 function) {
-	return PCIConfigReadWord(bus, slot, function, 0x9) & 0xff;
+inline UINT8 PciGetProgIf(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciConfigReadWord(bus, slot, function, 0x9) & 0xff;
 }
 
-inline UINT32 PCIGetBAR(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n) {
-	return PCIConfigReadDWord(bus, slot, function, (UINT8)(0x10 + 0x4 * n));
+inline UINT32 PciGetBar(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n) {
+	return PciConfigReadDWord(bus, slot, function, (UINT8)(0x10 + 0x4 * n));
 }
 
-#define PCIGetBAR0(b,s,f) PCIGetBAR(b,s,f,0)
-#define PCIGetBAR1(b,s,f) PCIGetBAR(b,s,f,1)
-#define PCIGetBAR2(b,s,f) PCIGetBAR(b,s,f,2)
-#define PCIGetBAR3(b,s,f) PCIGetBAR(b,s,f,3)
-#define PCIGetBAR4(b,s,f) PCIGetBAR(b,s,f,4)
+inline UINT32 PciGetBar0(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciGetBar(bus, slot, function, 0);
+}
 
-UINT8 PCIScan();
-void PCIScanBus(UINT8 bus);
-void PCIScanDevice(UINT8 bus, UINT8 device);
-void PCIScanFunction(UINT8 bus, UINT8 device, UINT8 function);
+inline UINT32 PciGetBar1(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciGetBar(bus, slot, function, 1);
+}
+
+inline UINT32 PciGetBar2(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciGetBar(bus, slot, function, 2);
+}
+
+inline UINT32 PciGetBar3(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciGetBar(bus, slot, function, 3);
+}
+
+inline UINT32 PciGetBar4(UINT8 bus, UINT8 slot, UINT8 function) {
+	return PciGetBar(bus, slot, function, 4);
+}
+
+UINT8 PciScan();
+void PciScanBus(UINT8 bus);
+void PciScanDevice(UINT8 bus, UINT8 device);
+void PciScanFunction(UINT8 bus, UINT8 device, UINT8 function);
 
 #ifdef __cplusplus
 }

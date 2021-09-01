@@ -1,9 +1,9 @@
 #include "device/Keyboard.h"
-#include "video/SimpleTextIO.h"
+#include "video/SimpleTextIo.h"
 #include "HAL/Port.h"
 #include "HAL/IDT.h"
 
-KeyState state;
+KEY_STATE state;
 UINT8 ScancodeSet = 0;
 
 KEY(NULL, 0, 0, 0, 0);

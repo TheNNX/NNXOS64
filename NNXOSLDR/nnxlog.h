@@ -12,7 +12,7 @@ void NNXLogG(const char* str, ...);
 void NNXClearG();
 void NNXSetLoggerG(void*);
 void* NNXGetLoggerG(void);
-void* NNXNewLoggerG(VFSFile*);
+void* NNXNewLoggerG(VFS_FILE*);
 void NNXLoggerTest(VFS* filesystem);
 
 #ifdef __cplusplus
@@ -20,14 +20,14 @@ void NNXLoggerTest(VFS* filesystem);
 
 class NNXLogger {
 public:
-	NNXLogger(VFSFile* loggerFile);
+	NNXLogger(VFS_FILE* loggerFile);
 	~NNXLogger();
 	void Log(const char* str, ...);
 	void Clear();
 	void Log(const char* str, va_list l);
 	void Flush();
 private:
-	VFSFile* loggerFile;
+	VFS_FILE* loggerFile;
 	VFS* filesystem;
 	UINT64 position;
 	unsigned char* buffer;

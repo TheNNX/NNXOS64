@@ -1,5 +1,5 @@
 #include "nnxint.h"
-#include "video/SimpleTextIO.h"
+#include "video/SimpleTextIo.h"
 #include "memory/physical_allocator.h"
 #include "memory/paging.h"
 #include "HAL/GDT.h"
@@ -27,8 +27,8 @@ VOID* gRDSP;
 
 void LoadKernel() {
 	MZ_FILE_TABLE MZFileTable;
-	VFS* vfs = VFSGetPointerToVFS(0);
-	VFSFile* file = vfs->functions.OpenFile(vfs, "efi\\boot\\NNXOSKRN.EXE");
+	VFS* vfs = VfsGetPointerToVfs(0);
+	VFS_FILE* file = vfs->Functions.OpenFile(vfs, "efi\\boot\\NNXOSKRN.EXE");
 	PE_FILE_TABLE PEFileTable;
 	DATA_DIRECTORY *dataDirectories;
 	INT64 i;
@@ -40,15 +40,15 @@ void LoadKernel() {
 		return;
 	}
 
-	vfs->functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
-	file->filePointer = MZFileTable.e_lfanew;
+	vfs->Functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
+	file->FilePointer = MZFileTable.e_lfanew;
 
 	if (MZFileTable.signature != IMAGE_MZ_MAGIC) {
 		PrintT("Invalid PE file %x %X\n", MZFileTable.signature, IMAGE_MZ_MAGIC);
 		return;
 	}
 
-	vfs->functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
+	vfs->Functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
 
 	if (PEFileTable.signature != IMAGE_PE_MAGIC) {
 		PrintT("Invalid PE header\n");
@@ -56,7 +56,7 @@ void LoadKernel() {
 	}
 
 	dataDirectories = NNXAllocatorAlloc(sizeof(DATA_DIRECTORY) * PEFileTable.optionalHeader.NumberOfDataDirectories);
-	vfs->functions.ReadFile(file, sizeof(dataDirectories) * PEFileTable.optionalHeader.NumberOfDataDirectories, dataDirectories);
+	vfs->Functions.ReadFile(file, sizeof(dataDirectories) * PEFileTable.optionalHeader.NumberOfDataDirectories, dataDirectories);
 	NNXAllocatorFree(dataDirectories);
 
 	imageBase = PEFileTable.optionalHeader.ImageBase;
@@ -65,13 +65,13 @@ void LoadKernel() {
 		UINT64 tempFP, status;
 		int j;
 
-		if (status = vfs->functions.ReadFile(file, sizeof(SECTION_HEADER), &sHeader))
+		if (status = vfs->Functions.ReadFile(file, sizeof(SECTION_HEADER), &sHeader))
 			return;
 
-		tempFP = file->filePointer;
-		file->filePointer = sHeader.SectionPointer;
+		tempFP = file->FilePointer;
+		file->FilePointer = sHeader.SectionPointer;
 
-		if (status = vfs->functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64)sHeader.VirtualAddress) + imageBase))
+		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64)sHeader.VirtualAddress) + imageBase))
 			return;
 
 		if (sHeader.VirtualSize > sHeader.SizeOfSection) {
@@ -82,10 +82,10 @@ void LoadKernel() {
 
 		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64)sHeader.VirtualAddress) + imageBase);
 
-		file->filePointer = tempFP;
+		file->FilePointer = tempFP;
 	}
 
-	vfs->functions.CloseFile(file);
+	vfs->Functions.CloseFile(file);
 
 	LdrKernelInitializationData data;
 	data.Framebuffer = gFramebuffer;
@@ -158,12 +158,12 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	MemorySize = memorySize;
 
-	TextIOInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
+	TextIoInitialize(framebuffer, framebufferEnd, width, height, pixelsPerScanline);
 	UINT32 box[] = { 0, width, 20, height - 20 };
-	TextIOSetBoundingBox(box);
-	TextIOSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
-	TextIOClear();
-	TextIOSetCursorPosition(0, 20);
+	TextIoSetBoundingBox(box);
+	TextIoSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
+	TextIoClear();
+	TextIoSetCursorPosition(0, 20);
 
 	PrintT("Initializing memory\n");
 	
@@ -182,55 +182,55 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	idtr->Size = sizeof(IDTEntry) * 128 - 1;
 	idtr->Base = idt;
 
-	((UINT64*)gdt->entries)[0] = 0;		//NULL DESCRIPTOR
+	((UINT64*)gdt->Entries)[0] = 0;		//NULL DESCRIPTOR
 
-	gdt->entries[1].base0to15 = 0;		//CODE, RING 0 DESCRIPTOR
-	gdt->entries[1].base16to23 = 0;
-	gdt->entries[1].base24to31 = 0;
-	gdt->entries[1].limit0to15 = 0xFFFF;
-	gdt->entries[1].limit16to19 = 0xF;
-	gdt->entries[1].flags = 0xa;
-	gdt->entries[1].accessByte = 0x9a;
+	gdt->Entries[1].Base0To15 = 0;		//CODE, RING 0 DESCRIPTOR
+	gdt->Entries[1].Base16To23 = 0;
+	gdt->Entries[1].Base24To31 = 0;
+	gdt->Entries[1].Limit0To15 = 0xFFFF;
+	gdt->Entries[1].Limit16To19 = 0xF;
+	gdt->Entries[1].Flags = 0xa;
+	gdt->Entries[1].AccessByte = 0x9a;
 
-	gdt->entries[2].base0to15 = 0;		//DATA, RING 0 DESCRIPTOR
-	gdt->entries[2].base16to23 = 0;
-	gdt->entries[2].base24to31 = 0;
-	gdt->entries[2].limit0to15 = 0xFFFF;
-	gdt->entries[2].limit16to19 = 0xF;
-	gdt->entries[2].flags = 0xc;
-	gdt->entries[2].accessByte = 0x92;
+	gdt->Entries[2].Base0To15 = 0;		//DATA, RING 0 DESCRIPTOR
+	gdt->Entries[2].Base16To23 = 0;
+	gdt->Entries[2].Base24To31 = 0;
+	gdt->Entries[2].Limit0To15 = 0xFFFF;
+	gdt->Entries[2].Limit16To19 = 0xF;
+	gdt->Entries[2].Flags = 0xc;
+	gdt->Entries[2].AccessByte = 0x92;
 
-	gdt->entries[3].base0to15 = 0;	//CODE, RING 3 DESCRIPTOR
-	gdt->entries[3].base16to23 = 0;
-	gdt->entries[3].base24to31 = 0;
-	gdt->entries[3].limit0to15 = 0xFFFF;
-	gdt->entries[3].limit16to19 = 0xF;
-	gdt->entries[3].flags = 0xa;
-	gdt->entries[3].accessByte = 0xfa;
+	gdt->Entries[3].Base0To15 = 0;	//CODE, RING 3 DESCRIPTOR
+	gdt->Entries[3].Base16To23 = 0;
+	gdt->Entries[3].Base24To31 = 0;
+	gdt->Entries[3].Limit0To15 = 0xFFFF;
+	gdt->Entries[3].Limit16To19 = 0xF;
+	gdt->Entries[3].Flags = 0xa;
+	gdt->Entries[3].AccessByte = 0xfa;
 
-	gdt->entries[4].base0to15 = 0;		//DATA, RING 3 DESCRIPTOR
-	gdt->entries[4].base16to23 = 0;
-	gdt->entries[4].base24to31 = 0;
-	gdt->entries[4].limit0to15 = 0xFFFF;
-	gdt->entries[4].limit16to19 = 0xF;
-	gdt->entries[4].flags = 0xc;
-	gdt->entries[4].accessByte = 0xf2;
+	gdt->Entries[4].Base0To15 = 0;		//DATA, RING 3 DESCRIPTOR
+	gdt->Entries[4].Base16To23 = 0;
+	gdt->Entries[4].Base24To31 = 0;
+	gdt->Entries[4].Limit0To15 = 0xFFFF;
+	gdt->Entries[4].Limit16To19 = 0xF;
+	gdt->Entries[4].Flags = 0xc;
+	gdt->Entries[4].AccessByte = 0xf2;
 	LoadGDT(gdtr);
 
 	for (int a = 0; a < 128; a++) {
-		idt->entries[a].selector = 0x8;
+		idt->Entries[a].selector = 0x8;
 		void(*handler)();
 		handler = IntTestASM;
 
 		if (a < sizeof(interrupts) / sizeof(*interrupts))
 			handler = interrupts[a];
 
-		idt->entries[a].offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
-		idt->entries[a].offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
-		idt->entries[a].offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
+		idt->Entries[a].offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
+		idt->Entries[a].offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
+		idt->Entries[a].offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
 
-		idt->entries[a].type = 0x8E;
-		idt->entries[a].ist = 0;
+		idt->Entries[a].type = 0x8E;
+		idt->Entries[a].ist = 0;
 	}
 
 	LoadIDT(idtr);
@@ -248,28 +248,28 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	UINT8 status = 0;
 
-	TextIOClear();
-	TextIOSetCursorPosition(0, 20);
+	TextIoClear();
+	TextIoSetCursorPosition(0, 20);
 	PrintT("NNXOSLDR.exe version %s\n", version);
 	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
 
 	PrintT("Memory map: ");
-	TextIOSetColorInformation(0xFFFFFFFF, 0xFF007F00, 1);
+	TextIoSetColorInformation(0xFFFFFFFF, 0xFF007F00, 1);
 	PrintT(" FREE ");
-	TextIOSetColorInformation(0xFFFFFFFF, 0xFF7F0000, 1);
+	TextIoSetColorInformation(0xFFFFFFFF, 0xFF7F0000, 1);
 	PrintT(" USED ");
-	TextIOSetColorInformation(0xFF000000, 0xFFAFAF00, 1);
+	TextIoSetColorInformation(0xFF000000, 0xFFAFAF00, 1);
 	PrintT(" UTIL ");
-	TextIOSetColorInformation(0xFF000000, 0xFF00FFFF, 1);
+	TextIoSetColorInformation(0xFF000000, 0xFF00FFFF, 1);
 	PrintT(" PERM ");
-	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
+	TextIoSetColorInformation(0xFFFFFFFF, 0, 1);
 
 	DrawMap();
 
-	TextIOSetCursorPosition(0, 220);
+	TextIoSetCursorPosition(0, 220);
 
-	VFSInit();
-	PCIScan();
+	VfsInit();
+	PciScan();
 	PitUniprocessorInitialize();
 
 	EnableInterrupts();

@@ -1,5 +1,5 @@
 #include "nnxalloc.h"
-#include "../video/SimpleTextIO.h"
+#include "../video/SimpleTextIo.h"
 #include "MemoryOperations.h"
 #include "text.h"
 
@@ -42,18 +42,18 @@ void ForceScreenUpdate() {
 		}
 	}
 
-	TextIOGetCursorPosition(&cursorX, &cursorY);
-	TextIOGetBoundingBox(oldBoundingBox);
-	TextIOSetBoundingBox(newBoundingBox);
-	TextIOGetColorInformation(&oldColor, &oldBackground, &oldRenderBack);
+	TextIoGetCursorPosition(&cursorX, &cursorY);
+	TextIoGetBoundingBox(oldBoundingBox);
+	TextIoSetBoundingBox(newBoundingBox);
+	TextIoGetColorInformation(&oldColor, &oldBackground, &oldRenderBack);
 
-	TextIOSetCursorPosition(minX + 8, minY + 6);
-	TextIOSetColorInformation(0xFF000000, controlColor, 0);
+	TextIoSetCursorPosition(minX + 8, minY + 6);
+	TextIoSetColorInformation(0xFF000000, controlColor, 0);
 
 	if (first) {
 		PrintT("Allocator usage: %i%%, total: %iKiB", (NNXAllocatorGetUsedMemory() * 100) / NNXAllocatorGetTotalMemory(), (NNXAllocatorGetTotalMemory() + 1) / 1024);
 
-		TextIOGetCursorPosition(&currentPosX, &currentPosY);
+		TextIoGetCursorPosition(&currentPosX, &currentPosY);
 
 		cFramebuffer = gFramebuffer + (currentPosX + pad) + currentPosY * gPixelsPerScanline;
 
@@ -76,9 +76,9 @@ void ForceScreenUpdate() {
 
 		lastX = currentPosX + pad + progressBarLength + 1;
 	}
-	TextIOSetColorInformation(oldColor, oldBackground, oldRenderBack);
-	TextIOSetCursorPosition(cursorX, cursorY);
-	TextIOSetBoundingBox(oldBoundingBox);
+	TextIoSetColorInformation(oldColor, oldBackground, oldRenderBack);
+	TextIoSetCursorPosition(cursorX, cursorY);
+	TextIoSetBoundingBox(oldBoundingBox);
 #endif
 }
 

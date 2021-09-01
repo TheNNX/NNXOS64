@@ -26,7 +26,7 @@ typedef struct MBRTable {
 	union
 	{
 		WORD optionalReserved;
-		WORD reserved;
+		WORD Reserved;
 	};
 
 	MBRPartitionTableEntry tableEntries[4];

@@ -8,12 +8,12 @@
 extern "C" {
 #endif
 
-	typedef struct PCI_IDE_Controller PCI_IDE_Controller;
+	typedef struct PCI_IDE_CONTROLLER PCI_IDE_CONTROLLER;
 
 #include "device/hdd/hdd.h"
 
-	typedef struct IDEDrive {
-		UINT8 reserved;
+	typedef struct IDE_DRIVE {
+		UINT8 Reserved;
 		UINT8 channel;
 		UINT8 drive;
 		UINT16 type;
@@ -22,11 +22,11 @@ extern "C" {
 		UINT32 commandSets;
 		UINT64 size;
 		unsigned char model[41];
-		PCI_IDE_Controller* controller;
+		PCI_IDE_CONTROLLER* controller;
 		CHS geometry;
-	} IDEDrive;
+	} IDE_DRIVE;
 
-	UINT64 PCI_IDE_DiskIO(IDEDrive* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
+	UINT64 PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
 
 #define ATA_REG_DATA       0x00
 #define ATA_REG_ERROR      0x01
@@ -83,7 +83,7 @@ extern "C" {
 #define      ATAPI_CMD_READ       0xA8
 #define      ATAPI_CMD_EJECT      0x1B
 
-	struct PCI_IDE_Controller {
+	struct PCI_IDE_CONTROLLER {
 		UINT8 functionNumber;
 		UINT8 deviceNumber;
 		UINT8 busNumber;
@@ -108,16 +108,16 @@ extern "C" {
 
 		unsigned char interrupt_number;
 
-		IDEDrive drives[4];
+		IDE_DRIVE drives[4];
 	};
 
 #define IDE_LBA_SUPPORT 0x200
 
-	PCI_IDE_Controller PCIIDE_InitPCIDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+	PCI_IDE_CONTROLLER PciIdeInitPciDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
 
 #define MAX_PCI_IDE_CONTROLLERS 32
-	extern IDEDrive drives[MAX_PCI_IDE_CONTROLLERS * 4];
-	extern PCI_IDE_Controller controllers[MAX_PCI_IDE_CONTROLLERS];
+	extern IDE_DRIVE drives[MAX_PCI_IDE_CONTROLLERS * 4];
+	extern PCI_IDE_CONTROLLER controllers[MAX_PCI_IDE_CONTROLLERS];
 
 #ifdef __cplusplus
 }

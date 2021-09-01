@@ -14,7 +14,7 @@ AS LONG AS IT WORKS (WHICH AT THE MOMENT
 IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 */
 
-#include "video/SimpleTextIO.h"
+#include "video/SimpleTextIo.h"
 #include "nnxint.h"
 #include "nnxllist.hpp"
 
@@ -31,7 +31,7 @@ typedef struct AMLObjectReference {
 	AMLObjType type;
 }AMLObjRef, AMLObjectReference;
 
-typedef struct SDTHeader {
+typedef struct SDT_HEADER {
 	UINT8 Signature[4];
 	UINT32 Lenght;
 	UINT8 Revision;
@@ -41,7 +41,7 @@ typedef struct SDTHeader {
 	UINT32 OEMRevision;
 	UINT32 CreatorID;
 	UINT32 CreatorRevision;
-}ACPI_SDTHeader, ACPI_SDT;
+}ACPI_SDT_HEADER, ACPI_SDT;
 
 typedef struct GAS {
 	UINT8 AddressSpace;
@@ -52,12 +52,12 @@ typedef struct GAS {
 }ACPI_GAS;
 
 typedef struct XSDT {
-	ACPI_SDTHeader Header;
-	ACPI_SDTHeader* OtherSDTs[0];
+	ACPI_SDT_HEADER Header;
+	ACPI_SDT_HEADER* OtherSDTs[0];
 }ACPI_XSDT;
 
 typedef struct RSDT {
-	ACPI_SDTHeader Header;
+	ACPI_SDT_HEADER Header;
 	UINT32 OtherSDTs[0];
 }ACPI_RSDT;
 
@@ -79,13 +79,13 @@ typedef struct RDSP {
 }ACPI_RDSP;
 
 typedef struct DSDT {
-	ACPI_SDTHeader Header;
+	ACPI_SDT_HEADER Header;
 	UINT8 amlCode[0];
 }ACPI_DSDT;
 
 typedef struct FADT
 {
-	ACPI_SDTHeader Header;
+	ACPI_SDT_HEADER Header;
 	UINT32 FirmwareCtrl;
 	UINT32 DSDT;
 	UINT8 Reserved;
@@ -150,7 +150,7 @@ typedef struct ACPI_MADT_ENTRY {
 }ACPI_MADT_ENTRY;
 
 typedef struct MADT{
-	ACPI_SDTHeader Header;
+	ACPI_SDT_HEADER Header;
 	UINT32 LapicBase32;
 	UINT32 Flags;
 	ACPI_MADT_ENTRY InteruptControlerStruct;
@@ -214,7 +214,7 @@ typedef struct ACPI_MADT_X2LAPIC {
 	UINT32 ProcessorUid;
 }ACPI_MADT_X2LAPIC;
 
-typedef struct { UINT8 name[4]; } AMLName;
+typedef struct { UINT8 name[4]; } AML_NAME;
 
 #pragma pack(pop)
 
@@ -403,17 +403,14 @@ typedef struct { UINT8 name[4]; } AMLName;
 			break;
 		}
 	}
-	ACPI_XSDT* GetXSDT(ACPI_RDSP* rdsp);
-	ACPI_RSDT* GetRSDT(ACPI_RDSP* rdsp);
-
-	VOID* GetACPITable(ACPI_RDSP* rdsp, const char* name);
-	UINT8 ACPIParseDSDT(ACPI_DSDT* table);
-
-	UINT8 ACPILastError();
-	AMLName CreateName(const char* name);
-
-	BOOL ACPIVerifyRDSP(ACPI_RDSP*);
-	BOOL ACPIVerifySDT(ACPI_SDTHeader*);
+	ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp);
+	ACPI_RSDT* GetRsdt(ACPI_RDSP* rdsp);
+	VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name);
+	UINT8 AcpiParseDSDT(ACPI_DSDT* table);
+	UINT8 AcpiLastError();
+	AML_NAME AcpiCreateName(const char* name);
+	BOOL AcpiVerifyRdsp(ACPI_RDSP*);
+	BOOL AcpiVerifySdt(ACPI_SDT_HEADER*);
 
 #ifdef __cplusplus 
 }

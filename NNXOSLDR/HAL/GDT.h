@@ -16,35 +16,35 @@ typedef struct GDTR {
 }GDTR;
 
 typedef struct GDTEntry {
-	UINT16 limit0to15;
-	UINT16 base0to15;
-	UINT8 base16to23;
-	UINT8 accessByte;
-	UINT8 limit16to19 : 4;
-	UINT8 flags : 4;
-	UINT8 base24to31;
+	UINT16 Limit0To15;
+	UINT16 Base0To15;
+	UINT8 Base16To23;
+	UINT8 AccessByte;
+	UINT8 Limit16To19 : 4;
+	UINT8 Flags : 4;
+	UINT8 Base24To31;
 }GDTEntry;
 
 typedef struct GDT {
-	GDTEntry entries[0];
+	GDTEntry Entries[0];
 }GDT;
 
 typedef struct TSS {
 	union {
-		UINT16 IOPB_offset;
+		UINT16 IopbOffset;
 		UINT16 Size;
 	};
 	UINT16 reserved4;
 	UINT64 reserved3;
-	UINT64 IST[8];
+	UINT64 Ist[8];
 	UINT64 reserved2;
-	UINT64 RSP[3];
+	UINT64 Rsp[3];
 	UINT32 reserved1;
 }TSS;
 
 typedef struct TSSDescriptorEntry {
-	UINT32 reserved;
-	UINT32 base32to63;
+	UINT32 Reserved;
+	UINT32 Base32To63;
 	GDTEntry StandartGdtEntry;
 }TSSDescriptorEntry;
 

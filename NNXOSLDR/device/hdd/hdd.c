@@ -9,54 +9,54 @@
 #include "../../memory/nnxalloc.h"
 
 BOOL RegisterPartition(UINT64 number) {
-	VirtualFileSystem* filesystem = VFSGetPointerToVFS(number);
+	VIRTUAL_FILE_SYSTEM* filesystem = VfsGetPointerToVfs(number);
 
 	BPB _bpb, *bpb = &_bpb;
-	VFSReadSector(filesystem, 0, bpb);
+	VfsReadSector(filesystem, 0, bpb);
 
-	BYTE *fatTypeInfo = 0, *volumeLabel = 0;
+	BYTE *FatTypeInfo = 0, *VolumeLabel = 0;
 	UINT32 serialNumber = 0;
-	bool hasNameOrID = false;
-	if (bpb->sectorTotSize16 == 0 && bpb->sectorTotSize32 == 0) {
+	bool HasNameOrID = false;
+	if (bpb->SectorTotSize16 == 0 && bpb->SectorTotSize32 == 0) {
 		PrintT("No FAT\n");
 		PrintT("Unsupported virtual filesystem of %i\n", number);
 		return FALSE;
 
 	}
-	else if (bpb->rootEntryCount == 0)
+	else if (bpb->RootEntryCount == 0)
 	{
 		PrintT("FAT32 disk detected\n");
 		BPB_EXT_FAT32* extBPB = &(bpb->_);
-		fatTypeInfo = extBPB->fatTypeInfo;
-		if (extBPB->hasNameOrID == 0x29) {
-			serialNumber = extBPB->volumeID;
-			volumeLabel = extBPB->volumeLabel;
+		FatTypeInfo = extBPB->FatTypeInfo;
+		if (extBPB->HasNameOrID == 0x29) {
+			serialNumber = extBPB->VolumeID;
+			VolumeLabel = extBPB->VolumeLabel;
 		}
 
 	}
 	else {
 		PrintT("FAT12/16 disk detected\n");
 		BPB_EXT_FAT1X* extBPB = &(bpb->_);
-		fatTypeInfo = extBPB->fatTypeInfo;
-		if (extBPB->hasNameOrID == 0x29);
+		FatTypeInfo = extBPB->FatTypeInfo;
+		if (extBPB->HasNameOrID == 0x29);
 		{
-			serialNumber = extBPB->volumeID;
-			volumeLabel = extBPB->volumeLabel;
+			serialNumber = extBPB->VolumeID;
+			VolumeLabel = extBPB->VolumeLabel;
 		}
 	}
 
-	if (fatTypeInfo) {
-		filesystem->allocationUnitSize = bpb->sectorsPerCluster * bpb->bytesPerSector;
+	if (FatTypeInfo) {
+		filesystem->AllocationUnitSize = bpb->SectorsPerCluster * bpb->BytesPerSector;
 		BYTE nameCopy[12] = { 0 };
 
 		for (int n = 0; n < 8; n++) {
-			nameCopy[n] = fatTypeInfo[n];
+			nameCopy[n] = FatTypeInfo[n];
 		}
 		PrintT("(%s)\n", nameCopy);
 
-		if (volumeLabel) {
+		if (VolumeLabel) {
 			for (int n = 0; n < 11; n++) {
-				nameCopy[n] = volumeLabel[n];
+				nameCopy[n] = VolumeLabel[n];
 			}
 			PrintT("%s %x\n", nameCopy, serialNumber);
 		}
@@ -64,9 +64,9 @@ BOOL RegisterPartition(UINT64 number) {
 			PrintT("No volume name/ID info.\n");
 		}
 
-		UINT32 freeClusters = FATScanFree(filesystem);
-		PrintT("%i/%i KiB free\n", freeClusters * bpb->bytesPerSector * bpb->sectorsPerCluster / 1024, FATCalculateFATClusterCount(bpb) * bpb->bytesPerSector * bpb->sectorsPerCluster / 1024);
-		bool pass = NNX_FATAutomaticTest(filesystem);
+		UINT32 freeClusters = FatScanFree(filesystem);
+		PrintT("%i/%i KiB free\n", freeClusters * bpb->BytesPerSector * bpb->SectorsPerCluster / 1024, FatCalculateFatClusterCount(bpb) * bpb->BytesPerSector * bpb->SectorsPerCluster / 1024);
+		bool pass = NNXFatAutomaticTest(filesystem);
 		if (!pass)
 			PrintT("Test failed.\n");
 	}
@@ -81,14 +81,14 @@ void DiskCheck() {
 
 	UINT8 diskReadBuffer[4096];
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++) {
-		if (!drives[i].reserved || drives[i].type)
+		if (!drives[i].Reserved || drives[i].type)
 			continue;
 		MBR mbr;
-		PCI_IDE_DiskIO(drives + i, 0, 0, 1, &diskReadBuffer);
+		PciIdeDiskIo(drives + i, 0, 0, 1, &diskReadBuffer);
 		mbr = *((MBR*)diskReadBuffer);
 		if (mbr.mbrtable.magicNumber == MBR_SIGNATURE) {
 			GPT gpt;
-			PCI_IDE_DiskIO(drives + i, 0, 1, 1, &gpt);
+			PciIdeDiskIo(drives + i, 0, 1, 1, &gpt);
 			
 			UINT32 number = -1;
 
@@ -104,14 +104,14 @@ void DiskCheck() {
 
 				UINT32 sectorCountForPartitionArray = (numberOfEntries * bytesPerEntry - 1) / 512 + 1;
 				for (UINT32 currentSector = 0; currentSector < sectorCountForPartitionArray; currentSector++) {
-					PCI_IDE_DiskIO(drives + i, 0, startOfArray + currentSector, 2, buffer);
+					PciIdeDiskIo(drives + i, 0, startOfArray + currentSector, 2, buffer);
 
 					UINT32 entryStartInSector = entryNumber * bytesPerEntry % 512;
 					for (UINT32 currentEntryPos = entryStartInSector; currentEntryPos < 512; currentEntryPos += bytesPerEntry) {
 						GPTPartitionEntry* entry = (buffer + currentEntryPos);
 						if (!GPTCompareGUID(entry->typeGUID, GPT_EMPTY_TYPE)) {
-							number = VFSAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FATAPIGetFunctionSet());
-							FATInitVFS(VFSGetPointerToVFS(number));
+							number = VfsAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FatVfsInterfaceGetFunctionSet());
+							FatInitVfs(VfsGetPointerToVfs(number));
 						}
 						entryNumber++;
 					}
@@ -125,8 +125,8 @@ void DiskCheck() {
 					if (entry.partitionSizeInSectors == 0)
 						continue;
 
-					number = VFSAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FATAPIGetFunctionSet());
-					FATInitVFS(VFSGetPointerToVFS(number));
+					number = VfsAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FatVfsInterfaceGetFunctionSet());
+					FatInitVfs(VfsGetPointerToVfs(number));
 				}
 			}
 

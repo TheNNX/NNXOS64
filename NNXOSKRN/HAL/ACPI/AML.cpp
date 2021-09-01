@@ -5,6 +5,9 @@
 	VERSION I'M USING SO IT'S 
 	   GOOD ENOUGH FOR NOW.
 								  */
+/*
+	THIS IS VERY BROKEN
+*/
 
 #define PRINT_IN_DEBUG_ONLY
 
@@ -16,18 +19,20 @@
 #define NULL 0
 #endif // ! NULL
 
-AMLName gHID;
+AML_NAME gHID;
 
 extern "C" {
 	extern UINT8 localLastError;
-	UINT8 ACPIParseDSDT(ACPI_DSDT* table) {
-		if (!ACPIVerifySDT((ACPI_SDT*)table))
+	UINT8 AcpiParseDSDT(ACPI_DSDT* table) {
+		if (!AcpiVerifySdt((ACPI_SDT*)table))
 		{
 			localLastError = ACPI_ERROR_INVALID_DSDT;
 			return localLastError;
 		}
+
 		AMLParser acpi = AMLParser(table);
 		acpi.Parse(acpi.GetRootScope(), acpi.GetSize());
+		return 0;
 	}
 }
 
@@ -35,36 +40,36 @@ AMLParser::AMLParser(ACPI_DSDT* table) {
 	this->table = (UINT8*)table;
 	this->index = 0;
 	GetString(this->name, 4);
-	this->size = GetDWORD();
-	this->revision = GetBYTE();
-	this->checksum = GetBYTE();
+	this->size = GetDword();
+	this->revision = GetByte();
+	this->checksum = GetByte();
 	GetString(this->oemid, 6, 0);
 	GetString(this->tableid, 8, 0);
-	this->oemRevision = GetDWORD();
+	this->oemRevision = GetDword();
 	GetString(compilerName, 4);
-	this->compilerRevision = GetDWORD();
+	this->compilerRevision = GetDword();
 	this->root = AMLScope();
 	this->size -= index;
-	gHID = CreateName("_HID");
+	gHID = AcpiCreateName("_HID");
 	InitializeNamespace(&(this->root));
 }
 
-UINT8 AMLParser::GetBYTE() {
+UINT8 AMLParser::GetByte() {
 	index++;
 	return table[index-1];
 }
 
-UINT16 AMLParser::GetWORD() {
+UINT16 AMLParser::GetWord() {
 	index += 2;
 	return *((UINT16*)(table+index-2));
 }
 
-UINT32 AMLParser::GetDWORD() {
+UINT32 AMLParser::GetDword() {
 	index += 4;
 	return *((UINT32*)(table+index-4));
 }
 
-UINT64 AMLParser::GetQWORD() {
+UINT64 AMLParser::GetQword() {
 	index += 8;
 	return *((UINT64*)(table + index - 8));
 }
@@ -85,16 +90,17 @@ void AMLParser::GetString(UINT8* output, UINT32 lenght, UINT8 terminator) {
 	}
 }
 
-AMLName AMLParser::GetName() {
-	UINT32 temp = GetDWORD();
-	return *((AMLName*)(&temp));
+AML_NAME AMLParser::GetName() {
+	UINT32 temp = GetDword();
+	return *((AML_NAME*)(&temp));
 }
 
 void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 	PrintT("Parsing for scope: %x ", scope); PrintName(scope->name); PrintT("\n");
 	UINT64 indexMax = index + size;
 	while (index < indexMax) {
-		UINT8 opcode = GetBYTE();
+		UINT8 opcode = GetByte();
+		PrintT("[ACPI opcode]: %x\n", opcode);
 		switch (opcode)
 		{
 		case AML_OPCODE_ZEROOPCODE:
@@ -102,9 +108,9 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			break;
 		case AML_OPCODE_NAMEOPCODE:
 		{
-			AMLNameWithinAScope nws = this->GetNameWithinAScope(scope);
+			AML_NAME_WITHIN_SCOPE nws = this->GetNameWithinAScope(scope);
 			AMLNamedObject *namedObject = AMLNamedObject::newObject(nws.name, CreateAMLObjRef(NULL, tAMLInvalid));
-			AMLObjRef amlObject = this->GetAMLObject(GetBYTE());
+			AMLObjRef amlObject = this->GetAmlObject(GetByte());
 			namedObject->object = amlObject;
 			nws.scope->namedObjects.Add(namedObject);
 			break;
@@ -114,7 +120,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 			UINT64 index1 = index;
 			UINT32 PkgLenght = this->DecodePkgLenght();
 
-			AMLNameWithinAScope nws = this->GetNameWithinAScope(scope);
+			AML_NAME_WITHIN_SCOPE nws = this->GetNameWithinAScope(scope);
 			AMLScope* _scope = FindScope(nws.name, nws.scope);
 			if (_scope == 0) {
 				PrintT("Couldn't find object: ");
@@ -130,30 +136,33 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 		{
 			UINT64 index1 = this->index;
 			UINT32 PkgLenght = DecodePkgLenght();
-			AMLNameWithinAScope name = GetNameWithinAScope(scope);
+			AML_NAME_WITHIN_SCOPE name = GetNameWithinAScope(scope);
 			AMLMethodDef* methodDef = CreateMethod(name.name, name.scope);
 			methodDef->name.scope->methods.Add(methodDef);
-			UINT8 flags = GetBYTE();
+			UINT8 flags = GetByte();
 			UINT64 index2 = this->index;
 			methodDef->codeIndex = index2;
 			methodDef->maxCodeIndex = methodDef->codeIndex + PkgLenght - (index2 - index1);
 			methodDef->parameterNumber = flags & 0x7;
 
-			//we want to skip the code of the function since this class is only a parser, there will be a separate 'AMLExecutor' class that will deal with the code execution
+			/* 
+				We want to skip the code of the function since this class is only a parser.
+				There will be a separate 'AMLExecutor' class that will deal with the code execution.
+			*/
 			this->index = methodDef->maxCodeIndex;
 
 			break;
 		}
 		case AML_OPCODE_EXTOPPREFIX:
 		{
-			UINT8 extOpcode = GetBYTE();
+			UINT8 extOpcode = GetByte();
 			switch (extOpcode)
 			{
 			case AML_OPCODE_EXTOP_DEVICEOPCODE:
 			{
 				UINT64 index1 = this->index;
 				UINT32 PkgLenght = DecodePkgLenght();
-				AMLNameWithinAScope nws = GetNameWithinAScope(scope);
+				AML_NAME_WITHIN_SCOPE nws = GetNameWithinAScope(scope);
 				UINT64 index2 = this->index;
 				UINT32 size = PkgLenght - (index2 - index1);
 				PrintT("Device: ");
@@ -162,28 +171,28 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 
 				AMLDevice *device = AMLDevice::newScope((const char*)nws.name.name, scope);
 				this->Parse(device, size);
-				device->Init_HID();
-				PrintT("_HID: %x\n", GetIntegerFromAMLObjRef(device->Get_HID()->object));
+				device->InitHid();
+				PrintT("_HID: %x\n", GetIntegerFromAmlObjRef(device->GetHid()->object));
 				break;
 			}case AML_OPCODE_EXTOP_OPREGIONOPCODE: {
-				AMLNameWithinAScope name = GetNameWithinAScope(scope);
+
+				AML_NAME_WITHIN_SCOPE name = GetNameWithinAScope(scope);
 				AMLOpetationRegion* prevOpRegion = scope->opRegion;
 				scope->opRegion = CreateOperationRegion(name);
-				scope->opRegion->type = GetBYTE();
-				scope->opRegion->offset = GetIntegerFromAMLObjRef(GetAMLObject(GetBYTE()));
+				scope->opRegion->type = GetByte();
+				scope->opRegion->offset = GetIntegerFromAmlObjRef(GetAmlObject(GetByte()));
 				scope->opRegion->lenght = GetInteger();
 				scope->opRegion->previous = prevOpRegion;
-				PrintT("Done\n");
 				break;
 			}
 			case AML_OPCODE_EXTOP_FIELDOPCODE: {
-				PrintT("Declaring field\n");
+				PrintT("Declaring field ");
 
 				UINT32 startIndex = this->index;
 				UINT32 pkgLenght = DecodePkgLenght();
 
-				AMLNameWithinAScope fieldName = GetNameWithinAScope(scope);
-				UINT8 fieldFlags = GetBYTE();
+				AML_NAME_WITHIN_SCOPE fieldName = GetNameWithinAScope(scope);
+				UINT8 fieldFlags = GetByte();
 
 				AMLField* field = this->CreateField(scope->opRegion, fieldFlags & 0xf, (fieldFlags & 0x10) >> 4, (fieldFlags & 0xE0) >> 5);
 
@@ -192,11 +201,12 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 				while (pkgLenghtCounter > 0) {
 					startIndex = this->index;
 
-					AMLNameWithinAScope name = GetNameWithinAScope(scope);
-					AMLFieldUnit* fieldUnit = CreateFieldUnit(name.name, GetBYTE());
+					AML_NAME_WITHIN_SCOPE name = GetNameWithinAScope(scope);
+					AMLFieldUnit* fieldUnit = CreateFieldUnit(name.name, GetByte());
 					name.scope->namedObjects.Add(AMLNamedObject::newObject(name.name, CreateAMLObjRef(fieldUnit, tAMLFieldUnit)));
 					field->fieldUnits.Add(fieldUnit);
 					PrintName(fieldUnit->name);
+					PrintT("\n");
 
 					pkgLenghtCounter -= (this->index - startIndex);
 				}
@@ -225,23 +235,23 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size) {
 }
 
 UINT64 AMLParser::GetInteger() {
-	AMLObjRef objRef = GetAMLObject(GetBYTE());
-	UINT64 res = GetIntegerFromAMLObjRef(objRef);
+	AMLObjRef objRef = GetAmlObject(GetByte());
+	UINT64 res = GetIntegerFromAmlObjRef(objRef);
 	return res;
 }
 
-AMLNameWithinAScope AMLParser::GetNameWithinAScope(AMLScope* current) {
+AML_NAME_WITHIN_SCOPE AMLParser::GetNameWithinAScope(AMLScope* current) {
 	AMLScope* dstScope = current;
 	if (this->table[index] == AML_OPCODE_DUALNAMEPREFIX || this->table[index] == AML_OPCODE_MULTINAMEPREFIX) {
-		UINT8 SegNum = this->table[index] == AML_OPCODE_DUALNAMEPREFIX ? 1 : GetBYTE() - 1; //substract one, since the last name is going to be read
+		UINT8 SegNum = this->table[index] == AML_OPCODE_DUALNAMEPREFIX ? 1 : GetByte() - 1; //substract one, since the last Name is going to be read
 																							//by the code outside the else-if
 		for (UINT8 a = 0; a < SegNum; a++) {
 
-			AMLName name = GetName();
+			AML_NAME name = GetName();
 			dstScope = this->FindScope(name, dstScope);
 			if (dstScope == 0) {
 				localLastError == ACPI_ERROR_AML_OBJECT_NOT_FOUND;
-				AMLNameWithinAScope null = { 0 };
+				AML_NAME_WITHIN_SCOPE null = { 0 };
 				*((DWORD*)(&null.name)) = 0;
 				null.scope = 0;
 				return null;
@@ -254,13 +264,13 @@ AMLNameWithinAScope AMLParser::GetNameWithinAScope(AMLScope* current) {
 	else if (this->table[index] == AML_OPCODE_ROOTCHAROPCODE) {
 		dstScope = &(this->root);
 	}
-	AMLNameWithinAScope name;
+	AML_NAME_WITHIN_SCOPE name;
 	name.name = GetName();
 	name.scope = dstScope;
 	return name;
 }
 
-AMLScope* AMLParser::FindScope(AMLName name, AMLScope* current) {
+AMLScope* AMLParser::FindScope(AML_NAME name, AMLScope* current) {
 	AMLScope* temp = current;
 
 	while (temp) {
@@ -283,19 +293,19 @@ AMLScope* AMLParser::FindScope(AMLName name, AMLScope* current) {
 	return 0;
 }
 
-AMLNamedObject::AMLNamedObject(AMLName name, AMLObjRef object) {
+AMLNamedObject::AMLNamedObject(AML_NAME name, AMLObjRef object) {
 	this->name = name;
 	this->object = object;
 }
 
-AMLNamedObject* AMLNamedObject::newObject(AMLName name, AMLObjRef object) {
+AMLNamedObject* AMLNamedObject::newObject(AML_NAME name, AMLObjRef object) {
 	AMLNamedObject* output = (AMLNamedObject*)NNXAllocatorAlloc(sizeof(AMLNamedObject));
 	*output = AMLNamedObject(name, object);
-	//PrintT("Allocated new named object for name ");PrintName(output->name);PrintT(" at location %x\n", output);
+	//PrintT("Allocated new named object for Name ");PrintName(output->Name);PrintT(" at location %x\n", output);
 	return output;
 }
 
-void PrintName(AMLName t) {
+void PrintName(AML_NAME t) {
 	char buffer[5] = { 0 };
 	for (int a = 0; a < 4; a++) {
 		buffer[a] = t.name[a];
@@ -311,12 +321,12 @@ AMLScope::AMLScope() {
 }
 
 UINT32 AMLParser::DecodePkgLenght() {
-	UINT8 Byte0 = GetBYTE();
+	UINT8 Byte0 = GetByte();
 	UINT8 PkgLengthType = (Byte0 & 0xc0) >> 6;
 	if (PkgLengthType) {
 		UINT32 result = Byte0 & 0xf;
 		for (int a = 0; a < PkgLengthType; a++) {
-			result |= (((UINT32)GetBYTE()) << (4 + 8 * a));
+			result |= (((UINT32)GetByte()) << (4 + 8 * a));
 		}
 		return result;
 	}
@@ -326,10 +336,10 @@ UINT32 AMLParser::DecodePkgLenght() {
 }
 
 UINT8 AMLParser::DecodePackageNumElements() {
-	UINT8 Byte0 = this->GetBYTE();
+	UINT8 Byte0 = this->GetByte();
 	
 	if (Byte0 == AML_OPCODE_BYTEPREFIX) {
-		Byte0 = this->GetBYTE();
+		Byte0 = this->GetByte();
 	}
 	else {
 		return Byte0;
@@ -337,7 +347,7 @@ UINT8 AMLParser::DecodePackageNumElements() {
 	
 }
 
-UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef) {
+UINT64 GetIntegerFromAmlObjRef(AMLObjectReference objRef) {
 	switch (objRef.type)
 	{
 	case tAMLByte: 
@@ -357,8 +367,8 @@ UINT64 GetIntegerFromAMLObjRef(AMLObjectReference objRef) {
 
 
 UINT32 AMLParser::DecodeBufferSize() {
-	AMLObjRef objRef = GetAMLObject(GetBYTE());
-	return GetIntegerFromAMLObjRef(objRef);
+	AMLObjRef objRef = GetAmlObject(GetByte());
+	return GetIntegerFromAmlObjRef(objRef);
 }
 
 AMLBuffer* AMLParser::ReadBufferData() {
@@ -366,7 +376,7 @@ AMLBuffer* AMLParser::ReadBufferData() {
 	AMLBuffer* amlBuffer = (AMLBuffer*)NNXAllocatorAlloc(sizeof(AMLBuffer));
 	*amlBuffer = AMLBuffer(bufferSize);
 	for (int a = 0; a < bufferSize; a++) {
-		amlBuffer->data[a] = GetBYTE();
+		amlBuffer->data[a] = GetByte();
 	}
 	return amlBuffer;
 }
@@ -377,7 +387,7 @@ int __strlen(char* string) {
 	return a;
 }
 
-AMLBuffer* AMLParser::AMLToBuffer(AMLObjRef data) {
+AMLBuffer* AMLParser::AmlToBuffer(AMLObjRef data) {
 	AMLBuffer* buffer = (AMLBuffer*)NNXAllocatorAlloc(sizeof(AMLBuffer));
 	switch (data.type) {
 	case tAMLString:
@@ -408,7 +418,7 @@ AMLBuffer* AMLParser::AMLToBuffer(AMLObjRef data) {
 }
 
 AMLBuffer* AMLParser::CreateBufferFromBufferData() {
-	switch(UINT8 opcode = GetBYTE()) {
+	switch(UINT8 opcode = GetByte()) {
 	case AML_OPCODE_TOBUFFEROPCODE:	//TODO: rest of type 5 opcodes
 		return this->CreateBufferFromType5Opcode(opcode);
 	default:
@@ -420,7 +430,7 @@ AMLBuffer* AMLParser::CreateBufferFromBufferData() {
 AMLBuffer* AMLParser::CreateBufferFromType5Opcode(UINT8 opcode) {
 	switch (opcode) {
 	case AML_OPCODE_TOBUFFEROPCODE:
-		return AMLToBuffer(GetAMLObject(GetBYTE()));
+		return AmlToBuffer(GetAmlObject(GetByte()));
 	}
 	return 0;
 }
@@ -444,7 +454,7 @@ AMLPackage* AMLParser::CreatePackage() {
 
 	amlPackage->elements = (AMLObjRef*)(NNXAllocatorAllocArray(numElements, sizeof(AMLObjRef)));
 	for (int a = 0; a < numElements; a++) {
-		AMLObjRef element = GetAMLObject(GetBYTE());
+		AMLObjRef element = GetAmlObject(GetByte());
 		amlPackage->elements[a] = element;
 	}
 
@@ -458,25 +468,25 @@ AMLObjRef CreateAMLObjRef(VOID* pointer, AMLObjectType type) {
 	return result;
 }
 
-AMLObjRef AMLParser::GetAMLObject(UINT8 opcode) {
+AMLObjRef AMLParser::GetAmlObject(UINT8 opcode) {
 	switch (opcode)
 	{
 	case AML_OPCODE_ZEROOPCODE:
 	case AML_OPCODE_ONEOPCODE:
 		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = opcode), this->revision < 2 ? tAMLDword : tAMLQword);
 	case AML_OPCODE_BYTEPREFIX:
-		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = GetBYTE()), tAMLByte);
+		return CreateAMLObjRef(&(*((UINT8*)NNXAllocatorAlloc(sizeof(UINT8))) = GetByte()), tAMLByte);
 	case AML_OPCODE_WORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT16*)NNXAllocatorAlloc(sizeof(UINT16))) = GetWORD()), tAMLWord);
+		return CreateAMLObjRef(&(*((UINT16*)NNXAllocatorAlloc(sizeof(UINT16))) = GetWord()), tAMLWord);
 	case AML_OPCODE_DWORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT32*)NNXAllocatorAlloc(sizeof(UINT32))) = GetDWORD()), tAMLDword);
+		return CreateAMLObjRef(&(*((UINT32*)NNXAllocatorAlloc(sizeof(UINT32))) = GetDword()), tAMLDword);
 	case AML_OPCODE_STRINGPREFIX: {
 		UINT8* str = (UINT8*)NNXAllocatorAllocArray(256, 1);
 		GetString(str, 255, 0);
 		return CreateAMLObjRef(str, tAMLString); 
 	}
 	case AML_OPCODE_QWORDPREFIX:
-		return CreateAMLObjRef(&(*((UINT64*)NNXAllocatorAlloc(sizeof(UINT64))) = GetQWORD()), tAMLQword);
+		return CreateAMLObjRef(&(*((UINT64*)NNXAllocatorAlloc(sizeof(UINT64))) = GetQword()), tAMLQword);
 	case AML_OPCODE_BUFFEROPCODE:
 		return CreateAMLObjRef(CreateBuffer(), tAMLBuffer);
 	case AML_OPCODE_PACKAGEOPCODE:
@@ -510,8 +520,8 @@ void InitializeNamespace(AMLScope* root) {
 	root->children.Add(AMLScope::newScope("_GPE", root));
 }
 
-extern "C" AMLName CreateName(const char* name) {
-	AMLName n;
+extern "C" AML_NAME AcpiCreateName(const char* name) {
+	AML_NAME n;
 	MemCopy(n.name, (void*)name, 4);
 	return n;
 }
@@ -520,16 +530,16 @@ AMLScope* AMLScope::newScope(const char* name, AMLScope* parent) {
 	AMLScope* result = (AMLScope*)NNXAllocatorAlloc(sizeof(AMLScope));
 	*result = AMLScope();
 	result->parent = parent;
-	result->name = CreateName(name);
+	result->name = AcpiCreateName(name);
 	return result;
 }
 
 
-AMLNamedObject* AMLDevice::Get_HID() {
+AMLNamedObject* AMLDevice::GetHid() {
 	return this->_HID;
 }
 
-void AMLDevice::Init_HID() {
+void AMLDevice::InitHid() {
 	NNXLinkedListEntry<AMLNamedObject*>* current = this->namedObjects.first;
 	while (current) {
 		if (current->value->name == gHID) {
@@ -543,19 +553,19 @@ AMLDevice* AMLDevice::newScope(const char* name, AMLScope* parent) {
 	AMLDevice* result = (AMLDevice*)NNXAllocatorAlloc(sizeof(AMLDevice));
 	*result = AMLDevice();
 	result->parent = parent;
-	result->name = CreateName(name);
+	result->name = AcpiCreateName(name);
 	result->opRegion = 0;
 	return result;
 }
 
-AMLMethodDef::AMLMethodDef(AMLName name, AMLParser* parser, AMLScope* scope) {
+AMLMethodDef::AMLMethodDef(AML_NAME name, AMLParser* parser, AMLScope* scope) {
 	this->parser = parser;
 	this->name.scope = scope;
 	this->name.name = name;
 	this->parameterNumber = 0;
 }
 
-AMLMethodDef* AMLParser::CreateMethod(AMLName methodName, AMLScope* scope) {
+AMLMethodDef* AMLParser::CreateMethod(AML_NAME methodName, AMLScope* scope) {
 	AMLMethodDef* method = (AMLMethodDef*)NNXAllocatorAlloc(sizeof(AMLMethodDef));
 	*method = AMLMethodDef(methodName, this, scope);
 	method->codeIndex = 0;
@@ -563,7 +573,7 @@ AMLMethodDef* AMLParser::CreateMethod(AMLName methodName, AMLScope* scope) {
 	return method;
 }
 
-AMLOpetationRegion* AMLParser::CreateOperationRegion(AMLNameWithinAScope name) {
+AMLOpetationRegion* AMLParser::CreateOperationRegion(AML_NAME_WITHIN_SCOPE name) {
 	AMLOpetationRegion* opregion = (AMLOpetationRegion*)NNXAllocatorAlloc(sizeof(AMLOpetationRegion));
 	*opregion = AMLOpetationRegion();
 	opregion->name = name;
@@ -580,7 +590,7 @@ AMLField* AMLParser::CreateField(AMLOpetationRegion *parent, UINT8 access, UINT8
 	return field;
 }
 
-AMLFieldUnit* AMLParser::CreateFieldUnit(AMLName name, UINT8 width) {
+AMLFieldUnit* AMLParser::CreateFieldUnit(AML_NAME name, UINT8 width) {
 	AMLFieldUnit* fieldUnit = (AMLFieldUnit*)NNXAllocatorAlloc(sizeof(AMLFieldUnit));
 	*fieldUnit = AMLFieldUnit();
 	fieldUnit->width = width;

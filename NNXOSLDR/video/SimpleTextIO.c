@@ -1,5 +1,5 @@
 
-#include  "SimpleTextIO.h"
+#include  "SimpleTextIo.h"
 #include "memory/physical_allocator.h"
 #include "text.h"
 
@@ -15,10 +15,10 @@ UINT64 FrameBufferSize() {
 	return (((UINT64)gFramebufferEnd) - ((UINT64)gFramebuffer));
 }
 
-UINT32 TextIODeltaX = 0;
-UINT32 deltaY = 0;
+UINT32 TextIoDeltaX = 0;
+UINT32 TextIoDeltaY = 0;
 
-BOOL opGlobal;
+BOOL IsCurrentOperationGlobal;
 
 UINT8 align = 0;
 
@@ -79,7 +79,7 @@ UINT8 StaticFont8x8[][8] = { UNKNOWNMARK  UNKNOWNMARK  UNKNOWNMARK UNKNOWNMARK U
 TIMES128(UNKNOWNMARK) UNKNOWNMARK
 };
 
-void TextIOClear() {
+void TextIoClear() {
 	for (int y = gMinY; y < gMaxY; y++) {
 		for (int x = gMinX; x < gMaxX; x++) {
 			gFramebuffer[x + y * gPixelsPerScanline] = gBackdrop;
@@ -87,46 +87,46 @@ void TextIOClear() {
 	}
 }
 
-void TextIOSetBoundingBox(UINT32 *boundingBox) {
+void TextIoSetBoundingBox(UINT32 *boundingBox) {
 	gMinX = boundingBox[0];
 	gMaxX = boundingBox[1];
 	gMinY = boundingBox[2];
 	gMaxY = boundingBox[3];
 }
 
-void TextIOGetBoundingBox(UINT32 *boundingBox) {
+void TextIoGetBoundingBox(UINT32 *boundingBox) {
 	boundingBox[0] = gMinX;
 	boundingBox[1] = gMaxX;
 	boundingBox[2] = gMinY;
 	boundingBox[3] = gMaxY;
 }
 
-void TextIOSetCursorPosition(UINT32 posX, UINT32 posY) {
+void TextIoSetCursorPosition(UINT32 posX, UINT32 posY) {
 	gCursorX = posX;
 	gCursorY = posY;
 }
 
-void TextIOGetCursorPosition(UINT32* posX, UINT32* posY) {
+void TextIoGetCursorPosition(UINT32* posX, UINT32* posY) {
 	*posX = gCursorX;
 	*posY = gCursorY;
 }
 
-void TextIOSetColorInformation(UINT32 color, UINT32 background, UINT8 renderBack) {
+void TextIoSetColorInformation(UINT32 color, UINT32 background, UINT8 renderBack) {
 	gColor = color;
 	gBackdrop = background;
 	gRenderBackdrop = renderBack;
 }
 
-void TextIOGetColorInformation(UINT32 *color, UINT32* background, UINT8 *renderBack) {
+void TextIoGetColorInformation(UINT32 *color, UINT32* background, UINT8 *renderBack) {
 	*color = gColor;
 	*background = gBackdrop;
 	*renderBack = gRenderBackdrop;
 }
-void TextIOSetAlignment(UINT8 alignment) {
+void TextIoSetAlignment(UINT8 alignment) {
 	align = alignment;
 }
 
-void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p) {
+void TextIoInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p) {
 	if (initialized && w == 0)
 		w = gWidth;
 
@@ -138,7 +138,7 @@ void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w,
 
 	if (!initialized) {
 		UINT32 defBoundingBox[] = { 0, gWidth, 0, gHeight };
-		TextIOSetBoundingBox(defBoundingBox);
+		TextIoSetBoundingBox(defBoundingBox);
 	}
 	
 	gFramebuffer = framebufferIn;
@@ -149,21 +149,21 @@ void TextIOInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w,
 	gPixelsPerScanline = p;
 	initialized = 0xFF;
 
-	TextIOSetAlignment(0);
-	TextIOSetCursorPosition(1,1);
-	TextIOSetColorInformation(0xFFFFFFFF, 0, 1);
+	TextIoSetAlignment(0);
+	TextIoSetCursorPosition(1,1);
+	TextIoSetColorInformation(0xFFFFFFFF, 0, 1);
 }
 
-UINT8 TextIOGetAlignment() {
+UINT8 TextIoGetAlignment() {
 	return align;
 }
 
-UINT8 TextIOIsInitialized() {
+UINT8 TextIoIsInitialized() {
 	return initialized == 0xFF;
 }
 
-void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
-	if (!TextIOIsInitialized())
+void TextIoOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
+	if (!TextIoIsInitialized())
 		return;
 	UINT8 *StaticFontEntry = StaticFont8x8[characterID];
 
@@ -184,7 +184,7 @@ void TextIOOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY,
 	}
 }
 
-void TextIOMoveUpARow() {
+void TextIoMoveUpARow() {
 	
 	for (UINT64 y = gMinY; y < gMaxY-9; y++) {
 		for (UINT64 x = gMinX; x < gMaxX; x++) {
@@ -195,21 +195,21 @@ void TextIOMoveUpARow() {
 	gCursorY -= 9;
 }
 
-void TextIOOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop) {
-	if (!TextIOIsInitialized())
+void TextIoOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop) {
+	if (!TextIoIsInitialized())
 		return;
-	TextIOOutputCharacterWithinBox(characterID, posX, posY, color, backdrop, renderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
+	TextIoOutputCharacterWithinBox(characterID, posX, posY, color, backdrop, renderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
-void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
-	if (!TextIOIsInitialized())
+void TextIoOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY) {
+	if (!TextIoIsInitialized())
 		return;
 
 	UINT32 initialPX = posX, initialPY = posY;
 	int stringIndex = 0;
 
-	TextIODeltaX = 0;
-	deltaY = 0;
+	TextIoDeltaX = 0;
+	TextIoDeltaY = 0;
 
 	while (input[stringIndex])
 	{
@@ -218,10 +218,10 @@ void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 colo
 			posY += 9;
 		}
 		if (posY + 8 > maxY) {
-			TextIODeltaX = posX - initialPX;
-			deltaY = posY - initialPY;
-			if (opGlobal) {
-				opGlobal = FALSE;
+			TextIoDeltaX = posX - initialPX;
+			TextIoDeltaY = posY - initialPY;
+			if (IsCurrentOperationGlobal) {
+				IsCurrentOperationGlobal = FALSE;
 				gCursorX = posX;
 				gCursorY = posY;
 			}
@@ -229,10 +229,10 @@ void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 colo
 		}
 
 		if (input[stringIndex] == '\n') {
-			TextIODeltaX = posX - initialPX;
-			deltaY = posY - initialPY;
-			if (opGlobal) {
-				opGlobal = FALSE;
+			TextIoDeltaX = posX - initialPX;
+			TextIoDeltaY = posY - initialPY;
+			if (IsCurrentOperationGlobal) {
+				IsCurrentOperationGlobal = FALSE;
 				gCursorX = posX;
 				gCursorY = posY;
 			}
@@ -246,7 +246,7 @@ void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 colo
 			posX *= align;
 		}
 
-		TextIOOutputCharacterWithinBox(input[stringIndex], posX, posY, color, backdrop, renderBackdrop, minX, maxX, minY, maxY);
+		TextIoOutputCharacterWithinBox(input[stringIndex], posX, posY, color, backdrop, renderBackdrop, minX, maxX, minY, maxY);
 		if (align)
 			posX += align;
 		else
@@ -254,21 +254,21 @@ void TextIOOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 colo
 		stringIndex++;
 	}
 
-	TextIODeltaX = posX - initialPX;
-	deltaY = posY - initialPY;
-	if (opGlobal) {
-		opGlobal = FALSE;
+	TextIoDeltaX = posX - initialPX;
+	TextIoDeltaY = posY - initialPY;
+	if (IsCurrentOperationGlobal) {
+		IsCurrentOperationGlobal = FALSE;
 		gCursorX = posX;
 		gCursorY = posY;
 	}
 }
 
-void TextIOOutputStringGlobal(const char* input) {
-	opGlobal = TRUE;
-	TextIOOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
+void TextIoOutputStringGlobal(const char* input) {
+	IsCurrentOperationGlobal = TRUE;
+	TextIoOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
-void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
+void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2) {
 	
 	void* args = args2;
 	
@@ -280,7 +280,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 			gCursorY += 9;
 		}
 		if (gCursorY + 8 > gMaxY) {
-			TextIOMoveUpARow();
+			TextIoMoveUpARow();
 		}
 
 		if (align)
@@ -304,7 +304,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 					case 's':;
 						char* toDisplay = *((UINT64*)args);
 						args = ((UINT64*)args) + 1;
-						TextIOOutputStringGlobal(toDisplay);
+						TextIoOutputStringGlobal(toDisplay);
 						break;
 					case 'S': {
 						char* toDisplay = *((UINT64*)args);
@@ -314,7 +314,7 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 						for (UINT64 a = 0; a < lenght; a++) {
 							char* string[2] = { 0,0 };
 							string[0] = toDisplay[a];
-							TextIOOutputStringGlobal(string);
+							TextIoOutputStringGlobal(string);
 						}
 						break; 
 					}
@@ -324,15 +324,15 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 						if (string[0] == 0)
 							string[0] = 0xff;
 						((UINT64*)args) += 1;
-						TextIOOutputStringGlobal(string);
+						TextIoOutputStringGlobal(string);
 						break;
 					case 'd':
 					case 'i': {
 						UINT64 c = *((UINT64*)args);
 						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
-						IntegerToASCII(c, 10, str);
-						TextIOOutputStringGlobal(str);
+						IntegerToAscii(c, 10, str);
+						TextIoOutputStringGlobal(str);
 						break;
 					}
 					case 'b':
@@ -340,34 +340,34 @@ void TextIOOutputFormatedString(char* input, UINT32 size, va_list args2) {
 						UINT64 c = *((UINT64*)args);
 						args = ((UINT64*)args) + 1;
 						char str[65] = { 0 };
-						IntegerToASCII(c, 2, str);
-						TextIOOutputStringGlobal(str);
+						IntegerToAscii(c, 2, str);
+						TextIoOutputStringGlobal(str);
 						break;
 					}
 					case 'X': {
 						UINT64 c = *((UINT64*)args);
 						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
-						IntegerToASCIICapital(c, 16, str);
-						TextIOOutputStringGlobal(str);
+						IntegerToAsciiCapital(c, 16, str);
+						TextIoOutputStringGlobal(str);
 						break;
 					}
 					case 'x': {
 						UINT64 c = *((UINT64*)args);
 						args = ((UINT64*)args) + 1;
 						char str[32] = { 0 };
-						IntegerToASCII(c, 16, str);
-						TextIOOutputStringGlobal(str);
+						IntegerToAscii(c, 16, str);
+						TextIoOutputStringGlobal(str);
 						break;
 					}
 					default:
-						TextIOOutputStringGlobal("?");
+						TextIoOutputStringGlobal("?");
 						break;
 				}
 				break;
 			default:
 display:
-				TextIOOutputCharacterWithinBox(input[i], gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
+				TextIoOutputCharacterWithinBox(input[i], gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 				gCursorX += 8;
 				break;
 		}
@@ -380,24 +380,24 @@ void PrintTA(char* input, ...) {
 	va_list		args;
 	va_start(args, input);
 	
-	TextIOOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
+	TextIoOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
 	
 	va_end(args);
 }
 
-void TextIOTest(UINT64 mode) {
-	if (!TextIOIsInitialized())
+void TextIoTest(UINT64 mode) {
+	if (!TextIoIsInitialized())
 		return;
 
 	if (mode == 0) {
 		
-		TextIOOutputCharacter('!', 20, 20, 0xFF000000, 0, 0);
-		TextIOOutputCharacter('~', 28, 20, 0xFFFFFFFF, 0, 1);
-		TextIOOutputCharacter('}', 36, 20, 0xFF000000, 0, 0);
+		TextIoOutputCharacter('!', 20, 20, 0xFF000000, 0, 0);
+		TextIoOutputCharacter('~', 28, 20, 0xFFFFFFFF, 0, 1);
+		TextIoOutputCharacter('}', 36, 20, 0xFF000000, 0, 0);
 
-		TextIOOutputString("test of the new ............................................................................................................................................\nhhh", 500, 20, 0xFFBFBFBF, 0, 1, 0, 550, 0, gHeight);
+		TextIoOutputString("test of the new ............................................................................................................................................\nhhh", 500, 20, 0xFFBFBFBF, 0, 1, 0, 550, 0, gHeight);
 	
-		TextIOOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, gWidth, 0, gHeight);
+		TextIoOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, gWidth, 0, gHeight);
 		PrintT("test %i 0x%X %x %x %c '%s' %i '%s'\n",185,0x666666,0x12345678,0xabcdef00, '*', "g", 0x69LL, "mn");
 	
 	}
@@ -407,7 +407,7 @@ void DrawMap() {
 	int x = 0;
 	int y = 0;
 
-	TextIOGetCursorPosition(&x, &y);
+	TextIoGetCursorPosition(&x, &y);
 
 	x = 0;
 	y += 10;

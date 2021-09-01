@@ -1,7 +1,7 @@
 #ifndef NNX_OSDBG_H
 #define NNX_OSDBG_H
 
-#include "video/SimpleTextIO.h"
+#include "video/SimpleTextIo.h"
 #include "nnxint.h"
 #include "HAL/IDT.h"
 

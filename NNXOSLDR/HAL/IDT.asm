@@ -70,7 +70,7 @@ IRQ%1:
 	pushstate
 	xchg bx, bx
 	mov rcx, %1
-	call IRQHandlerInternal
+	call IrqHandlerInternal
 	popstate
 	iretq
 %endmacro
@@ -142,12 +142,12 @@ Ack:
 .end:
 	ret
 
-[EXTERN IRQHandler]
-func IRQHandlerInternal
+[EXTERN IrqHandler]
+func IrqHandlerInternal
 	call Ack
 .end:
 	sub rsp, 32
-	call IRQHandler
+	call IrqHandler
 	add rsp, 32
 	BOCHS_DEBUG
 	ret

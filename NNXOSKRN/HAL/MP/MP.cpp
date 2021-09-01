@@ -9,20 +9,20 @@ extern "C" {
 	PVOID* ApStackPointerArray;
 
 	PVOID MpPopulateApStartupCode() {
-		VFSFile* apCodeFile;
+		VFS_FILE* apCodeFile;
 		VFS* systemPartition;
 		PVOID code = (PVOID)0x0000;
 		ApData* data = (ApData*)(((UINT64)code) + 0x800);
-		systemPartition = VFSGetSystemVFS();
+		systemPartition = VfsGetSystemVfs();
 
-		apCodeFile = systemPartition->functions.OpenFile(systemPartition, (char*)"EFI\\BOOT\\APSTART.BIN");
+		apCodeFile = systemPartition->Functions.OpenFile(systemPartition, (char*)"EFI\\BOOT\\APSTART.BIN");
 		if (!apCodeFile) {
 			PrintT("Error loading file\n");
 			while (1);
 		}
 		else {
-			systemPartition->functions.ReadFile(apCodeFile, 0x1000, code);
-			systemPartition->functions.CloseFile(apCodeFile);
+			systemPartition->Functions.ReadFile(apCodeFile, 0x1000, code);
+			systemPartition->Functions.CloseFile(apCodeFile);
 		}
 
 		data->ApCR3 = GetCR3();
@@ -72,7 +72,7 @@ extern "C" {
 			if (ApicLocalApicIDs[i] == currentLapicId)
 				continue;
 
-			ApStackPointerArray[i] = (PVOID)NNXAllocatorAlloc(AP_INITIAL_STACK_SIZE);
+			ApStackPointerArray[i] = (PVOID)((size_t)NNXAllocatorAlloc(AP_INITIAL_STACK_SIZE) + AP_INITIAL_STACK_SIZE);
 			ApicInitIpi(ApicLocalApicIDs[i], 0x00);
 			PitUniprocessorPollSleepMs(10);
 
@@ -87,12 +87,13 @@ extern "C" {
 		PrintT("%s done\n", __FUNCTION__);
 
 		while (true) {
-			color++;
-			color--;
+			//color++;
+			//color--;
 		}
 	}
 
 	VOID ApProcessorInit(UINT8 lapicId) {
+		while (1);
 		while (true) {
 			PitUniprocessorPollSleepMs(998);
 

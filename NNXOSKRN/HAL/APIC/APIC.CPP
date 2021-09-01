@@ -15,7 +15,7 @@ extern "C" {
 	VOID ApicInit(ACPI_MADT* madt) {
 		UINT64 i = 0, currentLocalApicIdIndex = 0;
 		UINT8* currentPointer = (UINT8*)&(madt->InteruptControlerStruct);
-		NNXLogger logger = NNXLogger(VFSGetPointerToVFS(0)->functions.OpenOrCreateFile(VFSGetPointerToVFS(0), (char*)"APICLOG.TXT"));
+		NNXLogger logger = NNXLogger(VfsGetPointerToVfs(0)->Functions.OpenOrCreateFile(VfsGetPointerToVfs(0), (char*)"APICLOG.TXT"));
 		logger.Log("LAPIC initialization started\n");
 
 		ApicLocalApicBase = madt->LapicBase32;

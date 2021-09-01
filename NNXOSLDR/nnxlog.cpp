@@ -33,16 +33,16 @@ void NNXLogger::Log(const char* text, va_list l) {
 				INT64 i = *((INT64*)args);
 				args = ((INT64*)args) + 1;
 				if (nextCharacter == 'X')
-					IntegerToASCIICapital(i, 16, numberBuffer);
+					IntegerToAsciiCapital(i, 16, numberBuffer);
 				else if (nextCharacter == 'x')
-					IntegerToASCII(i, 16, numberBuffer);
+					IntegerToAscii(i, 16, numberBuffer);
 				else if (nextCharacter == 'b') {
-					IntegerToASCII(i, 2, numberBuffer);
+					IntegerToAscii(i, 2, numberBuffer);
 				}
 				else if (nextCharacter == 'u')
-					IntegerToASCII(i, -8, numberBuffer);
+					IntegerToAscii(i, -8, numberBuffer);
 				else
-					IntegerToASCII(i, -10, numberBuffer);
+					IntegerToAscii(i, -10, numberBuffer);
 
 				this->AppendText(numberBuffer, FindCharacterFirst(numberBuffer, -1, 0));
 				break;
@@ -102,13 +102,13 @@ void NNXLogger::AppendText(const char* text, UINT64 textLength) {
 }
 
 void NNXLogger::Flush() {
-	this->filesystem->functions.AppendFile(this->loggerFile, this->position, this->buffer);
+	this->filesystem->Functions.AppendFile(this->loggerFile, this->position, this->buffer);
 	this->position = 0;
 }
 
-NNXLogger::NNXLogger(VFSFile* file) {
+NNXLogger::NNXLogger(VFS_FILE* file) {
 	this->loggerFile = file;
-	this->filesystem = file->filesystem;
+	this->filesystem = file->Filesystem;
 	buffer = new unsigned char[512];
 	position = 0;
 }
@@ -121,14 +121,14 @@ void NNXLogger::Log(const char* str, ...) {
 }
 
 void NNXLogger::Clear() {
-	this->filesystem->functions.DeleteFile(this->loggerFile);
-	this->filesystem->functions.RecreateDeletedFile(this->loggerFile);
+	this->filesystem->Functions.DeleteFile(this->loggerFile);
+	this->filesystem->Functions.RecreateDeletedFile(this->loggerFile);
 	this->position = 0;
 }
 
 NNXLogger::~NNXLogger() {
 	this->Flush();
-	this->filesystem->functions.CloseFile(this->loggerFile);
+	this->filesystem->Functions.CloseFile(this->loggerFile);
 }
 
 extern "C" void NNXLogG(const char* str, ...) {
@@ -152,26 +152,26 @@ extern "C" void* NNXGetLoggerG() {
 	return gLogger;
 }
 
-extern "C" void* NNXNewLoggerG(VFSFile* file) {
+extern "C" void* NNXNewLoggerG(VFS_FILE* file) {
 	NNXSetLoggerG(new NNXLogger(file));
 	return (void*)NNXGetLoggerG();
 }
 
 extern "C" void NNXLoggerTest(VFS* filesystem) {
-	VFSFile* loggerFile;
-	if (filesystem->functions.CheckIfFileExists(filesystem, (char*)"LOG.TXT")) {
-		if (filesystem->functions.DeleteAndCloseFile(filesystem->functions.OpenFile(filesystem, (char*)"LOG.TXT"))) {
+	VFS_FILE* loggerFile;
+	if (filesystem->Functions.CheckIfFileExists(filesystem, (char*)"LOG.TXT")) {
+		if (filesystem->Functions.DeleteAndCloseFile(filesystem->Functions.OpenFile(filesystem, (char*)"LOG.TXT"))) {
 			PrintT("Cannot delete old log\n");
 			return;
 		}
 	}
 
-	if (filesystem->functions.CreateFile(filesystem, (char*)"LOG.TXT")) {
+	if (filesystem->Functions.CreateFile(filesystem, (char*)"LOG.TXT")) {
 		PrintT("Cannot create file\n");
 		return;
 	}
 
-	loggerFile = filesystem->functions.OpenFile(filesystem, (char*)"LOG.TXT");
+	loggerFile = filesystem->Functions.OpenFile(filesystem, (char*)"LOG.TXT");
 	if (loggerFile) {
 		if (gLogger)
 			delete gLogger;

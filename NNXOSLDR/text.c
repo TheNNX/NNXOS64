@@ -24,7 +24,7 @@ UINT64 FindCharacterFirst(char* string, UINT64 len, char character) {
 	return -1;
 }
 
-UINT64 IntegerToASCIIBase(UINT64 i, INT8 base, char *b, const char *digit) {
+UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) {
 	UINT64 counter = 0;
 	char* p = b;
 	UINT64 shifter = i;
@@ -72,18 +72,18 @@ UINT64 IntegerToASCIIBase(UINT64 i, INT8 base, char *b, const char *digit) {
 /*
 	Negative bases for signed numbers
 */
-UINT64 IntegerToASCII(UINT64 i, INT8 base, char *b)
+UINT64 IntegerToAscii(UINT64 i, INT8 base, char *b)
 {
-	return IntegerToASCIIBase(i, base, b, "0123456789abcdef");
+	return IntegerToAsciiBase(i, base, b, "0123456789abcdef");
 }
 
 
 /*
 	Negative bases for signed numbers
 */
-UINT64 IntegerToASCIICapital(UINT64 i, INT8 base, char *b)
+UINT64 IntegerToAsciiCapital(UINT64 i, INT8 base, char *b)
 {
-	return IntegerToASCIIBase(i, base, b, "0123456789ABCDEF");
+	return IntegerToAsciiBase(i, base, b, "0123456789ABCDEF");
 }
 
 char ToUppercase(char c) {

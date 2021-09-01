@@ -34,7 +34,7 @@ typedef struct GPTPartitionHeader {
 
 typedef struct GPT {
 	GPTPartitionHeader header;
-	BYTE reserved[512 - sizeof(GPTPartitionHeader)];
+	BYTE Reserved[512 - sizeof(GPTPartitionHeader)];
 }GPT;
 
 typedef struct GPTPartitionEntry {

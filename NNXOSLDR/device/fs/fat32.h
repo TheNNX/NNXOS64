@@ -5,22 +5,22 @@
 #pragma pack(push, 1)
 
 typedef struct {
-	UINT32 sectorFATSize32;
-	UINT16 extFlags;
-	UINT16 filesystemVersion;
-	UINT32 firstAccessibleCluster;
-	UINT16 sectorFINFOSize16;
-	UINT16 sectorMirrorSize16;
+	UINT32 SectorFatSize32;
+	UINT16 ExtFlags;
+	UINT16 FilesystemVersion;
+	UINT32 FirstAccessibleCluster;
+	UINT16 SectorFsInfoSize16;
+	UINT16 SectorMirrorSize16;
 	BYTE reserved0[12];
-	BYTE biosIntNumber;
+	BYTE BiosIntNumber;
 	BYTE reserved1;
-	BYTE hasNameOrID;
+	BYTE HasNameOrID;
 	union {
-		UINT32 volumeSerialNumber;
-		UINT32 volumeID;
+		UINT32 VolumeSerialNumber;
+		UINT32 VolumeID;
 	};
-	BYTE volumeLabel[11];
-	BYTE fatTypeInfo[8];
+	BYTE VolumeLabel[11];
+	BYTE FatTypeInfo[8];
 }BPB_EXT_FAT32, BPB32;
 #pragma pack(pop)
 #endif

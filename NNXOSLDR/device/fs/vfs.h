@@ -10,58 +10,58 @@
 extern "C"{
 #endif
 
-typedef struct VFSFile {
-	char* name;
-	char* path;
-	UINT64 filePointer;
-	UINT64 fileSize;
-	struct VirtualFileSystem* filesystem;
-}VFSFile;
+typedef struct VFS_FILE {
+	char* Name;
+	char* Path;
+	UINT64 FilePointer;
+	UINT64 FileSize;
+	struct VIRTUAL_FILE_SYSTEM* Filesystem;
+}VFS_FILE;
 
-typedef struct VFSFucntionSet {
-	BOOL (*CheckIfFileExists)(struct VirtualFileSystem* filesystem, char* path);
+typedef struct VFS_FUNCTION_SET {
+	BOOL (*CheckIfFileExists)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
-	/* Allocate and initialize VFSFile structure */
-	VFSFile* (*OpenFile)(struct VirtualFileSystem* filesystem, char* path);
+	/* Allocate and initialize VFS_FILE structure */
+	VFS_FILE* (*OpenFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
 	/* Create if file does not exist */
-	VFSFile* (*OpenOrCreateFile)(struct VirtualFileSystem* filesystem, char* path);
+	VFS_FILE* (*OpenOrCreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
-	/* Deallocate VFSFile structure */
-	VOID (*CloseFile)(VFSFile* file);
+	/* Deallocate VFS_FILE structure */
+	VOID (*CloseFile)(VFS_FILE* file);
 
 	/* Delete the file without closing the structure */
-	UINT64(*DeleteFile)(VFSFile* file);
+	UINT64(*DeleteFile)(VFS_FILE* file);
 
-	/* Delete the file and deallocate VFSFile structure */
-	UINT64(*DeleteAndCloseFile)(VFSFile* file);
+	/* Delete the file and deallocate VFS_FILE structure */
+	UINT64(*DeleteAndCloseFile)(VFS_FILE* file);
 
-	/* Create file at given path*/
-	UINT64(*CreateFile)(struct VirtualFileSystem* filesystem, char* path);
+	/* Create file at given Path*/
+	UINT64(*CreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
-	/* Create a file for a given VFSFile structure of a file deleted by DeleteFile */
-	UINT64(*RecreateDeletedFile)(VFSFile* file);
+	/* Create a file for a given VFS_FILE structure of a file deleted by DeleteFile */
+	UINT64(*RecreateDeletedFile)(VFS_FILE* file);
 
 	/* This does NOT modify the file pointer */
-	UINT64(*AppendFile)(VFSFile* file, UINT64 size, VOID* buffer);
+	UINT64(*AppendFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
 
-	UINT64(*ResizeFile)(VFSFile* file, UINT64 newsize);
-	UINT64(*WriteFile)(VFSFile* file, UINT64 size, VOID* buffer);
-	UINT64(*ReadFile)(VFSFile* file, UINT64 size, VOID* buffer);
+	UINT64(*ResizeFile)(VFS_FILE* file, UINT64 newsize);
+	UINT64(*WriteFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
+	UINT64(*ReadFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
 
-	UINT64(*CreateDirectory)(struct VirtualFileSystem* filesystem, char* path);
+	UINT64(*CreateDirectory)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 	UINT64(*MoveFile)(char* oldPath, char* newPath);
-	UINT64(*RenameFile)(VFSFile* file, char* newFileName);
-} VFSFunctionSet;
+	UINT64(*RenameFile)(VFS_FILE* file, char* newFileName);
+} VFS_FUNCTION_SET;
 
-typedef struct VirtualFileSystem {
-	IDEDrive* drive;
-	UINT64 lbaStart;
-	UINT64 sizeInSectors;
-	UINT64 allocationUnitSize;
-	VFSFunctionSet functions;
-	VOID* filesystemSpecificData;
-}VirtualFileSystem, VFS;
+typedef struct VIRTUAL_FILE_SYSTEM {
+	IDE_DRIVE* Drive;
+	UINT64 LbaStart;
+	UINT64 SizeInSectors;
+	UINT64 AllocationUnitSize;
+	VFS_FUNCTION_SET Functions;
+	VOID* FilesystemSpecificData;
+}VIRTUAL_FILE_SYSTEM, VFS;
 
 #define VFS_ERR_INVALID_FILENAME			0xFFFF0001
 #define VFS_ERR_INVALID_PATH				0xFFFF0002
@@ -77,14 +77,14 @@ typedef struct VirtualFileSystem {
 
 #define VFS_MAX_PATH (4096 - sizeof(MemoryBlock) - 1)
 
-void VFSInit();
-UINT32 VFSAddPartition(IDEDrive* drive, UINT64 lbaStart, UINT64 partitionSize, VFSFunctionSet functionSet);
-VirtualFileSystem* VFSGetPointerToVFS(unsigned int n);
-VirtualFileSystem* VFSGetSystemVFS();
-UINT64 VFSReadSector(VirtualFileSystem*, UINT64 n, BYTE* destination);
-UINT64 VFSWriteSector(VirtualFileSystem*, UINT64 n, BYTE* source);
-VFSFile* VFSAllocateVFSFile(VFS* filesystem, char* path);
-VOID VFSDeallocateVFSFile(VFSFile* vfsFile);
+void VfsInit();
+UINT32 VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functionSet);
+VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(unsigned int n);
+VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs();
+UINT64 VfsReadSector(VIRTUAL_FILE_SYSTEM*, UINT64 n, BYTE* destination);
+UINT64 VfsWriteSector(VIRTUAL_FILE_SYSTEM*, UINT64 n, BYTE* source);
+VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path);
+VOID VfsDeallocateVfsFile(VFS_FILE* vfsFile);
 
 UINT64 FindFirstSlash(char* path);
 UINT64 FindLastSlash(char* path);

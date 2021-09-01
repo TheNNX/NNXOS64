@@ -26,7 +26,7 @@ extern "C" {
 	}IDTEntry;
 
 	typedef struct IDT {
-		IDTEntry entries[0];
+		IDTEntry Entries[0];
 	}IDT;
 
 	void LoadIDT(IDTR*);
@@ -74,7 +74,7 @@ extern "C" {
 	void IRQ12();
 	void IRQ13();
 	void IRQ14();
-	void IRQHandler(UINT64);
+	void IrqHandler(UINT64);
 
 #ifdef __cplusplus
 }

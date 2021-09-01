@@ -3,6 +3,8 @@
 #include "nnxint.h"
 #include "vfs.h"
 
+// TODO TODO TODO TODO
+
 #define FAT32_RESERVED_CLUSTER_START 0xFFFFFF8
 #define FAT16_RESERVED_CLUSTER_START 0xFFF8
 #define FAT12_RESERVED_CLUSTER_START 0xFF8
@@ -12,16 +14,16 @@
 #pragma pack(push, 1)
 
 typedef struct {
-	UINT16 year : 7;
-	UINT16 month : 4;
-	UINT16 day : 5;
-}FATDate;
+	UINT16 Year : 7;
+	UINT16 Month : 4;
+	UINT16 Day : 5;
+}FAT_DATE;
 
 typedef struct {
-	UINT16 hour : 5;
-	UINT16 minutes : 6;
-	UINT16 seconds : 5;
-}FATTime;
+	UINT16 Hour : 5;
+	UINT16 Minutes : 6;
+	UINT16 Seconds : 5;
+}FAT_TIME;
 
 #define FAT_READONLY 1
 #define FAT_HIDDEN 2
@@ -31,87 +33,87 @@ typedef struct {
 #define FAT_ARCHIVE 32
 #define FAT_LFN (1|2|4|8);
 
-typedef struct {
-	UINT8 reservedJump[3];
-	UINT8 oemName[8];
-	UINT16 bytesPerSector;
-	UINT8 sectorsPerCluster;
-	UINT16 sectorReservedSize;
-	UINT8 numberOfFATs;
-	UINT16 rootEntryCount;
-	UINT16 sectorTotSize16;
-	UINT8 mediaType;
-	UINT16 sectorFATSize16;
-	UINT16 sectorsPerTrack;
-	UINT16 headsVolumeSize;
-	UINT32 sectorsHidden;
-	UINT32 sectorTotSize32;
+typedef struct BPB{
+	UINT8 ReservedJump[3];
+	UINT8 OemName[8];
+	UINT16 BytesPerSector;
+	UINT8 SectorsPerCluster;
+	UINT16 SectorReservedSize;
+	UINT8 NumberOfFats;
+	UINT16 RootEntryCount;
+	UINT16 SectorTotSize16;
+	UINT8 MediaType;
+	UINT16 SectorFatSize16;
+	UINT16 SectorsPerTrack;
+	UINT16 HeadsVolumeSize;
+	UINT32 SectorsHidden;
+	UINT32 SectorTotSize32;
 	UINT8 _[476];
-}BPB, BIOSParameterBlock;
+}BPB, BIOS_PARAMETER_BLOCK;
 
 typedef struct {
-	BYTE biosIntNumber;
+	BYTE BiosIntNumber;
 	BYTE reserved0;
-	BYTE hasNameOrID;
+	BYTE HasNameOrID;
 	union {
-		UINT32 volumeSerialNumber;
-		UINT32 volumeID;
+		UINT32 VolumeSerialNumber;
+		UINT32 VolumeID;
 	};
-	BYTE volumeLabel[11];
-	BYTE fatTypeInfo[8];
+	BYTE VolumeLabel[11];
+	BYTE FatTypeInfo[8];
 }BPB_EXT_FAT1X, BPB1X;
 
-typedef struct{
-	unsigned char filename[8];
-	unsigned char fileExtension[3];
-	BYTE fileAttributes;
-	BYTE reserved;
-	BYTE createTimeHRes;
-	FATTime creationTime;
-	FATDate creationDate;
-	FATDate accessDate;
-	UINT16 highCluster;
-	FATTime modifiedTime;
-	FATDate modifiedDate;
-	UINT16 lowCluster;
-	UINT32 fileSize;
-}FATDirectoryEntry;
+typedef struct FAT_DIRECTORY_ENTRY{
+	unsigned char Filename[8];
+	unsigned char FileExtension[3];
+	BYTE FileAttributes;
+	BYTE Reserved;
+	BYTE CreateTimeHRes;
+	FAT_TIME CreationTime;
+	FAT_DATE CreationDate;
+	FAT_DATE AccessDate;
+	UINT16 HighCluster;
+	FAT_TIME ModifiedTime;
+	FAT_DATE ModifiedDate;
+	UINT16 LowCluster;
+	UINT32 FileSize;
+}FAT_DIRECTORY_ENTRY;
 
-BOOL FATisFileOrDir(FATDirectoryEntry* sectorData);
-UINT32 FATCalculateFATClusterCount(BPB* bpb);
-BOOL FATisFAT12(BPB* bpb);
-BOOL FATisFAT16(BPB* bpb);
-BOOL FATisFAT32(BPB* bpb);
-UINT32 FATFileAllocationTableSize(BPB* bpb);
-UINT32 FATFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 endIndex);
-UINT32 FATVolumeTotalSize(BPB* bpb);
-UINT32 FATScanFree(VFS* filesystem);
-BOOL FATIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
-UINT64 FATReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
-UINT32 FATCalculateFirstClusterPosition(BPB* bpb);
-UINT64 FATSearchForFileInDirectory(FATDirectoryEntry* sectorData, BPB* bpb, VFS* filesystem, char* name, FATDirectoryEntry* output);
-UINT32 FATFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
-UINT64 FATRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
-UINT64 FATAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
+BOOL FatIsFileOrDir(FAT_DIRECTORY_ENTRY* sectorData);
+UINT32 FatCalculateFatClusterCount(BPB* bpb);
+BOOL FatIsFat12(BPB* bpb);
+BOOL FatIsFat16(BPB* bpb);
+BOOL FatIsFat32(BPB* bpb);
+UINT32 FatFileAllocationTableSize(BPB* bpb);
+UINT32 FatFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 endIndex);
+UINT32 FatVolumeTotalSize(BPB* bpb);
+UINT32 FatScanFree(VFS* filesystem);
+BOOL FatIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
+UINT64 FatReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
+UINT32 FatCalculateFirstClusterPosition(BPB* bpb);
+UINT64 FatSearchForFileInDirectory(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, char* name, FAT_DIRECTORY_ENTRY* output);
+UINT32 FatFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
+UINT64 FatRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
+UINT64 FatAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
 UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
-UINT64 FATDeleteFileEntry(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
-UINT64 FATDeleteFile(BPB* bpb, VFS* vfs, FATDirectoryEntry* parentDirectory, char* filename);
-BOOL FATCompareEntries(FATDirectoryEntry* entry1, FATDirectoryEntry* entry2);
-UINT64 FATResizeFile(BPB* bpb, VFS* filesystem, FATDirectoryEntry* parentFile, char* filename, UINT64 newSize);
-VFSFile* FATAPIOpenFile(VFS* vfs, char* path);
-VOID FATAPICloseFile(VFSFile* file);
-UINT64 FATAPIWriteFile(VFSFile* file, UINT64 size, VOID* buffer);
-UINT64 FATAPIReadFile(VFSFile* file, UINT64 size, VOID* buffer);
-UINT64 FATAPIAppendFile(VFSFile* file, UINT64 size, VOID* buffer);
-UINT64 FATAPIResizeFile(VFSFile* file, UINT64 newsize);
-UINT64 FATAPIDeleteFile(VFSFile* file);
-UINT64 FATAPIDeleteAndCloseFile(VFSFile* file);
-UINT64 FATAPIRecreateDeletedFile(VFSFile* file);
-UINT32 FATReadFATEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
-VOID FATInitVFS(VFS* partition);
-VFSFunctionSet FATAPIGetFunctionSet();
+UINT64 FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, char* Filename);
+UINT64 FatDeleteFile(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, char* Filename);
+BOOL FatCompareEntries(FAT_DIRECTORY_ENTRY* entry1, FAT_DIRECTORY_ENTRY* entry2);
+UINT64 FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile, char* Filename, UINT64 newSize);
+VFS_FILE* FatVfsInterfaceOpenFile(VFS* vfs, char* path);
+VOID FatVfsInterfaceCloseFile(VFS_FILE* file);
+UINT64 FatVfsInterfaceWriteFile(VFS_FILE* file, UINT64 size, VOID* buffer);
+UINT64 FatVfsInterfaceReadFile(VFS_FILE* file, UINT64 size, VOID* buffer);
+UINT64 FatVfsInterfaceAppendFile(VFS_FILE* file, UINT64 size, VOID* buffer);
+UINT64 FatVfsInterfaceResizeFile(VFS_FILE* file, UINT64 newsize);
+UINT64 FatVfsInterfaceDeleteFile(VFS_FILE* file);
+UINT64 FatVfsInterfaceDeleteAndCloseFile(VFS_FILE* file);
+UINT64 FatVfsInterfaceRecreateDeletedFile(VFS_FILE* file);
+UINT32 FatReadFatEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
+VOID FatInitVfs(VFS* partition);
+VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet();
 
-BOOL NNX_FATAutomaticTest(VFS* filesystem);
+BOOL NNXFatAutomaticTest(VFS* filesystem);
 
 typedef struct FATFilesystemSpecificData {
 	VOID* cachedFATSector;
