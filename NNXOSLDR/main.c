@@ -1,4 +1,4 @@
-#include "nnxint.h"
+#include <nnxint.h>
 #include "video/SimpleTextIo.h"
 #include "memory/physical_allocator.h"
 #include "memory/paging.h"
@@ -13,7 +13,7 @@
 #include "nnxlog.h"
 #include "nnxcfg.h"
 #include "nnxoskldr.h"
-#include "../pe/pe.h" // from bootloader
+#include <nnxpe.h>
 
 VOID DebugX(UINT64 n) {
 	PrintT("0x%X\n", n);

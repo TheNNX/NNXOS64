@@ -1,7 +1,7 @@
 #ifndef NNX_LDR_HEADER
 #define NNX_LDR_HEADER
 
-#include "nnxint.h"
+#include <nnxint.h>
 
 typedef struct KLdrKernelInitializationData {
 	UINT32* Framebuffer;

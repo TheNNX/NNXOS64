@@ -1,7 +1,7 @@
 #ifndef NNX_MEMOP_HEADER
 #define NNX_MEMOP_HEADER
 
-#include "nnxint.h"
+#include <nnxint.h>
 #ifdef  __cplusplus
 extern "C" {
 #endif

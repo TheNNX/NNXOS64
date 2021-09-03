@@ -116,12 +116,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="nnxarg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="nnxint.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="video\SimpleTextIo.h">
       <Filter>Header Files\video</Filter>
     </ClInclude>

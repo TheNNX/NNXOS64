@@ -46,7 +46,7 @@
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>NNXOSLDR</TargetName>
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
     <CustomBuildAfterTargets>
@@ -57,7 +57,7 @@
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>NNXOSLDR</TargetName>
     <GenerateManifest>false</GenerateManifest>
-    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
     <CustomBuildAfterTargets />
@@ -212,8 +212,6 @@
     <ClInclude Include="memory\paging.h" />
     <ClInclude Include="memory\physical_allocator.h" />
     <ClInclude Include="multitasking\Task.h" />
-    <ClInclude Include="nnxarg.h" />
-    <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxosdbg.h" />
     <ClInclude Include="nnxoskldr.h" />
@@ -251,6 +249,11 @@
       </SubType>
     </None>
     <None Include="text.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CommonInclude\CommonInclude.vcxproj">
+      <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

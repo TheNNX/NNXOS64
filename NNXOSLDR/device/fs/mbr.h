@@ -1,7 +1,7 @@
 #ifndef NNX_MBR_HEADER
 #define NNX_MBR_HEADER
 
-#include "nnxint.h"
+#include <nnxint.h>
 #include "device/hdd/hdd.h"
 
 #define MBR_SIGNATURE 0xaa55

@@ -44,14 +44,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(SolutionDir)NNXOSLDR</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(SolutionDir)NNXOSLDR</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />
@@ -188,6 +188,11 @@
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatOutputAsContent>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CommonInclude\CommonInclude.vcxproj">
+      <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

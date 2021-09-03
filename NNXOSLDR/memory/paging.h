@@ -1,6 +1,6 @@
 #ifndef NNX_PAGING_HEADER
 #define NNX_PAGING_HEADER
-#include "nnxint.h"
+#include <nnxint.h>
 #include "../HAL/registers.h"
 
 #ifdef __cplusplus

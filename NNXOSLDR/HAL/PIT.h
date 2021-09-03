@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "../nnxint.h"
+#include <nnxint.h>
 
 #define PIT_FREQUENCY 1193182
 

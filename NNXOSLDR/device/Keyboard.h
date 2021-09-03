@@ -1,5 +1,5 @@
 #pragma once
-#include "nnxint.h"
+#include <nnxint.h>
 
 #define KEYBOARD_PORT 0x60
 #define KEYBOARD_COMMAND_PORT 0x64

@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#include "nnxint.h"
+#include <nnxint.h>
 #include "nnxarg.h"
 #include "../nnxcfg.h"
 

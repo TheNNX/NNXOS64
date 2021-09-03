@@ -2,7 +2,7 @@
 #define NNX_GDT_HEADER
 #pragma pack(push)
 #pragma pack(1)
-#include "nnxint.h"
+#include <nnxint.h>
 
 #ifdef __cplusplus
 extern "C" {

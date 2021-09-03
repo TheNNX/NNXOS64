@@ -1,6 +1,6 @@
 #ifndef NNX_PORT_HEADER
 #define NNX_PORT_HEADER
-#include "nnxint.h"
+#include <nnxint.h>
 void outb(UINT16, UINT8); 
 void outw(UINT16, UINT16); 
 void outd(UINT16, UINT32);

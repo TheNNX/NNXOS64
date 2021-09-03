@@ -1,6 +1,6 @@
 #ifndef NNX_FAT_HEADER
 #define NNX_FAT_HEADER
-#include "nnxint.h"
+#include <nnxint.h>
 #include "vfs.h"
 
 // TODO TODO TODO TODO

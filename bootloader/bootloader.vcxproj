@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6F2688E1-F1DF-4D79-8F2E-307772AC6F77}</ProjectGuid>
+    <RootNamespace>uefi-simple</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <ProjectName>bootloader</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetExt>.efi</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)image\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
+    <TargetName>bootx64</TargetName>
+    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
+    <IncludePath>$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude;$(SolutionDir)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetExt>.efi</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)image\</OutDir>
+    <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
+    <TargetName>bootx64</TargetName>
+    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
+    <IncludePath>$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude;$(SolutionDir)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)\gnu-efi\inc;$(SolutionDir)\gnu-efi\inc\x86_64</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;HAVE_USE_MS_ABI;GNU_EFI_USE_EXTERNAL_STDARG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <CompileAs>CompileAsC</CompileAs>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4091</DisableSpecificWarnings>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <SubSystem>EFI Application</SubSystem>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+    <Link>
+      <AdditionalDependencies>$(SolutionDir)temp\x64\$(Configuration)\gnu-efi.lib;libcmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>efi_main</EntryPointSymbol>
+      <SubSystem>EFI Application</SubSystem>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OptimizeReferences>true</OptimizeReferences>
+      <RandomizedBaseAddress />
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <ProgramDatabaseFile />
+      <MergeSections>.pdata=.data</MergeSections>
+    </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)image\efi\boot\
+rmdir /Q /S $(ProjectName)</Command>
+    </PostBuildEvent>
+    <CustomBuild>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
+    </CustomBuild>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)\gnu-efi\inc;$(SolutionDir)\gnu-efi\inc\x86_64</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;HAVE_USE_MS_ABI;GNU_EFI_USE_EXTERNAL_STDARG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <CompileAs>CompileAsC</CompileAs>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4091</DisableSpecificWarnings>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <SubSystem>EFI Application</SubSystem>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+    <Link>
+      <AdditionalDependencies>$(SolutionDir)temp\x64\$(Configuration)\gnu-efi.lib;libcmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>efi_main</EntryPointSymbol>
+      <SubSystem>EFI Application</SubSystem>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OptimizeReferences>true</OptimizeReferences>
+      <RandomizedBaseAddress>
+      </RandomizedBaseAddress>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <ProgramDatabaseFile>
+      </ProgramDatabaseFile>
+      <MergeSections>.pdata=.data</MergeSections>
+    </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)image\efi\boot\
+rmdir /Q /S $(ProjectName)</Command>
+    </PostBuildEvent>
+    <CustomBuild>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
+    </CustomBuild>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommonInclude\CommonInclude.vcxproj">
+      <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\NNXOSKRN\NNXOSKRN.vcxproj">
+      <Project>{67e77dd1-d078-48e7-8f75-159c6130c693}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\NNXOSLDR\NNXOSLDR.vcxproj">
+      <Project>{3c2ebf37-3efd-491a-87fe-3b590f3e32a2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="gnu-efi.vcxproj">
+      <Project>{3135d563-9596-4584-9ed6-616adec52974}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="boot.c" />
+    <ClCompile Include="pe\pe.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="low.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="low.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

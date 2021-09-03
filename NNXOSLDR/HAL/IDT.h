@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#include "nnxint.h"
+#include <nnxint.h>
 
 	struct IDT;
 	typedef struct IDTR {
