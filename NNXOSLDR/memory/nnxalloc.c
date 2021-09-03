@@ -93,12 +93,14 @@ void UpdateScreen() {
 }
 
 void InitializeScreen() {
+#ifdef DEBUG
 	minX = 0;
 	maxX = gWidth;
 	maxY = 19;
 	minY = 0;
 	times = 0;
 	lastX = maxX;
+#endif
 }
 
 void NNXAllocatorInitialize() {

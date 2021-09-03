@@ -315,7 +315,7 @@ void FatCopyNameFromEntry(FAT_DIRECTORY_ENTRY* entry, char* dst, int* endName, i
 	}
 }
 
-BOOL FatCompareName(FAT_DIRECTORY_ENTRY* entry, char* Filename) {
+BOOL FatCompareName(FAT_DIRECTORY_ENTRY* entry, char* filename) {
 	char entryName[13] = { 0 };
 	
 	int endExt, endName;
@@ -329,8 +329,8 @@ BOOL FatCompareName(FAT_DIRECTORY_ENTRY* entry, char* Filename) {
 	}
 
 	int i = 0;
-	while (Filename[i]) {
-		if (Uppercase(Filename[i]) != Uppercase(entryName[i]))
+	while (filename[i]) {
+		if (Uppercase(filename[i]) != Uppercase(entryName[i]))
 			return false;
 		i++;
 	}
@@ -351,7 +351,7 @@ BOOL FatIsFileOrDir(FAT_DIRECTORY_ENTRY* sectorData) {
 	return true;
 }
 
-UINT64 FatSearchForFileInDirectory(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, char* name, FAT_DIRECTORY_ENTRY* output) {
+UINT64 FatSearchForFileInDirectory(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, const char * name, FAT_DIRECTORY_ENTRY* output) {
 	for (UINT64 entryIndex = 0; entryIndex < (bpb->BytesPerSector / 32); entryIndex++) {
 		if (!FatIsFileOrDir(sectorData + entryIndex)) {
 			continue;
@@ -410,10 +410,10 @@ UINT64 FatCopyFirstFilenameFromPath(char* path, char* filenameCopy) {
 	return 0;
 }
 
-BOOL FatWriteDirectoryEntryToSectors(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, char* Filename, FAT_DIRECTORY_ENTRY* fileDir) {
+BOOL FatWriteDirectoryEntryToSectors(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, char* filename, FAT_DIRECTORY_ENTRY* fileDir) {
 	for (UINT64 entryIndex = 0; entryIndex < (bpb->BytesPerSector / 32); entryIndex++) {
 		if (sectorData[entryIndex].Filename[0] == 0x0 
-			|| FatCompareName(sectorData + entryIndex, Filename)) {
+			|| FatCompareName(sectorData + entryIndex, filename)) {
 			sectorData[entryIndex] = *fileDir;
 			return TRUE;
 		}
@@ -884,7 +884,7 @@ UINT64 FatVfsInterfaceCreateFile(VFS* filesystem, char* path) {
 	}
 }
 
-VFS_FILE* FatVfsInterfaceOpenFile(VFS* vfs, char* path) {
+VFS_FILE* FatVfsInterfaceOpenFile(VFS* vfs, const char * path) {
 	BPB _bpb, *bpb = &_bpb;
 	FAT_DIRECTORY_ENTRY direntry;
 	UINT64 status;
@@ -1087,7 +1087,7 @@ UINT64 FatVfsInterfaceResizeFile(VFS_FILE* file, UINT64 newsize) {
 	UINT64(*RenameFile)(VFS_FILE* file, char* newFileName);
 */
 
-UINT64 FatVfsInterfaceChangeDirectoryEntryInternal(VFS* vfs, char* path, FAT_DIRECTORY_ENTRY* desiredFileEntry, BPB* bpb) {
+UINT64 FatVfsInterfaceChangeDirectoryEntryInternal(VFS* vfs, const char * path, FAT_DIRECTORY_ENTRY* desiredFileEntry, BPB* bpb) {
 	UINT64 parentPathLength, status;
 	FAT_DIRECTORY_ENTRY fileEntry;
 
@@ -1122,7 +1122,7 @@ UINT64 FatVfsInterfaceChangeDirectoryEntryInternal(VFS* vfs, char* path, FAT_DIR
 	return 0;
 }
 
-UINT64 FatVfsInterfaceChangeDirectoryEntry(VFS* vfs, char* path, FAT_DIRECTORY_ENTRY* desiredFileEntry, BPB* bpb) {
+UINT64 FatVfsInterfaceChangeDirectoryEntry(VFS* vfs, const char * path, FAT_DIRECTORY_ENTRY* desiredFileEntry, BPB* bpb) {
 	UINT64 status = FatVfsInterfaceChangeDirectoryEntryInternal(vfs, path, desiredFileEntry, bpb);
 
 	if (status) {
@@ -1144,7 +1144,7 @@ UINT64 FatVfsInterfaceChangeDirectoryEntry(VFS* vfs, char* path, FAT_DIRECTORY_E
 	return 0;
 }
 
-UINT64 FatVfsInterfaceChangeFileAttributes(VFS* vfs, char* path, BYTE attributes) {
+UINT64 FatVfsInterfaceChangeFileAttributes(VFS* vfs, const char * path, BYTE attributes) {
 	UINT64 status;
 	BPB _bpb, *bpb = &_bpb;
 	FAT_DIRECTORY_ENTRY fileEntry;
@@ -1165,14 +1165,14 @@ UINT64 FatVfsInterfaceChangeFileAttributes(VFS* vfs, char* path, BYTE attributes
 	return 0;
 }
 
-BYTE FatVfsInterfaceGetFileAttributes(VFS* vfs, char* path) {
+BYTE FatVfsInterfaceGetFileAttributes(VFS* vfs, const char * path) {
 	BPB _bpb, *bpb = &_bpb;
 	FAT_DIRECTORY_ENTRY theFile;
 	FatVfsInterfaceGetDirectoryEntry(vfs, path, &theFile, bpb);
 	return theFile.FileAttributes;
 }
 
-UINT64 FatVfsInterfaceCreateDirectory(VFS* vfs, char* path) {
+UINT64 FatVfsInterfaceCreateDirectory(VFS* vfs, const char * path) {
 	BPB _bpb, *bpb = &_bpb;
 	FAT_DIRECTORY_ENTRY fileEntry;
 	FAT_DIRECTORY_ENTRY selfEntry, parentEntry;
@@ -1268,7 +1268,7 @@ UINT64 FatVfsInterfaceCreateDirectory(VFS* vfs, char* path) {
 	return status;
 }
 
-VFS_FILE* FatVfsInterfaceOpenOrCreateFile(VFS* vfs, char* path) {
+VFS_FILE* FatVfsInterfaceOpenOrCreateFile(VFS* vfs, const char * path) {
 	if (!FatVfsInterfaceCheckIfFileExists(vfs, path)) {
 		if (FatVfsInterfaceCreateFile(vfs, path))
 			return 0;
@@ -1295,13 +1295,13 @@ VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet() {
 	return functionSet;
 }
 
-FAT_DIRECTORY_ENTRY FatEntryFromPath(char* path) {
+FAT_DIRECTORY_ENTRY FatEntryFromPath(const char * path) {
 	FAT_DIRECTORY_ENTRY result = { 0 };
 	GetFileNameAndExtensionFromPath(path, result.Filename, result.FileExtension);
 	return result;
 }
 
-UINT32 FatPathParser(char* path, UINT32 currentIndex) {
+UINT32 FatPathParser(const char * path, UINT32 currentIndex) {
 	path += currentIndex;
 	
 	UINT32 position = FindFirstSlash(path);
@@ -1371,10 +1371,10 @@ UINT64 FatAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 n) {
 	return 0;
 }
 
-UINT64 FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile, char* Filename, UINT64 newSize) {
+UINT64 FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile, const char * filename, UINT64 newSize) {
 	FAT_DIRECTORY_ENTRY file, oldfile;
 
-	UINT64 status = FatReccursivlyFindDirectoryEntry(bpb, filesystem, FatGetFirstClusterOfFile(bpb, parentFile), Filename, &file);
+	UINT64 status = FatReccursivlyFindDirectoryEntry(bpb, filesystem, FatGetFirstClusterOfFile(bpb, parentFile), filename, &file);
 
 	if (status)
 		return status;
@@ -1423,10 +1423,10 @@ UINT64 FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile,
 	return FatChangeDirectoryEntry(bpb, filesystem, parentFile, &oldfile, &file);
 }
 
-UINT64 FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, char* Filename) {
+UINT64 FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename) {
 	UINT64 status;
 	FAT_DIRECTORY_ENTRY fatEntry, changedEntry;
-	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), Filename, &fatEntry))
+	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
 		return status;
 	changedEntry = fatEntry;
 	changedEntry.Filename[0] = FAT_FILE_DELETED;
@@ -1438,7 +1438,7 @@ UINT64 FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirecto
 UINT64 FatDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, FAT_DIRECTORY_ENTRY* fatEntry) {
 	UINT64 status;
 	FAT_DIRECTORY_ENTRY empty;
-	char Filename[14];
+	char filename[14];
 	UINT64 filenameIndex = 0;
 	UINT64 filenameLength = 0;
 	UINT64 extensionLength = 0;
@@ -1487,22 +1487,22 @@ UINT64 FatDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDi
 	}
 
 	for (i = 0; i < filenameLength; i++) {
-		Filename[filenameIndex++] = fatEntry->Filename[i];
+		filename[filenameIndex++] = fatEntry->Filename[i];
 	}
 
 	if (extensionLength)
-		Filename[filenameIndex++] = '.';
+		filename[filenameIndex++] = '.';
 
 	for (i = 0; i < extensionLength; i++) {
-		Filename[filenameIndex++] = fatEntry->FileExtension[i];
+		filename[filenameIndex++] = fatEntry->FileExtension[i];
 	}
 
-	Filename[filenameIndex] = 0;
+	filename[filenameIndex] = 0;
 
-	if (status = FatResizeFile(bpb, vfs, parentDirectory, Filename, 0))
+	if (status = FatResizeFile(bpb, vfs, parentDirectory, filename, 0))
 		return status;
 
-	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), Filename, &fatEntry))
+	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
 		return status;
 
 	if (status = FatChangeDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry, &empty)) {
@@ -1513,11 +1513,11 @@ UINT64 FatDeleteDirectoryEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDi
 	return 0;
 }
 
-UINT64 FatDeleteFile(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, char* Filename) {
+UINT64 FatDeleteFile(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename) {
 	UINT64 status;
 	FAT_DIRECTORY_ENTRY fatEntry;
 
-	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), Filename, &fatEntry))
+	if (status = FatReccursivlyFindDirectoryEntry(bpb, vfs, FatGetFirstClusterOfFile(bpb, parentDirectory), filename, &fatEntry))
 		return status;
 
 	if (status = FatDeleteDirectoryEntry(bpb, vfs, parentDirectory, &fatEntry))

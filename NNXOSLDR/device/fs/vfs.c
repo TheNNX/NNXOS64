@@ -46,7 +46,7 @@ VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs() {
 	return VfsGetPointerToVfs(0);
 }
 
-UINT64 FindFirstSlash(char* path) {
+UINT64 FindFirstSlash(const char * path) {
 	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
 	UINT64 forwardSlash = FindCharacterFirst(path, pathLenght, '/');
 	UINT64 backSlash = FindCharacterFirst(path, pathLenght, '\\');
@@ -54,7 +54,7 @@ UINT64 FindFirstSlash(char* path) {
 	return ((forwardSlash < backSlash) ? (forwardSlash) : (backSlash));
 }
 
-UINT64 FindLastSlash(char* path) {
+UINT64 FindLastSlash(const char * path) {
 	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
 	UINT64 forwardSlash = FindCharacterLast(path, pathLenght, '/');
 	UINT64 backSlash = FindCharacterLast(path, pathLenght, '\\');
@@ -108,7 +108,7 @@ VOID VfsDeallocateVfsFile(VFS_FILE* file) {
 	NNXAllocatorFree(file);
 }
 
-UINT64 GetParentPathLength(char* path) {
+UINT64 GetParentPathLength(const char * path) {
 	UINT64 lastSlash = FindLastSlash(path);
 	return lastSlash;
 }
@@ -120,7 +120,7 @@ UINT64 GetParentPath(char* path, char* dst) {
 	return parentPathLength;
 }
 
-UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension) {
+UINT64 GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension) {
 	UINT64 length = FindCharacterFirst(path, -1, 0);
 	UINT64 begin = FindLastSlash(path) + 1;
 	UINT64 dot = FindCharacterLast(path + begin, length - begin, '.');

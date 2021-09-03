@@ -86,16 +86,16 @@ UINT64 VfsWriteSector(VIRTUAL_FILE_SYSTEM*, UINT64 n, BYTE* source);
 VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path);
 VOID VfsDeallocateVfsFile(VFS_FILE* vfsFile);
 
-UINT64 FindFirstSlash(char* path);
-UINT64 FindLastSlash(char* path);
+UINT64 FindFirstSlash(const char * path);
+UINT64 FindLastSlash(const char * path);
 
 /* REMEMBER TO RESERVE SPACE FOR NULL TERMINATOR (THIS FUNCTION'S RESULT HAS TO BE INCREMENTED BY 1, IN ORDER TO USE THIS STRING) */
-UINT64 GetParentPathLength(char* path);
+UINT64 GetParentPathLength(const char * path);
 
 /* REMEMBER TO RESERVE SPACE FOR NULL TERMINATION */
 UINT64 GetParentPath(char* path, char* dst);
 
-UINT64 GetFileNameAndExtensionFromPath(char* path, char* name, char* extension);
+UINT64 GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension);
 
 #ifdef __cplusplus
 }
