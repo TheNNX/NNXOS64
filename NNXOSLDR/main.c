@@ -1,4 +1,4 @@
-#include <nnxint.h>
+#include <nnxtype.h>
 #include "video/SimpleTextIo.h"
 #include "memory/physical_allocator.h"
 #include "memory/paging.h"

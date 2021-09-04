@@ -18,10 +18,10 @@
     <ClInclude Include="nnxarg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxint.h">
+    <ClInclude Include="nnxpe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxpe.h">
+    <ClInclude Include="nnxtype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

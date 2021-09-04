@@ -2,7 +2,7 @@
 #define NNX_ALLOC_HEADER
 #pragma pack(push, 1)
 
-#include <nnxint.h>
+#include <nnxtype.h>
 
 typedef struct MemoryBlock {
 	UINT64 size;

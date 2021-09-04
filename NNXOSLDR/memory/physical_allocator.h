@@ -1,6 +1,6 @@
 #ifndef NNX_PHYSALLOC_HEADER
 #define NNX_PHYSALLOC_HEADER
-#include <nnxint.h>
+#include <nnxtype.h>
 
 #ifdef __cplusplus
 extern "C" {

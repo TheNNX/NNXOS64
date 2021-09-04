@@ -1,7 +1,7 @@
 #ifndef NNX_GPT_HEADER
 #define	NNX_GPT_HEADER
 
-#include <nnxint.h>
+#include <nnxtype.h>
 
 #pragma pack(push, 1)
 

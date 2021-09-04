@@ -129,8 +129,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="nnxarg.h" />
-    <ClInclude Include="nnxint.h" />
     <ClInclude Include="nnxpe.h" />
+    <ClInclude Include="nnxtype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

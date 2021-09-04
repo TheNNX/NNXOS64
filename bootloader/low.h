@@ -1,5 +1,5 @@
 #pragma once
-#include <nnxint.h>
+#include <nnxtype.h>
 
 UINT64 GetCR2();
 UINT64 GetCR3();

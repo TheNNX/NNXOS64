@@ -1,5 +1,6 @@
-#pragma once
-#include <nnxint.h>
+#ifndef NNX_KEYBOARD_HEADER
+#define NNX_KEYBOARD_HEADER
+#include <nnxtype.h>
 
 #define KEYBOARD_PORT 0x60
 #define KEYBOARD_COMMAND_PORT 0x64
@@ -498,3 +499,4 @@ typedef struct KEY_STATE {
 }KEY_STATE;
 
 #pragma pack(pop)
+#endif

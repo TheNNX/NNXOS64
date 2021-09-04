@@ -1,7 +1,7 @@
 #ifndef NNX_REGISTERS_HEADER
 #define NNX_REGISTERS_HEADER
 
-#include <nnxint.h>
+#include <nnxtype.h>
 
 #ifdef __cplusplus
 extern "C" {

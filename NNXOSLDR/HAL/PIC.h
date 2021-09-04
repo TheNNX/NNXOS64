@@ -6,7 +6,7 @@
 #define PIC_PRIMARY_DATA PIC_PRIMARY+1
 #define PIC_SECONDARY_DATA PIC_SECONDARY+1
 
-#include <nnxint.h>
+#include <nnxtype.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,6 +1,6 @@
 #ifndef NNX_HDD_HEADER
 #define NNX_HDD_HEADER
-#include <nnxint.h>
+#include <nnxtype.h>
 #pragma pack(push, 1)
 
 void DiskCheck();

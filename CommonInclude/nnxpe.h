@@ -3,7 +3,7 @@
 #ifndef _PE_H
 #define _PE_H 
 
-#include <nnxint.h>
+#include <nnxtype.h>
 
 UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint);
 

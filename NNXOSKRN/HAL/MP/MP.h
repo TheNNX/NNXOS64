@@ -1,7 +1,7 @@
 #ifndef NNX_MP_HEADER
 #define NNX_MP_HEADER
 
-#include <nnxint.h>
+#include <nnxtype.h>
 #include "../../../NNXOSLDR/HAL/GDT.h"
 #include "../../../NNXOSLDR/HAL/IDT.h"
 

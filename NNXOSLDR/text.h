@@ -1,7 +1,7 @@
 #ifndef NNX_TEXT_HEADER
 #define NNX_TEXT_HEADER
 
-#include <nnxint.h>
+#include <nnxtype.h>
 #include "nnxosdbg.h"
 
 #ifdef __cplusplus
