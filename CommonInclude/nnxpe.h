@@ -1,11 +1,9 @@
-#pragma once
-
 #ifndef _PE_H
 #define _PE_H 
 
 #include <nnxtype.h>
 
-UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint);
+UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* memmap);
 
 
 #define IMAGE_PE_MAGIC 0x4550
@@ -18,13 +16,15 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 typedef UINT32 RVA;
 typedef UINT8 CHAR8;
 
-typedef struct _MZ_FILE_TABLE {
+typedef struct _MZ_FILE_TABLE 
+{
 	UINT16 signature;
 	UINT8 nc[58];
 	UINT32 e_lfanew;
 }_MZ, MZ_FILE_TABLE, DOS_EXECUTABLE_TABLE, IMAGE_DOS_HEADER;
 
-typedef struct _FILE_HEADER_TABLE {
+typedef struct _FILE_HEADER_TABLE 
+{
 	UINT16 Machine;
 	UINT16 NumberOfSections;
 	UINT32 TimeDateStamp;
@@ -34,7 +34,8 @@ typedef struct _FILE_HEADER_TABLE {
 	UINT16 Characteristics;
 }_COFF, IMAGE_COFF_HEADER, IMAGE_COFF_TABLE, _COFF_TABLE, IMAGE_FILE_HEADER;
 
-typedef struct _DATA_DIR {
+typedef struct _DATA_DIR 
+{
 	RVA virtualAddress;
 	UINT32 size;
 }DATA_DIRECTORY, DataDirectory;
@@ -79,7 +80,8 @@ typedef struct _DATA_DIR {
 #define IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT 13
 #define IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR 14
 
-typedef struct _OPTIONAL_HEADER_TABLE64 {
+typedef struct _OPTIONAL_HEADER_TABLE64 
+{
 	UINT16 signature;
 	UINT8 MajorLinkerVersion;
 	UINT8 MinorLinkerVersion;
@@ -135,7 +137,8 @@ typedef struct _EXPORT_TABLE
 	RVA AddressOfNameOrdinals;
 }IMAGE_EXPORT_TABLE, IMAGE_EXPORT_DIRECTORY_ENTRY;
 
-typedef struct _IMPORT_DESCRIPTOR {
+typedef struct _IMPORT_DESCRIPTOR 
+{
 	RVA OriginalFirstThunk;
 	UINT32 TimeDateStamp;
 	UINT32 ForwardedStamp;
@@ -143,7 +146,8 @@ typedef struct _IMPORT_DESCRIPTOR {
 	RVA FirstThunk;
 }IMAGE_IMPORT_DESCRIPTOR;
 
-typedef struct _IMPORT_TABLE {
+typedef struct _IMPORT_TABLE 
+{
 	IMAGE_IMPORT_DESCRIPTOR entries[0];
 }IMAGE_IMPORT_TABLE, IMAGE_IMPORT_DIRECTORY_ENTRY;
 
@@ -157,7 +161,8 @@ typedef struct _IMPORT_TABLE {
 #define IMAGE_FILE_SYSTEM 0x1000
 #define IMAGE_FILE_DLL 0x2000
 
-typedef struct _PE_FILE_TABLE {
+typedef struct _PE_FILE_TABLE 
+{
 	UINT32 signature;
 	IMAGE_COFF_HEADER fileHeader;
 	IMAGE_OPTIONAL_HEADER64 optionalHeader;
@@ -177,11 +182,13 @@ typedef struct _SECTION_HEADER
 	UINT32 Characteristics;
 }SECTION_HEADER;
 
-typedef struct _SECTION_TABLE {
+typedef struct _SECTION_TABLE 
+{
 	SECTION_HEADER headers[0];
 }SECTION_TABLE, IMAGE_SECTION_TABLE_HEADER;
 
-typedef struct _IMAGE_IMPORT_BY_NAME {
+typedef struct _IMAGE_IMPORT_BY_NAME 
+{
 	UINT16 Hint;
 	CHAR8 Name[0];
 }IMPORT_BY_NAME, IMAGE_IMPORT_BY_NAME;

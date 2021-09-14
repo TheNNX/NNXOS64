@@ -19,8 +19,8 @@ extern "C"{
 		UINT64 ApCR3;
 		PVOID* ApStackPointerArray;
 		VOID(*ApProcessorInit)(UINT8 lapicId);
-		GDTR ApGdtr;
-		IDTR ApIdtr;
+		KGDTR64 ApGdtr;
+		_KIDTR64 ApIdtr;
 	}ApData;
 #pragma pack(pop)
 

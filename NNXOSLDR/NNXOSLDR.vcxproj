@@ -218,7 +218,6 @@
     <ClInclude Include="video\SimpleTextIo.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="HAL\func.inc" />
     <CustomBuild Include="HAL\Port.asm">
       <FileType>Document</FileType>
     </CustomBuild>

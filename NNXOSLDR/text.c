@@ -1,12 +1,15 @@
 #include "text.h"
 
-UINT64 FindCharacterLast(char* string, UINT64 len, char character) {
+UINT64 FindCharacterLast(char* string, UINT64 len, char character) 
+{
 	NNXAssertAndStop(len != -1, "Cannot find the last character of string with unknown length.");
 
 	UINT64 current = -1;
 
-	for (UINT64 i = 0; i < len; i++) {
-		if (string[i] == character) {
+	for (UINT64 i = 0; i < len; i++) 
+	{
+		if (string[i] == character) 
+		{
 			current = i;
 		}
 	}
@@ -14,9 +17,12 @@ UINT64 FindCharacterLast(char* string, UINT64 len, char character) {
 	return current;
 }
 
-UINT64 FindCharacterFirst(char* string, UINT64 len, char character) {
-	for (UINT64 i = 0; i < len; i++) {
-		if (string[i] == character) {
+UINT64 FindCharacterFirst(char* string, UINT64 len, char character) 
+{
+	for (UINT64 i = 0; i < len; i++) 
+	{
+		if (string[i] == character) 
+		{
 			return i;
 		}
 	}
@@ -24,7 +30,8 @@ UINT64 FindCharacterFirst(char* string, UINT64 len, char character) {
 	return -1;
 }
 
-UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) {
+UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) 
+{
 	UINT64 counter = 0;
 	char* p = b;
 	UINT64 shifter = i;
@@ -32,12 +39,15 @@ UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) {
 	if (base == 0)
 		return 0;
 
-	if (base < 0 && ((INT64)i) < 0) {
+	if (base < 0 && ((INT64)i) < 0) 
+	{
 		i = (-((INT64)i));
-		if (b) {
+		if (b)
+{
 			*b++ = '-';
 		}
-		else {
+		else
+{
 			counter++;
 		}
 	}
@@ -46,8 +56,10 @@ UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) {
 		base = -base;
 	
 
-	if (b == 0) {
-		do {
+	if (b == 0) 
+	{
+		do
+{
 			i = i / base;
 			counter++;
 		} while (i);
@@ -55,13 +67,15 @@ UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit) {
 		return counter;
 	}
 
-	do {
+	do
+{
 		++p;
 		shifter = shifter / base;
 		counter++;
 	} while (shifter);
 	*p = '\0';
-	do {
+	do
+{
 		*--p = digit[i % base];
 		i = i / base;
 	} while (i);
@@ -86,13 +100,15 @@ UINT64 IntegerToAsciiCapital(UINT64 i, INT8 base, char *b)
 	return IntegerToAsciiBase(i, base, b, "0123456789ABCDEF");
 }
 
-char ToUppercase(char c) {
+char ToUppercase(char c) 
+{
 	if (c >= 'a' && c <= 'z')
 		return c + ('A' - 'a');
 	return c;
 }
 
-char ToLowercase(char c) {
+char ToLowercase(char c) 
+{
 	if (c >= 'A' && c <= 'Z')
 		return c - ('A' - 'a');
 	return c;

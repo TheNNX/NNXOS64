@@ -37,6 +37,12 @@
     <Filter Include="Header Files\HAL\MP">
       <UniqueIdentifier>{48a04605-c1fb-42ca-8e42-4bc32919f042}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HAL\X64">
+      <UniqueIdentifier>{436245cc-38cb-4579-9d9b-725524e3ef70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HAL\X64">
+      <UniqueIdentifier>{25f9cff4-bd9c-4b7e-83ca-b856f2e0893c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -54,6 +60,12 @@
     <ClCompile Include="HAL\MP\MP.cpp">
       <Filter>Source Files\HAL\MP</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\spinlock.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\irql.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -68,10 +80,22 @@
     <ClInclude Include="HAL\MP\MP.h">
       <Filter>Header Files\HAL\MP</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\irql.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\spinlock.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\pcr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\MP\ApEntry.asm">
       <Filter>Source Files\HAL\MP</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\X64\spinlock.asm">
+      <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

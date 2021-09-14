@@ -4,13 +4,15 @@
 #include "../../HAL/PCI/PCIIDE.h"
 #include "../../HAL/PCI/PCI.h"
 #include "../../memory/nnxalloc.h"
+#include "../../../NNXOSKRN/HAL/spinlock.h"
 #define VFS_MAX_NUMBER 64
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-typedef struct VFS_FILE {
+typedef struct VFS_FILE
+{
 	char* Name;
 	char* Path;
 	UINT64 FilePointer;
@@ -18,7 +20,8 @@ typedef struct VFS_FILE {
 	struct VIRTUAL_FILE_SYSTEM* Filesystem;
 }VFS_FILE;
 
-typedef struct VFS_FUNCTION_SET {
+typedef struct VFS_FUNCTION_SET
+{
 	BOOL (*CheckIfFileExists)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
 	/* Allocate and initialize VFS_FILE structure */
@@ -54,13 +57,15 @@ typedef struct VFS_FUNCTION_SET {
 	UINT64(*RenameFile)(VFS_FILE* file, char* newFileName);
 } VFS_FUNCTION_SET;
 
-typedef struct VIRTUAL_FILE_SYSTEM {
+typedef struct VIRTUAL_FILE_SYSTEM
+{
 	IDE_DRIVE* Drive;
 	UINT64 LbaStart;
 	UINT64 SizeInSectors;
 	UINT64 AllocationUnitSize;
 	VFS_FUNCTION_SET Functions;
 	VOID* FilesystemSpecificData;
+	KSPIN_LOCK DeviceSpinlock;
 }VIRTUAL_FILE_SYSTEM, VFS;
 
 #define VFS_ERR_INVALID_FILENAME			0xFFFF0001

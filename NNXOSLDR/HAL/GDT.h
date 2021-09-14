@@ -5,17 +5,18 @@
 #include <nnxtype.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" 
+{
 #endif
 
-struct GDT;
-
-typedef struct GDTR {
+typedef struct _KGDTR64 
+{
 	UINT16 Size;
 	struct GDT* Base;
-}GDTR;
+}KGDTR64, *LPGDTR64, *PGDTR64;
 
-typedef struct GDTEntry {
+typedef struct _KGDTENTRY64 
+{
 	UINT16 Limit0To15;
 	UINT16 Base0To15;
 	UINT8 Base16To23;
@@ -23,14 +24,12 @@ typedef struct GDTEntry {
 	UINT8 Limit16To19 : 4;
 	UINT8 Flags : 4;
 	UINT8 Base24To31;
-}GDTEntry;
+}KGDTENTRY64, *PKGDTENTRY64, *LPKGDTENTRY64;
 
-typedef struct GDT {
-	GDTEntry Entries[0];
-}GDT;
-
-typedef struct TSS {
-	union {
+typedef struct _KTSS 
+{
+	union 
+	{
 		UINT16 IopbOffset;
 		UINT16 Size;
 	};
@@ -40,16 +39,17 @@ typedef struct TSS {
 	UINT64 reserved2;
 	UINT64 Rsp[3];
 	UINT32 reserved1;
-}TSS;
+}KTSS;
 
-typedef struct TSSDescriptorEntry {
+typedef struct _KTSSENTRY64 
+{
 	UINT32 Reserved;
 	UINT32 Base32To63;
-	GDTEntry StandartGdtEntry;
-}TSSDescriptorEntry;
+	KGDTENTRY64 StandartGdtEntry;
+}KTSSENTRY64, *PKTSSENTRY64, *LPKTSSENTRY64;
 
-void LoadGDT(GDTR*);
-void StoreGDT(GDTR*);
+void LoadGDT(KGDTR64*);
+void StoreGDT(KGDTR64*);
 
 #ifdef __cplusplus
 }

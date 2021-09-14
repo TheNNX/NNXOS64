@@ -30,7 +30,8 @@
 
 int basicallyATest = 0;
 
-extern "C" {
+extern "C" 
+{
 	void DrawMap();
 	UINT32* gFramebuffer;
 	UINT32* gFramebufferEnd;
@@ -44,7 +45,8 @@ extern "C" {
 	extern UINT8 Initialized;
 }
 
-extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
+extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) 
+{
 	DisableInterrupts();
 	gFramebuffer = data->Framebuffer;
 	gFramebufferEnd = data->FramebufferEnd;
@@ -64,7 +66,8 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 	DrawMap();
 
 	NNXAllocatorInitialize();
-	for (int i = 0; i < 64; i++) {
+	for (int i = 0; i < 64; i++) 
+	{
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 
@@ -74,7 +77,8 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data) {
 	UINT8 status;
 	ACPI_FADT* facp = (ACPI_FADT*)AcpiGetTable(data->rdsp, "FACP");
 
-	if (!facp) {
+	if (!facp) 
+	{
 		status = AcpiLastError();
 		ACPI_ERROR(status);
 		while (1);

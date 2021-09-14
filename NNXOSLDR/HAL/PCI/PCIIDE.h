@@ -5,14 +5,16 @@
 //All consts from https://wiki.osdev.org/PCI_IDE_Controller
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 	typedef struct PCI_IDE_CONTROLLER PCI_IDE_CONTROLLER;
 
 #include "device/hdd/hdd.h"
 
-	typedef struct IDE_DRIVE {
+	typedef struct IDE_DRIVE
+{
 		UINT8 Reserved;
 		UINT8 channel;
 		UINT8 drive;
@@ -83,7 +85,8 @@ extern "C" {
 #define      ATAPI_CMD_READ       0xA8
 #define      ATAPI_CMD_EJECT      0x1B
 
-	struct PCI_IDE_CONTROLLER {
+	struct PCI_IDE_CONTROLLER
+{
 		UINT8 functionNumber;
 		UINT8 deviceNumber;
 		UINT8 busNumber;
@@ -95,7 +98,8 @@ extern "C" {
 		UINT32 BAR3;
 		UINT32 BAR4;
 
-		struct IDE_Channels {
+		struct IDE_Channels
+{
 			unsigned short base;
 			unsigned short ctrl;
 			unsigned short bus_master_ide;

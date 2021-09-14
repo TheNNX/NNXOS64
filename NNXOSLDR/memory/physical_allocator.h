@@ -3,7 +3,8 @@
 #include <nnxtype.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 	extern UINT8* GlobalPhysicalMemoryMap;

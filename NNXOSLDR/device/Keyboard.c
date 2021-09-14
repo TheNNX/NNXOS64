@@ -6,7 +6,7 @@
 KEY_STATE state;
 UINT8 ScancodeSet = 0;
 
-KEY(NULL, 0, 0, 0, 0);
+KEY(UNDEF, 0, 0, 0, 0);
 KEY(ESC, K_ESCAPE, 0, 0, 0, 0);
 KEY(F1, K_F1, 0, 0, 0, 0);
 KEY(F2, K_F2, 0, 0, 0, 0);
@@ -98,28 +98,33 @@ KEYSide(RCTRL, K_RCONTROL, K_CONTROL);
 KEY(PrintScreen, K_SNAPSHOT, 0, 0, 0, 0);
 
 
-UINT8(*ScancodeSet2Keys[])() = {KeyNULL, KeyF9, KeyNULL, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyNULL, KeyF10, KeyF8, 
-								KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyNULL, KeyNULL, KeyLALT, KeyLShift, KeyNULL, KeyLCTRL, KeyQ, 
-								Key1, KeyNULL, KeyNULL, KeyNULL, KeyZ, KeyS, KeyA, KeyW, Key2, KeyNULL, KeyNULL, KeyC, KeyX, KeyD,
-								KeyE, Key4, Key3, KeyNULL, KeyNULL, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyNULL, KeyNULL, 
-								KeyN, KeyB, KeyH, KeyG, KeyY, Key6, KeyNULL, KeyNULL, KeyNULL, KeyM, KeyJ, KeyU, Key7, Key8, KeyNULL,
-								KeyNULL, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyNULL, KeyNULL, KeyPeriod, KeySlash, KeyL, KeySemicolon, 
-								KeyP, KeyMinus, KeyNULL, KeyNULL, KeyNULL, KeyQuote, KeyNULL, KeySQB_Open, KeyEquals, KeyNULL, KeyNULL,
-								KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyNULL, KeyBackslash, KeyNULL, KeyNULL, KeyNULL,
-								KeyNULL, KeyNULL, KeyNULL, KeyNULL, KeyNULL, KeyBackspace};
+UINT8(*ScancodeSet2Keys[])() = {KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyUNDEF, KeyF10, KeyF8, 
+								KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ, 
+								Key1, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyZ, KeyS, KeyA, KeyW, Key2, KeyUNDEF, KeyUNDEF, KeyC, KeyX, KeyD,
+								KeyE, Key4, Key3, KeyUNDEF, KeyUNDEF, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyUNDEF, KeyUNDEF, 
+								KeyN, KeyB, KeyH, KeyG, KeyY, Key6, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyM, KeyJ, KeyU, Key7, Key8, KeyUNDEF,
+								KeyUNDEF, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyUNDEF, KeyUNDEF, KeyPeriod, KeySlash, KeyL, KeySemicolon, 
+								KeyP, KeyMinus, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyQuote, KeyUNDEF, KeySQB_Open, KeyEquals, KeyUNDEF, KeyUNDEF,
+								KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyUNDEF, KeyBackslash, KeyUNDEF, KeyUNDEF, KeyUNDEF,
+								KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace};
 
 UINT8 keyboardInitialized = 0;
 
-UINT8 KeyboardInitialize() {
+UINT8 KeyboardInitialize()
+{
 	outb(KEYBOARD_COMMAND_PORT, 0xFF);
 	UINT8 selfTest = inb(KEYBOARD_PORT);
 	PrintT("kb st: %x\n", selfTest);
 	ScancodeSet = GetScancodeSet();
+
 	if (ScancodeSet != 2)
 		SetScancodeSet(2);
+
 	ScancodeSet = 2;
 	outb(KEYBOARD_COMMAND_PORT, 0x20);
+
 	while (inb(KEYBOARD_COMMAND_PORT) & 2);
+
 	UINT8 KCB = inb(KEYBOARD_PORT);
 	KCB &= ~(0X40);							//disable translation
 	outb(KEYBOARD_COMMAND_PORT, 0x60);
@@ -127,7 +132,8 @@ UINT8 KeyboardInitialize() {
 	keyboardInitialized = 1;
 }
 
-UINT8 SpecialKey() {
+UINT8 SpecialKey()
+{
 	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
 }
 
@@ -141,7 +147,8 @@ UINT8 KeyboardInterrupt(){
 	UINT8 scancode = inb(KEYBOARD_PORT);
 
 	UINT8(*key)();
-	if (scancode == 0xf0) {
+	if (scancode == 0xf0)
+{
 		while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 		scancode = inb(KEYBOARD_PORT);
 		if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
@@ -149,7 +156,8 @@ UINT8 KeyboardInterrupt(){
 		key = ScancodeSet2Keys[scancode];
 		return key(1);
 	}
-	else if (scancode == 0xe0) {
+	else if (scancode == 0xe0)
+{
 		return SpecialKey();
 	}
 	if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
@@ -158,7 +166,8 @@ UINT8 KeyboardInterrupt(){
 	return key(0);
 }
 
-UINT8 GetScancodeSet() {
+UINT8 GetScancodeSet()
+{
 	DisableInterrupts();
 	outb(KEYBOARD_PORT, 0xf0);
 	while(inb(KEYBOARD_COMMAND_PORT) & 0x2);
@@ -166,7 +175,8 @@ UINT8 GetScancodeSet() {
 	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 	UINT8 byte = inb(KEYBOARD_PORT);
 	EnableInterrupts();
-	if (byte == KB_ACK) {
+	if (byte == KB_ACK)
+{
 		while (byte = inb(KEYBOARD_PORT) == KB_ACK);
 		byte = inb(KEYBOARD_PORT);
 		while (inb(KEYBOARD_COMMAND_PORT)&1) inb(KEYBOARD_PORT);
@@ -186,14 +196,16 @@ UINT8 GetScancodeSet() {
 			return KB_SCANCODESET_UNKNOWN;
 		}
 	}
-	else {
+	else
+{
 		return GetScancodeSet();
 	}
 	
 	return byte;
 }
 
-UINT8 SetScancodeSet(UINT8 setNumber) {
+UINT8 SetScancodeSet(UINT8 setNumber)
+{
 	if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
 		return 0;
 	DisableInterrupts();

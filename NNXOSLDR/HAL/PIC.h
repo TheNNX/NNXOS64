@@ -9,7 +9,8 @@
 #include <nnxtype.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 	VOID PicInitialize();

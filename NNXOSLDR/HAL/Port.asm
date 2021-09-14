@@ -1,16 +1,6 @@
 [BITS 64]
 [SECTION .text]
-
-;for my convinience of not googling this over and over again:
-;
-;"That means RCX, RDX, R8, R9 for integer, struct or pointer arguments (in that order)"
-;
-;source, https://en.wikipedia.org/wiki/X86_calling_conventions
-;
-;
-;
-
-%strcat INC_FUNC __FILE__,"/../func.inc"
+%strcat INC_FUNC __FILE__,"/../../../CommonInclude/func.inc"
 %include INC_FUNC
 
 func inb

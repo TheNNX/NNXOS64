@@ -15,17 +15,20 @@
 #include "nnxoskldr.h"
 #include <nnxpe.h>
 
-VOID DebugX(UINT64 n) {
+VOID DebugX(UINT64 n)
+{
 	PrintT("0x%X\n", n);
 }
 
-VOID DebugD(UINT64 n) {
+VOID DebugD(UINT64 n)
+{
 	PrintT("%d\n", n);
 }
 
 VOID* gRDSP;
 
-void LoadKernel() {
+void LoadKernel() 
+{
 	MZ_FILE_TABLE MZFileTable;
 	VFS* vfs = VfsGetPointerToVfs(0);
 	VFS_FILE* file = vfs->Functions.OpenFile(vfs, "efi\\boot\\NNXOSKRN.EXE");
@@ -35,7 +38,8 @@ void LoadKernel() {
 	UINT64 imageBase;
 	UINT64(*EntryPoint)(LdrKernelInitializationData*);
 
-	if (file == 0) {
+	if (file == 0) 
+	{
 		PrintT("Error loading kernel.\n");
 		return;
 	}
@@ -43,14 +47,16 @@ void LoadKernel() {
 	vfs->Functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
 	file->FilePointer = MZFileTable.e_lfanew;
 
-	if (MZFileTable.signature != IMAGE_MZ_MAGIC) {
+	if (MZFileTable.signature != IMAGE_MZ_MAGIC) 
+	{
 		PrintT("Invalid PE file %x %X\n", MZFileTable.signature, IMAGE_MZ_MAGIC);
 		return;
 	}
 
 	vfs->Functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
 
-	if (PEFileTable.signature != IMAGE_PE_MAGIC) {
+	if (PEFileTable.signature != IMAGE_PE_MAGIC) 
+	{
 		PrintT("Invalid PE header\n");
 		return;
 	}
@@ -60,7 +66,8 @@ void LoadKernel() {
 	NNXAllocatorFree(dataDirectories);
 
 	imageBase = PEFileTable.optionalHeader.ImageBase;
-	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++) {
+	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++) 
+	{
 		SECTION_HEADER sHeader;
 		UINT64 tempFP, status;
 		int j;
@@ -74,8 +81,10 @@ void LoadKernel() {
 		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64)sHeader.VirtualAddress) + imageBase))
 			return;
 
-		if (sHeader.VirtualSize > sHeader.SizeOfSection) {
-			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++) {
+		if (sHeader.VirtualSize > sHeader.SizeOfSection) 
+		{
+			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++) 
+			{
 				((UINT8*)(((UINT64)sHeader.VirtualAddress) + imageBase + sHeader.SizeOfSection))[j] = 0;
 			}
 		}
@@ -117,10 +126,12 @@ UINT32 gHeight;
 extern BOOL gInteruptInitialized;
 
 #ifdef BOCHS
-void KernelMain(){
+void KernelMain()
+{
 #else
 void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, UINT64(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
-	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp) {
+	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp) 
+{
 #endif
 	UINT64 i;
 	gInteruptInitialized = FALSE;
@@ -148,11 +159,13 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	GlobalPhysicalMemoryMap = nnxMMap;
 	GlobalPhysicalMemoryMapSize = nnxMMapSize;
 
-	for(i = ((UINT64)GlobalPhysicalMemoryMap) / 4096; i < (((UINT64)GlobalPhysicalMemoryMap) + GlobalPhysicalMemoryMapSize + 4095) / 4096; i++){
+	for(i = ((UINT64)GlobalPhysicalMemoryMap) / 4096; i < (((UINT64)GlobalPhysicalMemoryMap) + GlobalPhysicalMemoryMapSize + 4095) / 4096; i++)
+	{
 		GlobalPhysicalMemoryMap[i] = MEM_TYPE_USED_PERM;
 	}
 
-	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++) {
+	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++) 
+	{
 		GlobalPhysicalMemoryMap[((UINT64)gFramebuffer) / 4096 + i] = MEM_TYPE_USED_PERM;
 	}
 
@@ -169,68 +182,68 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	
 	PagingInit();
 
-	GDTR* gdtr = GDT_VIRTUAL_ADDRESS;
-	GDT* gdt = GDT_VIRTUAL_ADDRESS + sizeof(GDTR);
-	IDTR* idtr = IDT_VIRTUAL_ADDRESS;
-	IDT* idt = IDT_VIRTUAL_ADDRESS + sizeof(IDTR);
+	KGDTR64* gdtr = GDT_VIRTUAL_ADDRESS;
+	KGDTENTRY64* gdt = (GDT_VIRTUAL_ADDRESS + sizeof(KGDTR64));
+	KIDTR64* idtr = IDT_VIRTUAL_ADDRESS;
+	KIDTENTRY64* idt = (IDT_VIRTUAL_ADDRESS + sizeof(KIDTR64));
 	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
 	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
 
-	gdtr->Size = sizeof(GDTEntry) * 5 - 1;
+	gdtr->Size = sizeof(KGDTENTRY64) * 5 - 1;
 	gdtr->Base = gdt;
 
-	idtr->Size = sizeof(IDTEntry) * 128 - 1;
+	idtr->Size = sizeof(KIDTENTRY64) * 128 - 1;
 	idtr->Base = idt;
 
-	((UINT64*)gdt->Entries)[0] = 0;		//NULL DESCRIPTOR
+	((UINT64*)gdt)[0] = 0;		//NULL DESCRIPTOR
 
-	gdt->Entries[1].Base0To15 = 0;		//CODE, RING 0 DESCRIPTOR
-	gdt->Entries[1].Base16To23 = 0;
-	gdt->Entries[1].Base24To31 = 0;
-	gdt->Entries[1].Limit0To15 = 0xFFFF;
-	gdt->Entries[1].Limit16To19 = 0xF;
-	gdt->Entries[1].Flags = 0xa;
-	gdt->Entries[1].AccessByte = 0x9a;
+	gdt[1].Base0To15 = 0;		//CODE, RING 0 DESCRIPTOR
+	gdt[1].Base16To23 = 0;
+	gdt[1].Base24To31 = 0;
+	gdt[1].Limit0To15 = 0xFFFF;
+	gdt[1].Limit16To19 = 0xF;
+	gdt[1].Flags = 0xA;
+	gdt[1].AccessByte = 0x9A;
 
-	gdt->Entries[2].Base0To15 = 0;		//DATA, RING 0 DESCRIPTOR
-	gdt->Entries[2].Base16To23 = 0;
-	gdt->Entries[2].Base24To31 = 0;
-	gdt->Entries[2].Limit0To15 = 0xFFFF;
-	gdt->Entries[2].Limit16To19 = 0xF;
-	gdt->Entries[2].Flags = 0xc;
-	gdt->Entries[2].AccessByte = 0x92;
+	gdt[2].Base0To15 = 0;		//DATA, RING 0 DESCRIPTOR
+	gdt[2].Base16To23 = 0;
+	gdt[2].Base24To31 = 0;
+	gdt[2].Limit0To15 = 0xFFFF;
+	gdt[2].Limit16To19 = 0xF;
+	gdt[2].Flags = 0xC;
+	gdt[2].AccessByte = 0x92;
 
-	gdt->Entries[3].Base0To15 = 0;	//CODE, RING 3 DESCRIPTOR
-	gdt->Entries[3].Base16To23 = 0;
-	gdt->Entries[3].Base24To31 = 0;
-	gdt->Entries[3].Limit0To15 = 0xFFFF;
-	gdt->Entries[3].Limit16To19 = 0xF;
-	gdt->Entries[3].Flags = 0xa;
-	gdt->Entries[3].AccessByte = 0xfa;
+	gdt[3].Base0To15 = 0;	//CODE, RING 3 DESCRIPTOR
+	gdt[3].Base16To23 = 0;
+	gdt[3].Base24To31 = 0;
+	gdt[3].Limit0To15 = 0xFFFF;
+	gdt[3].Limit16To19 = 0xF;
+	gdt[3].Flags = 0xA;
+	gdt[3].AccessByte = 0xFA;
 
-	gdt->Entries[4].Base0To15 = 0;		//DATA, RING 3 DESCRIPTOR
-	gdt->Entries[4].Base16To23 = 0;
-	gdt->Entries[4].Base24To31 = 0;
-	gdt->Entries[4].Limit0To15 = 0xFFFF;
-	gdt->Entries[4].Limit16To19 = 0xF;
-	gdt->Entries[4].Flags = 0xc;
-	gdt->Entries[4].AccessByte = 0xf2;
+	gdt[4].Base0To15 = 0;		//DATA, RING 3 DESCRIPTOR
+	gdt[4].Base16To23 = 0;
+	gdt[4].Base24To31 = 0;
+	gdt[4].Limit0To15 = 0xFFFF;
+	gdt[4].Limit16To19 = 0xF;
+	gdt[4].Flags = 0xC;
+	gdt[4].AccessByte = 0xF2;
 	LoadGDT(gdtr);
 
-	for (int a = 0; a < 128; a++) {
-		idt->Entries[a].selector = 0x8;
+	for (int a = 0; a < 128; a++) 
+	{
+		idt[a].Selector = 0x8;
 		void(*handler)();
 		handler = IntTestASM;
 
 		if (a < sizeof(interrupts) / sizeof(*interrupts))
 			handler = interrupts[a];
 
-		idt->Entries[a].offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
-		idt->Entries[a].offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
-		idt->Entries[a].offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
-
-		idt->Entries[a].type = 0x8E;
-		idt->Entries[a].ist = 0;
+		idt[a].Offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
+		idt[a].Offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
+		idt[a].Offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
+		idt[a].Type = 0x8E;
+		idt[a].Ist = 0;
 	}
 
 	LoadIDT(idtr);
@@ -242,7 +255,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PicInitialize();
 
 	NNXAllocatorInitialize();
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++) 
+	{
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
 

@@ -8,7 +8,8 @@
 
 #pragma pack(push, 1)
 
-typedef struct MBRPartitionTableEntry {
+typedef struct MBRPartitionTableEntry
+{
 	BYTE attributes;
 	HSC partitionStartCHS;
 	BYTE partitionType;
@@ -17,7 +18,8 @@ typedef struct MBRPartitionTableEntry {
 	DWORD partitionSizeInSectors;
 }MBRPartitionTableEntry;
 
-typedef struct MBRTable {
+typedef struct MBRTable
+{
 	union
 	{
 		DWORD optionalUID;
@@ -34,7 +36,8 @@ typedef struct MBRTable {
 	WORD magicNumber;
 } MBRTable;
 
-typedef struct MBR {
+typedef struct MBR
+{
 	UINT8 bootstrap[440];
 	MBRTable mbrtable;
 } MBR;

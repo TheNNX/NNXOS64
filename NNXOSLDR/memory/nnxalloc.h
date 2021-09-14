@@ -4,7 +4,8 @@
 
 #include <nnxtype.h>
 
-typedef struct MemoryBlock {
+typedef struct MemoryBlock
+{
 	UINT64 size;
 	struct MemoryBlock* next;
 	UINT8 flags;
@@ -16,7 +17,8 @@ typedef struct MemoryBlock {
 #define MEMBLOCK_USED 1
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 	void NNXAllocatorInitialize();
 	void NNXAllocatorAppend(void* memblock, UINT64 sizeofMemblock);

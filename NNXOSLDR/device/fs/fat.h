@@ -13,13 +13,15 @@
 
 #pragma pack(push, 1)
 
-typedef struct {
+typedef struct
+{
 	UINT16 Year : 7;
 	UINT16 Month : 4;
 	UINT16 Day : 5;
 }FAT_DATE;
 
-typedef struct {
+typedef struct
+{
 	UINT16 Hour : 5;
 	UINT16 Minutes : 6;
 	UINT16 Seconds : 5;
@@ -51,11 +53,13 @@ typedef struct BPB{
 	UINT8 _[476];
 }BPB, BIOS_PARAMETER_BLOCK;
 
-typedef struct {
+typedef struct
+{
 	BYTE BiosIntNumber;
 	BYTE reserved0;
 	BYTE HasNameOrID;
-	union {
+	union
+{
 		UINT32 VolumeSerialNumber;
 		UINT32 VolumeID;
 	};
@@ -115,7 +119,8 @@ VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet();
 
 BOOL NNXFatAutomaticTest(VFS* filesystem);
 
-typedef struct FATFilesystemSpecificData {
+typedef struct FATFilesystemSpecificData
+{
 	VOID* cachedFATSector;
 	UINT32 cachedFATSectorNumber;
 }FATFilesystemSpecificData;

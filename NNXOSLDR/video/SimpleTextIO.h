@@ -1,7 +1,8 @@
 #ifndef NNX_STIO_HEADER
 #define NNX_STIO_HEADER
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <nnxtype.h>
@@ -33,7 +34,8 @@ extern "C" {
 
 #ifdef PRINT_IN_DEBUG_ONLY
 #ifndef DEBUG
-	inline void null(const char* input, ...) {
+	inline void null(const char* input, ...)
+{
 		return;
 	}
 #define PrintT null

@@ -5,8 +5,10 @@
 
 void DiskCheck();
 
-typedef struct CHS {
-	union {
+typedef struct CHS 
+{
+	union 
+	{
 		UINT32 chs;
 		struct
 		{
@@ -17,7 +19,8 @@ typedef struct CHS {
 	};
 }CHS;
 
-typedef struct HSC {
+typedef struct HSC 
+{
 	BYTE bytes[3];
 }HSC;
 

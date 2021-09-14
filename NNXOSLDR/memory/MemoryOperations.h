@@ -3,7 +3,8 @@
 
 #include <nnxtype.h>
 #ifdef  __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 	void MemSet(void* dst, UINT8 value, UINT64 size);

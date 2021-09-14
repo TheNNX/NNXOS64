@@ -25,7 +25,8 @@ const UINT32 progressBarLength = 160;
 
 #endif
 
-void ForceScreenUpdate() {
+void ForceScreenUpdate() 
+{
 #ifdef DEBUG
 	const UINT32 controlColor = 0xFFC3C3C3, controlBckgrd = 0xFF606060;
 	const UINT32 usedColor = 0xFF800000, freeColor = 0xFF008000;
@@ -35,9 +36,11 @@ void ForceScreenUpdate() {
 	UINT32 cursorX, cursorY, oldColor, oldBackground, oldRenderBack, currentPosX, currentPosY, i;
 	UINT32 pixelsUsed = 0;
 
-	for (UINT32 y = minY; y < maxY; y++) {
+	for (UINT32 y = minY; y < maxY; y++)
+{
 		cFramebuffer += gPixelsPerScanline;
-		for (UINT32 x = minX; x < lastX; x++) {
+		for (UINT32 x = minX; x < lastX; x++)
+{
 			cFramebuffer[x] = controlColor;
 		}
 	}
@@ -50,25 +53,29 @@ void ForceScreenUpdate() {
 	TextIoSetCursorPosition(minX + 8, minY + 6);
 	TextIoSetColorInformation(0xFF000000, controlColor, 0);
 
-	if (first) {
+	if (first)
+{
 		PrintT("Allocator usage: %i%%, total: %iKiB", (NNXAllocatorGetUsedMemory() * 100) / NNXAllocatorGetTotalMemory(), (NNXAllocatorGetTotalMemory() + 1) / 1024);
 
 		TextIoGetCursorPosition(&currentPosX, &currentPosY);
 
 		cFramebuffer = gFramebuffer + (currentPosX + pad) + currentPosY * gPixelsPerScanline;
 
-		for (i = 0; i < progressBarLength; i++) {
+		for (i = 0; i < progressBarLength; i++)
+{
 			gFramebuffer[gPixelsPerScanline * (currentPosY - 1) + currentPosX + 10 + i] = controlBckgrd;
 			gFramebuffer[gPixelsPerScanline * (currentPosY + 8) + currentPosX + 10 + i] = controlBckgrd;
 		}
 
 		pixelsUsed = (NNXAllocatorGetUsedMemory() * progressBarLength) / NNXAllocatorGetTotalMemory();
 
-		for (i = 0; i < 8; i++) {
+		for (i = 0; i < 8; i++)
+{
 			UINT32 j;
 			gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad - 1] = controlBckgrd;
 			gFramebuffer[gPixelsPerScanline * (currentPosY + i) + currentPosX + pad + progressBarLength] = controlBckgrd;
-			for (j = 0; j < progressBarLength; j++) {
+			for (j = 0; j < progressBarLength; j++)
+{
 				cFramebuffer[j] = (j < pixelsUsed) ? usedColor : freeColor;
 			}
 			cFramebuffer += gPixelsPerScanline;
@@ -82,9 +89,11 @@ void ForceScreenUpdate() {
 #endif
 }
 
-void UpdateScreen() {
+void UpdateScreen() 
+{
 #ifdef DEBUG
-	if ((times % required) == 0) {
+	if ((times % required) == 0)
+{
 		times = 0;
 		ForceScreenUpdate();
 	}
@@ -92,7 +101,8 @@ void UpdateScreen() {
 #endif
 }
 
-void InitializeScreen() {
+void InitializeScreen() 
+{
 #ifdef DEBUG
 	minX = 0;
 	maxX = gWidth;
@@ -103,16 +113,19 @@ void InitializeScreen() {
 #endif
 }
 
-void NNXAllocatorInitialize() {
+void NNXAllocatorInitialize() 
+{
 	first = 0;
 	InitializeScreen();
 }
 
-UINT64 CountBlockSize(UINT8 flags) {
+UINT64 CountBlockSize(UINT8 flags) 
+{
 	UINT64 result = 0;
 
 	MemoryBlock* current = first;
-	while (current) {
+	while (current) 
+	{
 		if (current->flags == flags || (flags & 0x80))
 			result += current->size + ((flags & 0x80) ? sizeof(MemoryBlock) : 0);
 		current = current->next;
@@ -121,34 +134,42 @@ UINT64 CountBlockSize(UINT8 flags) {
 	return result;
 }
 
-UINT64 NNXAllocatorGetTotalMemory() {
+UINT64 NNXAllocatorGetTotalMemory() 
+{
 	return CountBlockSize(0xFF);
 }
 
 
-UINT64 NNXAllocatorGetUsedMemory() {
+UINT64 NNXAllocatorGetUsedMemory() 
+{
 	return NNXAllocatorGetTotalMemory() - CountBlockSize(MEMBLOCK_FREE);
 }
 
-UINT64 NNXAllocatorGetUsedMemoryInBlocks() {
+UINT64 NNXAllocatorGetUsedMemoryInBlocks() 
+{
 	return CountBlockSize(MEMBLOCK_USED);
 }
 
-UINT64 NNXAllocatorGetFreeMemory() {
+UINT64 NNXAllocatorGetFreeMemory()
+{
 	return CountBlockSize(MEMBLOCK_FREE);
 }
 
-void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
-	if (!first) {
+void NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
+{
+	if (!first) 
+	{
 		first = memblock;
 		first->size = memblockSize - sizeof(MemoryBlock) - 1;
 		first->next = 0;
 		first->flags = MEMBLOCK_FREE;
 	}
-	else {
+	else 
+	{
 		MemoryBlock* current = first;
 		UINT64 i = 0;
-		while (current->next) {
+		while (current->next) 
+		{
 			i++;
 			current = current->next;
 		}
@@ -162,12 +183,14 @@ void NNXAllocatorAppend(void* memblock, UINT64 memblockSize) {
 	UpdateScreen();
 }
 
-void TryMerge() {
+void TryMerge() 
+{
 	if (noMerge == TRUE)
 	{
 		PrintT("Merge failed. Blocks:\n");
 		MemoryBlock* current = first;
-		while (current) {
+		while (current) 
+		{
 			if(current->size > 256)
 				PrintT("Block %i %x %x %x\n", current->size, current, current->next, current->flags);
 			current = current->next;
@@ -182,14 +205,16 @@ void TryMerge() {
 
 	dirty = FALSE;
 
-	while (current->next) {
-
+	while (current->next) 
+	{
 		if (!(current->flags & MEMBLOCK_USED) && !(current->next->flags & MEMBLOCK_USED) &&
-			(((UINT64)current) + current->size + sizeof(MemoryBlock)) == current->next) {
+			(((UINT64)current) + current->size + sizeof(MemoryBlock)) == current->next) 
+		{
 			current->size += current->next->size + sizeof(MemoryBlock);
 			current->next = current->next->next;
 		}
-		else {
+		else 
+		{
 			current = current->next;
 		}
 		
@@ -198,25 +223,31 @@ void TryMerge() {
 	UpdateScreen();
 }
 
-void* NNXAllocatorAlloc(UINT64 size) {
+void* NNXAllocatorAlloc(UINT64 size) 
+{
 	MemoryBlock* current = first;
 	
-	while (current) {
+	while (current) 
+	{
 
-		if (current->flags & (~MEMBLOCK_USED)) {
+		if (current->flags & (~MEMBLOCK_USED)) 
+		{
 			PrintT("Invalid block of size %x at address %x leading to address %x (flags %b) in kernel allocator\n", current->size, current, current->next, current->flags);
 			while (1);
 		}
 
-		if (!(current->flags & MEMBLOCK_USED)) {
+		if (!(current->flags & MEMBLOCK_USED)) 
+		{
 			
-			if (current->size == size) {
+			if (current->size == size) 
+			{
 				current->flags |= MEMBLOCK_USED;
 				dirty = TRUE;
 				UpdateScreen();
 				return (void*)(((UINT64)current) + sizeof(MemoryBlock));
 			}
-			else if (current->size > size + sizeof(MemoryBlock)) {
+			else if (current->size > size + sizeof(MemoryBlock)) 
+			{
 				current->flags |= MEMBLOCK_USED;
 				MemoryBlock* newBlock = (MemoryBlock*)((((UINT64)current) + size + sizeof(MemoryBlock)));
 				newBlock->next = current->next;
@@ -232,7 +263,8 @@ void* NNXAllocatorAlloc(UINT64 size) {
 		current = current->next;
 	}
 	
-	if (dirty) {
+	if (dirty) 
+	{
 		TryMerge();
 		noMerge = TRUE;
 		UpdateScreen();
@@ -242,20 +274,23 @@ void* NNXAllocatorAlloc(UINT64 size) {
 	while (1);
 }
 
-void* NNXAllocatorAllocArray(UINT64 n, UINT64 size) {
+void* NNXAllocatorAllocArray(UINT64 n, UINT64 size) 
+{
 	void* result = NNXAllocatorAlloc(n*size);
 	if(result)
 		MemSet(result, 0, size*n);
 	return result;
 }
 
-void NNXAllocatorFree(void* address) {
+void NNXAllocatorFree(void* address) 
+{
 	dirty = true;
 	MemoryBlock* toBeFreed = ((UINT64)address - sizeof(MemoryBlock));
 	toBeFreed->flags &= (~MEMBLOCK_USED);
 	UpdateScreen();
 }
 
-VOID NNXAllocatorF() {
+VOID NNXAllocatorF() 
+{
 	PrintT("Total memory: %i\nUsed memory: %i\nFree memory: %i\nFirst memory block: 0x%X\n", NNXAllocatorGetTotalMemory(), NNXAllocatorGetUsedMemory(), NNXAllocatorGetFreeMemory(), first);
 }

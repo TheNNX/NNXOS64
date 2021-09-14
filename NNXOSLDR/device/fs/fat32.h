@@ -4,7 +4,8 @@
 
 #pragma pack(push, 1)
 
-typedef struct {
+typedef struct
+{
 	UINT32 SectorFatSize32;
 	UINT16 ExtFlags;
 	UINT16 FilesystemVersion;
@@ -15,7 +16,8 @@ typedef struct {
 	BYTE BiosIntNumber;
 	BYTE reserved1;
 	BYTE HasNameOrID;
-	union {
+	union
+{
 		UINT32 VolumeSerialNumber;
 		UINT32 VolumeID;
 	};

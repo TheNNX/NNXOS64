@@ -357,7 +357,7 @@ typedef struct { UINT8 name[4]; } AML_NAME;
 
 #define ACPI_ERROR_MSG(a) PrintT("ACPI ERROR: %s\n",a)
 
-	typedef enum {
+	enum {
 		tAMLByte = AML_OPCODE_BYTEPREFIX,
 		tAMLWord = AML_OPCODE_WORDPREFIX,
 		tAMLDword = AML_OPCODE_DWORDPREFIX,

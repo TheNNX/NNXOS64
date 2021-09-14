@@ -196,9 +196,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="HAL\func.inc">
-      <Filter>Header Files\HAL</Filter>
-    </None>
     <None Include="multitasking\Task.asm">
       <Filter>Source Files\multitasking</Filter>
     </None>

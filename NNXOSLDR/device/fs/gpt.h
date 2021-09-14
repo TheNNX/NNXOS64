@@ -15,7 +15,8 @@ extern GUID GPT_MS_BASIC_DISK;
 extern GUID GPT_MS_EFI_DISK;
 extern GUID GPT_EMPTY_TYPE;
 
-typedef struct GPTPartitionHeader {
+typedef struct GPTPartitionHeader
+{
 	UINT64 signature;
 	DWORD revision;
 	DWORD headerSize;
@@ -32,12 +33,14 @@ typedef struct GPTPartitionHeader {
 	DWORD crc32ChecksumOfPartitionTable;
 }GPTPartitionHeader, *PGPTPartitionHeader;
 
-typedef struct GPT {
+typedef struct GPT
+{
 	GPTPartitionHeader header;
 	BYTE Reserved[512 - sizeof(GPTPartitionHeader)];
 }GPT;
 
-typedef struct GPTPartitionEntry {
+typedef struct GPTPartitionEntry
+{
 	GUID typeGUID;
 	GUID uniqueGUID;
 	QWORD lbaPartitionStart;

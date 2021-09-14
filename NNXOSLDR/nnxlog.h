@@ -5,7 +5,8 @@
 #include "nnxarg.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 void NNXLogG(const char* str, ...);
@@ -18,7 +19,8 @@ void NNXLoggerTest(VFS* filesystem);
 #ifdef __cplusplus
 }
 
-class NNXLogger {
+class NNXLogger
+{
 public:
 	NNXLogger(VFS_FILE* loggerFile);
 	~NNXLogger();

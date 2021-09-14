@@ -4,33 +4,31 @@
 #pragma pack(1)
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <nnxtype.h>
 
-	struct IDT;
-	typedef struct IDTR {
+	typedef struct _KIDTR64 
+	{
 		UINT16 Size;
 		struct IDT* Base;
-	}IDTR;
+	}KIDTR64;
 
-	typedef struct IDTEntry {
-		UINT16 offset0to15;
-		UINT16 selector;
-		UINT8 ist;
-		UINT8 type;
-		UINT16 offset16to31;
-		UINT32 offset32to63;
-		UINT32 zero;
-	}IDTEntry;
+	typedef struct _KIDTENTRY64 
+	{
+		UINT16 Offset0to15;
+		UINT16 Selector;
+		UINT8 Ist;
+		UINT8 Type;
+		UINT16 Offset16to31;
+		UINT32 Offset32to63;
+		UINT32 Zero;
+	}KIDTENTRY64, *PKIDTENTRY64, *LPKIDTENTRY64;
 
-	typedef struct IDT {
-		IDTEntry Entries[0];
-	}IDT;
-
-	void LoadIDT(IDTR*);
-	void StoreIDT(IDTR*);
+	void LoadIDT(KIDTR64*);
+	void StoreIDT(KIDTR64*);
 	void EnableInterrupts();
 	void DisableInterrupts();
 	void ForceInterrupt(UINT64);
