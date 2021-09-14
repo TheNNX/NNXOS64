@@ -7,7 +7,10 @@
 
 #define GPT_SIGNATURE 0x5452415020494645
 
-typedef struct { QWORD a[2]; } GUID, DQWORD;
+typedef struct
+{
+	QWORD a[2];
+} GUID, DQWORD;
 
 BOOL GPTCompareGUID(GUID a1, GUID a2);
 

@@ -4,88 +4,88 @@
 
 NNXLogger* gLogger = 0;
 
-void NNXLogger::Log(const char* text, va_list l) 
+void NNXLogger::Log(const char* text, va_list l)
 {
-	UINT64 index, textLength = FindCharacterFirst((char*)text, -1, 0);
+	UINT64 index, textLength = FindCharacterFirst((char*) text, -1, 0);
 	char numberBuffer[65];
-	void* args = (void*)l;
+	void* args = (void*) l;
 
 	if (textLength == 0)
 		return;
 
-	for (index = 0; index < textLength;) 
+	for (index = 0; index < textLength;)
 	{
-		if (text[index] == '%') 
+		if (text[index] == '%')
 		{
 			index++;
 			char nextCharacter = text[index++];
 			switch (nextCharacter)
 			{
-			case '%':
-			{
-				this->AppendText("%", 1);
-				break;
-			}
-			case 'i':
-			case 'd':
-			case 'x':
-			case 'X':
-			case 'u':
-			case 'b':
-			{
-				INT64 i = *((INT64*)args);
-				args = ((INT64*)args) + 1;
-				if (nextCharacter == 'X')
-					IntegerToAsciiCapital(i, 16, numberBuffer);
-				else if (nextCharacter == 'x')
-					IntegerToAscii(i, 16, numberBuffer);
-				else if (nextCharacter == 'b')
-{
-					IntegerToAscii(i, 2, numberBuffer);
+				case '%':
+				{
+					this->AppendText("%", 1);
+					break;
 				}
-				else if (nextCharacter == 'u')
-					IntegerToAscii(i, -8, numberBuffer);
-				else
-					IntegerToAscii(i, -10, numberBuffer);
+				case 'i':
+				case 'd':
+				case 'x':
+				case 'X':
+				case 'u':
+				case 'b':
+				{
+					INT64 i = *((INT64*) args);
+					args = ((INT64*) args) + 1;
+					if (nextCharacter == 'X')
+						IntegerToAsciiCapital(i, 16, numberBuffer);
+					else if (nextCharacter == 'x')
+						IntegerToAscii(i, 16, numberBuffer);
+					else if (nextCharacter == 'b')
+					{
+						IntegerToAscii(i, 2, numberBuffer);
+					}
+					else if (nextCharacter == 'u')
+						IntegerToAscii(i, -8, numberBuffer);
+					else
+						IntegerToAscii(i, -10, numberBuffer);
 
-				this->AppendText(numberBuffer, FindCharacterFirst(numberBuffer, -1, 0));
-				break;
-			}
-			case 'c': 
-			{
-				char i[2];
-				i[0] = (*((INT64*)args)) & 0xFF;
-				i[1] = 0;
-				args = ((INT64*)args) + 1;
-				this->AppendText(i, 1);
-				break;
-			}
-			case 's':
-			{
-				char* str = *((char**)args);
-				args = ((INT64*)args) + 1;
-				this->AppendText(str, FindCharacterFirst(str, -1, 0));
-				break;
-			}
-			case 'S':
-			{
-				UINT64 len;
-				char* str = *((char**)args);
-				args = ((INT64*)args) + 1;
-				len = *((UINT64*)args);
-				args = ((INT64*)args) + 1;
-				this->AppendText(str, len);
-				break;
-			}
-			default:
-				break;
+					this->AppendText(numberBuffer, FindCharacterFirst(numberBuffer, -1, 0));
+					break;
+				}
+				case 'c':
+				{
+					char i[2];
+					i[0] = (*((INT64*) args)) & 0xFF;
+					i[1] = 0;
+					args = ((INT64*) args) + 1;
+					this->AppendText(i, 1);
+					break;
+				}
+				case 's':
+				{
+					char* str = *((char**) args);
+					args = ((INT64*) args) + 1;
+					this->AppendText(str, FindCharacterFirst(str, -1, 0));
+					break;
+				}
+				case 'S':
+				{
+					UINT64 len;
+					char* str = *((char**) args);
+					args = ((INT64*) args) + 1;
+					len = *((UINT64*) args);
+					args = ((INT64*) args) + 1;
+					this->AppendText(str, len);
+					break;
+				}
+				default:
+					break;
 			}
 		}
-		else 
+		else
 		{
-			UINT64 nextPercent = FindCharacterFirst((char*)text + index, textLength - index, '%');
+			UINT64 nextPercent = FindCharacterFirst((char*) text + index, textLength - index, '%');
 			if (nextPercent == -1)
-{
+			{
 				nextPercent = textLength - index;
 			}
 
@@ -95,30 +95,30 @@ void NNXLogger::Log(const char* text, va_list l)
 	}
 }
 
-void NNXLogger::AppendText(const char* text, UINT64 textLength) 
+void NNXLogger::AppendText(const char* text, UINT64 textLength)
 {
-	for (int i = 0; i < textLength; i++) 
+	for (int i = 0; i < textLength; i++)
 	{
 		PrintT("%c", text[i]);
 	}
 
-	if (position + textLength >= 512) 
+	if (position + textLength >= 512)
 	{
 		this->Flush();
 	}
 
-	MemCopy(buffer + position, (void*)text, textLength);
-	position += textLength; 
+	MemCopy(buffer + position, (void*) text, textLength);
+	position += textLength;
 	buffer[position] = 0;
 }
 
-void NNXLogger::Flush() 
+void NNXLogger::Flush()
 {
 	this->filesystem->Functions.AppendFile(this->loggerFile, this->position, this->buffer);
 	this->position = 0;
 }
 
-NNXLogger::NNXLogger(VFS_FILE* file) 
+NNXLogger::NNXLogger(VFS_FILE* file)
 {
 	this->loggerFile = file;
 	this->filesystem = file->Filesystem;
@@ -126,7 +126,7 @@ NNXLogger::NNXLogger(VFS_FILE* file)
 	position = 0;
 }
 
-void NNXLogger::Log(const char* str, ...) 
+void NNXLogger::Log(const char* str, ...)
 {
 	va_list args;
 	va_start(args, str);
@@ -164,26 +164,26 @@ extern "C" void NNXSetLoggerG(void* input)
 {
 	if (gLogger)
 		delete gLogger;
-	gLogger = (NNXLogger*)input;
+	gLogger = (NNXLogger*) input;
 }
 
-extern "C" void* NNXGetLoggerG() 
+extern "C" void* NNXGetLoggerG()
 {
 	return gLogger;
 }
 
-extern "C" void* NNXNewLoggerG(VFS_FILE* file) 
+extern "C" void* NNXNewLoggerG(VFS_FILE* file)
 {
 	NNXSetLoggerG(new NNXLogger(file));
-	return (void*)NNXGetLoggerG();
+	return (void*) NNXGetLoggerG();
 }
 
-extern "C" void NNXLoggerTest(VFS* filesystem) 
+extern "C" void NNXLoggerTest(VFS* filesystem)
 {
 	VFS_FILE* loggerFile;
-	if (filesystem->Functions.CheckIfFileExists(filesystem, (char*)"LOG.TXT")) 
+	if (filesystem->Functions.CheckIfFileExists(filesystem, (char*)"LOG.TXT"))
 	{
-		if (filesystem->Functions.DeleteAndCloseFile(filesystem->Functions.OpenFile(filesystem, (char*)"LOG.TXT"))) 
+		if (filesystem->Functions.DeleteAndCloseFile(filesystem->Functions.OpenFile(filesystem, (char*)"LOG.TXT")))
 		{
 			PrintT("Cannot delete old log\n");
 			return;
@@ -197,7 +197,7 @@ extern "C" void NNXLoggerTest(VFS* filesystem)
 	}
 
 	loggerFile = filesystem->Functions.OpenFile(filesystem, (char*)"LOG.TXT");
-	if (loggerFile) 
+	if (loggerFile)
 	{
 		if (gLogger)
 			delete gLogger;

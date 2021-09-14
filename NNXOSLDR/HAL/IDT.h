@@ -10,13 +10,13 @@ extern "C"
 
 #include <nnxtype.h>
 
-	typedef struct _KIDTR64 
+	typedef struct _KIDTR64
 	{
 		UINT16 Size;
 		struct IDT* Base;
 	}KIDTR64;
 
-	typedef struct _KIDTENTRY64 
+	typedef struct _KIDTENTRY64
 	{
 		UINT16 Offset0to15;
 		UINT16 Selector;

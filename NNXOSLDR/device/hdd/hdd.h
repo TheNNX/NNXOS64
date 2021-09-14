@@ -5,9 +5,9 @@
 
 void DiskCheck();
 
-typedef struct CHS 
+typedef struct CHS
 {
-	union 
+	union
 	{
 		UINT32 chs;
 		struct
@@ -19,7 +19,7 @@ typedef struct CHS
 	};
 }CHS;
 
-typedef struct HSC 
+typedef struct HSC
 {
 	BYTE bytes[3];
 }HSC;

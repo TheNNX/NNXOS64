@@ -99,9 +99,6 @@ LongModeEntry:
 	; shouldn't return, if it did, do a cli+hlt loop
 	jmp Error
 
-; FuckYou:
-;	jmp $
-
 Error:
 	cli
 	hlt

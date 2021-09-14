@@ -194,13 +194,13 @@ UINT8 SetScancodeSet(UINT8);
 
 #pragma pack(push, 1)
 //designed to be compatible with MS virtual key mappings
-typedef struct KEY_STATE 
+typedef struct KEY_STATE
 {
-	union 
+	union
 	{
 		UINT8 KeyState[256];
 		struct
-{
+		{
 			UINT8 KEY00;
 			UINT8 LBUTTON;
 			UINT8 RBUTTON;
@@ -214,7 +214,7 @@ typedef struct KEY_STATE
 			UINT8 KEY0A;
 			UINT8 KEY0B;
 			UINT8 CLEAR;
-			union 
+			union
 			{
 				UINT8 RETURN;
 				UINT8 ENTER;
@@ -223,7 +223,7 @@ typedef struct KEY_STATE
 			UINT8 KEY0F;
 			UINT8 SHIFT;
 			UINT8 CONTROL;
-			union 
+			union
 			{
 				UINT8 ALT;
 				UINT8 MENU;
@@ -264,7 +264,7 @@ typedef struct KEY_STATE
 			union
 			{
 				UINT8 NUMBERS[10];
-				struct 
+				struct
 				{
 					UINT8 NUMBER0;
 					UINT8 NUMBER1;
@@ -286,7 +286,7 @@ typedef struct KEY_STATE
 			UINT8 KEY3E;
 			UINT8 KEY3F;
 			UINT8 KEY40;
-			union 
+			union
 			{
 				UINT8 LETTERS[26];
 				struct
@@ -324,10 +324,10 @@ typedef struct KEY_STATE
 			UINT8 APPS;
 			UINT8 KEY5E;
 			UINT8 SLEEP;
-			union 
+			union
 			{
 				UINT8 NUMPAD[10];
-				struct 
+				struct
 				{
 					UINT8 NUMPAD0;
 					UINT8 NUMPAD1;
@@ -347,7 +347,7 @@ typedef struct KEY_STATE
 			UINT8 SUBTRACT;
 			UINT8 DECIMAL;
 			UINT8 DIVIDE;
-			union 
+			union
 			{
 				UINT8 FUNCTION[24];
 				struct

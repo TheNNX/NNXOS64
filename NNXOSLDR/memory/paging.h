@@ -23,7 +23,7 @@ extern "C"
 	VOID PagingTLBFlushPage(UINT64 page);
 
 	inline UINT64 ToCanonicalAddress(UINT64 address)
-{
+	{
 		return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
 	}
 

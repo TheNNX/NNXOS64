@@ -35,15 +35,15 @@ extern "C"
 #ifdef PRINT_IN_DEBUG_ONLY
 #ifndef DEBUG
 	inline void null(const char* input, ...)
-{
+	{
 		return;
 	}
 #define PrintT null
 #endif
 #endif
 
-	
-	
+
+
 	void TextIoClear();
 	UINT64 FrameBufferSize();
 
@@ -58,6 +58,6 @@ extern "C"
 
 
 #ifdef __cplusplus
-	}
+}
 #endif
 #endif

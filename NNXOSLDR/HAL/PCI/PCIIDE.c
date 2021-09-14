@@ -78,9 +78,9 @@ VOID SearchForDevices(PCI_IDE_CONTROLLER* pic)
 	IdeWrite(pic, 1, ATA_REG_CONTROL, 2);
 
 	for (int i = 0; i < 2; i++)
-{
+	{
 		for (int j = 0; j < 2; j++)
-{
+		{
 			pic->drives[diskCount].Reserved = 0;
 			IdeWrite(pic, i, ATA_REG_HDDEVSEL, 0xA0 | (j << 4));
 			WAIT_MACRO;
@@ -95,14 +95,17 @@ VOID SearchForDevices(PCI_IDE_CONTROLLER* pic)
 			UINT8 error = 0;
 
 			while (1)
-{
+			{
 				status = IdeRead(pic, i, ATA_REG_STATUS);
-				if ((status & ATA_SR_ERR)) { error = 1; break; }
+				if ((status & ATA_SR_ERR))
+				{
+					error = 1; break;
+				}
 				if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) break;
 			}
 
 			if (error != 0)
-{
+			{
 				unsigned char LBA1 = IdeRead(pic, i, ATA_REG_LBA1);
 				unsigned char LBA2 = IdeRead(pic, i, ATA_REG_LBA2);
 
@@ -118,30 +121,30 @@ VOID SearchForDevices(PCI_IDE_CONTROLLER* pic)
 				error = status & ATA_SR_ERR;
 				WAIT_MACRO;
 			}
-			
+
 			IdeReadBuffer(pic, i, ATA_REG_DATA, pic->ide_buffer, 128);
 
 			pic->drives[diskCount].Reserved = 1;
 			pic->drives[diskCount].type = type;
 			pic->drives[diskCount].channel = i;
 			pic->drives[diskCount].drive = j;
-			pic->drives[diskCount].signature = *((UINT16*)(pic->ide_buffer + ATA_IDENT_DEVICETYPE));
-			pic->drives[diskCount].capabilities = *((UINT16*)(pic->ide_buffer + ATA_IDENT_CAPABILITIES));
-			pic->drives[diskCount].commandSets = *((UINT32*)(pic->ide_buffer + ATA_IDENT_COMMANDSETS));
+			pic->drives[diskCount].signature = *((UINT16*) (pic->ide_buffer + ATA_IDENT_DEVICETYPE));
+			pic->drives[diskCount].capabilities = *((UINT16*) (pic->ide_buffer + ATA_IDENT_CAPABILITIES));
+			pic->drives[diskCount].commandSets = *((UINT32*) (pic->ide_buffer + ATA_IDENT_COMMANDSETS));
 
-			pic->drives[diskCount].geometry.sector = *((UINT8*)(pic->ide_buffer + ATA_IDENT_SECTORS));
-			pic->drives[diskCount].geometry.head = *((UINT8*)(pic->ide_buffer + ATA_IDENT_HEADS));
-			pic->drives[diskCount].geometry.cylinder = *((UINT16*)(pic->ide_buffer + ATA_IDENT_CYLINDERS));
+			pic->drives[diskCount].geometry.sector = *((UINT8*) (pic->ide_buffer + ATA_IDENT_SECTORS));
+			pic->drives[diskCount].geometry.head = *((UINT8*) (pic->ide_buffer + ATA_IDENT_HEADS));
+			pic->drives[diskCount].geometry.cylinder = *((UINT16*) (pic->ide_buffer + ATA_IDENT_CYLINDERS));
 
 			if (pic->drives[diskCount].commandSets & (1 << 26))
-				pic->drives[diskCount].size = *((unsigned int *)(pic->ide_buffer + ATA_IDENT_MAX_LBA_EXT));
+				pic->drives[diskCount].size = *((unsigned int *) (pic->ide_buffer + ATA_IDENT_MAX_LBA_EXT));
 			else
-				pic->drives[diskCount].size = *((unsigned int *)(pic->ide_buffer + ATA_IDENT_MAX_LBA));
+				pic->drives[diskCount].size = *((unsigned int *) (pic->ide_buffer + ATA_IDENT_MAX_LBA));
 
 			pic->drives[diskCount].size *= 512;
 
 			for (int k = 0; k < 40; k += 2)
-{
+			{
 				pic->drives[diskCount].model[k] = pic->ide_buffer[ATA_IDENT_MODEL + k + 1];
 				pic->drives[diskCount].model[k + 1] = pic->ide_buffer[ATA_IDENT_MODEL + k];
 			}
@@ -166,13 +169,14 @@ PCI_IDE_CONTROLLER PciIdeInitPciDevice(UINT8 bus, UINT8 device, UINT8 function, 
 	pic.interrupt_number = PciConfigReadWord(bus, device, function, 0x3c) & 0xff;
 
 	if (pic.interrupt_number == 0xFE)
-{
+	{
 		PciConfigWriteByte(bus, device, function, 0x3f, 14);
 		pic.interrupt_number = 14;
 	}
 	else
-{
-		if (progIf == 0x80 || progIf == 0x8A) { //parallel IDE
+	{
+		if (progIf == 0x80 || progIf == 0x8A)
+		{ //parallel IDE
 			pic.interrupt_number = 210;
 		}
 	}
@@ -184,34 +188,34 @@ PCI_IDE_CONTROLLER PciIdeInitPciDevice(UINT8 bus, UINT8 device, UINT8 function, 
 UINT8 IdePoll(PCI_IDE_CONTROLLER* controller, UINT8 channel, BOOL setError)
 {
 	for (int i = 0; i < 4; i++)
-{
+	{
 		IdeRead(controller, channel, ATA_REG_ALTSTATUS);
 	}
 
 	WAIT_MACRO;
-	
+
 	UINT8 status;
 	while (status = IdeRead(controller, channel, ATA_REG_STATUS))
-{
+	{
 		if (!(status & ATA_SR_BSY))
 			break;
 	}
-	
+
 	if (setError)
-{
-		
+	{
+
 		if (status & ATA_SR_ERR)
-{
+		{
 			PrintTA("ERR\n");
 			return status;
 		}
 		if (status & ATA_SR_DF)
-{
+		{
 			PrintTA("DF\n");
 			return status;
 		}
 		if (!(status & ATA_SR_DRQ))
-{
+		{
 			PrintTA("DRQ\n");
 
 			return status;
@@ -232,16 +236,16 @@ UINT64 PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 number
 	while (IdeRead(controller, channel, ATA_REG_STATUS) & ATA_SR_BSY);
 
 	if (drive->capabilities & IDE_LBA_SUPPORT)
-{
+	{
 		IdeWrite(controller, channel, ATA_REG_HDDEVSEL, 0xE0 | (isSlave << 4) | ((lba > 0xfffffff) ? 0 : ((lba & 0xF000000) >> 24))); // Drive & LBA
 		if (lba > 0xfffffff)
-{
-			
-			IdeWrite(controller, channel, ATA_REG_SECCOUNT1, (numberOfSectors&0xFF00)>>8);
+		{
+
+			IdeWrite(controller, channel, ATA_REG_SECCOUNT1, (numberOfSectors & 0xFF00) >> 8);
 			IdeWrite(controller, channel, ATA_REG_LBA3, (lba >> 24) & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_LBA4, (lba >> 32) & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_LBA5, (lba >> 40) & 0x0F);
-		
+
 			IdeWrite(controller, channel, ATA_REG_SECCOUNT0, numberOfSectors);
 			IdeWrite(controller, channel, ATA_REG_LBA0, lba & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_LBA1, (lba >> 8) & 0xFF);
@@ -249,17 +253,17 @@ UINT64 PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 number
 			IdeWrite(controller, channel, ATA_REG_COMMAND, direction ? ATA_CMD_WRITE_PIO_EXT : ATA_CMD_READ_PIO_EXT);
 		}
 		else
-{
+		{
 			IdeWrite(controller, channel, ATA_REG_SECCOUNT0, numberOfSectors);
 			IdeWrite(controller, channel, ATA_REG_LBA0, lba & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_LBA1, (lba >> 8) & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_LBA2, (lba >> 16) & 0xFF);
 			IdeWrite(controller, channel, ATA_REG_COMMAND, direction ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO);
 		}
-		
+
 	}
 	else
-{
+	{
 		UINT8 sector = lba % drive->geometry.sector;
 		UINT8 head = lba / drive->geometry.sector % drive->geometry.cylinder;
 		UINT16 cylinder = lba / drive->geometry.sector / drive->geometry.cylinder;
@@ -267,31 +271,31 @@ UINT64 PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 number
 		IdeWrite(controller, channel, ATA_REG_HDDEVSEL, 0xA0 | (isSlave << 4) | (head&(0xf))); // Drive & CHS
 		IdeWrite(controller, channel, ATA_REG_SECCOUNT0, numberOfSectors);
 		IdeWrite(controller, channel, ATA_REG_LBA0, sector);
-		IdeWrite(controller, channel, ATA_REG_LBA1, (UINT8)(cylinder & 0xFF));
-		IdeWrite(controller, channel, ATA_REG_LBA2, (UINT8)((cylinder >> 8) & 0xFF));
+		IdeWrite(controller, channel, ATA_REG_LBA1, (UINT8) (cylinder & 0xFF));
+		IdeWrite(controller, channel, ATA_REG_LBA2, (UINT8) ((cylinder >> 8) & 0xFF));
 		IdeWrite(controller, channel, ATA_REG_COMMAND, direction ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO);
 	}
-	
+
 	for (int i = 0; i < numberOfSectors; i++)
-{
+	{
 		UINT8 err = IdePoll(controller, channel, 1);
 		if (err & (ATA_SR_ERR || ATA_SR_DF))
-{
+		{
 			PrintT("ERR: %X, %i/%i\n", lba, i + 1, numberOfSectors);
 			return err;
 		}
 		if (direction == 0)
-{
+		{
 			for (int i = 0; i < 256; i++)
-{
-				*((UINT16*)(buffer+2*i)) = inw(bus);
+			{
+				*((UINT16*) (buffer + 2 * i)) = inw(bus);
 			}
 		}
 		else
-{
+		{
 			for (int i = 0; i < 256; i++)
-{
-				outw(bus, *((UINT16*)(buffer + 2*i)));
+			{
+				outw(bus, *((UINT16*) (buffer + 2 * i)));
 			}
 			IdeWrite(controller, channel, ATA_REG_COMMAND, (lba > 0xfffffff) ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 		}

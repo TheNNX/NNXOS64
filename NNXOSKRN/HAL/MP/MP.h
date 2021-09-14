@@ -6,13 +6,14 @@
 #include "../../../NNXOSLDR/HAL/IDT.h"
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 	VOID MpInitialize();
 	VOID ApProcessorInit(UINT8 lapicID);
 
 #pragma pack(push, 1)
-	typedef struct ApData {
+	typedef struct ApData
+	{
 		UINT16 ApSpinlock;
 		UINT8 Padding[62];
 		UINT8 ApCurrentlyBeingInitialized;

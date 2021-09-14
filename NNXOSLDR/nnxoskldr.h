@@ -3,7 +3,7 @@
 
 #include <nnxtype.h>
 
-typedef struct KLdrKernelInitializationData 
+typedef struct KLdrKernelInitializationData
 {
 	UINT32* Framebuffer;
 	UINT32* FramebufferEnd;

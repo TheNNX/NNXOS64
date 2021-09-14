@@ -16,7 +16,8 @@ class AMLField;
 class AMLOpetationRegion;
 class AMLFieldUnit;
 
-class AMLNamedObject {
+class AMLNamedObject
+{
 public:
 	AML_NAME name;
 	AMLObjRef object;
@@ -24,21 +25,24 @@ public:
 	static AMLNamedObject* newObject(AML_NAME name, AMLObjRef object);
 };
 
-class AMLBuffer {
+class AMLBuffer
+{
 public:
 	AMLBuffer(UINT32 size);
 	UINT8 *data;
-	UINT32 size;	
+	UINT32 size;
 };
 
-class AMLPackage {
+class AMLPackage
+{
 public:
 	AMLPackage(UINT8 numberOfElements);
 	UINT8 numElements;					// According to ACPI 6.2 Specification 19.3.5 "ASL Data Types", the size of a package cannot exceed 255
 	AMLObjRef* elements;
 };
 
-class AMLScope{
+class AMLScope
+{
 public:
 	AML_NAME name;
 	AMLScope* parent;
@@ -51,7 +55,8 @@ public:
 	AMLOpetationRegion *opRegion;
 };
 
-typedef struct {
+typedef struct
+{
 	AML_NAME name;
 	AMLScope* scope;
 }AML_NAME_WITHIN_SCOPE;
@@ -106,8 +111,9 @@ private:
 };
 
 void PrintName(AML_NAME name);
-inline bool operator==(const AML_NAME& name1, const AML_NAME& name2) {
-	return (*((DWORD*)name1.name) == *((DWORD*)name2.name));
+inline bool operator==(const AML_NAME& name1, const AML_NAME& name2)
+{
+	return (*((DWORD*) name1.name) == *((DWORD*) name2.name));
 }
 
 void InitializeNamespace(AMLScope* root);
@@ -124,7 +130,8 @@ public:
 
 UINT64 GetIntegerFromAmlObjRef(AMLObjectReference objRef);
 
-class AMLMethodDef {
+class AMLMethodDef
+{
 public:
 	AML_NAME_WITHIN_SCOPE name;
 	UINT8 parameterNumber;
@@ -135,13 +142,15 @@ public:
 	AMLMethodDef(AML_NAME, AMLParser*, AMLScope*);
 };
 
-class AMLFieldUnit {
+class AMLFieldUnit
+{
 public:
 	AML_NAME name;
 	UINT8 width;
 };
 
-class AMLField {
+class AMLField
+{
 public:
 	AMLOpetationRegion* parent;
 	UINT8 accessWidth;
@@ -150,7 +159,8 @@ public:
 	NNXLinkedList<AMLFieldUnit*> fieldUnits;
 };
 
-class AMLOpetationRegion {
+class AMLOpetationRegion
+{
 public:
 	UINT8 type;
 	UINT64 offset;

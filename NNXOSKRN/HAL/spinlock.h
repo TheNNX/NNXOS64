@@ -2,14 +2,14 @@
 #define NNX_SPINLOCK_HEADER
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 #include <nnxtype.h>
 #include "irql.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4324)
-	typedef __declspec(align(64)) struct KSPIN_LOCK 
+	typedef __declspec(align(64)) struct KSPIN_LOCK
 	{
 		UINT64 Lock;
 	}KSPIN_LOCK, *PKSPIN_LOCK;

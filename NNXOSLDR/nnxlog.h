@@ -9,12 +9,12 @@ extern "C"
 {
 #endif
 
-void NNXLogG(const char* str, ...);
-void NNXClearG();
-void NNXSetLoggerG(void*);
-void* NNXGetLoggerG(void);
-void* NNXNewLoggerG(VFS_FILE*);
-void NNXLoggerTest(VFS* filesystem);
+	void NNXLogG(const char* str, ...);
+	void NNXClearG();
+	void NNXSetLoggerG(void*);
+	void* NNXGetLoggerG(void);
+	void* NNXNewLoggerG(VFS_FILE*);
+	void NNXLoggerTest(VFS* filesystem);
 
 #ifdef __cplusplus
 }

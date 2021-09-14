@@ -6,37 +6,37 @@
 #include "HAL/IDT.h"
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 
-inline void NNXAssert(BOOL x, char* s) 
-{
-	if (!x)
-		PrintT("%s", s);
-}
-
-inline void NNXAssertAndStop(BOOL x, char* s) 
-{
-	NNXAssert(x, s);
-	if (!x)
-{
-		DisableInterrupts();
-		while (true);
+	inline void NNXAssert(BOOL x, char* s)
+	{
+		if (!x)
+			PrintT("%s", s);
 	}
-}
+
+	inline void NNXAssertAndStop(BOOL x, char* s)
+	{
+		NNXAssert(x, s);
+		if (!x)
+		{
+			DisableInterrupts();
+			while (true);
+		}
+	}
 
 
 #ifdef __cplusplus
 }
 
-inline void NNXAssert(BOOL x, const char* s) 
+inline void NNXAssert(BOOL x, const char* s)
 {
-	NNXAssert(x, (char*)s);
+	NNXAssert(x, (char*) s);
 }
 
-inline void NNXAssertAndStop(BOOL x, const char* s) 
+inline void NNXAssertAndStop(BOOL x, const char* s)
 {
-	NNXAssertAndStop(x, (char*)s);
+	NNXAssertAndStop(x, (char*) s);
 }
 
 #endif

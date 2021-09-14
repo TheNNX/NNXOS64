@@ -13,7 +13,7 @@ KEY(F2, K_F2, 0, 0, 0, 0);
 KEY(F3, K_F3, 0, 0, 0, 0);
 KEY(F4, K_F4, 0, 0, 0, 0);
 KEY(F5, K_F5, 0, 0, 0, 0);
-KEY(F6, K_F6, 0, 0 ,0, 0);
+KEY(F6, K_F6, 0, 0, 0, 0);
 KEY(F7, K_F7, 0, 0, 0, 0);
 KEY(F8, K_F8, 0, 0, 0, 0);
 KEY(F9, K_F9, 0, 0, 0, 0);
@@ -98,15 +98,15 @@ KEYSide(RCTRL, K_RCONTROL, K_CONTROL);
 KEY(PrintScreen, K_SNAPSHOT, 0, 0, 0, 0);
 
 
-UINT8(*ScancodeSet2Keys[])() = {KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyUNDEF, KeyF10, KeyF8, 
-								KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ, 
+UINT8(*ScancodeSet2Keys[])() = { KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyUNDEF, KeyF10, KeyF8,
+								KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ,
 								Key1, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyZ, KeyS, KeyA, KeyW, Key2, KeyUNDEF, KeyUNDEF, KeyC, KeyX, KeyD,
-								KeyE, Key4, Key3, KeyUNDEF, KeyUNDEF, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyUNDEF, KeyUNDEF, 
+								KeyE, Key4, Key3, KeyUNDEF, KeyUNDEF, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyUNDEF, KeyUNDEF,
 								KeyN, KeyB, KeyH, KeyG, KeyY, Key6, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyM, KeyJ, KeyU, Key7, Key8, KeyUNDEF,
-								KeyUNDEF, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyUNDEF, KeyUNDEF, KeyPeriod, KeySlash, KeyL, KeySemicolon, 
+								KeyUNDEF, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyUNDEF, KeyUNDEF, KeyPeriod, KeySlash, KeyL, KeySemicolon,
 								KeyP, KeyMinus, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyQuote, KeyUNDEF, KeySQB_Open, KeyEquals, KeyUNDEF, KeyUNDEF,
 								KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyUNDEF, KeyBackslash, KeyUNDEF, KeyUNDEF, KeyUNDEF,
-								KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace};
+								KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace };
 
 UINT8 keyboardInitialized = 0;
 
@@ -137,7 +137,8 @@ UINT8 SpecialKey()
 	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
 }
 
-UINT8 KeyboardInterrupt(){
+UINT8 KeyboardInterrupt()
+{
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
 
@@ -148,7 +149,7 @@ UINT8 KeyboardInterrupt(){
 
 	UINT8(*key)();
 	if (scancode == 0xf0)
-{
+	{
 		while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 		scancode = inb(KEYBOARD_PORT);
 		if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
@@ -157,7 +158,7 @@ UINT8 KeyboardInterrupt(){
 		return key(1);
 	}
 	else if (scancode == 0xe0)
-{
+	{
 		return SpecialKey();
 	}
 	if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
@@ -170,37 +171,37 @@ UINT8 GetScancodeSet()
 {
 	DisableInterrupts();
 	outb(KEYBOARD_PORT, 0xf0);
-	while(inb(KEYBOARD_COMMAND_PORT) & 0x2);
+	while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
 	outb(KEYBOARD_PORT, 0);
 	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 	UINT8 byte = inb(KEYBOARD_PORT);
 	EnableInterrupts();
 	if (byte == KB_ACK)
-{
+	{
 		while (byte = inb(KEYBOARD_PORT) == KB_ACK);
 		byte = inb(KEYBOARD_PORT);
-		while (inb(KEYBOARD_COMMAND_PORT)&1) inb(KEYBOARD_PORT);
+		while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
 		PrintT("BYTE: %X\n", byte);
 		switch (byte)
 		{
-		case 0x43:	//TRANSLATED
-		case 1:		//NOT TRANSLATED
-			return KB_SCANCODESET1;
-		case 0x41:	//TRANSLATED
-		case 2:		//NOT TRANSLATED
-			return KB_SCANCODESET2;
-		case 0x3f:	//TRANSLATED
-		case 3:		//NOT TRANSLATED
-			return KB_SCANCODESET3;
-		default:
-			return KB_SCANCODESET_UNKNOWN;
+			case 0x43:	//TRANSLATED
+			case 1:		//NOT TRANSLATED
+				return KB_SCANCODESET1;
+			case 0x41:	//TRANSLATED
+			case 2:		//NOT TRANSLATED
+				return KB_SCANCODESET2;
+			case 0x3f:	//TRANSLATED
+			case 3:		//NOT TRANSLATED
+				return KB_SCANCODESET3;
+			default:
+				return KB_SCANCODESET_UNKNOWN;
 		}
 	}
 	else
-{
+	{
 		return GetScancodeSet();
 	}
-	
+
 	return byte;
 }
 
@@ -219,5 +220,5 @@ UINT8 SetScancodeSet(UINT8 setNumber)
 		return 1;
 	else
 		return 0;
-	
+
 }

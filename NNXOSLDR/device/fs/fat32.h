@@ -17,7 +17,7 @@ typedef struct
 	BYTE reserved1;
 	BYTE HasNameOrID;
 	union
-{
+	{
 		UINT32 VolumeSerialNumber;
 		UINT32 VolumeID;
 	};

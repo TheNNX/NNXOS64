@@ -43,30 +43,30 @@ VOID PagingTLBFlushPage(UINT64 page)
 
 VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage)
 {
-	UINT64 i, result = (UINT64)-1LL;
+	UINT64 i, result = (UINT64) -1LL;
 	min &= 0xFFFFFFFFFFFF;
 	max &= 0xFFFFFFFFFFFF;
 
 	for (i = min / PAGE_SIZE_SMALL; i < max / PAGE_SIZE_SMALL; i++)
-{
+	{
 		if ((RecursivePagingPML4Base[i / (512 * 512 * 512)]) == 0)
-{
+		{
 			result = i;
 			break;
 		}
 		if ((RecursivePagingPDPsBase[i / (512 * 512)]) == 0)
-{
+		{
 			result = i;
 			break;
 		}
 		if ((RecursivePagingPDsBase[i / 512]) == 0)
-{
+		{
 			result = i;
 			break;
 		}
 
 		if ((RecursivePagingPTsBase[i]) == 0)
-{
+		{
 			result = i;
 			break;
 		}
@@ -109,42 +109,42 @@ VOID PagingMapPage(VOID* v, VOID* p, UINT16 f)
 	pml4Index = vUINT >> 39;
 
 	if (!(cRecursivePagingPML4Base[pml4Index]))
-{
-		cRecursivePagingPML4Base[pml4Index] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
+	{
+		cRecursivePagingPML4Base[pml4Index] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPDPsBase + 512 * pml4Index);
 		MemSet(cRecursivePagingPDPsBase + 512 * pml4Index, 0, PAGE_SIZE_SMALL);
 	}
 
 	if (!(cRecursivePagingPDPsBase[pdpIndex]))
-{
-		cRecursivePagingPDPsBase[pdpIndex] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
+	{
+		cRecursivePagingPDPsBase[pdpIndex] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPDsBase + 512 * pdpIndex);
 		MemSet(cRecursivePagingPDsBase + 512 * pdpIndex, 0, PAGE_SIZE_SMALL);
 	}
 
 	if (!(cRecursivePagingPDsBase[pdIndex]))
-{
-		cRecursivePagingPDsBase[pdIndex] = ((UINT64)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
+	{
+		cRecursivePagingPDsBase[pdIndex] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE);
 		PagingTLBFlushPage(cRecursivePagingPTsBase + 512 * pdIndex);
 		MemSet(cRecursivePagingPTsBase + 512 * pdIndex, 0, PAGE_SIZE_SMALL);
 	}
 
 	if (cRecursivePagingPTsBase[ptIndex])
-{
+	{
 		if (gInteruptInitialized)
-{
-			PrintT("Warning: page overriden %x to %x\n", cRecursivePagingPTsBase[ptIndex], ((UINT64)p) | f);
+		{
+			PrintT("Warning: page overriden %x to %x\n", cRecursivePagingPTsBase[ptIndex], ((UINT64) p) | f);
 		}
 	}
 
-	cRecursivePagingPTsBase[ptIndex] = ((UINT64)p) | f;
+	cRecursivePagingPTsBase[ptIndex] = ((UINT64) p) | f;
 
 	if (pml4Index == 510)
-{
+	{
 		PagingTLBFlush();
 	}
 	else
-{
+	{
 		PagingTLBFlushPage(v);
 	}
 }
@@ -175,19 +175,19 @@ UINT64 PhysicalAddressFunctionIdentify(UINT64 a, UINT64 b, UINT8 physMemoryType)
 
 UINT64 PhysicalAddressFunctionGlobalMemoryMap(UINT64 address, UINT64 relativeAddrss, UINT8 physMemoryType)
 {
-	return PAGE_ALIGN((UINT64)GlobalPhysicalMemoryMap) + relativeAddrss;
+	return PAGE_ALIGN((UINT64) GlobalPhysicalMemoryMap) + relativeAddrss;
 }
 
 VOID InternalPagingAllocatePagingStructures(
-	UINT64* PML4, UINT64 PML4Index, UINT64 PDPIndex, 
-	UINT64 initialPageTable, UINT64 howManyPageTables, 
-	UINT64(*PhysicalAddressFunction)(UINT64, UINT64, UINT8), 
+	UINT64* PML4, UINT64 PML4Index, UINT64 PDPIndex,
+	UINT64 initialPageTable, UINT64 howManyPageTables,
+	UINT64(*PhysicalAddressFunction)(UINT64, UINT64, UINT8),
 	UINT16 additionalFlags,
-	UINT8 physMemoryType) 
+	UINT8 physMemoryType)
 {
 	UINT64 i, j, *PDPTempKernel, *PDTempKernel;
 	if ((PML4[PML4Index] & PAGE_PRESENT) == 0)
-{
+	{
 		PML4[PML4Index] = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
 		MemSet(PML4[PML4Index], 0, PAGE_SIZE_SMALL);
 		PML4[PML4Index] |= (PAGE_WRITE | PAGE_PRESENT);
@@ -196,25 +196,25 @@ VOID InternalPagingAllocatePagingStructures(
 	PDPTempKernel = PAGE_ALIGN(PML4[PML4Index]);
 
 	if ((PDPTempKernel[PDPIndex] & PAGE_PRESENT) == 0)
-{
+	{
 		PDPTempKernel[PDPIndex] = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
 		MemSet(PDPTempKernel[PDPIndex], 0, PAGE_SIZE_SMALL);
 		PDPTempKernel[PDPIndex] |= (PAGE_WRITE | PAGE_PRESENT);
 	}
-	
+
 	PDTempKernel = PAGE_ALIGN(PDPTempKernel[PDPIndex]);
 
 	/* allocate page tables */
 	for (i = initialPageTable; i < howManyPageTables + initialPageTable; i++)
-{
+	{
 		PDTempKernel[i] = InternalAllocatePhysicalPageWithType(physMemoryType);
 		for (j = 0; j < 512; j++)
-{
-			((UINT64*)PDTempKernel[i])[j] = PhysicalAddressFunction(
-				ToCanonicalAddress(((i + (512 * PML4Index + PDPIndex) * 512) * 512 + j) << 12), 
+		{
+			((UINT64*) PDTempKernel[i])[j] = PhysicalAddressFunction(
+				ToCanonicalAddress(((i + (512 * PML4Index + PDPIndex) * 512) * 512 + j) << 12),
 				((i - initialPageTable) * 512 + j) << 12,
 				physMemoryType
-			) 
+			)
 				| (PAGE_PRESENT | PAGE_WRITE | additionalFlags);
 		}
 
@@ -225,9 +225,9 @@ VOID InternalPagingAllocatePagingStructures(
 const UINT64 loaderTemporaryKernelPTStart = 0;
 const UINT64 loaderTemporaryKernelPTSize = 32;
 
-/*	TODO: Map ACPI structures, so they're always accessible 
-	(and mark them as used in the GlobalPhysicalMemoryMap) 
-	
+/*	TODO: Map ACPI structures, so they're always accessible
+	(and mark them as used in the GlobalPhysicalMemoryMap)
+
 	Perhaps it should be done on structure first use, ex.
 	when the OS retrieves the RDSP it should map it, and set
 	the pointer to the updated value. Later, upon (X/R)SDT's
@@ -255,17 +255,17 @@ VOID PagingInit()
 
 	/* for physical memory map */
 	InternalPagingAllocatePagingStructures(PML4, KERNEL_PML4_ENTRY, 0, pageTableKernelReserve,
-		GlobalPhysicalMemoryMapSize / (4096 * 512) + 2, PhysicalAddressFunctionGlobalMemoryMap, 0, MEM_TYPE_USED_PERM);
+										   GlobalPhysicalMemoryMapSize / (4096 * 512) + 2, PhysicalAddressFunctionGlobalMemoryMap, 0, MEM_TYPE_USED_PERM);
 
 	/* for recursive paging */
-	PML4[PML4EntryForRecursivePaging] = ((UINT64)PML4) | (PAGE_WRITE | PAGE_PRESENT);
+	PML4[PML4EntryForRecursivePaging] = ((UINT64) PML4) | (PAGE_WRITE | PAGE_PRESENT);
 
 	SetCR3(PML4);
-	GlobalPhysicalMemoryMap = virtualGlobalPhysicalMemoryMapSize | (((UINT64)GlobalPhysicalMemoryMap) & 0xFFF);
+	GlobalPhysicalMemoryMap = virtualGlobalPhysicalMemoryMapSize | (((UINT64) GlobalPhysicalMemoryMap) & 0xFFF);
 
 	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++)
-{
-		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION + i * PAGE_SIZE_SMALL, ((UINT64)gFramebuffer) + i * PAGE_SIZE_SMALL, 0x3);
+	{
+		PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION + i * PAGE_SIZE_SMALL, ((UINT64) gFramebuffer) + i * PAGE_SIZE_SMALL, 0x3);
 	}
 
 	TextIoInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize(), 0, 0, 0);
@@ -277,7 +277,7 @@ VOID PagingKernelInit()
 	UINT64 i;
 
 	for (i = loaderTemporaryKernelPTStart; i < loaderTemporaryKernelPTSize + loaderTemporaryKernelPTStart; i++)
-{
+	{
 		//PagingMapPage(RecursivePagingPTsBase + i * 512, 0, 0);
 	}
 	PagingTLBFlush();

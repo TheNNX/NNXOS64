@@ -3,10 +3,10 @@
 #include "efibind.h"
 #include <nnxpe.h>
 
-UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap) 
+UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap)
 {
 	IMAGE_DOS_HEADER* dos_header = FileBuffer;
-	IMAGE_PE_HEADER* pe_header = (IMAGE_PE_HEADER*)((UINT64)dos_header + (UINT64)dos_header->e_lfanew);
+	IMAGE_PE_HEADER* pe_header = (IMAGE_PE_HEADER*) ((UINT64) dos_header + (UINT64) dos_header->e_lfanew);
 
 	if (pe_header->signature != IMAGE_PE_MAGIC)
 	{
@@ -19,20 +19,20 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 
 	UINT16 machine = fileHeader->Machine;
 
-	if (machine != IMAGE_MACHINE_X64 || optionalHeader->signature != IMAGE_OPTIONAL_HEADER_NT64) 
+	if (machine != IMAGE_MACHINE_X64 || optionalHeader->signature != IMAGE_OPTIONAL_HEADER_NT64)
 	{
 		Print(L"Invalid parameters\n");
 		return EFI_INVALID_PARAMETER;
 	}
 	UINT64 imageBase = optionalHeader->ImageBase;
-	IMAGE_SECTION_TABLE_HEADER* section_table = (IMAGE_SECTION_TABLE_HEADER*)(((UINT64)optionalHeader->NumberOfDataDirectories) * ((UINT64)sizeof(DataDirectory)) + ((UINT64)optionalHeader) + ((UINT64)sizeof(IMAGE_OPTIONAL_HEADER64)));
+	IMAGE_SECTION_TABLE_HEADER* section_table = (IMAGE_SECTION_TABLE_HEADER*) (((UINT64) optionalHeader->NumberOfDataDirectories) * ((UINT64)sizeof(DataDirectory)) + ((UINT64) optionalHeader) + ((UINT64)sizeof(IMAGE_OPTIONAL_HEADER64)));
 
 	for (int index = 0; index < fileHeader->NumberOfSections; index++)
 	{
 		SECTION_HEADER* SectionHeader = section_table->headers + index;
 
 		CHAR16 Name[8];
-		for (int a = 0; a < 8; a++) 
+		for (int a = 0; a < 8; a++)
 		{
 			Name[a] = SectionHeader->Name[a];
 		}
@@ -40,16 +40,16 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 		Print(L"  Section '%s': VA:0x%x SoS:0x%x\n", Name, SectionHeader->VirtualAddress, SectionHeader->SizeOfSection);
 
 
-		UINT8* dst = (UINT8*)(SectionHeader->VirtualAddress + imageBase);
-		UINT8* src = (UINT8*)(SectionHeader->SectionPointer + (UINT64)FileBuffer);
+		UINT8* dst = (UINT8*) (SectionHeader->VirtualAddress + imageBase);
+		UINT8* src = (UINT8*) (SectionHeader->SectionPointer + (UINT64) FileBuffer);
 
-		for (UINT32 times = 0; times < SectionHeader->SizeOfSection / 4096 + 5; times++) 
+		for (UINT32 times = 0; times < SectionHeader->SizeOfSection / 4096 + 5; times++)
 		{
-			MemoryMap[((UINT64)dst) / 4096 + times - 5] = 0;
-			Print(L"%d: %x %x [%d]\n", times, dst, SectionHeader->SizeOfSection, ((UINT64)dst) / 4096 + times);
+			MemoryMap[((UINT64) dst) / 4096 + times - 5] = 0;
+			Print(L"%d: %x %x [%d]\n", times, dst, SectionHeader->SizeOfSection, ((UINT64) dst) / 4096 + times);
 		}
 
-		for (UINT32 memory = 0; memory < SectionHeader->SizeOfSection; memory++) 
+		for (UINT32 memory = 0; memory < SectionHeader->SizeOfSection; memory++)
 		{
 			dst[memory] = src[memory];
 		}
@@ -58,14 +58,14 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 
 	int numberOfDataEntries = optionalHeader->NumberOfDataDirectories;
 
-	IMAGE_EXPORT_TABLE* exportTable = (IMAGE_EXPORT_TABLE*)(optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_EXPORT].virtualAddress + imageBase);
-	IMAGE_IMPORT_TABLE* importTable = (IMAGE_IMPORT_TABLE*)(optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_IMPORT].virtualAddress + imageBase);
+	IMAGE_EXPORT_TABLE* exportTable = (IMAGE_EXPORT_TABLE*) (optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_EXPORT].virtualAddress + imageBase);
+	IMAGE_IMPORT_TABLE* importTable = (IMAGE_IMPORT_TABLE*) (optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_IMPORT].virtualAddress + imageBase);
 	RVA importTableRVA = optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_IMPORT].virtualAddress;
 	RVA exportTableRVA = optionalHeader->dataDirectories[IMAGE_DIRECTORY_ENTRY_EXPORT].virtualAddress;
 
 	Print(L"%d\n", numberOfDataEntries);
 
-	if (numberOfDataEntries > IMAGE_DIRECTORY_ENTRY_IMPORT && importTableRVA) 
+	if (numberOfDataEntries > IMAGE_DIRECTORY_ENTRY_IMPORT && importTableRVA)
 	{
 		Print(L"Import directory exists\n");
 		int entryIndex = 0;
@@ -73,10 +73,10 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 		while (importTable->entries[entryIndex].OriginalFirstThunk)
 		{
 			Print(L" | Import: %a\n", imageBase + importTable->entries[entryIndex].Name);
-			while (*((RVA**)(imageBase + importTable->entries[entryIndex].FirstThunk))) 
+			while (*((RVA**) (imageBase + importTable->entries[entryIndex].FirstThunk)))
 			{
 
-				IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*)(imageBase + *((RVA**)(imageBase + importTable->entries[entryIndex].FirstThunk)));
+				IMAGE_IMPORT_BY_NAME* importByName = (IMAGE_IMPORT_BY_NAME*) (imageBase + *((RVA**) (imageBase + importTable->entries[entryIndex].FirstThunk)));
 
 				Print(L" |--> %a\n", imageBase + importByName->Name);
 
@@ -88,7 +88,7 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 		return EFI_UNSUPPORTED;
 	}
 
-	*entrypoint = (UINT64*)(imageBase + optionalHeader->EntrypointRVA);
+	*entrypoint = (UINT64*) (imageBase + optionalHeader->EntrypointRVA);
 
 	return EFI_SUCCESS;
 }

@@ -27,7 +27,7 @@ VOID DebugD(UINT64 n)
 
 VOID* gRDSP;
 
-void LoadKernel() 
+void LoadKernel()
 {
 	MZ_FILE_TABLE MZFileTable;
 	VFS* vfs = VfsGetPointerToVfs(0);
@@ -38,7 +38,7 @@ void LoadKernel()
 	UINT64 imageBase;
 	UINT64(*EntryPoint)(LdrKernelInitializationData*);
 
-	if (file == 0) 
+	if (file == 0)
 	{
 		PrintT("Error loading kernel.\n");
 		return;
@@ -47,7 +47,7 @@ void LoadKernel()
 	vfs->Functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
 	file->FilePointer = MZFileTable.e_lfanew;
 
-	if (MZFileTable.signature != IMAGE_MZ_MAGIC) 
+	if (MZFileTable.signature != IMAGE_MZ_MAGIC)
 	{
 		PrintT("Invalid PE file %x %X\n", MZFileTable.signature, IMAGE_MZ_MAGIC);
 		return;
@@ -55,7 +55,7 @@ void LoadKernel()
 
 	vfs->Functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
 
-	if (PEFileTable.signature != IMAGE_PE_MAGIC) 
+	if (PEFileTable.signature != IMAGE_PE_MAGIC)
 	{
 		PrintT("Invalid PE header\n");
 		return;
@@ -66,7 +66,7 @@ void LoadKernel()
 	NNXAllocatorFree(dataDirectories);
 
 	imageBase = PEFileTable.optionalHeader.ImageBase;
-	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++) 
+	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++)
 	{
 		SECTION_HEADER sHeader;
 		UINT64 tempFP, status;
@@ -78,18 +78,18 @@ void LoadKernel()
 		tempFP = file->FilePointer;
 		file->FilePointer = sHeader.SectionPointer;
 
-		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64)sHeader.VirtualAddress) + imageBase))
+		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64) sHeader.VirtualAddress) + imageBase))
 			return;
 
-		if (sHeader.VirtualSize > sHeader.SizeOfSection) 
+		if (sHeader.VirtualSize > sHeader.SizeOfSection)
 		{
-			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++) 
+			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++)
 			{
-				((UINT8*)(((UINT64)sHeader.VirtualAddress) + imageBase + sHeader.SizeOfSection))[j] = 0;
+				((UINT8*) (((UINT64) sHeader.VirtualAddress) + imageBase + sHeader.SizeOfSection))[j] = 0;
 			}
 		}
 
-		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64)sHeader.VirtualAddress) + imageBase);
+		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64) sHeader.VirtualAddress) + imageBase);
 
 		file->FilePointer = tempFP;
 	}
@@ -130,7 +130,7 @@ void KernelMain()
 {
 #else
 void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 height, UINT32 pixelsPerScanline, UINT64(*ExitBootServices)(void*, UINT64), void* imageHandle, UINT64 n,
-	UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp) 
+				UINT8* nnxMMap, UINT64 nnxMMapSize, UINT64 memorySize, VOID* rdsp)
 {
 #endif
 	UINT64 i;
@@ -159,14 +159,14 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	GlobalPhysicalMemoryMap = nnxMMap;
 	GlobalPhysicalMemoryMapSize = nnxMMapSize;
 
-	for(i = ((UINT64)GlobalPhysicalMemoryMap) / 4096; i < (((UINT64)GlobalPhysicalMemoryMap) + GlobalPhysicalMemoryMapSize + 4095) / 4096; i++)
+	for (i = ((UINT64) GlobalPhysicalMemoryMap) / 4096; i < (((UINT64) GlobalPhysicalMemoryMap) + GlobalPhysicalMemoryMapSize + 4095) / 4096; i++)
 	{
 		GlobalPhysicalMemoryMap[i] = MEM_TYPE_USED_PERM;
 	}
 
-	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++) 
+	for (i = 0; i < FrameBufferSize() / PAGE_SIZE_SMALL + 1; i++)
 	{
-		GlobalPhysicalMemoryMap[((UINT64)gFramebuffer) / 4096 + i] = MEM_TYPE_USED_PERM;
+		GlobalPhysicalMemoryMap[((UINT64) gFramebuffer) / 4096 + i] = MEM_TYPE_USED_PERM;
 	}
 
 	MemorySize = memorySize;
@@ -179,7 +179,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	TextIoSetCursorPosition(0, 20);
 
 	PrintT("Initializing memory\n");
-	
+
 	PagingInit();
 
 	KGDTR64* gdtr = GDT_VIRTUAL_ADDRESS;
@@ -195,7 +195,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	idtr->Size = sizeof(KIDTENTRY64) * 128 - 1;
 	idtr->Base = idt;
 
-	((UINT64*)gdt)[0] = 0;		//NULL DESCRIPTOR
+	((UINT64*) gdt)[0] = 0;		//NULL DESCRIPTOR
 
 	gdt[1].Base0To15 = 0;		//CODE, RING 0 DESCRIPTOR
 	gdt[1].Base16To23 = 0;
@@ -230,7 +230,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	gdt[4].AccessByte = 0xF2;
 	LoadGDT(gdtr);
 
-	for (int a = 0; a < 128; a++) 
+	for (int a = 0; a < 128; a++)
 	{
 		idt[a].Selector = 0x8;
 		void(*handler)();
@@ -239,9 +239,9 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 		if (a < sizeof(interrupts) / sizeof(*interrupts))
 			handler = interrupts[a];
 
-		idt[a].Offset0to15 = (UINT16)(((UINT64)handler) & 0xFFFF);
-		idt[a].Offset16to31 = (UINT16)((((UINT64)handler) >> 16) & 0xFFFF);
-		idt[a].Offset32to63 = (UINT32)((((UINT64)handler) >> 32) & 0xFFFFFFFF);
+		idt[a].Offset0to15 = (UINT16) (((UINT64) handler) & 0xFFFF);
+		idt[a].Offset16to31 = (UINT16) ((((UINT64) handler) >> 16) & 0xFFFF);
+		idt[a].Offset32to63 = (UINT32) ((((UINT64) handler) >> 32) & 0xFFFFFFFF);
 		idt[a].Type = 0x8E;
 		idt[a].Ist = 0;
 	}
@@ -249,13 +249,13 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	LoadIDT(idtr);
 	/* TODO: Implement page-fault handler capable of dealing with page invalidation if a faulty address is mapped in the paging structures, but not in the TLB */
 	gInteruptInitialized = TRUE;
-	
+
 	KeyboardInitialize();
 	PrintT("Keyboard initialized.\n");
 	PicInitialize();
 
 	NNXAllocatorInitialize();
-	for (i = 0; i < 8; i++) 
+	for (i = 0; i < 8; i++)
 	{
 		NNXAllocatorAppend(PagingAllocatePage(), 4096);
 	}
@@ -265,7 +265,7 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	TextIoClear();
 	TextIoSetCursorPosition(0, 20);
 	PrintT("NNXOSLDR.exe version %s\n", version);
-	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64)framebufferEnd) - ((UINT64)framebuffer)) / 4096);
+	PrintT("Stage 2 loaded... %x %x %i\n", framebuffer, framebufferEnd, (((UINT64) framebufferEnd) - ((UINT64) framebuffer)) / 4096);
 
 	PrintT("Memory map: ");
 	TextIoSetColorInformation(0xFFFFFFFF, 0xFF007F00, 1);
@@ -287,8 +287,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 	PitUniprocessorInitialize();
 
 	EnableInterrupts();
-	
+
 	LoadKernel();
-	
+
 	while (1);
 }

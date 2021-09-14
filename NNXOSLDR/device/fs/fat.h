@@ -35,7 +35,8 @@ typedef struct
 #define FAT_ARCHIVE 32
 #define FAT_LFN (1|2|4|8);
 
-typedef struct BPB{
+typedef struct BPB
+{
 	UINT8 ReservedJump[3];
 	UINT8 OemName[8];
 	UINT16 BytesPerSector;
@@ -59,7 +60,7 @@ typedef struct
 	BYTE reserved0;
 	BYTE HasNameOrID;
 	union
-{
+	{
 		UINT32 VolumeSerialNumber;
 		UINT32 VolumeID;
 	};
@@ -67,7 +68,8 @@ typedef struct
 	BYTE FatTypeInfo[8];
 }BPB_EXT_FAT1X, BPB1X;
 
-typedef struct FAT_DIRECTORY_ENTRY{
+typedef struct FAT_DIRECTORY_ENTRY
+{
 	unsigned char Filename[8];
 	unsigned char FileExtension[3];
 	BYTE FileAttributes;
