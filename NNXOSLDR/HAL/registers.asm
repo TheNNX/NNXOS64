@@ -20,6 +20,14 @@ getreg SP
 getreg BP
 getreg DI
 getreg SI
+getreg 8
+getreg 9
+getreg 10
+getreg 11
+getreg 12
+getreg 13
+getreg 14
+getreg 15
 
 [GLOBAL SetCR3]
 SetCR3:
@@ -58,5 +66,21 @@ GetCR4:
 
 [GLOBAL SetCR4]
 SetCR4:
-	mov CR4, rcx
+	mov cr4, rcx
+	ret
+
+func KeStop
+	cli
+	hlt
+
+func HalX64WriteMsr
+	mov rax, rdx
+	and rax, 0xFFFFFFFF
+	shr rdx, 32
+	wrmsr
+	ret
+
+func HalX64SwapGs
+	swapgs
+	mov rax, gs
 	ret

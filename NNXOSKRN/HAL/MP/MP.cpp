@@ -3,6 +3,7 @@
 #include "../../../NNXOSLDR/HAL/PIT.h"
 #include "../../../NNXOSLDR/memory/paging.h"
 #include "../../../NNXOSLDR/device/fs/vfs.h"
+#include "../X64/pcr.h"
 
 extern "C" {
 
@@ -31,8 +32,8 @@ extern "C" {
 		data->ApCR3 = GetCR3();
 		data->ApStackPointerArray = ApStackPointerArray;
 		data->ApProcessorInit = ApProcessorInit;
-		StoreGDT(&data->ApGdtr);
-		StoreIDT(&data->ApIdtr);
+		HalpStoreGdt(&data->ApGdtr);
+		HalpStoreIdt(&data->ApIdtr);
 
 		return code;
 	}
@@ -89,24 +90,23 @@ extern "C" {
 				PitUniprocessorPollSleepUs(200);
 			}
 		}
-
-		PrintT("%s done\n", __FUNCTION__);
-
-		while (true)
-		{
-			//color++;
-			//color--;
-		}
 	}
+
+	VOID HalAcquireLockRaw(UINT64* lock);
+	VOID HalReleaseLockRaw(UINT64* lock);
+
+	__declspec(align(64)) UINT64 DrawLock = 0;
 
 	VOID ApProcessorInit(UINT8 lapicId)
 	{
-		while (1);
+		HalpSetupPcrForCurrentCpu(lapicId);
+
 		while (true)
 		{
-			PitUniprocessorPollSleepMs(998);
+			HalAcquireLockRaw(&DrawLock);
+			PitUniprocessorPollSleepMs(200);
 
-			for (int y = 0; y < gHeight / 2; y++)
+			for (int y = gHeight - (lapicId + 1) * 40; y < gHeight - lapicId * 40; y++)
 			{
 				for (int x = 0; x < gWidth / 2; x++)
 				{
@@ -115,6 +115,7 @@ extern "C" {
 			}
 
 			color = (color + 1) % (sizeof(debugColors) / sizeof(*debugColors));
+			HalReleaseLockRaw(&DrawLock);
 		}
 	}
 }

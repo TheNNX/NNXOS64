@@ -164,22 +164,33 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bugcheck.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\APIC\APIC.CPP" />
     <ClCompile Include="HAL\irql.c" />
     <ClCompile Include="HAL\MP\MP.cpp" />
     <ClCompile Include="HAL\spinlock.c" />
+    <ClCompile Include="HAL\X64\cpu.c" />
+    <ClCompile Include="HAL\X64\pcr.c" />
+    <ClCompile Include="HAL\X64\sheduler.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="pool.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bugcheck.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\APIC\APIC.h" />
     <ClInclude Include="HAL\irql.h" />
     <ClInclude Include="HAL\MP\MP.h" />
-    <ClInclude Include="HAL\pcr.h" />
     <ClInclude Include="HAL\spinlock.h" />
+    <ClInclude Include="HAL\X64\cpu.h" />
+    <ClInclude Include="HAL\X64\sheduler.h" />
+    <ClInclude Include="HAL\X64\pcr.h" />
+    <ClInclude Include="klist.h" />
+    <ClInclude Include="object.h" />
+    <ClInclude Include="pool.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\MP\ApEntry.asm">
@@ -201,6 +212,16 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\spinlock.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="HAL\X64\pcr.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="HAL\X64\thread.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

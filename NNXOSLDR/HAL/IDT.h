@@ -13,7 +13,7 @@ extern "C"
 	typedef struct _KIDTR64
 	{
 		UINT16 Size;
-		struct IDT* Base;
+		struct _KIDTENTRY64* Base;
 	}KIDTR64;
 
 	typedef struct _KIDTENTRY64
@@ -27,8 +27,9 @@ extern "C"
 		UINT32 Zero;
 	}KIDTENTRY64, *PKIDTENTRY64, *LPKIDTENTRY64;
 
-	void LoadIDT(KIDTR64*);
-	void StoreIDT(KIDTR64*);
+	void HalpLoadIdt(KIDTR64*);
+	void HalpStoreIdt(KIDTR64*);
+
 	void EnableInterrupts();
 	void DisableInterrupts();
 	void ForceInterrupt(UINT64);
@@ -55,7 +56,7 @@ extern "C"
 	void Exception20();
 	void Exception30();
 	void ExceptionReserved();
-	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 rip);
+	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 errorCode2, UINT64 rip);
 
 	void IRQ0();
 	void IRQ1();
@@ -73,7 +74,9 @@ extern "C"
 	void IRQ13();
 	void IRQ14();
 	void IrqHandler(UINT64);
-
+	PKIDTENTRY64 HalpAllocateAndInitializeIdt();
+	VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL userCallable, BOOL fault);
+	VOID HalInitializeDescriptorTables();
 #ifdef __cplusplus
 }
 #endif

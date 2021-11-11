@@ -2,7 +2,8 @@
 
 void* operator new(size_t a)
 {
-	return NNXAllocatorAlloc(a);
+	void* result = NNXAllocatorAlloc(a);
+	return result;
 }
 
 void operator delete(void* a)
@@ -12,7 +13,8 @@ void operator delete(void* a)
 
 void* operator new[](size_t a)
 {
-	return NNXAllocatorAlloc(a);
+	void* result = NNXAllocatorAlloc(a);
+	return result;
 }
 
 void operator delete(void* a, size_t unused_b)

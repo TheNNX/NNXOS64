@@ -25,7 +25,7 @@ const UINT32 progressBarLength = 160;
 
 #endif
 
-void ForceScreenUpdate()
+VOID ForceScreenUpdate()
 {
 #ifdef DEBUG
 	const UINT32 controlColor = 0xFFC3C3C3, controlBckgrd = 0xFF606060;
@@ -89,7 +89,7 @@ void ForceScreenUpdate()
 #endif
 }
 
-void UpdateScreen()
+VOID UpdateScreen()
 {
 #ifdef DEBUG
 	if ((times % required) == 0)
@@ -101,7 +101,7 @@ void UpdateScreen()
 #endif
 }
 
-void InitializeScreen()
+VOID InitializeScreen()
 {
 #ifdef DEBUG
 	minX = 0;
@@ -113,7 +113,7 @@ void InitializeScreen()
 #endif
 }
 
-void NNXAllocatorInitialize()
+VOID NNXAllocatorInitialize()
 {
 	first = 0;
 	InitializeScreen();
@@ -155,7 +155,7 @@ UINT64 NNXAllocatorGetFreeMemory()
 	return CountBlockSize(MEMBLOCK_FREE);
 }
 
-void NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
+VOID NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
 {
 	if (!first)
 	{
@@ -183,7 +183,7 @@ void NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
 	UpdateScreen();
 }
 
-void TryMerge()
+VOID TryMerge()
 {
 	if (noMerge == TRUE)
 	{
@@ -223,7 +223,7 @@ void TryMerge()
 	UpdateScreen();
 }
 
-void* NNXAllocatorAlloc(UINT64 size)
+PVOID NNXAllocatorAlloc(UINT64 size)
 {
 	MemoryBlock* current = first;
 
@@ -274,7 +274,7 @@ void* NNXAllocatorAlloc(UINT64 size)
 	while (1);
 }
 
-void* NNXAllocatorAllocArray(UINT64 n, UINT64 size)
+PVOID NNXAllocatorAllocArray(UINT64 n, UINT64 size)
 {
 	void* result = NNXAllocatorAlloc(n*size);
 	if (result)
@@ -282,7 +282,7 @@ void* NNXAllocatorAllocArray(UINT64 n, UINT64 size)
 	return result;
 }
 
-void NNXAllocatorFree(void* address)
+VOID NNXAllocatorFree(void* address)
 {
 	dirty = true;
 	MemoryBlock* toBeFreed = ((UINT64) address - sizeof(MemoryBlock));
@@ -293,4 +293,10 @@ void NNXAllocatorFree(void* address)
 VOID NNXAllocatorF()
 {
 	PrintT("Total memory: %i\nUsed memory: %i\nFree memory: %i\nFirst memory block: 0x%X\n", NNXAllocatorGetTotalMemory(), NNXAllocatorGetUsedMemory(), NNXAllocatorGetFreeMemory(), first);
+}
+
+VOID NNXAllocatorDiagnostics(const char* message)
+{
+	PrintT("%s\n", message);
+	NNXAllocatorF();
 }

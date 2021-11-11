@@ -25,14 +25,30 @@ typedef __int16				INT16;
 typedef unsigned __int8		UINT8;
 typedef __int8				INT8;
 
+typedef UINT64	ULONG64;
+
 typedef UINT64	QWORD;
 typedef UINT32	DWORD;
 typedef UINT16	WORD;
 typedef UINT8	UCHAR;
 typedef INT8	CHAR;
 
+typedef LONG NTSTATUS;
+
+#define STATUS_SUCCESS		0x00000000UL
+#define STATUS_NO_MEMORY	0xC0000017UL
+
+#ifndef _M_AMD64
+typedef ULONG ULONG_PTR;
+#else
+typedef ULONGLONG ULONG_PTR;
+#endif
+
+typedef ULONG_PTR SIZE_T;
+
 #ifndef WCHAR_MAX
 typedef UINT16	WCHAR;
+#define WCHAR_MAX 65535U
 #endif
 
 #ifndef TRUE
@@ -50,6 +66,7 @@ typedef UINT16	WCHAR;
 #endif
 
 typedef bool BOOL;
+typedef BOOL BOOLEAN;
 
 #ifndef VOID
 typedef void VOID;
@@ -57,7 +74,11 @@ typedef void VOID;
 typedef VOID *PVOID, *LPVOID;
 
 #ifndef NULL
+#ifdef __cplusplus
+#define NULL __nullptr
+#else
 #define NULL ((LPVOID*)0)
+#endif
 #endif
 
 #ifdef _M_X86
@@ -73,4 +94,10 @@ typedef VOID *PVOID, *LPVOID;
 inline bool GetBit(unsigned int num, unsigned int n) {
 	return ((num >> n) & 1);
 }
+
+#define UINT64_MAX	0xFFFFFFFFFFFFFFFFULL
+#define UINT32_MAX	0xFFFFFFFFUL
+#define UINT16_MAX	0xFFFFU
+#define UINT8_MAX	0xFFU
+
 #endif

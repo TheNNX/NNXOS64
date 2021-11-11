@@ -9,7 +9,7 @@ extern "C" {
 
 #pragma warning(push)
 #pragma warning(disable: 4324)
-	typedef __declspec(align(64)) struct KSPIN_LOCK
+	typedef __declspec(align(64)) struct _KSPIN_LOCK
 	{
 		UINT64 Lock;
 	}KSPIN_LOCK, *PKSPIN_LOCK;
@@ -19,6 +19,10 @@ extern "C" {
 	VOID FASTCALL KfReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql);
 	VOID NTAPI KeAcquireSpinLock(PKSPIN_LOCK lock, PKIRQL oldIrql);
 	VOID NTAPI KeReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql);
+	VOID NTAPI KeInitializeSpinLock(PKSPIN_LOCK lock);
+
+	VOID HalAcquireLockRaw(UINT64* lock);
+	VOID HalReleaseLockRaw(UINT64* lock);
 #ifdef __cplusplus
 }
 #endif

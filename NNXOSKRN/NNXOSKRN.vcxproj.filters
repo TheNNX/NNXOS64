@@ -66,6 +66,21 @@
     <ClCompile Include="HAL\irql.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\pcr.c">
+      <Filter>Source Files\HAL\X64</Filter>
+    </ClCompile>
+    <ClCompile Include="bugcheck.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\cpu.c">
+      <Filter>Source Files\HAL\X64</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\sheduler.c">
+      <Filter>Source Files\HAL\X64</Filter>
+    </ClCompile>
+    <ClCompile Include="pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -86,7 +101,25 @@
     <ClInclude Include="HAL\spinlock.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\pcr.h">
+    <ClInclude Include="HAL\X64\pcr.h">
+      <Filter>Header Files\HAL\X64</Filter>
+    </ClInclude>
+    <ClInclude Include="bugcheck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\cpu.h">
+      <Filter>Header Files\HAL\X64</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\sheduler.h">
+      <Filter>Header Files\HAL\X64</Filter>
+    </ClInclude>
+    <ClInclude Include="object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pool.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="klist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -94,8 +127,14 @@
     <CustomBuild Include="HAL\MP\ApEntry.asm">
       <Filter>Source Files\HAL\MP</Filter>
     </CustomBuild>
+    <CustomBuild Include="HAL\X64\pcr.asm">
+      <Filter>Source Files\HAL\X64</Filter>
+    </CustomBuild>
     <CustomBuild Include="HAL\X64\spinlock.asm">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\HAL\X64</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\X64\thread.asm">
+      <Filter>Source Files\HAL\X64</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

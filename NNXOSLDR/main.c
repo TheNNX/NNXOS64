@@ -113,9 +113,6 @@ void LoadKernel()
 	EntryPoint(&data);
 }
 
-
-void IntTestASM();
-
 const char version[] = " 0.1";
 
 UINT32* gFramebuffer;
@@ -123,7 +120,7 @@ UINT32* gFramebufferEnd;
 UINT32 gPixelsPerScanline;
 UINT32 gWidth;
 UINT32 gHeight;
-extern BOOL gInteruptInitialized;
+extern BOOL HalpInteruptInitialized;
 
 #ifdef BOCHS
 void KernelMain()
@@ -134,25 +131,13 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 {
 #endif
 	UINT64 i;
-	gInteruptInitialized = FALSE;
+	HalpInteruptInitialized = FALSE;
 	gFramebuffer = framebuffer;
 	gFramebufferEnd = framebufferEnd;
 	gPixelsPerScanline = pixelsPerScanline;
 	gWidth = width;
 	gHeight = height;
 	gRDSP = rdsp;
-
-	void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
-										Exception4, Exception5, Exception6, Exception7,
-										Exception8, ExceptionReserved, Exception10, Exception11,
-										Exception12, Exception13, Exception14, ExceptionReserved,
-										Exception16, Exception17, Exception18, Exception19,
-										Exception20, ExceptionReserved, ExceptionReserved, ExceptionReserved,
-										ExceptionReserved, ExceptionReserved, ExceptionReserved, ExceptionReserved,
-										ExceptionReserved, ExceptionReserved, Exception30, ExceptionReserved,
-										IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
-										IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
-	};
 
 	ExitBootServices(imageHandle, n);
 	DisableInterrupts();
@@ -182,73 +167,8 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	PagingInit();
 
-	KGDTR64* gdtr = GDT_VIRTUAL_ADDRESS;
-	KGDTENTRY64* gdt = (GDT_VIRTUAL_ADDRESS + sizeof(KGDTR64));
-	KIDTR64* idtr = IDT_VIRTUAL_ADDRESS;
-	KIDTENTRY64* idt = (IDT_VIRTUAL_ADDRESS + sizeof(KIDTR64));
-	PagingMapPage(gdtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
-	PagingMapPage(idtr, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM), PAGE_PRESENT | PAGE_WRITE);
-
-	gdtr->Size = sizeof(KGDTENTRY64) * 5 - 1;
-	gdtr->Base = gdt;
-
-	idtr->Size = sizeof(KIDTENTRY64) * 128 - 1;
-	idtr->Base = idt;
-
-	((UINT64*) gdt)[0] = 0;		//NULL DESCRIPTOR
-
-	gdt[1].Base0To15 = 0;		//CODE, RING 0 DESCRIPTOR
-	gdt[1].Base16To23 = 0;
-	gdt[1].Base24To31 = 0;
-	gdt[1].Limit0To15 = 0xFFFF;
-	gdt[1].Limit16To19 = 0xF;
-	gdt[1].Flags = 0xA;
-	gdt[1].AccessByte = 0x9A;
-
-	gdt[2].Base0To15 = 0;		//DATA, RING 0 DESCRIPTOR
-	gdt[2].Base16To23 = 0;
-	gdt[2].Base24To31 = 0;
-	gdt[2].Limit0To15 = 0xFFFF;
-	gdt[2].Limit16To19 = 0xF;
-	gdt[2].Flags = 0xC;
-	gdt[2].AccessByte = 0x92;
-
-	gdt[3].Base0To15 = 0;	//CODE, RING 3 DESCRIPTOR
-	gdt[3].Base16To23 = 0;
-	gdt[3].Base24To31 = 0;
-	gdt[3].Limit0To15 = 0xFFFF;
-	gdt[3].Limit16To19 = 0xF;
-	gdt[3].Flags = 0xA;
-	gdt[3].AccessByte = 0xFA;
-
-	gdt[4].Base0To15 = 0;		//DATA, RING 3 DESCRIPTOR
-	gdt[4].Base16To23 = 0;
-	gdt[4].Base24To31 = 0;
-	gdt[4].Limit0To15 = 0xFFFF;
-	gdt[4].Limit16To19 = 0xF;
-	gdt[4].Flags = 0xC;
-	gdt[4].AccessByte = 0xF2;
-	LoadGDT(gdtr);
-
-	for (int a = 0; a < 128; a++)
-	{
-		idt[a].Selector = 0x8;
-		void(*handler)();
-		handler = IntTestASM;
-
-		if (a < sizeof(interrupts) / sizeof(*interrupts))
-			handler = interrupts[a];
-
-		idt[a].Offset0to15 = (UINT16) (((UINT64) handler) & 0xFFFF);
-		idt[a].Offset16to31 = (UINT16) ((((UINT64) handler) >> 16) & 0xFFFF);
-		idt[a].Offset32to63 = (UINT32) ((((UINT64) handler) >> 32) & 0xFFFFFFFF);
-		idt[a].Type = 0x8E;
-		idt[a].Ist = 0;
-	}
-
-	LoadIDT(idtr);
-	/* TODO: Implement page-fault handler capable of dealing with page invalidation if a faulty address is mapped in the paging structures, but not in the TLB */
-	gInteruptInitialized = TRUE;
+	HalpAllocateAndInitializeGdt();
+	HalpAllocateAndInitializeIdt();
 
 	KeyboardInitialize();
 	PrintT("Keyboard initialized.\n");

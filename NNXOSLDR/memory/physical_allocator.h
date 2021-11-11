@@ -11,11 +11,11 @@ extern "C"
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
 
-	void* InternalAllocatePhysicalPage();
+	PVOID InternalAllocatePhysicalPage();
 	UINT8 InternalFreePhysicalPage(void*);
-	void* InternalAllocatePhysicalPageEx(UINT8 type, UINT64 seekFromAddress, UINT64 seekToAddress);
-	void* InternalAllocatePhysicalPageWithType(UINT8 type);
-
+	PVOID InternalAllocatePhysicalPageEx(UINT8 type, UINT64 seekFromAddress, UINT64 seekToAddress);
+	PVOID InternalAllocatePhysicalPageWithType(UINT8 type);
+	
 #define MEM_TYPE_USED 0
 #define MEM_TYPE_FREE 1
 #define MEM_TYPE_UTIL 2

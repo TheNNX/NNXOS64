@@ -15,12 +15,15 @@ extern "C"
 
 	/* Scans the current virtual address space for a free page and maps it to a given physical page */
 	VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage);
+	VOID* PagingAllocatePageWithPhysicalAddress2(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage);
 	VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType);
 	VOID* PagingAllocatePage();
 	VOID* PagingAllocatePageFromRange(UINT64 min, UINT64 max);
 	VOID PagingMapPage(VOID* v, VOID* p, UINT16 f);
 	VOID PagingTLBFlush();
 	VOID PagingTLBFlushPage(UINT64 page);
+	PVOID PagingAllocatePageBlockWithPhysicalAdresses(UINT64 n, UINT64 min, UINT64 max, UINT16 flags, PVOID physFirstPage);
+	PVOID PagingAllocatePageBlock(UINT64 n, UINT16 flags);
 
 	inline UINT64 ToCanonicalAddress(UINT64 address)
 	{
@@ -46,6 +49,11 @@ extern "C"
 #define PAGE_ACCESSED 32
 #define PAGE_DIRTY 64
 #define PAGE_GLOBAL 256
+
+#define PAGING_KERNEL_SPACE		0xFFFF800000000000ULL
+#define PAGING_KERNEL_SPACE_END 0xFFFFFFFFFFFFFFFFULL
+#define PAGING_USER_SPACE		0x0000000000000000ULL
+#define PAGING_USER_SPACE_END	0x00007FFFFFFFFFFFULL
 
 #define PAGE_SYSTEM 0
 #define PAGE_READ 0

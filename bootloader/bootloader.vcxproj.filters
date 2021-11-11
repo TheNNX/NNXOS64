@@ -30,8 +30,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="low.asm">
+    <CustomBuild Include="low.asm">
       <Filter>Source Files</Filter>
-    </None>
+    </CustomBuild>
   </ItemGroup>
 </Project>

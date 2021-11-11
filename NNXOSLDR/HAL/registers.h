@@ -16,6 +16,14 @@ extern "C"
 	UINT64 GetRSI();
 	UINT64 GetRBP();
 	UINT64 GetRSP();
+	UINT64 GetR8();
+	UINT64 GetR9();
+	UINT64 GetR10();
+	UINT64 GetR11();
+	UINT64 GetR12();
+	UINT64 GetR13();
+	UINT64 GetR14();
+	UINT64 GetR15();
 	UINT64 GetCR0();
 	UINT64 GetCR2();
 	UINT64 GetCR3();
@@ -23,6 +31,8 @@ extern "C"
 	VOID SetCR3(UINT64);
 	VOID SetCR4(UINT64);
 	VOID SetCR0(UINT64);
+	VOID HalX64WriteMsr(UINT32 reg, UINT64 value);
+	PVOID HalX64SwapGs();
 
 #ifdef __cplusplus
 }

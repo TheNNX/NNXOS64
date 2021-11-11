@@ -12,7 +12,7 @@ extern "C"
 	typedef struct _KGDTR64
 	{
 		UINT16 Size;
-		struct GDT* Base;
+		struct _KGDTENTRY64* Base;
 	}KGDTR64, *LPGDTR64, *PGDTR64;
 
 	typedef struct _KGDTENTRY64
@@ -28,28 +28,45 @@ extern "C"
 
 	typedef struct _KTSS
 	{
+		UINT32 Reserved0;
 		union
 		{
-			UINT16 IopbOffset;
-			UINT16 Size;
+			struct
+			{
+				UINT64 Rsp0;
+				UINT64 Rsp1;
+				UINT64 Rsp2;
+			};
+			UINT64 Rsp[3];
 		};
-		UINT16 reserved4;
-		UINT64 reserved3;
-		UINT64 Ist[8];
-		UINT64 reserved2;
-		UINT64 Rsp[3];
-		UINT32 reserved1;
-	}KTSS;
+		UINT64 Reserved1;
+		union
+		{
+			struct
+			{
+				UINT64 Ist1;
+				UINT64 Ist2;
+				UINT64 Ist3;
+				UINT64 Ist4;
+				UINT64 Ist5;
+				UINT64 Ist6;
+				UINT64 Ist7;
+			};
+			UINT64 Ist[7];
+		};
+		UINT16 Reserved[5];
+		UINT16 IopbBase;
+	}KTSS, *PKTSS;
 
-	typedef struct _KTSSENTRY64
-	{
-		UINT32 Reserved;
-		UINT32 Base32To63;
-		KGDTENTRY64 StandartGdtEntry;
-	}KTSSENTRY64, *PKTSSENTRY64, *LPKTSSENTRY64;
+	typedef KGDTENTRY64 KTSSENTRY64, *PKTSSENTRY64, *LPKTSSENTRY64;
 
-	void LoadGDT(KGDTR64*);
-	void StoreGDT(KGDTR64*);
+	VOID HalpLoadGdt(KGDTR64*);
+	VOID HalpStoreGdt(KGDTR64*);
+	VOID HalpLoadTss(UINT64 gdtOffset);
+	PKGDTENTRY64 HalpAllocateAndInitializeGdt();
+	ULONG HalpGetGdtBase(KGDTENTRY64 entry);
+	ULONG_PTR HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh);
+	UINT64 HalpSetGdtEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, UINT32 base, UINT32 limit, UINT8 flags, UINT8 accessByte);
 
 #ifdef __cplusplus
 }

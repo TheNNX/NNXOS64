@@ -20,17 +20,18 @@ typedef struct MemoryBlock
 extern "C"
 {
 #endif
-	void NNXAllocatorInitialize();
-	void NNXAllocatorAppend(void* memblock, UINT64 sizeofMemblock);
+	VOID	NNXAllocatorInitialize();
+	VOID	NNXAllocatorAppend(PVOID memblock, UINT64 sizeofMemblock);
 
-	void* NNXAllocatorAlloc(UINT64 size);
-	void* NNXAllocatorAllocArray(UINT64 n, UINT64 size);
-	void NNXAllocatorFree(void* address);
+	PVOID	NNXAllocatorAlloc(UINT64 size);
+	PVOID	NNXAllocatorAllocArray(UINT64 n, UINT64 size);
+	VOID	NNXAllocatorFree(PVOID address);
 
-	UINT64 NNXAllocatorGetTotalMemory();
-	UINT64 NNXAllocatorGetUsedMemory();
-	UINT64 NNXAllocatorGetFreeMemory();
-	UINT64 NNXAllocatorGetUsedMemoryInBlocks();
+	UINT64	NNXAllocatorGetTotalMemory();
+	UINT64	NNXAllocatorGetUsedMemory();
+	UINT64	NNXAllocatorGetFreeMemory();
+	UINT64	NNXAllocatorGetUsedMemoryInBlocks();
+	VOID	NNXAllocatorDiagnostics(const char* message);
 #ifdef __cplusplus
 }
 

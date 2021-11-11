@@ -90,8 +90,6 @@ LongModeEntry:
 	; release the ApSpinlock before going to the C function
 	lock btr WORD [ApSpinlock], 0
 
-	; jmp $
-
 	mov QWORD rax, [ApProcessorInit]
 	; mov rax, FuckYou
 	call rax

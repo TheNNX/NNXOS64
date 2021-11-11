@@ -1,6 +1,7 @@
 #ifndef NNX_APIC_HEADER
 #define NNX_APIC_HEADER
 
+
 #include "../ACPI/AML.h"
 
 #ifdef __cplusplus
@@ -8,7 +9,6 @@
 extern "C" {
 #endif
 	/* Functions accessible from both C and C++ */
-
 	VOID ApicInit(ACPI_MADT* madt);
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data);
 	UINT32 ApicLocalApicReadRegister(UINT64 offset);

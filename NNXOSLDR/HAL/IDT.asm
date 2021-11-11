@@ -45,7 +45,8 @@ Exception%1:
 	pushstate
 	mov rcx, %1
 	mov rdx, [rsp+120]
-	mov r8, [rsp+128]
+	xor r8, r8
+	mov r9, [rsp+128]
 	call ExceptionHandler
 	popstate
 	add rsp, 8
@@ -57,8 +58,9 @@ Exception%1:
 Exception%1:
 	pushstate
 	mov rcx, %1
-	mov rdx, 0
-	mov r8, [rsp+120]
+	xor rdx, rdx
+	xor r8, r8
+	mov r9, [rsp+120]
 	call ExceptionHandler
 	popstate
 	iretq
@@ -75,21 +77,23 @@ IRQ%1:
 	iretq
 %endmacro
 
-func LoadIDT
+func HalpLoadIdt
 	lidt [rcx]
 	ret
 
 func IntTestASM
 	iretq
 
-func StoreIDT
+func HalpStoreIdt
 	sidt [rcx]
 	ret
 
+func KiEnableInterrupts
 func EnableInterrupts
 	sti
 	ret
 
+func KiDisableInterrupts
 func DisableInterrupts
 	cli
 	ret

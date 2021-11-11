@@ -13,8 +13,6 @@
 	The disadvantage of this solution is the disk space needed to contain the operating system,
 	as now there are two copies of each loader function on the disk, but since there are no
 	plans of expanding the loader much more, this can do for now.
-
-	TODO: make a separate project for the common part of the codebase, or move important stuff to this project
 */
 
 #include "HAL/ACPI/AML.h"
@@ -27,12 +25,16 @@
 #include "HAL/APIC/APIC.h"
 #include "../NNXOSLDR/device/fs/vfs.h"
 #include "HAL/MP/MP.h"
+#include "bugcheck.h"
+#include "HAL/X64/cpu.h"
+#include "HAL/X64/pcr.h"
+#include "HAL/X64/sheduler.h"
 
 int basicallyATest = 0;
 
 extern "C"
 {
-	void DrawMap();
+	VOID DrawMap();
 	UINT32* gFramebuffer;
 	UINT32* gFramebufferEnd;
 	UINT32 gPixelsPerScanline;
@@ -43,11 +45,22 @@ extern "C"
 	extern UINT32 gMaxY;
 	extern UINT32 gMaxX;
 	extern UINT8 Initialized;
+	extern VOID(*gExceptionHandlerPtr)(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip);
+}
+
+/*
+	Wrapper between ExceptionHandler and KeBugCheck
+*/
+extern "C" VOID KeExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
+{
+	KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 }
 
 extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data)
 {
+	PKIDTENTRY64 idt;
 	DisableInterrupts();
+	gExceptionHandlerPtr = KeExceptionHandler;
 	gFramebuffer = data->Framebuffer;
 	gFramebufferEnd = data->FramebufferEnd;
 	gWidth = data->FramebufferWidth;
@@ -81,15 +94,20 @@ extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data)
 	{
 		status = AcpiLastError();
 		ACPI_ERROR(status);
-		while (1);
+		KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
 	}
 
 	ACPI_MADT* MADT = (ACPI_MADT*) AcpiGetTable(data->rdsp, "APIC");
 	PrintT("Found MADT on %x\n", MADT);
 
 	ApicInit(MADT);
-	EnableInterrupts();
+	HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
+
+	if (status = PspDebugTest())
+		KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+
 	MpInitialize();
 
 	while (1);
+	KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
 }

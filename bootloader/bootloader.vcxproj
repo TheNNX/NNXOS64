@@ -148,20 +148,6 @@ rmdir /Q /S $(ProjectName)</Command>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CommonInclude\CommonInclude.vcxproj">
-      <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\NNXOSKRN\NNXOSKRN.vcxproj">
-      <Project>{67e77dd1-d078-48e7-8f75-159c6130c693}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\NNXOSLDR\NNXOSLDR.vcxproj">
-      <Project>{3c2ebf37-3efd-491a-87fe-3b590f3e32a2}</Project>
-    </ProjectReference>
-    <ProjectReference Include="gnu-efi.vcxproj">
-      <Project>{3135d563-9596-4584-9ed6-616adec52974}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="boot.c" />
     <ClCompile Include="pe\pe.c" />
   </ItemGroup>
@@ -172,6 +158,20 @@ rmdir /Q /S $(ProjectName)</Command>
     <CustomBuild Include="low.asm">
       <FileType>Document</FileType>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\.vs\msvc\gnu-efi.vcxproj">
+      <Project>{3135d563-9596-4584-9ed6-616adec52974}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\CommonInclude\CommonInclude.vcxproj">
+      <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\NNXOSKRN\NNXOSKRN.vcxproj">
+      <Project>{67e77dd1-d078-48e7-8f75-159c6130c693}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\NNXOSLDR\NNXOSLDR.vcxproj">
+      <Project>{3c2ebf37-3efd-491a-87fe-3b590f3e32a2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,6 +1,7 @@
 
 #include  "SimpleTextIo.h"
 #include "memory/physical_allocator.h"
+#include "memory/MemoryOperations.h"
 #include "text.h"
 
 #define TIMES8(x) x x x x x x x x
@@ -387,6 +388,19 @@ void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
 						char str[65] = { 0 };
 						IntegerToAscii(c, 2, str);
 						TextIoOutputStringGlobal(str);
+						break;
+					}
+					case 'H':
+					{
+						UINT64 c = *((UINT64*) args);
+						UINT64 length;
+						char str[17] = { 0 };
+						char str2[] = "0000000000000000";
+						args = ((UINT64*) args) + 1;
+						IntegerToAsciiCapital(c, 16, str);
+						length = FindCharacterFirst(str, -1, 0);
+						MemCopy(str2 + 16 - length, str, length);
+						TextIoOutputStringGlobal(str2);
 						break;
 					}
 					case 'X':

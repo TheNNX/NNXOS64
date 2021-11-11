@@ -2,9 +2,10 @@
 [SECTION .text]
 %define retfq o64 retf
 
-[GLOBAL LoadGDT]
-LoadGDT:
+[GLOBAL HalpLoadGdt]
+HalpLoadGdt:
 	lgdt [rcx]
+
 	mov ax, 0x10
 	mov ds, ax
 	mov es, ax
@@ -22,12 +23,12 @@ LoadGDT:
 .returnPoint:
 	ret
 
-[GLOBAL StoreGDT]
-StoreGDT:
+[GLOBAL HalpStoreGdt]
+HalpStoreGdt:
 	sgdt [rcx]
 	ret 
 
-[GLOBAL LoadTSS]
-LoadTSS:
+[GLOBAL HalpLoadTss]
+HalpLoadTss:
 	ltr cx
 	ret
