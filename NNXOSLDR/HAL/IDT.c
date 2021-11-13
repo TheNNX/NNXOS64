@@ -65,18 +65,20 @@ VOID PrintIdt(PKIDTENTRY64 idt, int to)
 		);
 }
 
-VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL usermode, BOOL shouldMaskIntFlag)
+VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL usermode, BOOL trap)
 {
 	idt[entryNo].Selector = 0x8;
 	idt[entryNo].Zero = 0;
 	idt[entryNo].Offset0to15 = (UINT16) (((ULONG_PTR) handler) & UINT16_MAX);
 	idt[entryNo].Offset16to31 = (UINT16) ((((ULONG_PTR) handler) >> 16) & UINT16_MAX);
 	idt[entryNo].Offset32to63 = (UINT32) ((((ULONG_PTR) handler) >> 32) & UINT32_MAX);
-	idt[entryNo].Type = 0xEE;
+	idt[entryNo].Type = 0x8E | (usermode ? (0x60) : 0x00) | (trap ? 0 : 1);
 	idt[entryNo].Ist = 0;
-	
-	PrintIdt(idt, entryNo + 1);
-	//while (1);
+}
+
+VOID Irq0C()
+{
+	PrintT("Timer tick\n");
 }
 
 KIDTENTRY64* HalpAllocateAndInitializeIdt()
@@ -92,7 +94,6 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 								IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 								IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
-
 	KIDTR64* idtr = PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
 	KIDTENTRY64* idt = (((ULONG_PTR) idtr) + sizeof(KIDTR64));
 
@@ -101,18 +102,13 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 
 	for (int a = 0; a < 128; a++)
 	{
-		idt[a].Selector = 0x8;
-		void(*handler)();
+		VOID(*handler)();
 		handler = IntTestASM;
 
 		if (a < sizeof(interrupts) / sizeof(*interrupts))
 			handler = interrupts[a];
 
-		idt[a].Offset0to15 = (UINT16) (((UINT64) handler) & UINT16_MAX);
-		idt[a].Offset16to31 = (UINT16) ((((UINT64) handler) >> 16) & UINT16_MAX);
-		idt[a].Offset32to63 = (UINT32) ((((UINT64) handler) >> 32) & UINT32_MAX);
-		idt[a].Type = 0x8E;
-		idt[a].Ist = 0;
+		HalpSetIdtEntry(idt, a, handler, FALSE, FALSE);
 	}
 
 	HalpLoadIdt(idtr);

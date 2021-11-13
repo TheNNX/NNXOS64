@@ -13,6 +13,10 @@ extern "C"
 	VOID PitUniprocessorPollSleepMs(UINT16 msDelay);
 	VOID PitUniprocessorInitialize();
 	VOID PitUniprocessorPollSleepTicks(UINT16 tickDelay);
+
+	VOID PitUniprocessorSetupCalibrationSleep();
+	VOID PitUniprocessorStartCalibrationSleep();
+
 	inline VOID PitUniprocessorPollSleepUs(UINT16 usDelay)
 	{
 		UINT64 tickDelay;

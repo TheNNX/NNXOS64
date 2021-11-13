@@ -15,6 +15,11 @@
 #include "nnxoskldr.h"
 #include <nnxpe.h>
 
+/* ignore, remove when sorting the 3 stage mess out */
+VOID ApicSendEoi()
+{
+}
+
 VOID DebugX(UINT64 n)
 {
 	PrintT("0x%X\n", n);

@@ -136,27 +136,33 @@ exception_error 30
 ExceptionReserved:
 exception_error 0xffffffffffffffff
 
-[GLOBAL Ack]
-Ack:
-	mov al, 0x20
-	out 0x20, al
-	cmp rcx, 8
-		jng .end
-	out 0xA0, al
-.end:
-	ret
-
 [EXTERN IrqHandler]
 func IrqHandlerInternal
-	call Ack
-.end:
-	sub rsp, 32
 	call IrqHandler
-	add rsp, 32
-	BOCHS_DEBUG
 	ret
 
-irq 0
+[EXTERN ApicSendEoi]
+[EXTERN Irq0C]
+func IRQ0
+	pushf
+	cli
+	cmp QWORD [rsp+8], 0x08
+	je .noswap
+	swapgs
+.noswap:
+	popf
+	pushstate
+	
+	call Irq0C
+	call ApicSendEoi
+	
+	popstate
+	cmp QWORD [rsp+8], 0x08
+	je .noswapExit
+	swapgs
+.noswapExit:
+	iretq
+
 irq 1
 irq 2
 irq 3

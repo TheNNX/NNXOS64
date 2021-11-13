@@ -75,7 +75,7 @@ extern "C"
 	void IRQ14();
 	void IrqHandler(UINT64);
 	PKIDTENTRY64 HalpAllocateAndInitializeIdt();
-	VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL userCallable, BOOL fault);
+	VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL userCallable, BOOL trap);
 	VOID HalInitializeDescriptorTables();
 #ifdef __cplusplus
 }

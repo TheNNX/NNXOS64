@@ -73,3 +73,16 @@ func PitUniprocessorPollSleepTicks
 	jmp .waiting
 .endwaiting:
 	ret
+
+func PitUniprocessorSetupCalibrationSleep	
+
+	; roughly a 1/20th of a second in ticks
+	mov ax, 59659
+	out 0x40, al
+	xchg al, ah
+	out 0x40, al
+
+	ret
+
+func PitUniprocessorStartCalibrationSleep
+	jmp PitUniprocessorPollSleepTicks.waiting

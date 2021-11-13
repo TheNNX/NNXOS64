@@ -7,10 +7,19 @@
 #include "../../../NNXOSLDR/HAL/PIT.h"
 #include "../spinlock.h"
 
-UINT64 ApicLocalApicBase;
-UINT64 ApicVirtualLocalApicBase;
-UINT64 ApicNumberOfCoresDetected;
-UINT8* ApicLocalApicIDs;
+extern "C" 
+{
+	UINT64 ApicLocalApicBase;
+	UINT64 ApicVirtualLocalApicBase;
+	UINT64 ApicNumberOfCoresDetected;
+	UINT8* ApicLocalApicIDs;
+
+	BOOL ApicBspLapicInitialized = FALSE;
+	UINT64 ApicTimerTicksPerSecond = 0;
+	extern BOOL HalpInteruptInitialized;
+
+	VOID KiEnableInterrupts();
+}
 
 class IoApic
 {
@@ -36,6 +45,14 @@ public:
 		this->IoApicBase = (volatile UINT32*) (((UINT64)this->IoApicBase) + (((UINT64)IoApicBasePhys) & PAGE_SIZE_SMALL));
 		this->Id = (ReadRegister(0x00) >> 24) & 0xF0;
 		this->RedirectionEntriesCount = (ReadRegister(0x01) >> 16) + 1;
+
+		PrintT("IO APIC n %i\n", RedirectionEntriesCount);
+		/* mask all external interrupts */
+		for (int i = 0; i < this->RedirectionEntriesCount; i++)
+		{
+			PrintT("Masking interrupt %i\n", i + this->InterruptBase);
+			MaskIrq(this->InterruptBase + i);
+		}
 	}
 
 	BYTE GetID()
@@ -48,14 +65,10 @@ public:
 		if (!this->InterruptRangeCheck(irqn))
 			return FALSE;
 
-		KeAcquireSpinLock(&this->Lock, &irql);
-
 		irqn -= this->InterruptBase;
 
 		UINT64 entry = ReadRedirectionEntry(irqn);
 		entry |= ((1ULL << 16ULL));
-
-		KeReleaseSpinLock(&this->Lock, irql);
 
 		return TRUE;
 	}
@@ -65,14 +78,10 @@ public:
 		if (!this->InterruptRangeCheck(irqn))
 			return FALSE;
 
-		KeAcquireSpinLock(&this->Lock, &irql);
-
 		irqn -= this->InterruptBase;
 
 		UINT64 entry = ReadRedirectionEntry(irqn);
 		entry &= ~((1ULL << 16ULL));
-
-		KeReleaseSpinLock(&this->Lock, irql);
 
 		return TRUE;
 	}
@@ -96,14 +105,22 @@ public:
 private:
 	VOID WriteRegister(const UINT8 offset, const UINT32 value)
 	{
+		KeAcquireSpinLock(&this->Lock, &this->Irql);
 		*((volatile UINT32*) (IoApicBase)) = offset;
 		*((volatile UINT32*) (IoApicBase + 0x10)) = value;
+		KeReleaseSpinLock(&this->Lock, this->Irql);
 	}
 
 	UINT32 ReadRegister(const UINT8 offset)
 	{
+		UINT32 result;
+
+		KeAcquireSpinLock(&this->Lock, &this->Irql);
 		*((volatile UINT32*) (IoApicBase)) = offset;
-		return *((volatile UINT32*) (IoApicBase + 0x10));
+		result = *((volatile UINT32*) (IoApicBase + 0x10));
+		KeReleaseSpinLock(&this->Lock, this->Irql);
+
+		return result;
 	}
 
 	UINT64 ReadRedirectionEntry(const UINT32 irqNumber)
@@ -129,7 +146,7 @@ private:
 	volatile UINT32* IoApicBase;
 	BYTE Id;
 	KSPIN_LOCK Lock = { 0 };
-	KIRQL irql = 0;
+	KIRQL Irql = 0;
 };
 
 IoApic** IoApics;
@@ -137,8 +154,6 @@ UINT64 IoApicCount;
 
 extern "C"
 {
-	extern BOOL HalpInteruptInitialized;
-
 	VOID ApicInit(ACPI_MADT* madt)
 	{
 		UINT64 i = 0, currentLocalApicIdIndex = 0, currentIoApicIndex = 0;
@@ -226,8 +241,6 @@ extern "C"
 
 		PicDisableForApic();
 
-		HalpInteruptInitialized = TRUE;
-
 		/* find virtual address space for the APIC registers */
 		ApicVirtualLocalApicBase = (UINT64) PagingAllocatePageWithPhysicalAddress2(
 			PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, 
@@ -238,14 +251,18 @@ extern "C"
 		/* ensure the physical page is marked as used in the memory map */
 		GlobalPhysicalMemoryMap[ApicLocalApicBase / PAGE_SIZE_SMALL] = MEM_TYPE_USED_PERM;
 
-		/* enables the LAPIC */
-		ApicLocalApicWriteRegister(LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET, 0x1FF);
+		ApicLocalApicInitializeCore();
 	}
 
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data)
 	{
 		UINT32* volatile Destination = (UINT32* volatile) (ApicVirtualLocalApicBase + offset);
 		*Destination = data;
+	}
+
+	VOID ApicSendEoi()
+	{
+		ApicLocalApicWriteRegister(LAPIC_EOI_REGISTER_OFFSET, 0);
 	}
 
 	UINT32 ApicLocalApicReadRegister(UINT64 offset)
@@ -280,5 +297,60 @@ extern "C"
 	UINT8 ApicGetCurrentLapicId()
 	{
 		return (UINT8) (ApicLocalApicReadRegister(LAPIC_ID_REGISTER_OFFSET) & 0xFF);
+	}
+
+	VOID ApicSetupTimer(UINT8 interruptVector)
+	{
+		/* make sure the timer is not running */
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, 0x00000000);
+
+		/* set the vector in the LVT entry for the timer */
+		ApicLocalApicWriteRegister(LAPIC_LVT_TIMER_REGISTER_OFFSET, interruptVector | LAPIC_TIMER_MODE_PERIODIC);
+		ApicLocalApicWriteRegister(LAPIC_DIVIDE_TIMER_REGISTER_OFFSET, LAPIC_TIMER_DIVISOR_1);
+
+		/* tick once every second */
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, ApicTimerTicksPerSecond);
+	}
+
+	UINT64 ApicTestTimer()
+	{
+		/* setup the LAPIC timer divisor */
+		ApicLocalApicWriteRegister(LAPIC_DIVIDE_TIMER_REGISTER_OFFSET, LAPIC_TIMER_DIVISOR_1);
+
+		/* wait for 1/20th of a second using PIT and count how many ticks have elapsed on APIC Timer 
+		to aproximate the frequency */
+		const UINT32 initialTicks = 0xFFFFFFFF;
+
+		PitUniprocessorSetupCalibrationSleep();
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, initialTicks);
+		PitUniprocessorStartCalibrationSleep();
+		
+		/* ticksElapsed holds the ticks per 1/20th of a second number */
+		UINT64 ticksElapsed = initialTicks - ApicLocalApicReadRegister(LAPIC_CURRENT_TIMER_COUNT_REGISTER_OFFSET);
+		UINT64 ticksPerSecond = ticksElapsed * 20;
+
+		/* stop the timer */
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, 0);
+
+		return ticksPerSecond;
+	}
+
+	VOID ApicLocalApicInitializeCore()
+	{
+		ApicLocalApicWriteRegister(LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET, 0x1FF);
+		
+		if (!ApicBspLapicInitialized)
+		{
+			ApicTimerTicksPerSecond = ApicTestTimer();
+		}
+
+		ApicSetupTimer(0x20);
+
+		if (!ApicBspLapicInitialized)
+		{
+			ApicBspLapicInitialized = TRUE;
+		}
+
+		KiEnableInterrupts();
 	}
 }
