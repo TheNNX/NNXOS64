@@ -43,6 +43,42 @@
     <Filter Include="Header Files\HAL\X64">
       <UniqueIdentifier>{25f9cff4-bd9c-4b7e-83ca-b856f2e0893c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HAL\PCI">
+      <UniqueIdentifier>{fadbe79b-54bb-4913-b30e-6ec33ffb4eb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\HAL\PCI">
+      <UniqueIdentifier>{03642e8b-6ee6-40c2-8926-57d173438a46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\memory">
+      <UniqueIdentifier>{201d5ef0-0374-4ed4-a91d-9fc93f64a698}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\memory">
+      <UniqueIdentifier>{25ac6afc-658d-4922-b648-54d222175c0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\video">
+      <UniqueIdentifier>{fde8697f-75e1-449d-b7cd-e2ad2bc08d23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\video">
+      <UniqueIdentifier>{0535b129-2283-4e43-b3a6-fa3cdfaa6958}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\device">
+      <UniqueIdentifier>{03ed654b-698a-47ac-acbb-3b9ebd47fe80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\device\fs">
+      <UniqueIdentifier>{aec3e9f3-2a0c-4add-be6d-fbb0d40185f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\device\hdd">
+      <UniqueIdentifier>{4773a31b-f1ef-4ddb-9c9f-0b2377d8a32f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\device">
+      <UniqueIdentifier>{64f3e66d-8252-4e53-a564-e45bc68874c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\device\fs">
+      <UniqueIdentifier>{c118f7df-be3c-42c1-bb12-ca8362efad3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\device\hdd">
+      <UniqueIdentifier>{9803b5bf-ddd4-488e-98b6-b87550424d2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -80,6 +116,60 @@
     </ClCompile>
     <ClCompile Include="pool.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="loadstub.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxalloccpp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxlog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="text.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\IDT.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\PCI\PCI.c">
+      <Filter>Source Files\HAL\PCI</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\PCI\PCIIDE.c">
+      <Filter>Source Files\HAL\PCI</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\MemoryOperations.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\nnxalloc.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\paging.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="memory\physical_allocator.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="video\SimpleTextIO.c">
+      <Filter>Source Files\video</Filter>
+    </ClCompile>
+    <ClCompile Include="device\Keyboard.c">
+      <Filter>Source Files\device</Filter>
+    </ClCompile>
+    <ClCompile Include="device\fs\fat.c">
+      <Filter>Source Files\device\fs</Filter>
+    </ClCompile>
+    <ClCompile Include="device\fs\gpt.c">
+      <Filter>Source Files\device\fs</Filter>
+    </ClCompile>
+    <ClCompile Include="device\fs\vfs.c">
+      <Filter>Source Files\device\fs</Filter>
+    </ClCompile>
+    <ClCompile Include="device\hdd\hdd.c">
+      <Filter>Source Files\device\hdd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -122,6 +212,81 @@
     <ClInclude Include="klist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\PIC.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\PIT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\Port.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\registers.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\IDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\GDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\PCI\PCIIDE.h">
+      <Filter>Header Files\HAL\PCI</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\PCI\PCI.h">
+      <Filter>Header Files\HAL\PCI</Filter>
+    </ClInclude>
+    <ClInclude Include="text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxlog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxosdbg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxcfg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxllist.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\MemoryOperations.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\nnxalloc.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\paging.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\physical_allocator.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="video\SimpleTextIO.h">
+      <Filter>Header Files\video</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\vfs.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\mbr.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\gpt.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\fat32.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\fs\fat.h">
+      <Filter>Header Files\device\fs</Filter>
+    </ClInclude>
+    <ClInclude Include="device\hdd\hdd.h">
+      <Filter>Header Files\device\hdd</Filter>
+    </ClInclude>
+    <ClInclude Include="device\Keyboard.h">
+      <Filter>Header Files\device</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\MP\ApEntry.asm">
@@ -136,5 +301,28 @@
     <CustomBuild Include="HAL\X64\thread.asm">
       <Filter>Source Files\HAL\X64</Filter>
     </CustomBuild>
+    <CustomBuild Include="HAL\GDT.asm">
+      <Filter>Source Files\HAL</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HAL\IDT.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\memory.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\PIC.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\PIT.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\Port.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
+    <None Include="HAL\registers.asm">
+      <Filter>Source Files\HAL</Filter>
+    </None>
   </ItemGroup>
 </Project>

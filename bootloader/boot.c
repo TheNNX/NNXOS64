@@ -7,7 +7,7 @@
 #include "gnu-efi/inc/efishellintf.h"
 #include "low.h"
 
-void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*);
+void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*, UINT32);
 
 
 EFI_FILE_PROTOCOL* GetFile(EFI_FILE* Root, CHAR16* Name)
@@ -232,7 +232,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	if (EFI_ERROR(Status))
 	{
-		Print("Error: Devices not found\n");
+		Print(L"Error: Devices not found\n");
 		return EFI_NOT_FOUND;
 	}
 
@@ -263,9 +263,9 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 
 		EFI_FILE* NNXOSCFGTXT = GetFile(RootFile, L"efi\\boot\\NNXOSCFG.txt");
-		EFI_FILE* NNXOSLDREXE = GetFile(RootFile, L"efi\\boot\\NNXOSLDR.exe");
+		EFI_FILE* NNXOSKRNEXE = GetFile(RootFile, L"efi\\boot\\NNXOSKRN.exe");
 
-		if (NNXOSLDREXE == 0)
+		if (NNXOSKRNEXE == 0)
 		{
 			Print(L"NNXOSLDR not present on the volume, going to the next one.\n");
 			RootFile->Close(RootFile);
@@ -297,7 +297,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 			RootFile->Close(NNXOSCFGTXT);
 		}
-		RootFile->Close(NNXOSLDREXE);
+		RootFile->Close(NNXOSKRNEXE);
 		RootFile->Close(RootFile);
 
 		BootmenuItem** Current = &Bootmenu;
@@ -352,7 +352,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		return EFI_NO_MEDIA;
 	}
 
-	EFI_FILE* FP = GetFile(Root, L"efi\\boot\\NNXOSLDR.exe");
+	EFI_FILE* FP = GetFile(Root, L"efi\\boot\\NNXOSKRN.exe");
 
 	if (FP == 0)
 	{
@@ -370,7 +370,8 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	if (FileBuffer[0] == 'M' && FileBuffer[1] == 'Z')
 	{
-		Status = LoadPortableExecutable(FileBuffer, FInfo->FileSize, &Stage2entrypoint, NNXMMap);
+		DWORD size;
+		Status = LoadPortableExecutable(FileBuffer, FInfo->FileSize, &Stage2entrypoint, NNXMMap, &size);
 
 		if (EFI_ERROR(Status))
 		{
@@ -381,7 +382,7 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		gBS->SetWatchdogTimer(0, 0, 0, NULL);
 		ScanMemoryMap(&FreePages, &Pages, &MapKey);
 		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, GOP->Mode->Info->PixelsPerScanLine, (void *) gBS->ExitBootServices, ImageHandle, MapKey,
-						 NNXMMap, NNXMMapIndex, Pages * 4096, pAcpiPointer);
+						 NNXMMap, NNXMMapIndex, Pages * 4096, pAcpiPointer, size);
 	}
 	else
 	{

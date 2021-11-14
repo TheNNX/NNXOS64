@@ -25,13 +25,13 @@ typedef __int16				INT16;
 typedef unsigned __int8		UINT8;
 typedef __int8				INT8;
 
-typedef UINT64	ULONG64;
 
-typedef UINT64	QWORD;
-typedef UINT32	DWORD;
-typedef UINT16	WORD;
-typedef UINT8	UCHAR;
-typedef INT8	CHAR;
+typedef UINT64	ULONG64, *PULONG64, *LPULONG64;
+typedef UINT64	QWORD, *PQWORD, *LPQWORD;
+typedef UINT32	DWORD, *PDWORD, *LPDWORD;
+typedef UINT16	WORD, *PWORD, *LPWORD;
+typedef UINT8	UCHAR, *PUCHAR, *LPUCHAR;
+typedef INT8	CHAR, *PCHAR, *LPCHAR;
 
 typedef LONG NTSTATUS;
 

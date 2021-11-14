@@ -25,10 +25,10 @@ extern "C" {
 		BOOL(*CheckIfFileExists)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
 
 		/* Allocate and initialize VFS_FILE structure */
-		VFS_FILE* (*OpenFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
+		VFS_FILE* (*OpenFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
 
 		/* Create if file does not exist */
-		VFS_FILE* (*OpenOrCreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
+		VFS_FILE* (*OpenOrCreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
 
 		/* Deallocate VFS_FILE structure */
 		VOID(*CloseFile)(VFS_FILE* file);
@@ -40,7 +40,7 @@ extern "C" {
 		UINT64(*DeleteAndCloseFile)(VFS_FILE* file);
 
 		/* Create file at given Path*/
-		UINT64(*CreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
+		UINT64(*CreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
 
 		/* Create a file for a given VFS_FILE structure of a file deleted by DeleteFile */
 		UINT64(*RecreateDeletedFile)(VFS_FILE* file);
@@ -52,9 +52,9 @@ extern "C" {
 		UINT64(*WriteFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
 		UINT64(*ReadFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
 
-		UINT64(*CreateDirectory)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
-		UINT64(*MoveFile)(char* oldPath, char* newPath);
-		UINT64(*RenameFile)(VFS_FILE* file, char* newFileName);
+		UINT64(*CreateDirectory)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
+		UINT64(*MoveFile)(const char* oldPath, const char* newPath);
+		UINT64(*RenameFile)(VFS_FILE* file, const char* newFileName);
 	} VFS_FUNCTION_SET;
 
 	typedef struct VIRTUAL_FILE_SYSTEM

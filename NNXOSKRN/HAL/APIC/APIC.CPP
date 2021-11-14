@@ -1,10 +1,10 @@
 #include "APIC.h"
-#include "../../../NNXOSLDR/HAL/PIC.h"
-#include "../../../NNXOSLDR/memory/paging.h"
-#include "../../../NNXOSLDR/memory/physical_allocator.h"
-#include "../../../NNXOSLDR/nnxlog.h"
-#include "../../../NNXOSLDR/device/fs/fat.h"
-#include "../../../NNXOSLDR/HAL/PIT.h"
+#include <HAL/PIC.h>
+#include <memory/paging.h>
+#include <memory/physical_allocator.h>
+#include <nnxlog.h>
+#include <device/fs/fat.h>
+#include <HAL/PIT.h>
 #include "../spinlock.h"
 
 extern "C" 
@@ -17,6 +17,9 @@ extern "C"
 	BOOL ApicBspLapicInitialized = FALSE;
 	UINT64 ApicTimerTicksPerSecond = 0;
 	extern BOOL HalpInteruptInitialized;
+	extern UINT8* GlobalPhysicalMemoryMap;
+	extern UINT64 GlobalPhysicalMemoryMapSize;
+	extern UINT64 MemorySize;
 
 	VOID KiEnableInterrupts();
 }

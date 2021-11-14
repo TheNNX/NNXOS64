@@ -1,11 +1,11 @@
 #include "sheduler.h"
 #include "../../pool.h"
 #include "../../klist.h"
-#include "../../../NNXOSLDR/memory/paging.h"
-#include "../../../NNXOSLDR/HAL/PIT.h"
-#include "../../../NNXOSLDR/video/SimpleTextIo.h"
-#include "../../../NNXOSLDR/memory/MemoryOperations.h"
-#include "../../../NNXOSKRN/HAL/X64/pcr.h"
+#include <memory/paging.h>
+#include <HAL/PIT.h>
+#include <video/SimpleTextIo.h>
+#include <memory/MemoryOperations.h>
+#include <HAL/X64/pcr.h>
 
 KLINKED_LIST PspThreadList;
 KLINKED_LIST PspProcessList;

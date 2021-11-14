@@ -1,6 +1,6 @@
 #include "pool.h"
-#include "../NNXOSLDR/memory/MemoryOperations.h"
-#include "../NNXOSLDR/memory/nnxalloc.h"
+#include <memory/MemoryOperations.h>
+#include <memory/nnxalloc.h>
 #include "bugcheck.h"
 
 PVOID ExAllocatePool(POOL_TYPE type, SIZE_T size)

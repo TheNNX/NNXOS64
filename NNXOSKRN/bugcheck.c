@@ -1,5 +1,5 @@
 #include "bugcheck.h"
-#include "../NNXOSLDR/video/SimpleTextIo.h"
+#include <video/SimpleTextIO.h>
 
 VOID KeBugCheck(ULONG code)
 {

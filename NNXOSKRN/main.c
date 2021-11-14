@@ -209,7 +209,6 @@ void KernelMain(int* framebuffer, int* framebufferEnd, UINT32 width, UINT32 heig
 
 	VfsInit();
 	PciScan();
-	PitUniprocessorInitialize();
 
 	EnableInterrupts();
 

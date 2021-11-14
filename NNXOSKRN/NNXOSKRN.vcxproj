@@ -14,20 +14,20 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{67E77DD1-D078-48E7-8F75-159C6130C693}</ProjectGuid>
     <RootNamespace>NNXOSKRN</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -44,14 +44,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(IncludePath);$(SolutionDir)CommonInclude</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />
@@ -73,11 +73,12 @@
       <SubSystem>Native</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)temp\NNXOSLDR\*.obj</AdditionalDependencies>
-      <EntryPointSymbol>KeEntry</EntryPointSymbol>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
       <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <FixedBaseAddress>true</FixedBaseAddress>
+      <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -102,7 +103,8 @@
       </Command>
     </CustomBuildStep>
     <PreLinkEvent>
-      <Command>cmd.exe /C "del $(SolutionDir)temp\NNXOSLDR\main.obj"</Command>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <CustomBuild>
       <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
@@ -127,11 +129,12 @@
       <SubSystem>Native</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)temp\NNXOSLDR\*.obj</AdditionalDependencies>
-      <EntryPointSymbol>KeEntry</EntryPointSymbol>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
       <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <FixedBaseAddress>true</FixedBaseAddress>
+      <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -156,7 +159,8 @@
       </Command>
     </CustomBuildStep>
     <PreLinkEvent>
-      <Command>cmd.exe /C "del $(SolutionDir)temp\NNXOSLDR\main.obj"</Command>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <CustomBuild>
       <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
@@ -165,32 +169,78 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bugcheck.c" />
+    <ClCompile Include="device\fs\fat.c" />
+    <ClCompile Include="device\fs\gpt.c" />
+    <ClCompile Include="device\fs\vfs.c" />
+    <ClCompile Include="device\hdd\hdd.c" />
+    <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\APIC\APIC.CPP" />
+    <ClCompile Include="HAL\IDT.c" />
     <ClCompile Include="HAL\irql.c" />
     <ClCompile Include="HAL\MP\MP.cpp" />
+    <ClCompile Include="HAL\PCI\PCI.c" />
+    <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="HAL\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
     <ClCompile Include="HAL\X64\sheduler.c" />
+    <ClCompile Include="loadstub.c" />
+    <ClCompile Include="main.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="memory\MemoryOperations.c" />
+    <ClCompile Include="memory\nnxalloc.c" />
+    <ClCompile Include="memory\paging.c" />
+    <ClCompile Include="memory\physical_allocator.c" />
+    <ClCompile Include="nnxalloccpp.cpp" />
+    <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="pool.c" />
+    <ClCompile Include="text.c" />
+    <ClCompile Include="video\SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bugcheck.h" />
+    <ClInclude Include="device\fs\fat.h" />
+    <ClInclude Include="device\fs\fat32.h" />
+    <ClInclude Include="device\fs\gpt.h" />
+    <ClInclude Include="device\fs\mbr.h" />
+    <ClInclude Include="device\fs\vfs.h" />
+    <ClInclude Include="device\hdd\hdd.h" />
+    <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\APIC\APIC.h" />
+    <ClInclude Include="HAL\GDT.h" />
+    <ClInclude Include="HAL\IDT.h" />
     <ClInclude Include="HAL\irql.h" />
     <ClInclude Include="HAL\MP\MP.h" />
+    <ClInclude Include="HAL\PCI\PCI.h" />
+    <ClInclude Include="HAL\PCI\PCIIDE.h" />
+    <ClInclude Include="HAL\PIC.h" />
+    <ClInclude Include="HAL\PIT.h" />
+    <ClInclude Include="HAL\Port.h" />
+    <ClInclude Include="HAL\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
     <ClInclude Include="HAL\X64\sheduler.h" />
     <ClInclude Include="HAL\X64\pcr.h" />
     <ClInclude Include="klist.h" />
+    <ClInclude Include="memory\MemoryOperations.h" />
+    <ClInclude Include="memory\nnxalloc.h" />
+    <ClInclude Include="memory\paging.h" />
+    <ClInclude Include="memory\physical_allocator.h" />
+    <ClInclude Include="nnxcfg.h" />
+    <ClInclude Include="nnxllist.hpp" />
+    <ClInclude Include="nnxlog.h" />
+    <ClInclude Include="nnxosdbg.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="pool.h" />
+    <ClInclude Include="text.h" />
+    <ClInclude Include="video\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\MP\ApEntry.asm">
@@ -222,6 +272,29 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\thread.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="HAL\GDT.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\IDT.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\memory.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIC.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIT.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\Port.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="HAL\registers.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

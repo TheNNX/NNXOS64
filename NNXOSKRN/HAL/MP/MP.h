@@ -2,8 +2,8 @@
 #define NNX_MP_HEADER
 
 #include <nnxtype.h>
-#include "../../../NNXOSLDR/HAL/GDT.h"
-#include "../../../NNXOSLDR/HAL/IDT.h"
+#include <HAL/GDT.h>
+#include <HAL/IDT.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -3,7 +3,7 @@
 #include "efibind.h"
 #include <nnxpe.h>
 
-UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap)
+UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* MemoryMap, DWORD* size)
 {
 	IMAGE_DOS_HEADER* dos_header = FileBuffer;
 	IMAGE_PE_HEADER* pe_header = (IMAGE_PE_HEADER*) ((UINT64) dos_header + (UINT64) dos_header->e_lfanew);
@@ -24,7 +24,10 @@ UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypo
 		Print(L"Invalid parameters\n");
 		return EFI_INVALID_PARAMETER;
 	}
-	UINT64 imageBase = optionalHeader->ImageBase;
+	
+	UINT64 imageBase = 0x100000/*optionalHeader->ImageBase*/;
+	*size = optionalHeader->SizeOfImage;
+	
 	IMAGE_SECTION_TABLE_HEADER* section_table = (IMAGE_SECTION_TABLE_HEADER*) (((UINT64) optionalHeader->NumberOfDataDirectories) * ((UINT64)sizeof(DataDirectory)) + ((UINT64) optionalHeader) + ((UINT64)sizeof(IMAGE_OPTIONAL_HEADER64)));
 
 	for (int index = 0; index < fileHeader->NumberOfSections; index++)

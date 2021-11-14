@@ -1,8 +1,8 @@
 #include "MP.h"
 #include "../APIC/APIC.h"
-#include "../../../NNXOSLDR/HAL/PIT.h"
-#include "../../../NNXOSLDR/memory/paging.h"
-#include "../../../NNXOSLDR/device/fs/vfs.h"
+#include <HAL/PIT.h>
+#include <memory/paging.h>
+#include <device/fs/vfs.h>
 #include "../X64/pcr.h"
 
 extern "C" {

@@ -3,8 +3,8 @@
 
 #include <nnxtype.h>
 #include "../spinlock.h"
-#include "../../../NNXOSLDR/HAL/GDT.h"
-#include "../../../NNXOSLDR/HAL/IDT.h"
+#include <HAL/GDT.h>
+#include <HAL/IDT.h>
 #include "../irql.h"
 
 #ifdef __cplusplus

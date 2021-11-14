@@ -12,6 +12,9 @@
 
 #define UNKNOWNMARK {0xC7, 0xBB, 0xFB, 0xF7, 0xEF, 0xEF, 0xFF, 0xEF},
 
+extern PBYTE GlobalPhysicalMemoryMap;
+extern UINT64 GlobalPhysicalMemoryMapSize;
+
 UINT64 FrameBufferSize()
 {
 	return (((UINT64) gFramebufferEnd) - ((UINT64) gFramebuffer));

@@ -15,20 +15,20 @@
 	plans of expanding the loader much more, this can do for now.
 */
 
-#include "HAL/ACPI/AML.h"
-#include "../NNXOSLDR/video/SimpleTextIo.h"
-#include "../NNXOSLDR/nnxoskldr.h"
-#include "../NNXOSLDR/nnxcfg.h"
-#include "../NNXOSLDR/memory/paging.h"
-#include "../NNXOSLDR/memory/physical_allocator.h"
-#include "../NNXOSLDR/HAL/IDT.h"
-#include "HAL/APIC/APIC.h"
-#include "../NNXOSLDR/device/fs/vfs.h"
-#include "HAL/MP/MP.h"
+#include <HAL/ACPI/AML.h>
+#include <video/SimpleTextIo.h>
+#include <nnxcfg.h>
+#include <memory/paging.h>
+#include <memory/physical_allocator.h>
+#include <HAL/IDT.h>
+#include <HAL/APIC/APIC.h>
+#include <device/fs/vfs.h>
+#include <HAL/MP/MP.h>
 #include "bugcheck.h"
 #include "HAL/X64/cpu.h"
 #include "HAL/X64/pcr.h"
 #include "HAL/X64/sheduler.h"
+#include <HAL/PIT.h>
 
 int basicallyATest = 0;
 
@@ -46,68 +46,66 @@ extern "C"
 	extern UINT32 gMaxX;
 	extern UINT8 Initialized;
 	extern VOID(*gExceptionHandlerPtr)(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip);
-}
 
-/*
-	Wrapper between ExceptionHandler and KeBugCheck
-*/
-extern "C" VOID KeExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
-{
-	KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
-}
+	extern UINT8* GlobalPhysicalMemoryMap;
+	extern UINT64 GlobalPhysicalMemoryMapSize;
+	extern UINT64 MemorySize;
 
-extern "C" UINT64 KeEntry(KLdrKernelInitializationData* data)
-{
-	PKIDTENTRY64 idt;
-	DisableInterrupts();
-	gExceptionHandlerPtr = KeExceptionHandler;
-	gFramebuffer = data->Framebuffer;
-	gFramebufferEnd = data->FramebufferEnd;
-	gWidth = data->FramebufferWidth;
-	gHeight = data->FramebufferHeight;
-	gPixelsPerScanline = data->FramebufferPixelsPerScanline;
 
-	GlobalPhysicalMemoryMap = data->PhysicalMemoryMap;
-	GlobalPhysicalMemoryMapSize = data->PhysicalMemoryMapSize;
-
-	TextIoInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
-	TextIoClear();
-
-	PagingKernelInit();
-
-	/* TODO: free temp-kernel physical memory here */
-	DrawMap();
-
-	NNXAllocatorInitialize();
-	for (int i = 0; i < 64; i++)
+	/*
+		Wrapper between ExceptionHandler and KeBugCheck
+	*/
+	VOID KeExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	{
-		NNXAllocatorAppend(PagingAllocatePage(), 4096);
+		KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
 
-	VfsInit();
-	PciScan();
-
-	UINT8 status;
-	ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(data->rdsp, "FACP");
-
-	if (!facp)
+	UINT64 KeEntry(ACPI_RDSP* pRdsp)
 	{
-		status = AcpiLastError();
-		ACPI_ERROR(status);
+		PKIDTENTRY64 idt;
+		DisableInterrupts();
+		PitUniprocessorInitialize();
+		//while (1);
+
+		gExceptionHandlerPtr = KeExceptionHandler;
+
+		TextIoInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
+		TextIoClear();
+
+		/* TODO: free temp-kernel physical memory here */
+		DrawMap();
+
+		NNXAllocatorInitialize();
+		for (int i = 0; i < 64; i++)
+		{
+			NNXAllocatorAppend(PagingAllocatePage(), 4096);
+		}
+
+		VfsInit();
+		PciScan();
+
+		UINT8 status;
+		ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(pRdsp, "FACP");
+
+		if (!facp)
+		{
+			status = AcpiLastError();
+			ACPI_ERROR(status);
+			KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
+		}
+
+		ACPI_MADT* MADT = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
+		PrintT("Found MADT on %x\n", MADT);
+
+		ApicInit(MADT);
+		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
+
+		if (status = PspDebugTest())
+			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+
+		MpInitialize();
+
+		while (1);
 		KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
 	}
-
-	ACPI_MADT* MADT = (ACPI_MADT*) AcpiGetTable(data->rdsp, "APIC");
-	PrintT("Found MADT on %x\n", MADT);
-
-	ApicInit(MADT);
-	HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
-
-	if (status = PspDebugTest())
-		KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
-
-	MpInitialize();
-
-	while (1);
-	KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
 }
