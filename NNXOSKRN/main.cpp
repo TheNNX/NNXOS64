@@ -1,20 +1,3 @@
-/*
-	All of NNXOSLDR .obj files are included in the linking process of this project
-	This is done to minimalize the ammount of code rewritten for the kernel,
-	that had already been written for the loader (e.g. FAT code, AML, memory managemenet).
-
-	This makes it possible to link to all loader functions without any stub function or
-	pointer passing. All changes to the loader files will immediately, whithout any changes
-	to the kernel, be passed to the kernel.
-
-	It is also useful, because the loader resides on address 0x10000 in memory, and
-	this kernel is supposed to be on 3 or 2 GiB address boundary (this has some advantages)
-
-	The disadvantage of this solution is the disk space needed to contain the operating system,
-	as now there are two copies of each loader function on the disk, but since there are no
-	plans of expanding the loader much more, this can do for now.
-*/
-
 #include <HAL/ACPI/AML.h>
 #include <video/SimpleTextIo.h>
 #include <nnxcfg.h>

@@ -6,6 +6,7 @@
 *.opensdf
 *.opendb
 *.db*
+debug.bat
 arm
 aa64
 x86_64
