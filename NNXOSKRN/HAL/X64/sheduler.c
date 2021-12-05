@@ -181,7 +181,7 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS process)
 
 NTSTATUS PspDestoryThreadInternal(PETHREAD thread)
 {
-	if(FindOnList(&thread->Process->ThreadList, thread))
+	if(FindInList(&thread->Process->ThreadList, thread))
 	   RemoveFromList(&thread->Process->ThreadList, thread);
 	RemoveFromList(&thread->Process->Pcb.ThreadList, &thread->Tcb);
 	ExFreePool(thread);

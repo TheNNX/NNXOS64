@@ -1,10 +1,8 @@
 #ifndef _PE_H
 #define _PE_H 
 
+#pragma pack(push, 1)
 #include <nnxtype.h>
-
-UINT64 LoadPortableExecutable(void* FileBuffer, int bufferSize, UINT64** entrypoint, UINT8* memmap);
-
 
 #define IMAGE_PE_MAGIC 0x4550
 #define IMAGE_MZ_MAGIC 0x5A4D
@@ -18,7 +16,7 @@ typedef UINT8 CHAR8;
 
 typedef struct _MZ_FILE_TABLE 
 {
-	UINT16 signature;
+	UINT16 Signature;
 	UINT8 nc[58];
 	UINT32 e_lfanew;
 }_MZ, MZ_FILE_TABLE, DOS_EXECUTABLE_TABLE, IMAGE_DOS_HEADER;
@@ -36,8 +34,8 @@ typedef struct _FILE_HEADER_TABLE
 
 typedef struct _DATA_DIR 
 {
-	RVA virtualAddress;
-	UINT32 size;
+	RVA VirtualAddressRVA;
+	UINT32 Size;
 }DATA_DIRECTORY, DataDirectory;
 
 #define IMAGE_OPTIONAL_HEADER_NT64 0x20B
@@ -82,7 +80,7 @@ typedef struct _DATA_DIR
 
 typedef struct _OPTIONAL_HEADER_TABLE64 
 {
-	UINT16 signature;
+	UINT16 Signature;
 	UINT8 MajorLinkerVersion;
 	UINT8 MinorLinkerVersion;
 	UINT32 CodeSize;
@@ -119,7 +117,7 @@ typedef struct _OPTIONAL_HEADER_TABLE64
 	UINT64 HeapCommitSize;
 	UINT32 LoaderFlags;
 	UINT32 NumberOfDataDirectories;
-	DATA_DIRECTORY dataDirectories[0];
+	DATA_DIRECTORY DataDirectories[0];
 }_OPTIONAL64, _OPTIONAL_PE64, IMAGE_OPTIONAL_HEADER64, IMAGE_OPTIONAL_TABLE64;
 
 typedef struct _EXPORT_TABLE
@@ -128,27 +126,33 @@ typedef struct _EXPORT_TABLE
 	UINT32 TimeDateStamp;
 	UINT16 MajorVersion;
 	UINT16 MinorVersion;
-	RVA Name;
+	RVA NameRVA;
 	UINT32 Base;
 	UINT32 NumberOfFunctions;
 	UINT32 NumberOfNames;
-	RVA AddressOfFunctions;
-	RVA AddressOfNames;
-	RVA AddressOfNameOrdinals;
+	RVA AddressOfFunctionsRVA;
+	RVA AddressOfNamesRVA;
+	RVA AddressOfNameOrdinalsRVA;
 }IMAGE_EXPORT_TABLE, IMAGE_EXPORT_DIRECTORY_ENTRY;
+
+typedef struct _IMAGE_EXPORT_ADDRESS_TABLE
+{
+	RVA AddressRVA;
+	RVA NameRVA;
+}IMAGE_EXPORT_ADDRESS_ENTRY;
 
 typedef struct _IMPORT_DESCRIPTOR 
 {
 	RVA OriginalFirstThunk;
 	UINT32 TimeDateStamp;
 	UINT32 ForwardedStamp;
-	RVA Name;
-	RVA FirstThunk;
+	RVA NameRVA;
+	RVA FirstThunkRVA;
 }IMAGE_IMPORT_DESCRIPTOR;
 
 typedef struct _IMPORT_TABLE 
 {
-	IMAGE_IMPORT_DESCRIPTOR entries[0];
+	IMAGE_IMPORT_DESCRIPTOR Entries[0];
 }IMAGE_IMPORT_TABLE, IMAGE_IMPORT_DIRECTORY_ENTRY;
 
 #define IMAGE_FILE_RELOC_STRIPPED 0x1
@@ -163,20 +167,20 @@ typedef struct _IMPORT_TABLE
 
 typedef struct _PE_FILE_TABLE 
 {
-	UINT32 signature;
-	IMAGE_COFF_HEADER fileHeader;
-	IMAGE_OPTIONAL_HEADER64 optionalHeader;
+	UINT32 Signature;
+	IMAGE_COFF_HEADER FileHeader;
+	IMAGE_OPTIONAL_HEADER64 OptionalHeader;
 }IMAGE_PE_HEADER, _PE, PE_FILE_TABLE;
 
 typedef struct _SECTION_HEADER
 {
 	UINT8 Name[8];
 	UINT32 VirtualSize;
-	UINT32 VirtualAddress;
+	RVA VirtualAddressRVA;
 	UINT32 SizeOfSection;
-	RVA SectionPointer;
-	RVA RelocationsPointer;
-	RVA LineNumbersPointer;
+	RVA PointerToDataRVA;
+	RVA RelocationsPointerRVA;
+	RVA LineNumbersPointerRVA;
 	UINT16 NumberOfRelocations;
 	UINT16 NumberOfLineNumbers;
 	UINT32 Characteristics;
@@ -184,7 +188,7 @@ typedef struct _SECTION_HEADER
 
 typedef struct _SECTION_TABLE 
 {
-	SECTION_HEADER headers[0];
+	SECTION_HEADER Headers[0];
 }SECTION_TABLE, IMAGE_SECTION_TABLE_HEADER;
 
 typedef struct _IMAGE_IMPORT_BY_NAME 
@@ -193,5 +197,25 @@ typedef struct _IMAGE_IMPORT_BY_NAME
 	CHAR8 Name[0];
 }IMPORT_BY_NAME, IMAGE_IMPORT_BY_NAME;
 
+typedef struct _IMAGE_ILT_ENTRY64
+{
+	union
+	{
+		struct
+		{
+			UINT64 NameRVA : 31;
+			UINT64 : 32;
+			UINT64 Mode : 1;
+		};
+		struct
+		{
+			UINT64 Ordinal : 16;
+			UINT64 : 37;
+			UINT64 : 1;
+		};
+		UINT64 AsNumber;
+	};
+}IMAGE_ILT_ENTRY64;
 
+#pragma pack(pop)
 #endif

@@ -43,12 +43,12 @@ extern "C"
 		KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
 
-	UINT64 KeEntry(ACPI_RDSP* pRdsp)
+	__declspec(dllexport) UINT64 KeEntry(ACPI_RDSP* pRdsp)
 	{
 		PKIDTENTRY64 idt;
+
 		DisableInterrupts();
 		PitUniprocessorInitialize();
-		//while (1);
 
 		gExceptionHandlerPtr = KeExceptionHandler;
 

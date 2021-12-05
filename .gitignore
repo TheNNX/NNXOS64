@@ -18,6 +18,7 @@ x64/*
 NNXOSKRN/x64/*
 gnu-efi/*
 .vs/nnxos64/*
+.vs/VSWorkspaceState.json
 *.tmp
 *.obj
 *.exe

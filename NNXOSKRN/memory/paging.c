@@ -289,8 +289,6 @@ const UINT64 loaderTemporaryKernelPTSize = 32;
     (ACPI doesn't use the tables once it creates them, right?? right??)
 */
 
-VOID TestF();
-
 VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
 {
     UINT64 i, *PML4, const pageTableKernelReserve = 16, RSP;
@@ -322,8 +320,6 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
     /* for recursive paging */
     PML4[PML4EntryForRecursivePaging] = ((UINT64) PML4) | (PAGE_WRITE | PAGE_PRESENT);
     GlobalPhysicalMemoryMap = virtualGlobalPhysicalMemoryMap | (((UINT64) pbPhysicalMemoryMap) & 0xFFF);
-
-    TestF();
 
     SetCR3(PML4);
 }

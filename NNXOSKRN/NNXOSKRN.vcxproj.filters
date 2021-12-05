@@ -114,19 +114,10 @@
     <ClCompile Include="HAL\X64\sheduler.c">
       <Filter>Source Files\HAL\X64</Filter>
     </ClCompile>
-    <ClCompile Include="pool.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="loadstub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="nnxalloccpp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="nnxlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="text.c">
@@ -171,6 +162,15 @@
     <ClCompile Include="device\hdd\hdd.c">
       <Filter>Source Files\device\hdd</Filter>
     </ClCompile>
+    <ClCompile Include="nnxalloccpp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxlog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -207,7 +207,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pool.h">
-      <Filter>Header Files\HAL</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="klist.h">
       <Filter>Header Files</Filter>
@@ -304,25 +304,23 @@
     <CustomBuild Include="HAL\GDT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="HAL\IDT.asm">
+    <CustomBuild Include="HAL\IDT.asm">
       <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\memory.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIC.asm">
       <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\PIC.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\PIT.asm">
       <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\PIT.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\Port.asm">
       <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\Port.asm">
+    </CustomBuild>
+    <CustomBuild Include="HAL\registers.asm">
       <Filter>Source Files\HAL</Filter>
-    </None>
-    <None Include="HAL\registers.asm">
-      <Filter>Source Files\HAL</Filter>
-    </None>
+    </CustomBuild>
+    <CustomBuild Include="memory\memory.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

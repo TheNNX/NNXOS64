@@ -14,20 +14,20 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{67E77DD1-D078-48E7-8F75-159C6130C693}</ProjectGuid>
     <RootNamespace>NNXOSKRN</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -44,17 +44,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />
+    <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -68,6 +70,8 @@
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -76,8 +80,8 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <BaseAddress>0x100000</BaseAddress>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <IgnoreSpecificDefaultLibraries>
@@ -89,6 +93,7 @@
       </StackReserveSize>
       <StackCommitSize>
       </StackCommitSize>
+      <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -124,6 +129,8 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -132,8 +139,8 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <BaseAddress>0x100000</BaseAddress>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <IgnoreSpecificDefaultLibraries>
@@ -145,6 +152,7 @@
       </StackReserveSize>
       <StackCommitSize>
       </StackCommitSize>
+      <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -282,9 +290,6 @@
     <CustomBuild Include="HAL\IDT.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\memory.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="HAL\PIC.asm">
       <FileType>Document</FileType>
     </CustomBuild>
@@ -295,6 +300,11 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="HAL\registers.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="memory\memory.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

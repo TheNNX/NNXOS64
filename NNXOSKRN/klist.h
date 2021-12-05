@@ -33,7 +33,7 @@ extern "C" {
 		if (first == NULL)
 			return NULL;
 
-		current = first->Next;
+		current = first;
 
 		while (current->Next)
 		{
@@ -56,7 +56,7 @@ extern "C" {
 		return current;
 	}
 
-	inline PKLINKED_LIST FindOnList(PKLINKED_LIST first, PVOID value)
+	inline PKLINKED_LIST FindInListCustomCompare(PKLINKED_LIST first, PVOID value, BOOL(*compare)(PVOID, PVOID))
 	{
 		PKLINKED_LIST current;
 
@@ -67,7 +67,7 @@ extern "C" {
 
 		while (current)
 		{
-			if (current->Value == value)
+			if (compare(current->Value, value))
 				return current;
 			current = current->Next;
 		}
@@ -75,9 +75,29 @@ extern "C" {
 		return NULL;
 	}
 
+	inline BOOL __CompareEq(PVOID a, PVOID b)
+	{
+		return a == b;
+	}
+
+	inline PKLINKED_LIST FindInList(PKLINKED_LIST first, PVOID value)
+	{
+		return FindInListCustomCompare(first, value, __CompareEq);
+	}
+
+	inline VOID RemoveChainElementFromList(PKLINKED_LIST element)
+	{
+		if (element->Next)
+			element->Next->Prev = element->Prev;
+		if (element->Prev)
+			element->Prev->Next = element->Next;
+
+		DEALLOC(element);
+	}
+
 	inline VOID RemoveFromList(PKLINKED_LIST first, PVOID value)
 	{
-		PKLINKED_LIST listElement = FindOnList(first, value);
+		PKLINKED_LIST listElement = FindInList(first, value);
 		PKLINKED_LIST prev, next;
 		
 		if (listElement == NULL)

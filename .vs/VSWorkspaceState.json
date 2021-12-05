@@ -1,13 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\NNXOSLDR",
+    "\\NNXOSKRN",
+    "\\NNXOSKRN\\HAL",
+    "\\NNXOSKRN\\HAL\\X64",
     "\\NNXOSLDR\\device",
-    "\\NNXOSLDR\\device\\fs",
-    "\\NNXOSLDR\\HAL",
-    "\\NNXOSLDR\\HAL\\ACPI",
-    "\\NNXOSLDR\\HAL\\PCI"
+    "\\NNXOSLDR\\device\\fs"
   ],
-  "SelectedNode": "\\NNXOSLDR\\HAL\\PCI\\PCI.c",
+  "SelectedNode": "\\NNXOSKRN\\HAL\\spinlock.c",
   "PreviewInSolutionExplorer": false
 }

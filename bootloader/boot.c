@@ -1,396 +1,472 @@
-﻿/*
-	TODO: CLEANUP THE WHOLE FILE!
-*/
+﻿/* TODO: separate out PE32 loading */
+/* TODO: finish import resolving */
+
+#include <efi.h>
+#include <efilib.h>
+#include <nnxtype.h>
+#include <NNXOSKRN/nnxcfg.h>
 #include <nnxpe.h>
-#include "gnu-efi/inc/efi.h"
-#include "gnu-efi/inc/efilib.h"
-#include "gnu-efi/inc/efishellintf.h"
-#include "low.h"
+#include <bootdata.h>
+#include <NNXOSKRN/memory/physical_allocator.h>
 
-void(*Stage2entrypoint)(EFI_STATUS *(int*, int*, UINT32, UINT32, UINT32, void(*)(void*, UINTN)), void*, UINTN, UINT8*, UINT64, UINT64, void*, UINT32);
+#define ALLOC(x) AllocateZeroPool(x)
+#define DEALLOC(x) FreePool(x)
 
+#include <NNXOSKRN/klist.h>
 
-EFI_FILE_PROTOCOL* GetFile(EFI_FILE* Root, CHAR16* Name)
+/* kinda ugly, but gets the job done (and is far prettier than the mess that it was before) */
+#define return_if_error_a(status, d) if (EFI_ERROR(status)) { if(d) Print(L"Line: %d Status: %r\n", __LINE__, status); return status; }
+#define return_if_error(status) return_if_error_a(status, 0)
+#define return_if_error_debug(status) return_if_error_a(status, 1)
+
+const CHAR16 *wszKernelPath = L"efi\\boot\\NNXOSKRN.exe";
+
+EFI_BOOT_SERVICES* gBootServices;
+
+typedef struct _MODULE_EXPORT
 {
-	EFI_STATUS  Status = 0;
-	EFI_FILE_PROTOCOL *File = 0;
+	char *Name;
+	PVOID Address;
+}MODULE_EXPORT, *PMODULE_EXPORT;
 
-	Status = Root->Open(Root, &File, Name, EFI_FILE_MODE_READ, 0);
+typedef struct _LOADED_MODULE
+{
+	KLINKED_LIST Exports;
+	PVOID Entrypoint;
+	PVOID ImageBase;
+	ULONG ImageSize;
+	CHAR* Name;
+	USHORT OrdinalBase;
+}LOADED_MODULE, *PLOADED_MODULE;
 
-	if (EFI_ERROR(Status))
-	{
-		return 0;
-	}
-
-	return File;
+VOID DestroyModuleExport(PVOID exportPointer)
+{
+	MODULE_EXPORT* export = (MODULE_EXPORT*) exportPointer;
+	FreePool(export);
 }
 
-UINTN MapSize = 0, MapKey, DescriptorSize = 0;
-EFI_MEMORY_DESCRIPTOR *MemoryMap = NULL;
-UINT32 DescriptorVersion;
-
-void ScanMemoryMap(UINT64* FreePages, UINT64* TotPages, UINT64* OutMapKey)
+VOID DestroyLoadedModule(PVOID modulePointer)
 {
-	EFI_STATUS Status;
+	LOADED_MODULE* module = (LOADED_MODULE*) modulePointer;
+	ClearListAndDestroyValues(&module->Exports, DestroyModuleExport);
+	FreePool(module);
+}
 
-	if (MemoryMap)
+KLINKED_LIST LoadedModules;
+
+VOID PrintExports()
+{
+	PKLINKED_LIST c = LoadedModules.Next;
+	while (c)
 	{
-		MapSize = 0;
-		MapKey = 0;
-		gBS->FreePool(MemoryMap);
-		MemoryMap = 0;
+		LOADED_MODULE* module = ((LOADED_MODULE*) c->Value);
+		Print(L"%X\n", module->ImageBase);
+		c = c->Next;
+
+		PKLINKED_LIST e = module->Exports.Next;
+
+		while (e)
+		{
+			Print(L"   %a=%X\n", ((MODULE_EXPORT*) e->Value)->Name, ((MODULE_EXPORT*) e->Value)->Address);
+			e = e->Next;
+		}
+	}
+}
+
+BOOL CompareModuleName(PVOID a, PVOID b)
+{
+	CHAR* name = b;
+	CHAR* moduleName = ((LOADED_MODULE*) a)->Name;
+
+	return strcmpa(name, moduleName) == 0;
+}
+
+EFI_STATUS TryToLoadModule(CHAR* name)
+{
+	return EFI_UNSUPPORTED;
+}
+
+EFI_STATUS HandleImportDirectory(LOADED_MODULE* module, IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
+{
+	EFI_STATUS status;
+	PVOID imageBase = module->ImageBase;
+
+	IMAGE_IMPORT_DESCRIPTOR* current = importDirectoryEntry->Entries;
+
+	while (current->NameRVA != 0)
+	{
+		CHAR* name = (CHAR*)((ULONG_PTR)current->NameRVA + (ULONG_PTR)imageBase);
+		IMAGE_ILT_ENTRY64* imports = (IMAGE_ILT_ENTRY64*)((ULONG_PTR)current->FirstThunkRVA + (ULONG_PTR)imageBase);
+		
+		PKLINKED_LIST moduleEntry = FindInListCustomCompare(&LoadedModules, name, CompareModuleName);
+
+		Print(L"%a:\n", name);
+
+		if (moduleEntry == NULL)
+		{
+			status = TryToLoadModule(name);
+			if (status)
+				return EFI_LOAD_ERROR;
+
+			moduleEntry = FindInListCustomCompare(&LoadedModules, name, CompareModuleName);
+
+			if (moduleEntry == NULL)
+				return EFI_ABORTED;
+		}
+		
+		while (imports->AsNumber)
+		{
+			if (imports->Mode == 0)
+			{
+				Print(L"   %a\n", imports->NameRVA + (ULONG_PTR)imageBase + 2);
+			}
+			else
+			{
+				Print(L"   #%d\n", imports->Ordinal);
+			}
+			imports++;
+		}
+
+		current++;
 	}
 
-	while (EFI_SUCCESS != (Status = gBS->GetMemoryMap(&MapSize,
-													  MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion)))
+	return EFI_SUCCESS;
+}
+
+EFI_STATUS HandleExportDirectory(LOADED_MODULE* module, IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry)
+{
+	PVOID imageBase = module->ImageBase;
+	UINTN numberOfExports = exportDirectoryEntry->NumberOfFunctions;
+	IMAGE_EXPORT_ADDRESS_ENTRY* exportAddressTable =
+		(IMAGE_EXPORT_ADDRESS_ENTRY*) ((ULONG_PTR) exportDirectoryEntry->AddressOfFunctionsRVA + (ULONG_PTR) imageBase);
+
+	UINTN i;
+
+	PKLINKED_LIST exports = &module->Exports;
+
+	module->Name = (CHAR*)((ULONG_PTR)exportDirectoryEntry->NameRVA + (ULONG_PTR)imageBase);
+	module->OrdinalBase = exportDirectoryEntry->Base;
+
+	for (i = 0; i < numberOfExports; i++)
 	{
-		if (Status == EFI_BUFFER_TOO_SMALL)
+		MODULE_EXPORT* e;
+		PKLINKED_LIST exportEntry = AppendList(exports, AllocateZeroPool(sizeof(MODULE_EXPORT)));
+
+		if (exportEntry == NULL)
 		{
-			MapSize += 2 * DescriptorSize;
-			gBS->AllocatePool(EfiLoaderData, MapSize, (void **) &MemoryMap);
+			RemoveFromList(&LoadedModules, module);
+			return EFI_OUT_OF_RESOURCES;
+		}
+
+		e = ((MODULE_EXPORT*) exportEntry->Value);
+		e->Address = (PVOID) ((ULONG_PTR) exportAddressTable[i].AddressRVA + (ULONG_PTR) imageBase);
+		e->Name = (PVOID) ((ULONG_PTR) exportAddressTable[i].NameRVA + (ULONG_PTR) imageBase);
+	}
+
+	return EFI_SUCCESS;
+}
+
+/* 
+	LoadImage function
+	Loads a PE32+ file into memory
+	Recursively loads dependencies
+*/
+EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_MODULE* outModule)
+{
+	EFI_STATUS status;
+	IMAGE_DOS_HEADER dosHeader;
+	IMAGE_PE_HEADER peHeader;
+
+	UINTN dataDirectoryIndex;
+	DATA_DIRECTORY dataDirectories[16];
+	UINTN numberOfDataDirectories, sizeOfDataDirectories;
+
+	SECTION_HEADER* sectionHeaders;
+	UINTN numberOfSectionHeaders, sizeOfSectionHeaders;
+	SECTION_HEADER* currentSection;
+
+	PKLINKED_LIST moduleLinkedListEntry;
+	PLOADED_MODULE module;
+
+	UINTN dosHeaderSize = sizeof(dosHeader);
+	UINTN peHeaderSize = sizeof(peHeader);
+
+	status = file->Read(file, &dosHeaderSize, &dosHeader);
+	return_if_error(status);
+	
+	if (dosHeader.Signature != IMAGE_MZ_MAGIC)
+		return EFI_UNSUPPORTED;
+
+	status = file->SetPosition(file, dosHeader.e_lfanew);
+	return_if_error(status);
+
+	status = file->Read(file, &peHeaderSize, &peHeader);
+	return_if_error(status);
+
+	if (peHeader.Signature != IMAGE_PE_MAGIC)
+		return EFI_UNSUPPORTED;
+
+	if (peHeader.OptionalHeader.Signature != IMAGE_OPTIONAL_HEADER_NT64 ||
+		peHeader.FileHeader.Machine != IMAGE_MACHINE_X64)
+	{
+		Print(L"%a: File specified is not a 64 bit executable\n", __FUNCDNAME__);
+		return EFI_UNSUPPORTED;
+	}
+
+	if (imageBase == NULL)
+		imageBase = (PVOID) peHeader.OptionalHeader.ImageBase;
+
+	/* read all data directories */
+	numberOfDataDirectories = peHeader.OptionalHeader.NumberOfDataDirectories;
+
+	if (numberOfDataDirectories > 16)
+		numberOfDataDirectories = 16;
+
+	sizeOfDataDirectories = numberOfDataDirectories * sizeof(DATA_DIRECTORY);
+
+	status = file->Read(file, &sizeOfDataDirectories, dataDirectories);
+	return_if_error(status);
+
+	/* read all sections */
+	numberOfSectionHeaders = peHeader.FileHeader.NumberOfSections;
+	sizeOfSectionHeaders = numberOfSectionHeaders * sizeof(SECTION_HEADER);
+	sectionHeaders = AllocateZeroPool(sizeOfSectionHeaders);
+	if (sectionHeaders == NULL)
+		return EFI_OUT_OF_RESOURCES;
+	status = file->SetPosition(file, dosHeader.e_lfanew + sizeof(peHeader) + peHeader.OptionalHeader.NumberOfDataDirectories * sizeof(DATA_DIRECTORY));
+	return_if_error(status);
+	status = file->Read(file, &sizeOfSectionHeaders, sectionHeaders);
+
+	for (currentSection = sectionHeaders; currentSection < sectionHeaders + numberOfSectionHeaders; currentSection++)
+	{
+		UINTN sectionSize;
+
+		status = file->SetPosition(file, currentSection->PointerToDataRVA);
+		
+		sectionSize = (UINTN)currentSection->SizeOfSection;
+		
+		if (!EFI_ERROR(status))
+			status = file->Read(file, &sectionSize, (PVOID)((ULONG_PTR) currentSection->VirtualAddressRVA + (ULONG_PTR)imageBase));
+		
+		if (EFI_ERROR(status))
+		{
+			FreePool(sectionHeaders);
+			return status;
 		}
 	}
 
-	EFI_MEMORY_DESCRIPTOR* Offset = MemoryMap;
-	UINT64 EndOfMemoryMap = ((UINT64) Offset) + MapSize;
+	FreePool(sectionHeaders);
 
-	while (Offset < EndOfMemoryMap)
+	/* add this module to the loaded module list
+	if for any reason it is not possible to finish loading, remember to remove from the list */
+	moduleLinkedListEntry = AppendList(&LoadedModules, AllocateZeroPool(sizeof(LOADED_MODULE)));
+	if (moduleLinkedListEntry == NULL)
+		return EFI_OUT_OF_RESOURCES;
+
+	module = ((LOADED_MODULE*) moduleLinkedListEntry->Value);
+
+	module->ImageBase = imageBase;
+	module->Entrypoint = (PVOID)(peHeader.OptionalHeader.EntrypointRVA + (ULONG_PTR)imageBase);
+	module->ImageSize = peHeader.OptionalHeader.SizeOfImage;
+	module->Name = "";
+
+	for (dataDirectoryIndex = 0; dataDirectoryIndex < numberOfDataDirectories; dataDirectoryIndex++)
 	{
-		EFI_MEMORY_DESCRIPTOR *Desc = Offset;
+		PVOID dataDirectory = (PVOID)((ULONG_PTR) dataDirectories[dataDirectoryIndex].VirtualAddressRVA + (ULONG_PTR) imageBase);
 
-		Offset = ((UINT64) Offset) + DescriptorSize;
-		*TotPages += Desc->NumberOfPages;
+		if (dataDirectories[dataDirectoryIndex].Size == 0 || dataDirectories[dataDirectoryIndex].VirtualAddressRVA == 0)
+			continue;
 
-		if (Desc->Type == EfiConventionalMemory || Desc->Type == EfiLoaderCode || Desc->Type == EfiLoaderData || Desc->Type == EfiBootServicesCode || Desc->Type == EfiBootServicesData)
-			*FreePages += Desc->NumberOfPages;
-
-	}
-	*OutMapKey = MapKey;
-}
-
-void BackspaceChar()
-{
-	EFI_SIMPLE_TEXT_OUT_PROTOCOL* Output = gST->ConOut;
-	EFI_SIMPLE_TEXT_IN_PROTOCOL* Input = gST->ConIn;
-	UINTN X, Y;
-	UINTN Columns, Rows;
-
-	Output->QueryMode(Output, Output->Mode, &Columns, &Rows);
-
-	X = Output->Mode->CursorColumn;
-	Y = Output->Mode->CursorRow;
-
-	if (X)
-		X--;
-	else
-	{
-		X = Columns - 1;
-
-		if (Y)
-			Y--;
-	}
-	PrintAt(X, Y, L" ");
-	Output->SetCursorPosition(Output, X, Y);
-}
-
-UINTN AskUserForNumber()
-{
-	UINTN CurrentNumber = 0, BufferLen = 0;
-	EFI_STATUS Status;
-	EFI_SIMPLE_TEXT_IN_PROTOCOL* Input = gST->ConIn;
-	EFI_INPUT_KEY Keydata;
-
-	while (TRUE)
-	{
-		UINTN Index;
-		gBS->WaitForEvent(1, &Input->WaitForKey, &Index);
-		Status = Input->ReadKeyStroke(Input, &Keydata);
-		if (!EFI_ERROR(Status))
+		if (dataDirectoryIndex == IMAGE_DIRECTORY_ENTRY_EXPORT)
 		{
-			if (Keydata.UnicodeChar == 0x08)
-			{
-				if (BufferLen)
-				{
-					CurrentNumber /= 10;
-					BufferLen--;
-					BackspaceChar();
-				}
-			}
-			else if (Keydata.UnicodeChar >= L'0' && Keydata.UnicodeChar <= L'9' && CurrentNumber < 100)
-			{
-				UINTN Inserted = Keydata.UnicodeChar - L'0';
-				CurrentNumber *= 10;
-				CurrentNumber += Inserted;
-				BufferLen++;
-				Print(L"%lc", Keydata.UnicodeChar);
-			}
-			else if (Keydata.UnicodeChar == 0xD || Keydata.UnicodeChar == 0xA)
-			{
-				Print(L"\n");
-				return CurrentNumber;
-			}
+			IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry = (IMAGE_EXPORT_DIRECTORY_ENTRY*) dataDirectory;
+
+			status = HandleExportDirectory(module, exportDirectoryEntry);
+			return_if_error(status);
 		}
-		else
+		else if (dataDirectoryIndex == IMAGE_DIRECTORY_ENTRY_IMPORT)
 		{
-			Print(L"Error reading key.\n");
-			return CurrentNumber;
+			IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry = (IMAGE_IMPORT_DIRECTORY_ENTRY*) dataDirectory;
+
+			status = HandleImportDirectory(module, importDirectoryEntry);
+			return_if_error(status);
 		}
 	}
 
+	*outModule = module;
+
+	return status;
 }
 
-typedef struct BootmenuItem
+EFI_STATUS QueryGraphicsInformation(BOOTDATA* bootdata)
 {
-	CHAR16 Name[16];
-	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* Filesystem;
-	struct BootmenuItem* Next;
-} BootmenuItem;
+	EFI_STATUS status;
+	EFI_GRAPHICS_OUTPUT_PROTOCOL* graphicsProtocol;
+	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode;
 
-EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+	status = gBootServices->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, &graphicsProtocol);
+	return_if_error(status);
+
+	mode = graphicsProtocol->Mode->Info;
+
+	bootdata->dwHeight = mode->VerticalResolution;
+	bootdata->dwWidth = mode->HorizontalResolution;
+	bootdata->dwPixelsPerScanline = mode->PixelsPerScanLine;
+	bootdata->pdwFramebuffer = (PDWORD)graphicsProtocol->Mode->FrameBufferBase;
+	bootdata->pdwFramebufferEnd = (PDWORD)((ULONG_PTR)graphicsProtocol->Mode->FrameBufferBase + (ULONG_PTR)graphicsProtocol->Mode->FrameBufferSize);
+
+	return EFI_SUCCESS;
+}
+
+EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
 {
-	InitializeLib(ImageHandle, SystemTable);
-	SystemTable->ConOut->ClearScreen(SystemTable->ConOut);
-	void* pAcpiPointer;
-	LibGetSystemConfigurationTable(&AcpiTableGuid, (VOID*) &pAcpiPointer);
+	EFI_STATUS status;
+	UINTN memoryMapSize = 0, memoryMapKey, descriptorSize;
+	EFI_MEMORY_DESCRIPTOR* memoryMap = NULL;
+	UINT32 descriptorVersion;
+	EFI_MEMORY_DESCRIPTOR* currentDescriptor;
+	UINTN pages = 0;
 
-	EFI_STATUS Status;
+	UINT8* memoryBitmap;
 
-	gBS = SystemTable->BootServices;
-
-	UINT64 Pages = 0, FreePages = 0;
-
-	ScanMemoryMap(&FreePages, &Pages, &MapKey);
-
-	UINT8* NNXMMap = 0;
-	Status = gBS->AllocatePool(EfiBootServicesData, Pages, &NNXMMap);
-	if (Status != EFI_SUCCESS)
+	do
 	{
-		Print(L"Error: could not allocate memory for memory map...\n");
-		return Status;
+		if (memoryMap != NULL)
+			FreePool(memoryMap);
+
+		status = gBootServices->AllocatePool(EfiLoaderData, memoryMapSize, &memoryMap);
+		if (EFI_ERROR(status) || memoryMap == NULL)
+			return EFI_ERROR(status) ? status : EFI_OUT_OF_RESOURCES;
+
+		status = gBootServices->GetMemoryMap(&memoryMapSize, memoryMap, &memoryMapKey, &descriptorSize, &descriptorVersion);
+		
+		memoryMapSize += descriptorSize;
+	}
+	while (status == EFI_BUFFER_TOO_SMALL);
+	return_if_error(status);
+
+	currentDescriptor = memoryMap;
+	while (currentDescriptor <= (EFI_MEMORY_DESCRIPTOR*)((ULONG_PTR)memoryMap + memoryMapSize))
+	{
+		pages += currentDescriptor->NumberOfPages;
+		currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR)currentDescriptor + descriptorSize);
 	}
 
-	EFI_MEMORY_DESCRIPTOR* Current = MemoryMap;
-	UINT64 NNXMMapIndex = 0;
-	while (Current < ((UINT64) MemoryMap) + MapSize)
+	memoryBitmap = AllocateZeroPool(pages);
+
+	currentDescriptor = memoryMap;
+	while (currentDescriptor <= (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) memoryMap + memoryMapSize))
 	{
-		EFI_MEMORY_DESCRIPTOR *Desc = Current;
-		for (UINT64 a = 0; a < Desc->NumberOfPages; a++)
+		UINTN relativePageIndex;
+		
+		UINT8 memoryType = MEM_TYPE_USED;
+
+		switch (currentDescriptor->Type)
 		{
-			if (NNXMMapIndex * 4096 >= NNXMMap && NNXMMapIndex * 4096 <= (((UINT64) NNXMMap) + Pages))
+			case EfiConventionalMemory:
+				memoryType = MEM_TYPE_FREE;
+				break;
+			case EfiLoaderCode:
+			case EfiLoaderData:
+			case EfiBootServicesCode:
+			case EfiBootServicesData:
+				memoryType = MEM_TYPE_UTIL;
+				break;
+		}
+
+		for (relativePageIndex = 0; relativePageIndex < currentDescriptor->NumberOfPages; relativePageIndex++)
+		{
+			UINTN pageIndex = currentDescriptor->PhysicalStart / PAGE_SIZE_SMALL + relativePageIndex;
+
+			memoryBitmap[pageIndex] = memoryType;
+			
+			if ((ULONG_PTR)pageIndex * PAGE_SIZE_SMALL >= (ULONG_PTR)memoryBitmap && 
+				(ULONG_PTR)pageIndex * PAGE_SIZE_SMALL <= ((ULONG_PTR) memoryBitmap + pages))
 			{
-				NNXMMap[NNXMMapIndex] = 0;
-				NNXMMapIndex++;
+				memoryBitmap[pageIndex] = MEM_TYPE_USED;
 				continue;
 			}
-
-			if (Desc->Type == EfiConventionalMemory)
-				NNXMMap[NNXMMapIndex] = 1;
-			else if (Desc->Type == EfiLoaderCode || Desc->Type == EfiLoaderData || Desc->Type == EfiBootServicesCode || Desc->Type == EfiBootServicesData)
-				NNXMMap[NNXMMapIndex] = 2;
-			else
-				NNXMMap[NNXMMapIndex] = 0;
-			NNXMMapIndex++;
-		}
-		Current = (((UINT64) Current) += DescriptorSize);
-	}
-	Print(L"Memory map has been filled up to index %d\n", NNXMMapIndex);
-	Print(L"%u B [%u MiB] RAM free out of %u B [%u MiB] total\n", FreePages * 4096, FreePages / 256, Pages * 4096, Pages / 256);
-	Print(L"%lf%% memory free to use.\n", ((double) FreePages) / ((double) Pages)*100.0);
-
-	UINT32* Framebuffer;
-	UINT32* FramebufferEnd;
-
-	EFI_HANDLE* HandleBuffer;
-	UINTN HandleCount = 0;
-	EFI_GRAPHICS_OUTPUT_PROTOCOL* GOP;
-	Status = gBS->LocateHandleBuffer(ByProtocol,
-									 &gEfiGraphicsOutputProtocolGuid,
-									 NULL,
-									 &HandleCount,
-									 &HandleBuffer);
-
-	Status = gBS->HandleProtocol(HandleBuffer[0],
-								 &gEfiGraphicsOutputProtocolGuid,
-								 (VOID **) &GOP);
-
-	Framebuffer = GOP->Mode->FrameBufferBase;
-	FramebufferEnd = GOP->Mode->FrameBufferSize + GOP->Mode->FrameBufferBase;
-
-	for (UINT64 Times = 0; Times < GOP->Mode->FrameBufferSize / 4096; Times++)
-	{
-		NNXMMap[Times + ((UINT64) Framebuffer) / 4096] = 0;
-	}
-
-	EFI_HANDLE* Filesystems;
-	UINTN FilesystemCount;
-
-	Status = gBS->LocateHandleBuffer(ByProtocol,
-									 &gEfiSimpleFileSystemProtocolGuid,
-									 NULL,
-									 &FilesystemCount,
-									 &Filesystems);
-
-	if (EFI_ERROR(Status))
-	{
-		Print(L"Error: Devices not found\n");
-		return EFI_NOT_FOUND;
-	}
-
-	gST->ConOut->ClearScreen(gST->ConOut);
-
-	UINTN MenuItemCount = 0;
-	BootmenuItem* Bootmenu = 0;
-
-	for (int i = 0; i < FilesystemCount; i++)
-	{
-		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SF;
-		Status = gBS->HandleProtocol(Filesystems[i], &gEfiSimpleFileSystemProtocolGuid, (VOID**) &SF);
-		Print(L"Enumerating handle no. %d\n", i);
-
-		if (EFI_ERROR(Status))
-		{
-			Print(L"Error: Device %d not found\n", i);
-			continue;
 		}
 
-		EFI_FILE *RootFile;
-		Status = SF->OpenVolume(SF, &RootFile);
-
-		if (EFI_ERROR(Status))
-		{
-			Print(L"Error: root directory not found\n");
-			continue;
-		}
-
-		EFI_FILE* NNXOSCFGTXT = GetFile(RootFile, L"efi\\boot\\NNXOSCFG.txt");
-		EFI_FILE* NNXOSKRNEXE = GetFile(RootFile, L"efi\\boot\\NNXOSKRN.exe");
-
-		if (NNXOSKRNEXE == 0)
-		{
-			Print(L"NNXOSLDR not present on the volume, going to the next one.\n");
-			RootFile->Close(RootFile);
-			continue;
-		}
-
-		MenuItemCount++;
-		CHAR16 Info16[16] = L"NO NAME";
-
-		if (NNXOSCFGTXT == 0)
-		{
-			Print(L"No config file, defaulting to NO NAME");
-		}
-		else
-		{
-
-			CHAR8 Info[16] = { 0 };
-			UINTN MaximalSize = 15 * sizeof(*Info);
-			Status = NNXOSCFGTXT->Read(NNXOSCFGTXT, &MaximalSize, Info);
-			if (EFI_ERROR(Status))
-			{
-				Print(L"Error reading config file\n");
-			}
-
-			for (int a = 0; a < 16; a++)
-			{
-				Info16[a] = (CHAR16) Info[a];
-			}
-
-			RootFile->Close(NNXOSCFGTXT);
-		}
-		RootFile->Close(NNXOSKRNEXE);
-		RootFile->Close(RootFile);
-
-		BootmenuItem** Current = &Bootmenu;
-		while (*Current)
-			Current = &((*Current)->Next);
-
-		*Current = AllocateZeroPool(sizeof(BootmenuItem));
-		CopyMem((*Current)->Name, Info16, 16 * sizeof(CHAR16));
-		(*Current)->Filesystem = SF;
+		currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) currentDescriptor + descriptorSize);
 	}
 
-	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* SelectedSF;
-
-	if (MenuItemCount == 1)
+	do
 	{
-		Print(L"One menu item avaible.\n");
-		SelectedSF = Bootmenu->Filesystem;
+		if (memoryMap != NULL)
+			FreePool(memoryMap);
+
+		status = gBootServices->AllocatePool(EfiLoaderData, memoryMapSize, &memoryMap);
+		if (EFI_ERROR(status) || memoryMap == NULL)
+			return EFI_ERROR(status) ? status : EFI_OUT_OF_RESOURCES;
+
+		status = gBootServices->GetMemoryMap(&memoryMapSize, memoryMap, &memoryMapKey, &descriptorSize, &descriptorVersion);
+
+		memoryMapSize += descriptorSize;
 	}
-	else if (MenuItemCount > 1)
-	{
-		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL** ChoiceArray = AllocateZeroPool(sizeof(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL) * MenuItemCount);
-		BootmenuItem* CurrentItem = Bootmenu;
-		UINTN Number = 1;
-		while (Bootmenu)
-		{
-			ChoiceArray[Number - 1] = Bootmenu->Filesystem;
-			Print(L"%d. %s\n", Number, Bootmenu->Name);
-			Bootmenu = Bootmenu->Next;
-			Number++;
-		}
-		Print(L"Multiple boot partitions avaible:\n");
-		while (Number > MenuItemCount || Number < 1)
-		{
-			Print(L"Please give a number between %d and %d.\n", 1, MenuItemCount);
-			Number = AskUserForNumber();
-		}
-		Print(L"%x selected\n", ChoiceArray[Number - 1]);
-		SelectedSF = ChoiceArray[Number - 1];
+	while (status == EFI_BUFFER_TOO_SMALL);
+	return_if_error(status);
 
-	}
-	else
-	{
-		return EFI_NOT_FOUND;
-	}
+	bootdata->mapKey = memoryMapKey;
+	bootdata->qwPhysicalMemoryMapSize = pages;
+	bootdata->pPhysicalMemoryMap = memoryBitmap;
 
-	EFI_FILE* Root;
-	Status = SelectedSF->OpenVolume(SelectedSF, &Root);
+	return EFI_SUCCESS;
+}
 
-	if (EFI_ERROR(Status))
-	{
-		Print(L"Error: cannot open the root directory.\n");
-		return EFI_NO_MEDIA;
-	}
+EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
+{
+	EFI_STATUS status;
+	EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
+	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* filesystem;
+	EFI_FILE_HANDLE root, kernelFile;
+	BOOTDATA bootdata;
+	VOID (*kernelEntrypoint)(BOOTDATA*);
+	PLOADED_MODULE module;
 
-	EFI_FILE* FP = GetFile(Root, L"efi\\boot\\NNXOSKRN.exe");
+	gBootServices = systemTable->BootServices;
 
-	if (FP == 0)
-	{
-		Print(L"Error: Unable to open the executable.\n");
-		return EFI_NOT_FOUND;
-	}
+	InitializeLib(imageHandle, systemTable);
 
-	char FInfoBuffer[512];
-	UINTN FInfoBufferSize = sizeof(FInfoBuffer);
-	EFI_FILE_INFO *FInfo = (void*) FInfoBuffer;
-	FP->GetInfo(FP, &gEfiFileInfoGuid, &FInfoBufferSize, FInfo);
-	CHAR8 *FileBuffer = AllocateZeroPool(FInfo->FileSize);
-	FP->Read(FP, &FInfo->FileSize, FileBuffer);
-	FP->Close(FP);
+	status = gBootServices->HandleProtocol(imageHandle, &gEfiLoadedImageProtocolGuid, &loadedImage);
+	return_if_error_debug(status);
 
-	if (FileBuffer[0] == 'M' && FileBuffer[1] == 'Z')
-	{
-		DWORD size;
-		Status = LoadPortableExecutable(FileBuffer, FInfo->FileSize, &Stage2entrypoint, NNXMMap, &size);
+	status = gBootServices->HandleProtocol(loadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, &filesystem);
+	return_if_error_debug(status);
 
-		if (EFI_ERROR(Status))
-		{
-			Print(L"%r\n", Status);
-			return Status;
-		}
+	status = filesystem->OpenVolume(filesystem, &root);
+	return_if_error_debug(status);
 
-		gBS->SetWatchdogTimer(0, 0, 0, NULL);
-		ScanMemoryMap(&FreePages, &Pages, &MapKey);
-		Stage2entrypoint(Framebuffer, FramebufferEnd, GOP->Mode->Info->HorizontalResolution, GOP->Mode->Info->VerticalResolution, GOP->Mode->Info->PixelsPerScanLine, (void *) gBS->ExitBootServices, ImageHandle, MapKey,
-						 NNXMMap, NNXMMapIndex, Pages * 4096, pAcpiPointer, size);
-	}
-	else
-	{
-		Print(L"%EError%N: NNXOSLDR.exe missing or corrupted. Are you sure you're trying to boot of the correct partition?");
-		return EFI_LOAD_ERROR;
-	}
+	status = root->Open(root, &kernelFile, (CHAR16*)wszKernelPath, EFI_FILE_MODE_READ, 0);
+	return_if_error_debug(status);
 
-	while (1);
+	status = LoadImage(kernelFile, (PVOID)KERNEL_INITIAL_ADDRESS, &module);
+	return_if_error_debug(status);
 
-	return EFI_ABORTED;
+	kernelEntrypoint = module->Entrypoint;
+	Print(L"Kernel entrypoint %X\n", kernelEntrypoint);
+	PrintExports();
+
+	bootdata.KernelBase = module->ImageBase;
+	bootdata.dwKernelSize = module->ImageSize;
+	bootdata.ExitBootServices = gBootServices->ExitBootServices;
+	bootdata.pImageHandle = imageHandle;
+	
+	LibGetSystemConfigurationTable(&AcpiTableGuid, &bootdata.pRdsp);
+
+	status = QueryGraphicsInformation(&bootdata);
+	return_if_error_debug(status);
+
+	status = QueryMemoryMap(&bootdata);
+	return_if_error_debug(status);
+
+	kernelEntrypoint(&bootdata);
+
+	ClearListAndDestroyValues(&LoadedModules, DestroyLoadedModule);
+
+	kernelFile->Close(kernelFile);
+	root->Close(root);
+
+	Print(L"Returning to EFI\n");
+	return EFI_LOAD_ERROR;
 }

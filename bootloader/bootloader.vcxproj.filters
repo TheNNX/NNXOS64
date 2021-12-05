@@ -12,26 +12,15 @@
     <Filter Include="Resource Files">
       <UniqueIdentifier>{b1c3b304-e868-4b07-988c-36ad7bc57300}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\pe">
-      <UniqueIdentifier>{09542462-0f3f-4bc8-8b76-2b597037c18a}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boot.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pe\pe.c">
-      <Filter>Source Files\pe</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="low.h">
+    <ClInclude Include="bootdata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="low.asm">
-      <Filter>Source Files</Filter>
-    </CustomBuild>
   </ItemGroup>
 </Project>

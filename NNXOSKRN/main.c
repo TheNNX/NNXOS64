@@ -52,26 +52,26 @@ void LoadKernel()
 	vfs->Functions.ReadFile(file, sizeof(MZFileTable), &MZFileTable);
 	file->FilePointer = MZFileTable.e_lfanew;
 
-	if (MZFileTable.signature != IMAGE_MZ_MAGIC)
+	if (MZFileTable.Signature != IMAGE_MZ_MAGIC)
 	{
-		PrintT("Invalid PE file %x %X\n", MZFileTable.signature, IMAGE_MZ_MAGIC);
+		PrintT("Invalid PE file %x %X\n", MZFileTable.Signature, IMAGE_MZ_MAGIC);
 		return;
 	}
 
 	vfs->Functions.ReadFile(file, sizeof(PEFileTable), &PEFileTable);
 
-	if (PEFileTable.signature != IMAGE_PE_MAGIC)
+	if (PEFileTable.Signature != IMAGE_PE_MAGIC)
 	{
 		PrintT("Invalid PE header\n");
 		return;
 	}
 
-	dataDirectories = NNXAllocatorAlloc(sizeof(DATA_DIRECTORY) * PEFileTable.optionalHeader.NumberOfDataDirectories);
-	vfs->Functions.ReadFile(file, sizeof(dataDirectories) * PEFileTable.optionalHeader.NumberOfDataDirectories, dataDirectories);
+	dataDirectories = NNXAllocatorAlloc(sizeof(DATA_DIRECTORY) * PEFileTable.OptionalHeader.NumberOfDataDirectories);
+	vfs->Functions.ReadFile(file, sizeof(dataDirectories) * PEFileTable.OptionalHeader.NumberOfDataDirectories, dataDirectories);
 	NNXAllocatorFree(dataDirectories);
 
-	imageBase = PEFileTable.optionalHeader.ImageBase;
-	for (i = 0; i < PEFileTable.fileHeader.NumberOfSections; i++)
+	imageBase = PEFileTable.OptionalHeader.ImageBase;
+	for (i = 0; i < PEFileTable.FileHeader.NumberOfSections; i++)
 	{
 		SECTION_HEADER sHeader;
 		UINT64 tempFP, status;
@@ -81,20 +81,20 @@ void LoadKernel()
 			return;
 
 		tempFP = file->FilePointer;
-		file->FilePointer = sHeader.SectionPointer;
+		file->FilePointer = sHeader.PointerToDataRVA;
 
-		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64) sHeader.VirtualAddress) + imageBase))
+		if (status = vfs->Functions.ReadFile(file, sHeader.SizeOfSection, ((UINT64) sHeader.VirtualAddressRVA) + imageBase))
 			return;
 
 		if (sHeader.VirtualSize > sHeader.SizeOfSection)
 		{
 			for (j = 0; j < sHeader.VirtualSize - sHeader.SizeOfSection; j++)
 			{
-				((UINT8*) (((UINT64) sHeader.VirtualAddress) + imageBase + sHeader.SizeOfSection))[j] = 0;
+				((UINT8*) (((UINT64) sHeader.VirtualAddressRVA) + imageBase + sHeader.SizeOfSection))[j] = 0;
 			}
 		}
 
-		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64) sHeader.VirtualAddress) + imageBase);
+		PrintT("Read section %S to 0x%X\n", sHeader.Name, 8, ((UINT64) sHeader.VirtualAddressRVA) + imageBase);
 
 		file->FilePointer = tempFP;
 	}
@@ -113,7 +113,7 @@ void LoadKernel()
 	data.DebugX = DebugX;
 	data.rdsp = gRDSP;
 
-	EntryPoint = PEFileTable.optionalHeader.EntrypointRVA + imageBase;
+	EntryPoint = PEFileTable.OptionalHeader.EntrypointRVA + imageBase;
 	PrintT("Kernel at 0x%X\n", EntryPoint);
 	EntryPoint(&data);
 }
