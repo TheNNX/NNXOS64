@@ -50,7 +50,7 @@ IF EXIST %IMAGE_PATH% (
 @ECHO diskpart /s detach.txt >> debug.bat
 @ECHO rem Due to an obscure bug, I assume in QEMU for Windows, the drive letter in an absolute path in quotes is treated as a protocol and this script is broken >> debug.bat
 @ECHO rem However, if the path to the disk doesn't contain whitespace - the script work >> debug.bat
-@ECHO qemu-system-x86_64 -no-shutdown -d cpu_reset -m 256 -M pc -monitor stdio -drive if=pflash,format=raw,readonly,file=OVMF_X64.fd -drive id=dummydisk,format=raw,file=%IMAGE_DIRECTORY%vdisk.vhd >> debug.bat
+@ECHO qemu-system-x86_64 -no-shutdown -d cpu_reset -m 256 -M pc -monitor stdio -drive if=pflash,format=raw,readonly,file=OVMF_X64.fd -drive id=dummydisk,format=raw,file=%IMAGE_PATH% >> debug.bat
 
 DISKPART /s create.txt
 
