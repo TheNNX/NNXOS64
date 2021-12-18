@@ -118,7 +118,7 @@ extern "C" {
 		return PciGetBar(bus, slot, function, 4);
 	}
 
-	UINT8 PciScan();
+	VOID PciScan();
 	void PciScanBus(UINT8 bus);
 	void PciScanDevice(UINT8 bus, UINT8 device);
 	void PciScanFunction(UINT8 bus, UINT8 device, UINT8 function);

@@ -1,9 +1,13 @@
+#define NNX_ALLOC_DEBUG 1
+#include <memory/nnxalloc.h>
 #include "MP.h"
 #include "../APIC/APIC.h"
 #include <HAL/PIT.h>
 #include <memory/paging.h>
 #include <device/fs/vfs.h>
 #include "../X64/pcr.h"
+#include <bugcheck.h>
+#include <HAL/X64/sheduler.h>
 
 extern "C" {
 
@@ -64,6 +68,7 @@ extern "C" {
 		UINT64 i, j;
 		UINT8 currentLapicId;
 		PVOID apData, apCode;
+		NTSTATUS status;
 
 		ApStackPointerArray = (PVOID*) NNXAllocatorAllocArray(ApicNumberOfCoresDetected, sizeof(*ApStackPointerArray));
 
@@ -78,7 +83,7 @@ extern "C" {
 			if (ApicLocalApicIDs[i] == currentLapicId)
 				continue;
 
-			ApStackPointerArray[i] = (PVOID) ((size_t) NNXAllocatorAlloc(AP_INITIAL_STACK_SIZE) + AP_INITIAL_STACK_SIZE);
+			ApStackPointerArray[i] = (PVOID)((ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE_SMALL);
 			ApicInitIpi(ApicLocalApicIDs[i], 0x00);
 			PitUniprocessorPollSleepMs(10);
 
@@ -86,10 +91,19 @@ extern "C" {
 			{
 				PrintT("Sending SIPI%i for %x (%i)\n", j, ApicLocalApicIDs[i], i);
 				ApicClearError();
-				ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16) apCode);
+
+				if ((UINT64) apCode > UINT16_MAX)
+					KeBugCheck(BC_HAL_INITIALIZATION_FAILED);
+
+				ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(UINT64)apCode);
 				PitUniprocessorPollSleepUs(200);
 			}
 		}
+
+		PrintT("DebugTest\n");
+		status = PspDebugTest();
+		if (status)
+			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 	}
 
 	VOID HalAcquireLockRaw(UINT64* lock);
@@ -99,16 +113,21 @@ extern "C" {
 
 	VOID ApProcessorInit(UINT8 lapicId)
 	{
+		UINT64 status;
+		PrintT("ApProcessorInit() from %i\n", (UINT64)ApicGetCurrentLapicId());
+		
 		HalpSetupPcrForCurrentCpu(lapicId);
 
-		while (true)
+		ApicNumberOfCoresInitialized++;
+
+		/*while (true)
 		{
 			HalAcquireLockRaw(&DrawLock);
 			PitUniprocessorPollSleepMs(200);
 
-			for (int y = gHeight - (lapicId + 1) * 40; y < gHeight - lapicId * 40; y++)
+			for (ULONG_PTR y = gHeight - (lapicId + 1) * 40; y < gHeight - lapicId * 40; y++)
 			{
-				for (int x = 0; x < gWidth / 2; x++)
+				for (ULONG_PTR x = 0; x < gWidth / 2; x++)
 				{
 					gFramebuffer[y * gPixelsPerScanline + x] = debugColors[color];
 				}
@@ -116,6 +135,10 @@ extern "C" {
 
 			color = (color + 1) % (sizeof(debugColors) / sizeof(*debugColors));
 			HalReleaseLockRaw(&DrawLock);
-		}
+		}*/
+
+		status = PspDebugTest();
+		if (status)
+			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 	}
 }

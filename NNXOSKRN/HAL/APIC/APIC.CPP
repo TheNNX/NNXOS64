@@ -1,3 +1,5 @@
+#define NNX_ALLOC_DEBUG 1
+#include <memory/nnxalloc.h>
 #include "APIC.h"
 #include <HAL/PIC.h>
 #include <memory/paging.h>
@@ -13,6 +15,7 @@ extern "C"
 	UINT64 ApicVirtualLocalApicBase;
 	UINT64 ApicNumberOfCoresDetected;
 	UINT8* ApicLocalApicIDs;
+	UINT64 ApicNumberOfCoresInitialized = 1;
 
 	BOOL ApicBspLapicInitialized = FALSE;
 	UINT64 ApicTimerTicksPerSecond = 0;
@@ -37,7 +40,7 @@ public:
 		this->IoApicBasePhys = base;
 		this->InterruptBase = interruptBase;
 		
-		this->IoApicBase = (volatile UINT32*)PagingAllocatePageBlockWithPhysicalAdresses(
+		this->IoApicBase = (volatile UINT32*)PagingAllocatePageBlockWithPhysicalAddresses(
 			2,
 			PAGING_KERNEL_SPACE,
 			PAGING_KERNEL_SPACE_END,
@@ -51,7 +54,7 @@ public:
 
 		PrintT("IO APIC n %i\n", RedirectionEntriesCount);
 		/* mask all external interrupts */
-		for (int i = 0; i < this->RedirectionEntriesCount; i++)
+		for (UINT32 i = 0; i < this->RedirectionEntriesCount; i++)
 		{
 			PrintT("Masking interrupt %i\n", i + this->InterruptBase);
 			MaskIrq(this->InterruptBase + i);
@@ -235,7 +238,8 @@ extern "C"
 			{
 				ACPI_MADT_IOAPIC* ioapic = (ACPI_MADT_IOAPIC*) madtEntry;
 				logger->Log("Starting IOAPIC initialization\n");
-				IoApics[currentIoApicIndex++] = new IoApic((volatile UINT32*)ioapic->IoApicAddress, ioapic->IoApicInterruptBase);
+				#pragma warning(disable: 4316)
+				IoApics[currentIoApicIndex++] = new IoApic((volatile UINT32*)(ULONG_PTR)ioapic->IoApicAddress, ioapic->IoApicInterruptBase);
 				
 			}
 
@@ -245,7 +249,7 @@ extern "C"
 		PicDisableForApic();
 
 		/* find virtual address space for the APIC registers */
-		ApicVirtualLocalApicBase = (UINT64) PagingAllocatePageWithPhysicalAddress2(
+		ApicVirtualLocalApicBase = (UINT64) PagingAllocatePageWithPhysicalAddress(
 			PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, 
 			PAGE_PRESENT | PAGE_WRITE, (VOID*) PAGE_ALIGN(ApicLocalApicBase)
 		);
@@ -259,7 +263,7 @@ extern "C"
 
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data)
 	{
-		UINT32* volatile Destination = (UINT32* volatile) (ApicVirtualLocalApicBase + offset);
+		UINT32* volatile Destination = (UINT32*) (ApicVirtualLocalApicBase + offset);
 		*Destination = data;
 	}
 
@@ -270,7 +274,7 @@ extern "C"
 
 	UINT32 ApicLocalApicReadRegister(UINT64 offset)
 	{
-		UINT32* volatile Source = (UINT32* volatile) (ApicVirtualLocalApicBase + offset);
+		UINT32* volatile Source = (UINT32*) (ApicVirtualLocalApicBase + offset);
 		return *Source;
 	}
 
@@ -299,7 +303,7 @@ extern "C"
 
 	UINT8 ApicGetCurrentLapicId()
 	{
-		return (UINT8) (ApicLocalApicReadRegister(LAPIC_ID_REGISTER_OFFSET) & 0xFF);
+		return (UINT8) ((ApicLocalApicReadRegister(LAPIC_ID_REGISTER_OFFSET) & 0xFF000000) >> 24);
 	}
 
 	VOID ApicSetupTimer(UINT8 interruptVector)
@@ -312,7 +316,7 @@ extern "C"
 		ApicLocalApicWriteRegister(LAPIC_DIVIDE_TIMER_REGISTER_OFFSET, LAPIC_TIMER_DIVISOR_1);
 
 		/* tick once every second */
-		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, ApicTimerTicksPerSecond);
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, (UINT32)ApicTimerTicksPerSecond);
 	}
 
 	UINT64 ApicTestTimer()

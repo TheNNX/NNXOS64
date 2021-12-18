@@ -38,6 +38,7 @@ extern "C"
 	{
 		return;
 	}
+#undef PrintT
 #define PrintT null
 #endif
 #endif

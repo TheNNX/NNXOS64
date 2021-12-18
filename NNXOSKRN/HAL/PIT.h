@@ -27,7 +27,7 @@ extern "C"
 		{
 			PitUniprocessorPollSleepTicks(65535);
 		}
-		PitUniprocessorPollSleepTicks(tickDelay);
+		PitUniprocessorPollSleepTicks((UINT16)tickDelay);
 	}
 
 #ifdef __cplusplus

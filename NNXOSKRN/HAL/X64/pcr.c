@@ -19,12 +19,12 @@ VOID HalpSetupPcrForCurrentCpu(UINT64 id)
 	PKPCR pcr;
 	PKIDTENTRY64 idt;
 	PKGDTENTRY64 gdt;
+	HalAcquireLockRaw(&PcrCreationLock);
+	DisableInterrupts();
 	gdt = HalpAllocateAndInitializeGdt();
 	idt = HalpAllocateAndInitializeIdt();
 	// HalpSetIdtEntry(idt, 0x20, HalpTaskSwitchHandler, TRUE, FALSE);
 
-	DisableInterrupts();
-	HalAcquireLockRaw(&PcrCreationLock);
 	pcr = HalCreatePcr(gdt, idt);
 	HalReleaseLockRaw(&PcrCreationLock);
 }
@@ -49,15 +49,23 @@ PKPCR KeGetPcr()
 	return HalGetPcr();
 }
 
-PKPCR HalCreatePcr(PKGDTENTRY64* gdt, PKIDTENTRY64* idt)
+PKPRCB HalCreatePrcb()
+{
+	PKPRCB prcb = (PKPRCB) NNXAllocatorAlloc(sizeof(KPRCB));
+	KeInitializeSpinLock(&prcb->Lock);
+	prcb->CurrentThread = prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
+
+	return prcb;
+}
+
+PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt)
 {
 	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
-
 
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);
-	PrintT("Set pcr->Tss to %x", pcr->Tss);
+	PrintT("Set pcr->Tss to %x\n", pcr->Tss);
 
 	pcr->Irql = 0;
 
@@ -66,8 +74,7 @@ PKPCR HalCreatePcr(PKGDTENTRY64* gdt, PKIDTENTRY64* idt)
 
 	pcr->SelfPcr = pcr;
 
-	/* TODO pcr->Prcb = HalCreatePcrb(); */
-	pcr->Prcb = NULL;
+	pcr->Prcb = HalCreatePrcb();
 
 	HalSetPcr(pcr);
 

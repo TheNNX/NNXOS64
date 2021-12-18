@@ -1,5 +1,6 @@
 #include "pool.h"
 #include <memory/MemoryOperations.h>
+#define NNX_ALLOC_DEBUG 1
 #include <memory/nnxalloc.h>
 #include "bugcheck.h"
 

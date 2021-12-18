@@ -14,7 +14,7 @@ extern "C" {
 		KSPIN_LOCK ProcessLock;
 		UINT64 BasePriority;
 		KAFFINITY AffinityMask;
-		PVOID AddressSpacePointer;
+		PVOID AddressSpacePhysicalPointer;
 		KLINKED_LIST ThreadList;
 		UINT64 NumberOfThreads;
 	} KPROCESS, *PKPROCESS;
@@ -80,8 +80,8 @@ extern "C" {
 	NTSTATUS PspCreateProcessInternal(PEPROCESS* output);
 	NTSTATUS PspCreateThreadInternal(PETHREAD* output, PEPROCESS parent);
 
-	__declspec(noreturn) NTSTATUS PspDebugTest();
-	__declspec(noreturn) VOID PspTestAsm();
+	NTSTATUS PspDebugTest();
+	VOID PspTestAsm();
 
 	NTSTATUS PspDestroyProcessInternal(PEPROCESS process);
 	NTSTATUS PspDestoryThreadInternal(PETHREAD thread);

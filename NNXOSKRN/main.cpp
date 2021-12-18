@@ -43,7 +43,9 @@ extern "C"
 		KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
 
-	__declspec(dllexport) UINT64 KeEntry(ACPI_RDSP* pRdsp)
+	ULONG_PTR gRdspPhysical;
+
+	__declspec(dllexport) UINT64 KeEntry()
 	{
 		PKIDTENTRY64 idt;
 
@@ -61,11 +63,14 @@ extern "C"
 		NNXAllocatorInitialize();
 		for (int i = 0; i < 64; i++)
 		{
-			NNXAllocatorAppend(PagingAllocatePage(), 4096);
+			NNXAllocatorAppend(PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END), 4096);
 		}
 
 		VfsInit();
 		PciScan();
+
+		PrintT("Prealloc %X\n", gRdspPhysical);
+		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE);
 
 		UINT8 status;
 		ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(pRdsp, "FACP");
@@ -77,14 +82,12 @@ extern "C"
 			KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
 		}
 
+
 		ACPI_MADT* MADT = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
 		PrintT("Found MADT on %x\n", MADT);
 
 		ApicInit(MADT);
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
-
-		if (status = PspDebugTest())
-			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 
 		MpInitialize();
 

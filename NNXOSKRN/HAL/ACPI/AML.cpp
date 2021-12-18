@@ -48,7 +48,7 @@ AMLParser::AMLParser(ACPI_DSDT* table)
 	GetString(compilerName, 4);
 	this->compilerRevision = GetDword();
 	this->root = AMLScope();
-	this->size -= index;
+	this->size -= (UINT32)index;
 	gHID = AcpiCreateName("_HID");
 	InitializeNamespace(&(this->root));
 }
@@ -139,7 +139,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size)
 					while (1);
 				}
 				UINT64 index2 = index;
-				UINT32 size = PkgLenght - (index2 - index1);
+				UINT32 size = PkgLenght - (UINT32)(index2 - index1);
 				this->Parse(_scope, size);
 				break;
 			}
@@ -175,7 +175,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size)
 						UINT32 PkgLenght = DecodePkgLenght();
 						AML_NAME_WITHIN_SCOPE nws = GetNameWithinAScope(scope);
 						UINT64 index2 = this->index;
-						UINT32 size = PkgLenght - (index2 - index1);
+						UINT32 size = PkgLenght - (UINT32)(index2 - index1);
 						PrintT("Device: ");
 						PrintName(nws.name);
 						PrintT("\n");
@@ -201,7 +201,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size)
 					{
 						PrintT("Declaring field ");
 
-						UINT32 startIndex = this->index;
+						UINT32 startIndex = (UINT32)this->index;
 						UINT32 pkgLenght = DecodePkgLenght();
 
 						AML_NAME_WITHIN_SCOPE fieldName = GetNameWithinAScope(scope);
@@ -213,7 +213,7 @@ void AMLParser::Parse(AMLScope* scope, UINT32 size)
 
 						while (pkgLenghtCounter > 0)
 						{
-							startIndex = this->index;
+							startIndex = (UINT32)this->index;
 
 							AML_NAME_WITHIN_SCOPE name = GetNameWithinAScope(scope);
 							AMLFieldUnit* fieldUnit = CreateFieldUnit(name.name, GetByte());
@@ -271,7 +271,7 @@ AML_NAME_WITHIN_SCOPE AMLParser::GetNameWithinAScope(AMLScope* current)
 			dstScope = this->FindScope(name, dstScope);
 			if (dstScope == 0)
 			{
-				localLastError == ACPI_ERROR_AML_OBJECT_NOT_FOUND;
+				localLastError = ACPI_ERROR_AML_OBJECT_NOT_FOUND;
 				AML_NAME_WITHIN_SCOPE null = { 0 };
 				*((DWORD*) (&null.name)) = 0;
 				null.scope = 0;
@@ -380,11 +380,8 @@ UINT8 AMLParser::DecodePackageNumElements()
 	{
 		Byte0 = this->GetByte();
 	}
-	else
-	{
-		return Byte0;
-	}
 
+	return Byte0;
 }
 
 UINT64 GetIntegerFromAmlObjRef(AMLObjectReference objRef)
@@ -410,7 +407,7 @@ UINT64 GetIntegerFromAmlObjRef(AMLObjectReference objRef)
 UINT32 AMLParser::DecodeBufferSize()
 {
 	AMLObjRef objRef = GetAmlObject(GetByte());
-	return GetIntegerFromAmlObjRef(objRef);
+	return (UINT32)GetIntegerFromAmlObjRef(objRef);
 }
 
 AMLBuffer* AMLParser::ReadBufferData()
@@ -418,7 +415,7 @@ AMLBuffer* AMLParser::ReadBufferData()
 	UINT32 bufferSize = DecodeBufferSize();
 	AMLBuffer* amlBuffer = (AMLBuffer*) NNXAllocatorAlloc(sizeof(AMLBuffer));
 	*amlBuffer = AMLBuffer(bufferSize);
-	for (int a = 0; a < bufferSize; a++)
+	for (ULONG_PTR a = 0; a < bufferSize; a++)
 	{
 		amlBuffer->data[a] = GetByte();
 	}
@@ -432,6 +429,8 @@ int __strlen(char* string)
 	return a;
 }
 
+
+
 AMLBuffer* AMLParser::AmlToBuffer(AMLObjRef data)
 {
 	AMLBuffer* buffer = (AMLBuffer*) NNXAllocatorAlloc(sizeof(AMLBuffer));
@@ -439,22 +438,22 @@ AMLBuffer* AMLParser::AmlToBuffer(AMLObjRef data)
 	{
 		case tAMLString:
 			*buffer = AMLBuffer((__strlen((char*) data.pointer)) + 1);
-			for (int a = 0; a < buffer->size; a++)
+			for (ULONG_PTR a = 0; a < buffer->size; a++)
 				buffer->data[a] = ((char*) data.pointer)[a];
 			break;
 		case tAMLDword:
 			*buffer = AMLBuffer(4);
-			for (int a = 0; a < 4; a++)
+			for (ULONG_PTR a = 0; a < 4; a++)
 				buffer->data[a] = ((UINT8*) data.pointer)[a];
 			break;
 		case tAMLQword:
 			*buffer = AMLBuffer(8);
-			for (int a = 0; a < 8; a++)
+			for (ULONG_PTR a = 0; a < 8; a++)
 				buffer->data[a] = ((UINT8*) data.pointer)[a];
 			break;
 		case tAMLBuffer:
 			*buffer = AMLBuffer(((AMLBuffer*) data.pointer)->size);
-			for (int a = 0; a < buffer->size; a++)
+			for (ULONG_PTR a = 0; a < buffer->size; a++)
 			{
 				buffer->data[a] = ((AMLBuffer*) data.pointer)->data[a];
 			}
@@ -551,7 +550,10 @@ AMLObjRef AMLParser::GetAmlObject(UINT8 opcode)
 		case AML_OPCODE_PACKAGEOPCODE:
 			return CreateAMLObjRef(CreatePackage(), tAMLPackage);
 		case AML_OPCODE_ONESOPCODE:
-			return CreateAMLObjRef(&(*((UINT8*) NNXAllocatorAlloc(sizeof(UINT8))) = this->revision < 2 ? 0xFFFFFFFF : 0xFFFFFFFFFFFFFFFF), this->revision < 2 ? tAMLDword : tAMLQword);
+			if (this->revision < 2)
+				return CreateAMLObjRef(&(*((UINT32*) NNXAllocatorAlloc(sizeof(UINT32))) = 0xFFFFFFFF), tAMLDword);
+			else
+				return CreateAMLObjRef(&(*((UINT64*) NNXAllocatorAlloc(sizeof(UINT64))) = 0xFFFFFFFFFFFFFFFF), tAMLQword);
 		default:
 			return CreateAMLObjRef(NULL, tAMLInvalid);
 	}

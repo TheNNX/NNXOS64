@@ -14,16 +14,16 @@
 
 #define RecursivePagingPagesSizePreBoundary        ((UINT64*)ToCanonicalAddress(PDP_COVERED_SIZE * PML4EntryForRecursivePaging))
 
-#define RecursivePagingPTsBase                    ((UINT64*)ToCanonicalAddress(RecursivePagingPagesSizePreBoundary))
+#define RecursivePagingPTsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPagesSizePreBoundary))
 #define RecursivePagingPTsSizePreBoundary        PD_COVERED_SIZE * PML4EntryForRecursivePaging
 
-#define RecursivePagingPDsBase                    ((UINT64*)ToCanonicalAddress(((UINT64)RecursivePagingPTsBase) + RecursivePagingPTsSizePreBoundary))
+#define RecursivePagingPDsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPTsBase + (UINT64)RecursivePagingPTsSizePreBoundary))
 #define RecursivePagingPDsSizePreBoundary        PT_COVERED_SIZE * PML4EntryForRecursivePaging
 
-#define RecursivePagingPDPsBase                    ((UINT64*)ToCanonicalAddress(((UINT64)RecursivePagingPDsBase) + RecursivePagingPDsSizePreBoundary))
+#define RecursivePagingPDPsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDsBase + (UINT64)RecursivePagingPDsSizePreBoundary))
 #define RecursivePagingPDPsSizePreBoundary        PAGE_SIZE_SMALL * PML4EntryForRecursivePaging
 
-#define RecursivePagingPML4Base                    ((UINT64*)ToCanonicalAddress(((UINT64)RecursivePagingPDPsBase) + RecursivePagingPDPsSizePreBoundary))
+#define RecursivePagingPML4Base                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDPsBase + (UINT64)RecursivePagingPDPsSizePreBoundary))
 #define RecursivePagingPML4Size                    PAGE_SIZE_SMALL
 
 extern BOOL HalpInteruptInitialized;
@@ -112,13 +112,6 @@ VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags
     return ToCanonicalAddress(result);
 }
 
-VOID* PagingAllocatePageWithPhysicalAddress2(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage)
-{
-    UINT64 result = PagingFindFreePages(min, max, 1);
-    PagingMapPage(result, physPage, flags);
-    return ToCanonicalAddress(result);
-}
-
 VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType)
 {
     return PagingAllocatePageWithPhysicalAddress(min, max, flags, InternalAllocatePhysicalPageWithType(physMemType));
@@ -142,9 +135,9 @@ VOID PagingMapPage(VOID* v, VOID* p, UINT16 f)
     UINT64* const cRecursivePagingPDPsBase = RecursivePagingPDPsBase;
     UINT64* const cRecursivePagingPDsBase = RecursivePagingPDsBase;
     UINT64* const cRecursivePagingPTsBase = RecursivePagingPTsBase;
-    v = PAGE_ALIGN(v);
-    p = PAGE_ALIGN(p);
-    vUINT = v; /* used to avoid annoying type casts */
+    v = (PVOID) PAGE_ALIGN(v);
+    p = (PVOID) PAGE_ALIGN(p);
+    vUINT = (UINT64) v; /* used to avoid annoying type casts */
     vUINT &= 0xFFFFFFFFFFFF; /* ignore bits 63-48, they are just a sign extension */
 
     ptIndex = vUINT >> 12;
@@ -155,21 +148,21 @@ VOID PagingMapPage(VOID* v, VOID* p, UINT16 f)
     if (!(cRecursivePagingPML4Base[pml4Index]))
     {
         cRecursivePagingPML4Base[pml4Index] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-        PagingTLBFlushPage(cRecursivePagingPDPsBase + 512 * pml4Index);
+        PagingTLBFlushPage((UINT64)cRecursivePagingPDPsBase + 512 * pml4Index);
         MemSet(cRecursivePagingPDPsBase + 512 * pml4Index, 0, PAGE_SIZE_SMALL);
     }
 
     if (!(cRecursivePagingPDPsBase[pdpIndex]))
     {
         cRecursivePagingPDPsBase[pdpIndex] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-        PagingTLBFlushPage(cRecursivePagingPDsBase + 512 * pdpIndex);
+        PagingTLBFlushPage((UINT64) cRecursivePagingPDsBase + 512 * pdpIndex);
         MemSet(cRecursivePagingPDsBase + 512 * pdpIndex, 0, PAGE_SIZE_SMALL);
     }
 
     if (!(cRecursivePagingPDsBase[pdIndex]))
     {
         cRecursivePagingPDsBase[pdIndex] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-        PagingTLBFlushPage(cRecursivePagingPTsBase + 512 * pdIndex);
+        PagingTLBFlushPage((UINT64) cRecursivePagingPTsBase + 512 * pdIndex);
         MemSet(cRecursivePagingPTsBase + 512 * pdIndex, 0, PAGE_SIZE_SMALL);
     }
 
@@ -189,7 +182,7 @@ VOID PagingMapPage(VOID* v, VOID* p, UINT16 f)
     }
     else
     {
-        PagingTLBFlushPage(v);
+        PagingTLBFlushPage((UINT64)v);
     }
 }
 
@@ -241,26 +234,26 @@ VOID InternalPagingAllocatePagingStructures(
     UINT64 i, j, *PDPTempKernel, *PDTempKernel;
     if ((PML4[PML4Index] & PAGE_PRESENT) == 0)
     {
-        PML4[PML4Index] = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
-        MemSet(PML4[PML4Index], 0, PAGE_SIZE_SMALL);
+        PML4[PML4Index] = (UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
+        MemSet((PVOID)PML4[PML4Index], 0, PAGE_SIZE_SMALL);
         PML4[PML4Index] |= (PAGE_WRITE | PAGE_PRESENT | PAGE_USER);
     }
 
-    PDPTempKernel = PAGE_ALIGN(PML4[PML4Index]);
+    PDPTempKernel = (UINT64*) PAGE_ALIGN(PML4[PML4Index]);
 
     if ((PDPTempKernel[PDPIndex] & PAGE_PRESENT) == 0)
     {
-        PDPTempKernel[PDPIndex] = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
-        MemSet(PDPTempKernel[PDPIndex], 0, PAGE_SIZE_SMALL);
+        PDPTempKernel[PDPIndex] = (UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
+        MemSet((PVOID) PDPTempKernel[PDPIndex], 0, PAGE_SIZE_SMALL);
         PDPTempKernel[PDPIndex] |= (PAGE_WRITE | PAGE_PRESENT | PAGE_USER);
     }
 
-    PDTempKernel = PAGE_ALIGN(PDPTempKernel[PDPIndex]);
+    PDTempKernel = (UINT64*) PAGE_ALIGN(PDPTempKernel[PDPIndex]);
 
     /* allocate page tables */
     for (i = initialPageTable; i < howManyPageTables + initialPageTable; i++)
     {
-        PDTempKernel[i] = InternalAllocatePhysicalPageWithType(physMemoryType);
+        PDTempKernel[i] = (UINT64) InternalAllocatePhysicalPageWithType(physMemoryType);
         for (j = 0; j < 512; j++)
         {
             ((UINT64*) PDTempKernel[i])[j] = PhysicalAddressFunction(
@@ -291,7 +284,7 @@ const UINT64 loaderTemporaryKernelPTSize = 32;
 
 VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
 {
-    UINT64 i, *PML4, const pageTableKernelReserve = 16, RSP;
+    UINT64 *PML4, const pageTableKernelReserve = 16, RSP;
     const UINT64 virtualGlobalPhysicalMemoryMap = ToCanonicalAddress((KERNEL_DESIRED_PML4_ENTRY * 512 * 512 + pageTableKernelReserve) * 512 * 4096);
     
     GlobalPhysicalMemoryMap = pbPhysicalMemoryMap;
@@ -319,9 +312,9 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
 
     /* for recursive paging */
     PML4[PML4EntryForRecursivePaging] = ((UINT64) PML4) | (PAGE_WRITE | PAGE_PRESENT);
-    GlobalPhysicalMemoryMap = virtualGlobalPhysicalMemoryMap | (((UINT64) pbPhysicalMemoryMap) & 0xFFF);
+    GlobalPhysicalMemoryMap = (PBYTE)(virtualGlobalPhysicalMemoryMap | (((UINT64) pbPhysicalMemoryMap) & 0xFFF));
 
-    SetCR3(PML4);
+    SetCR3((UINT64)PML4);
 }
 
 VOID PagingMapFramebuffer()
@@ -333,13 +326,19 @@ VOID PagingMapFramebuffer()
         PagingMapPage(FRAMEBUFFER_DESIRED_LOCATION + i * PAGE_SIZE_SMALL, ((UINT64) gFramebuffer) + i * PAGE_SIZE_SMALL, 0x3);
     }
 
-    TextIoInitialize(FRAMEBUFFER_DESIRED_LOCATION, FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize(), gWidth, gHeight, gPixelsPerScanline);
+    TextIoInitialize(
+		(UINT32*)FRAMEBUFFER_DESIRED_LOCATION, 
+		(UINT32*)(FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize()), 
+		gWidth, 
+		gHeight, 
+		gPixelsPerScanline);
+
     TextIoSetColorInformation(0xFFFFFFFF, 0x00000000, 0);
 
     TextIoClear();
 
-    gFramebuffer = FRAMEBUFFER_DESIRED_LOCATION;
-    gFramebufferEnd = FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize();
+    gFramebuffer = (UINT32*) FRAMEBUFFER_DESIRED_LOCATION;
+    gFramebufferEnd = (UINT32*) FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize();
 }
 
 VOID PagingKernelInit()
@@ -354,7 +353,7 @@ VOID PagingKernelInit()
 
 }
 
-PVOID PagingAllocatePageBlockWithPhysicalAdresses(UINT64 n, UINT64 min, UINT64 max, UINT16 flags, PVOID physFirstPage)
+PVOID PagingAllocatePageBlockWithPhysicalAddresses(UINT64 n, UINT64 min, UINT64 max, UINT16 flags, PVOID physFirstPage)
 {
     UINT64 i;
     PVOID virt = PagingFindFreePages(min, max, n);
@@ -362,6 +361,8 @@ PVOID PagingAllocatePageBlockWithPhysicalAdresses(UINT64 n, UINT64 min, UINT64 m
     {
         PagingMapPage(((UINT64)virt) + i * PAGE_SIZE_SMALL, ((UINT64)physFirstPage) + i * PAGE_SIZE_SMALL, flags);
     }
+
+	return virt;
 }
 
 PVOID PagingAllocatePageBlock(UINT64 n, UINT16 flags)
@@ -372,4 +373,19 @@ PVOID PagingAllocatePageBlock(UINT64 n, UINT16 flags)
     {
         PagingMapPage(((UINT64)virt) + i * PAGE_SIZE_SMALL, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED), flags);
     }
+
+	return virt;
+}
+
+ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT8 flags)
+{
+	ULONG_PTR virt = (ULONG_PTR) PagingAllocatePageBlockWithPhysicalAddresses(
+		(PAGE_ALIGN(physicalAddress + structureSize) - PAGE_ALIGN(physicalAddress)) / PAGE_SIZE_SMALL + 1,
+		PAGING_KERNEL_SPACE,
+		PAGING_KERNEL_SPACE_END,
+		flags,
+		(PVOID) PAGE_ALIGN(physicalAddress));
+
+	ULONG_PTR delta = physicalAddress - PAGE_ALIGN(physicalAddress);
+	return virt + delta;
 }

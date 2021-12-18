@@ -23,6 +23,7 @@ extern "C" {
 	extern UINT8* ApicLocalApicIDs;
 	extern UINT64 ApicVirtualLocalApicBase;
 	extern UINT64 ApicLocalApicBase;
+	extern UINT64 ApicNumberOfCoresInitialized;
 	VOID ApicLocalApicInitializeCore();
 #ifdef __cplusplus
 }

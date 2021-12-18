@@ -59,6 +59,7 @@ extern "C"
 	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 errorCode2, UINT64 rip);
 
 	void IRQ0();
+	void HalpTaskSwitchHandler();
 	void IRQ1();
 	void IRQ2();
 	void IRQ3();

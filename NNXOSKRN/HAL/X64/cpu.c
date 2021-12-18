@@ -4,8 +4,8 @@
 
 VOID HalSetPcr(PKPCR pcr)
 {
-	HalX64WriteMsr(0xC0000102UL, NULL);
-	HalX64WriteMsr(0xC0000101UL, pcr);
+	HalX64WriteMsr(0xC0000102UL, (UINT64)NULL);
+	HalX64WriteMsr(0xC0000101UL, (UINT64)pcr);
 }
 
 PKPCR HalSwapInPcr()

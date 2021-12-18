@@ -13,10 +13,12 @@ VOID KeBugCheckEx(ULONG code,
 {
 	
 	/* TODO: notify other CPUs */
-
-	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
-	TextIoClear();
-	TextIoSetCursorPosition(0, 8);
+	if (FALSE)
+	{
+		TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
+		TextIoClear();
+		TextIoSetCursorPosition(0, 8);
+	}
 
 	PrintT("Critical system failure\n");
 
@@ -29,6 +31,10 @@ VOID KeBugCheckEx(ULONG code,
 	{
 		PrintT("PHASE1_INITIALIZATION_FAILED");
 	}
+	else if (code == BC_HAL_INITIALIZATION_FAILED)
+	{
+		PrintT("HAL_INITIALIZATION_FAILED");
+	}
 	else
 	{
 		PrintT("BUGCHECK_CODE_%X", code);
@@ -36,18 +42,7 @@ VOID KeBugCheckEx(ULONG code,
 
 	PrintT("\n\n");
 	PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
-	PrintT("Registers:\n"
-		   "RAX 0x%H  RBX 0x%H  RCX 0x%H  RDX 0x%H\n"
-		   "RDI 0x%H  RSI 0x%H  RSP 0x%H  RBP 0x%H\n"
-		   "R8  0x%H  R9  0x%H  R10 0x%H  R11 0x%H\n"
-		   "R12 0x%H  R13 0x%H  R14 0x%H  R15 0x%H\n"
-		   "CR2 0x%H  CR3 0x%H  CR4 0x%H",
-		   GetRAX(), GetRBX(), GetRCX(), GetRDX(),
-		   GetRDI(), GetRSI(), GetRSP(), GetRBP(),
-		   GetR8() , GetR9() , GetR10(), GetR11(),
-		   GetR12(), GetR13(), GetR14(), GetR15(),
-		   GetCR2(), GetCR3(), GetCR4()
-	);
+	PrintT("CR2: %H CR3: %H", GetCR2(), GetCR3());
 
 	KeStop();
 }

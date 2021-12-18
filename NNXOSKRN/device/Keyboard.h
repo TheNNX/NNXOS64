@@ -187,7 +187,7 @@ extern UINT8(*ScancodeSet2Keys[])();
 
 extern UINT8 ScancodeSet;
 
-UINT8 KeyboardInitialize();
+VOID KeyboardInitialize();
 UINT8 KeyboardInterrupt();
 UINT8 GetScancodeSet();
 UINT8 SetScancodeSet(UINT8);

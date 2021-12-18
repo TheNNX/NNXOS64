@@ -12,6 +12,11 @@ extern "C" {
 	typedef __declspec(align(64)) struct _KSPIN_LOCK
 	{
 		UINT64 Lock;
+		/* If this is true, do not restore IRQL 
+		some locks are needed for PCR creation,
+		and only after PCR creation we can do
+		anything about the IRQL */
+		BOOL LockedDuringInitialization;
 	}KSPIN_LOCK, *PKSPIN_LOCK;
 #pragma warning(pop)
 

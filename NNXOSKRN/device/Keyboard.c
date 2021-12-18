@@ -6,7 +6,7 @@
 KEY_STATE state;
 UINT8 ScancodeSet = 0;
 
-KEY(UNDEF, 0, 0, 0, 0);
+KEY(UNDEF, 0, 0, 0, 0, 0);
 KEY(ESC, K_ESCAPE, 0, 0, 0, 0);
 KEY(F1, K_F1, 0, 0, 0, 0);
 KEY(F2, K_F2, 0, 0, 0, 0);
@@ -110,7 +110,7 @@ UINT8(*ScancodeSet2Keys[])() = { KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1,
 
 UINT8 keyboardInitialized = 0;
 
-UINT8 KeyboardInitialize()
+VOID KeyboardInitialize()
 {
 	outb(KEYBOARD_COMMAND_PORT, 0xFF);
 	UINT8 selfTest = inb(KEYBOARD_PORT);
@@ -126,15 +126,17 @@ UINT8 KeyboardInitialize()
 	while (inb(KEYBOARD_COMMAND_PORT) & 2);
 
 	UINT8 KCB = inb(KEYBOARD_PORT);
-	KCB &= ~(0X40);							//disable translation
+	KCB &= ~(0X40);	
 	outb(KEYBOARD_COMMAND_PORT, 0x60);
 	outb(KEYBOARD_PORT, KCB);
 	keyboardInitialized = 1;
 }
 
+/* TODO: no idea what this should return, might investigate later */
 UINT8 SpecialKey()
 {
 	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
+	return NULL;
 }
 
 UINT8 KeyboardInterrupt()

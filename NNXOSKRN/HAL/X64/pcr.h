@@ -33,7 +33,7 @@ extern "C"
 	}KPCR, *LPKPCR, *PKPCR;
 
 	PKPCR KeGetPcr();
-	PKPCR HalCreatePcr();
+	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt);
 	VOID HalpSetupPcrForCurrentCpu(UINT64 id);
 
 	typedef struct _KPRCB
@@ -50,7 +50,7 @@ extern "C"
 		ULONG Number;
 		ULONG64 RspBase;
 		KSPIN_LOCK Lock;
-	}KPRCB, *PKRCB, *LPKRCB;
+	}KPRCB, *PKPRCB, *LPKRCB;
 
 #ifdef __cplusplus
 }

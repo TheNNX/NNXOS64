@@ -29,7 +29,7 @@ VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UIN
 
 VOID PciIdeEnumerate();
 
-UINT8 PciScan()
+VOID PciScan()
 {
 	UINT8 header = PciGetHeader(0, 0, 0);
 	if (header & 0x80)

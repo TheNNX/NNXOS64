@@ -49,9 +49,9 @@ ULONG HalpGetGdtBase(KGDTENTRY64 entry)
 	return entry.Base0To15 | (entry.Base16To23 << 16UL) | (entry.Base24To31 << 24UL);
 }
 
-ULONG_PTR HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
+PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
 {
-	return HalpGetGdtBase(tssEntryLow) | ((*((UINT64*) &tssEntryHigh)) << 32UL);
+	return (PKTSS)(HalpGetGdtBase(tssEntryLow) | ((*((UINT64*) &tssEntryHigh)) << 32UL));
 }
 
 VOID PrintIdt(PKIDTENTRY64 idt, int to)
@@ -91,7 +91,7 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 								Exception20, ExceptionReserved, ExceptionReserved, ExceptionReserved,
 								ExceptionReserved, ExceptionReserved, ExceptionReserved, ExceptionReserved,
 								ExceptionReserved, ExceptionReserved, Exception30, ExceptionReserved,
-								IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
+								HalpTaskSwitchHandler, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 								IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
 	KIDTR64* idtr = PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);

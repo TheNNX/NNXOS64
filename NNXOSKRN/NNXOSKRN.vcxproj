@@ -72,6 +72,7 @@
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
+      <TreatSpecificWarningsAsErrors>4716;4715</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -131,6 +132,7 @@
       <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
+      <TreatSpecificWarningsAsErrors>4716;4715</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>

@@ -90,8 +90,10 @@ LongModeEntry:
 	; release the ApSpinlock before going to the C function
 	lock btr WORD [ApSpinlock], 0
 
+	; allocate shadow space for callee
+	sub rsp, 32
+
 	mov QWORD rax, [ApProcessorInit]
-	; mov rax, FuckYou
 	call rax
 
 	; shouldn't return, if it did, do a cli+hlt loop

@@ -12,8 +12,7 @@ extern "C" {
 #endif
 
 #ifndef ALLOC
-	PVOID NNXAllocatorAlloc(UINT64 size);
-	VOID NNXAllocatorFree(PVOID memory);
+#include "memory/nnxalloc.h"
 #define ALLOC(x) NNXAllocatorAlloc(x)
 #define DEALLOC(x) NNXAllocatorFree(x)
 #endif
@@ -30,8 +29,8 @@ extern "C" {
 	{
 		PKLINKED_LIST current;
 
-		if (first == NULL)
-			return NULL;
+		if ((PVOID)first == NULL)
+			return (PKLINKED_LIST)NULL;
 
 		current = first;
 
@@ -40,17 +39,17 @@ extern "C" {
 			current = current->Next;
 		}
 	
-		if (current == NULL)
-			return NULL;
+		if ((PVOID)current == NULL)
+			return (PKLINKED_LIST) NULL;
 
 		current->Next = (PKLINKED_LIST)ALLOC(sizeof(KLINKED_LIST));
 		
-		if (current->Next == NULL)
-			return NULL;
+		if ((PVOID)current->Next == NULL)
+			return (PKLINKED_LIST) NULL;
 
 		current->Next->Prev = current;
 		current = current->Next;
-		current->Next = NULL;
+		current->Next = (PKLINKED_LIST) NULL;
 		current->Value = value;
 
 		return current;
@@ -60,8 +59,8 @@ extern "C" {
 	{
 		PKLINKED_LIST current;
 
-		if (first == NULL)
-			return NULL;
+		if ((PVOID)first == NULL)
+			return (PKLINKED_LIST) NULL;
 
 		current = first->Next;
 
@@ -72,7 +71,7 @@ extern "C" {
 			current = current->Next;
 		}
 
-		return NULL;
+		return (PKLINKED_LIST) NULL;
 	}
 
 	inline BOOL __CompareEq(PVOID a, PVOID b)
@@ -100,25 +99,25 @@ extern "C" {
 		PKLINKED_LIST listElement = FindInList(first, value);
 		PKLINKED_LIST prev, next;
 		
-		if (listElement == NULL)
+		if ((PVOID)listElement == NULL)
 			return;
 		
 		prev = listElement->Prev;
 		next = listElement->Next;
 
-		if (first == NULL)
+		if ((PVOID)first == NULL)
 			return;
 
-		if (prev != NULL)
+		if ((PVOID)prev != NULL)
 		{
-			prev->Next = NULL;
-			prev = listElement->Prev = NULL;
+			prev->Next = (PKLINKED_LIST) NULL;
+			prev = listElement->Prev = (PKLINKED_LIST) NULL;
 		}
 
-		if (next != NULL)
+		if ((PVOID)next != NULL)
 		{
-			next->Prev = NULL;
-			next = listElement->Next = NULL;
+			next->Prev = (PKLINKED_LIST) NULL;
+			next = listElement->Next = (PKLINKED_LIST) NULL;
 		}
 
 		DEALLOC(listElement);
@@ -128,18 +127,18 @@ extern "C" {
 	{
 		PKLINKED_LIST current;
 
-		if (first == NULL)
+		if (first == (PKLINKED_LIST) NULL)
 			return;
 
 		current = first->Next;
 
-		if (current == NULL)
+		if (current == (PKLINKED_LIST) NULL)
 			return;
 
 		while (current)
 		{
 			PKLINKED_LIST next = current->Next;
-			if(Destroy != NULL)
+			if((PVOID)Destroy != NULL)
 				Destroy(current->Value);
 			DEALLOC(current);
 			current = next;
@@ -148,7 +147,7 @@ extern "C" {
 
 	inline VOID ClearList(PKLINKED_LIST first)
 	{
-		ClearListAndDestroyValues(first, NULL);
+		ClearListAndDestroyValues(first, (VOID(*)(PVOID))NULL);
 	}
 
 #ifdef __cplusplus

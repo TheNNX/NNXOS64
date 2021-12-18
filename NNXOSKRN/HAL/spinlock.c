@@ -1,9 +1,17 @@
 #include "spinlock.h"
+#include <HAL/APIC/APIC.h>
 
 KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock) 
 {
-	KIRQL temp;
-	KeRaiseIrql(DISPATCH_LEVEL, &temp);
+	KIRQL temp = 0;
+	if (ApicNumberOfCoresDetected != ApicNumberOfCoresInitialized)
+	{
+		lock->LockedDuringInitialization = TRUE;
+	}
+	else
+	{
+		KeRaiseIrql(DISPATCH_LEVEL, &temp);
+	}
 	HalAcquireLockRaw(&lock->Lock);
 	return temp;
 }
@@ -11,7 +19,11 @@ KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock)
 VOID FASTCALL KfReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql) 
 {
 	HalReleaseLockRaw(&lock->Lock);
-	KeLowerIrql(newIrql);
+	if (lock->LockedDuringInitialization)
+	{
+		lock->LockedDuringInitialization = FALSE;
+		KeLowerIrql(newIrql);
+	}
 }
 
 VOID NTAPI KeAcquireSpinLock(PKSPIN_LOCK lock, PKIRQL oldIrql) 
@@ -27,4 +39,5 @@ VOID NTAPI KeReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql)
 VOID NTAPI KeInitializeSpinLock(PKSPIN_LOCK lock)
 {
 	lock->Lock = 0ULL;
+	lock->LockedDuringInitialization = FALSE;
 }

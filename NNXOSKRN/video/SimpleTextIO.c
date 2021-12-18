@@ -86,9 +86,9 @@ TIMES128(UNKNOWNMARK) UNKNOWNMARK
 
 void TextIoClear()
 {
-	for (int y = gMinY; y < gMaxY; y++)
+	for (ULONG_PTR y = gMinY; y < gMaxY; y++)
 	{
-		for (int x = gMinX; x < gMaxX; x++)
+		for (ULONG_PTR x = gMinX; x < gMaxX; x++)
 		{
 			gFramebuffer[x + y * gPixelsPerScanline] = gBackdrop;
 		}
@@ -359,7 +359,7 @@ void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
 						args = ((UINT64*) args) + 1;
 						for (UINT64 a = 0; a < lenght; a++)
 						{
-							char* string[2] = { 0,0 };
+							char string[2] = { 0,0 };
 							string[0] = toDisplay[a];
 							TextIoOutputStringGlobal(string);
 						}

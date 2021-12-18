@@ -5,11 +5,6 @@
 
 [extern PspScheduleThread]
 
-func AsmLoop
-	jmp $
-	ret
-
-; suspect
 func HalpUpdateThreadKernelStack 
 	push QWORD rdi
 	mov QWORD rdi, [gs:0x08] 
@@ -18,6 +13,7 @@ func HalpUpdateThreadKernelStack
 	pop QWORD rdi
 	ret
 
+[extern ApicSendEoi]
 func HalpTaskSwitchHandler
 	; disable interrupts, just in case
 	pushf
@@ -29,6 +25,7 @@ func HalpTaskSwitchHandler
 	popf
 
 	call PspStoreContextFrom64
+	call ApicSendEoi
 
 	mov rcx, rsp
 	call PspScheduleThread

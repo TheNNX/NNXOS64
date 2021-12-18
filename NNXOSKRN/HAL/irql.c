@@ -5,7 +5,7 @@
 /* Aparently, these FASTCALL versions are somewhat-often used and therefore I'll provide them */
 KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql)
 {
-	
+	return NULL;
 }
 
 VOID FASTCALL KfLowerIrql(KIRQL newIrql)

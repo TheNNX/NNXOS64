@@ -527,7 +527,7 @@ UINT64 FatReccursivlyFindDirectoryEntry(BPB* bpb, VFS* filesystem, UINT32 parent
 		UINT32 rootDirStart = bpb->SectorReservedSize + bpb->NumberOfFats * fatSize;
 		UINT32 rootDirSectors = ((bpb->RootEntryCount * 32) + (bpb->BytesPerSector - 1)) / bpb->BytesPerSector;
 		FAT_DIRECTORY_ENTRY directory;
-		for (int i = 0; i < rootDirSectors; i++)
+		for (UINT32 i = 0; i < rootDirSectors; i++)
 		{
 			VfsReadSector(filesystem, rootDirStart + i, sectorData);
 
@@ -624,7 +624,7 @@ UINT32 FatScanFree(VFS* filesystem)
 	UINT32 clusterCount = FatCalculateFatClusterCount(bpb);
 	UINT32 freeClusters = 0;
 
-	for (int currentEntry = 1; currentEntry < clusterCount + 2; currentEntry++)
+	for (ULONG_PTR currentEntry = 1; currentEntry < clusterCount + 2; currentEntry++)
 	{
 		freeClusters += FatIsFree(currentEntry, bpb, filesystem, sectorsData, &currentSector);
 	}
@@ -639,7 +639,7 @@ UINT32 FatFindFreeCluster(BPB* bpb, VFS* vfs)
 	UINT32 currentSector = 0;
 	UINT8 *sectorsData = NNXAllocatorAlloc((FatIsFat12(bpb) ? 2 : 1) * bpb->BytesPerSector);
 
-	for (int currentEntry = 1; currentEntry < clusterCount + 2; currentEntry++)
+	for (ULONG_PTR currentEntry = 1; currentEntry < clusterCount + 2; currentEntry++)
 	{
 		if (FatIsFree(currentEntry, bpb, vfs, sectorsData, &currentSector))
 		{
@@ -1038,6 +1038,8 @@ UINT64 FatVfsInterfaceCreateFile(VFS* filesystem, char* path)
 			return status;
 		}
 	}
+
+	return STATUS_SUCCESS;
 }
 
 VFS_FILE* FatVfsInterfaceOpenFile(VFS* vfs, const char * path)
@@ -1113,7 +1115,7 @@ UINT64 FatVfsInterfaceDeleteFileFromPath(VFS* filesystem, char* path)
 
 UINT64 FatVfsInterfaceDeleteFile(VFS_FILE* file)
 {
-	FatVfsInterfaceDeleteFileFromPath(file->Filesystem, file->Path);
+	return FatVfsInterfaceDeleteFileFromPath(file->Filesystem, file->Path);
 }
 
 UINT64 FatVfsInterfaceDeleteAndCloseFile(VFS_FILE* file)

@@ -84,3 +84,9 @@ func HalX64SwapGs
 	swapgs
 	mov rax, gs
 	ret
+
+; new stack in rcx
+; "return" address in rdx
+func SetupStack
+	mov rsp, rcx
+	jmp rdx
