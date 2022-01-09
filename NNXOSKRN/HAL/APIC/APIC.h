@@ -19,11 +19,11 @@ extern "C" {
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data);
 	UINT32 ApicLocalApicReadRegister(UINT64 offset);
 	UINT8 ApicGetCurrentLapicId();
-	extern UINT64 ApicNumberOfCoresDetected;
+	extern UINT ApicNumberOfCoresDetected;
 	extern UINT8* ApicLocalApicIDs;
-	extern UINT64 ApicVirtualLocalApicBase;
-	extern UINT64 ApicLocalApicBase;
-	extern UINT64 ApicNumberOfCoresInitialized;
+	extern ULONG_PTR ApicVirtualLocalApicBase;
+	extern ULONG_PTR ApicLocalApicBase;
+	extern UINT ApicNumberOfCoresInitialized;
 	VOID ApicLocalApicInitializeCore();
 #ifdef __cplusplus
 }

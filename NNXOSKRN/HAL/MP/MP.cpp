@@ -7,7 +7,7 @@
 #include <device/fs/vfs.h>
 #include "../X64/pcr.h"
 #include <bugcheck.h>
-#include <HAL/X64/sheduler.h>
+#include <HAL/X64/scheduler.h>
 
 extern "C" {
 
@@ -89,56 +89,37 @@ extern "C" {
 
 			for (j = 0; j < 2; j++)
 			{
-				PrintT("Sending SIPI%i for %x (%i)\n", j, ApicLocalApicIDs[i], i);
 				ApicClearError();
 
 				if ((UINT64) apCode > UINT16_MAX)
-					KeBugCheck(BC_HAL_INITIALIZATION_FAILED);
+					KeBugCheck(HAL_INITIALIZATION_FAILED);
 
 				ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(UINT64)apCode);
 				PitUniprocessorPollSleepUs(200);
 			}
 		}
 
-		PrintT("DebugTest\n");
-		status = PspDebugTest();
+		status = PspInitializeCore(currentLapicId);
 		if (status)
-			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 	}
-
-	VOID HalAcquireLockRaw(UINT64* lock);
-	VOID HalReleaseLockRaw(UINT64* lock);
 
 	__declspec(align(64)) UINT64 DrawLock = 0;
 
 	VOID ApProcessorInit(UINT8 lapicId)
 	{
-		UINT64 status;
-		PrintT("ApProcessorInit() from %i\n", (UINT64)ApicGetCurrentLapicId());
-		
+		NTSTATUS status;
+
 		HalpSetupPcrForCurrentCpu(lapicId);
+		ApicLocalApicInitializeCore();
 
-		ApicNumberOfCoresInitialized++;
-
-		/*while (true)
-		{
-			HalAcquireLockRaw(&DrawLock);
-			PitUniprocessorPollSleepMs(200);
-
-			for (ULONG_PTR y = gHeight - (lapicId + 1) * 40; y < gHeight - lapicId * 40; y++)
-			{
-				for (ULONG_PTR x = 0; x < gWidth / 2; x++)
-				{
-					gFramebuffer[y * gPixelsPerScanline + x] = debugColors[color];
-				}
-			}
-
-			color = (color + 1) % (sizeof(debugColors) / sizeof(*debugColors));
-			HalReleaseLockRaw(&DrawLock);
-		}*/
-
-		status = PspDebugTest();
+		status = PspInitializeCore(lapicId);
 		if (status)
-			KeBugCheckEx(BC_PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+
+		/*
+			shouldn't get here anyway 
+		*/
+		KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, 0, 0, 0, 0);
 	}
 }

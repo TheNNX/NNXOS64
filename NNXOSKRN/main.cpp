@@ -10,8 +10,9 @@
 #include "bugcheck.h"
 #include "HAL/X64/cpu.h"
 #include "HAL/X64/pcr.h"
-#include "HAL/X64/sheduler.h"
+#include "HAL/X64/scheduler.h"
 #include <HAL/PIT.h>
+#include <nnxlog.h>
 
 int basicallyATest = 0;
 
@@ -34,21 +35,22 @@ extern "C"
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
 
+	ULONG_PTR gRdspPhysical;
+
+	ULONG_PTR KeMaximumIncrement = 15 * 10000;
+
+	UINT KeNumberOfProcessors = 1;
 
 	/*
 		Wrapper between ExceptionHandler and KeBugCheck
 	*/
 	VOID KeExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	{
-		KeBugCheckEx(BC_KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
+		KeBugCheckEx(KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
-
-	ULONG_PTR gRdspPhysical;
 
 	__declspec(dllexport) UINT64 KeEntry()
 	{
-		PKIDTENTRY64 idt;
-
 		DisableInterrupts();
 		PitUniprocessorInitialize();
 
@@ -57,19 +59,17 @@ extern "C"
 		TextIoInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
 		TextIoClear();
 
-		/* TODO: free temp-kernel physical memory here */
 		DrawMap();
 
 		NNXAllocatorInitialize();
 		for (int i = 0; i < 64; i++)
 		{
-			NNXAllocatorAppend(PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END), 4096);
+			NNXAllocatorAppend((PVOID)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END), 4096);
 		}
 
 		VfsInit();
 		PciScan();
 
-		PrintT("Prealloc %X\n", gRdspPhysical);
 		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE);
 
 		UINT8 status;
@@ -78,20 +78,18 @@ extern "C"
 		if (!facp)
 		{
 			status = AcpiLastError();
-			ACPI_ERROR(status);
-			KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
+			AcpiError(status);
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
 		}
 
+		ACPI_MADT* madt = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
+		PrintT("Found MADT on %x\n", madt);
 
-		ACPI_MADT* MADT = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
-		PrintT("Found MADT on %x\n", MADT);
-
-		ApicInit(MADT);
+		ApicInit(madt);
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 
 		MpInitialize();
 
-		while (1);
-		KeBugCheck(BC_PHASE1_INITIALIZATION_FAILED);
+		KeBugCheck(PHASE1_INITIALIZATION_FAILED);
 	}
 }

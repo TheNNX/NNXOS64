@@ -13,6 +13,8 @@ extern "C" {
 	VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL oldIrql);
 	VOID NTAPI KeLowerIrql(KIRQL newIrql);
 
+	KIRQL NTAPI KeGetCurrentIrql();
+
 #define DISPATCH_LEVEL 32
 
 #ifdef __cplusplus

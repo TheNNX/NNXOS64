@@ -95,37 +95,37 @@ UINT32 FatFollowClusterChainToAPoint(BPB* bpb, VFS* vfs, UINT32 start, UINT32 en
 UINT32 FatVolumeTotalSize(BPB* bpb);
 UINT32 FatScanFree(VFS* filesystem);
 BOOL FatIsFree(UINT32 n, BPB* bpb, VFS* filesystem, BYTE* sectorsData, UINT32* currentSector);
-UINT64 FatReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
+VFS_STATUS FatReadSectorOfCluster(BPB* bpb, VFS* filesystem, UINT32 clusterIndex, UINT32 sectorIndex, BYTE* data);
 UINT32 FatCalculateFirstClusterPosition(BPB* bpb);
-UINT64 FatSearchForFileInDirectory(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, const char * name, FAT_DIRECTORY_ENTRY* output);
+VFS_STATUS FatSearchForFileInDirectory(FAT_DIRECTORY_ENTRY* sectorData, BPB* bpb, VFS* filesystem, const char * name, FAT_DIRECTORY_ENTRY* output);
 UINT32 FatFollowClusterChain(BPB* bpb, VFS* vfs, UINT32 n);
-UINT64 FatRemoveTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
-UINT64 FatAppendTrailingClusters(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
-UINT64 GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension);
-UINT64 FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename);
-UINT64 FatDeleteFile(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename);
+VFS_STATUS FatDecreaseClusterChainLengthTo(BPB* bpb, VFS* vfs, UINT32 start, UINT32 remove);
+VFS_STATUS FatIncreaseClusterChainLengthBy(BPB* bpb, VFS* vfs, UINT32 start, UINT32 append);
+SIZE_T GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension);
+VFS_STATUS FatDeleteFileEntry(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename);
+VFS_STATUS FatDeleteFile(BPB* bpb, VFS* vfs, FAT_DIRECTORY_ENTRY* parentDirectory, const char * filename);
 BOOL FatCompareEntries(FAT_DIRECTORY_ENTRY* entry1, FAT_DIRECTORY_ENTRY* entry2);
-UINT64 FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile, const char * filename, UINT64 newSize);
+VFS_STATUS FatResizeFile(BPB* bpb, VFS* filesystem, FAT_DIRECTORY_ENTRY* parentFile, const char * filename, SIZE_T newSize);
 VFS_FILE* FatVfsInterfaceOpenFile(VFS* vfs, const char * path);
 VOID FatVfsInterfaceCloseFile(VFS_FILE* file);
-UINT64 FatVfsInterfaceWriteFile(VFS_FILE* file, UINT64 size, VOID* buffer);
-UINT64 FatVfsInterfaceReadFile(VFS_FILE* file, UINT64 size, VOID* buffer);
-UINT64 FatVfsInterfaceAppendFile(VFS_FILE* file, UINT64 size, VOID* buffer);
-UINT64 FatVfsInterfaceResizeFile(VFS_FILE* file, UINT64 newsize);
-UINT64 FatVfsInterfaceDeleteFile(VFS_FILE* file);
-UINT64 FatVfsInterfaceDeleteAndCloseFile(VFS_FILE* file);
-UINT64 FatVfsInterfaceRecreateDeletedFile(VFS_FILE* file);
-UINT32 FatReadFatEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
+VFS_STATUS FatVfsInterfaceWriteFile(VFS_FILE* file, SIZE_T size, VOID* buffer);
+VFS_STATUS FatVfsInterfaceReadFile(VFS_FILE* file, SIZE_T size, VOID* buffer);
+VFS_STATUS FatVfsInterfaceAppendFile(VFS_FILE* file, SIZE_T size, VOID* buffer);
+VFS_STATUS FatVfsInterfaceResizeFile(VFS_FILE* file, SIZE_T newsize);
+VFS_STATUS FatVfsInterfaceDeleteFile(VFS_FILE* file);
+VFS_STATUS FatVfsInterfaceDeleteAndCloseFile(VFS_FILE* file);
+VFS_STATUS FatVfsInterfaceRecreateDeletedFile(VFS_FILE* file);
+VFS_STATUS FatReadFatEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
 VOID FatInitVfs(VFS* partition);
 VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet();
 
 BOOL NNXFatAutomaticTest(VFS* filesystem);
 
-typedef struct FATFilesystemSpecificData
+typedef struct _FAT_FILESYSTEM_SPECIFIC_VFS_DATA
 {
-	VOID* cachedFATSector;
-	UINT32 cachedFATSectorNumber;
-}FATFilesystemSpecificData;
+	VOID* CachedFatSector;
+	UINT32 CachedFatSectorNumber;
+}FAT_FILESYSTEM_SPECIFIC_VFS_DATA;
 
 #pragma pack(pop)
 #endif

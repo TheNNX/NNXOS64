@@ -33,15 +33,26 @@ typedef UINT16	WORD, *PWORD, *LPWORD;
 typedef UINT8	UCHAR, *PUCHAR, *LPUCHAR;
 typedef INT8	CHAR, *PCHAR, *LPCHAR;
 
-typedef LONG NTSTATUS;
+typedef INT64	LONG64, *PLONG64, *LPLONG64;
 
-#define STATUS_SUCCESS		0x00000000UL
-#define STATUS_NO_MEMORY	0xC0000017UL
+typedef LONG NTSTATUS;
+typedef LONG INT;
+typedef ULONG UINT;
+
+#define STATUS_SUCCESS				0x00000000UL
+#define STATUS_ABANDONED			0x00000080UL
+#define STATUS_USER_APC				0x000000C0UL
+#define STATUS_ALERTED				0x00000101UL
+#define STATUS_TIMEOUT				0x00000102UL
+#define STATUS_INVALID_PARAMETER	0xC000000DUL
+#define STATUS_NO_MEMORY			0xC0000017UL
 
 #ifndef _M_AMD64
 typedef ULONG ULONG_PTR;
+typedef LONG LONG_PTR;
 #else
 typedef ULONGLONG ULONG_PTR;
+typedef LONGLONG LONG_PTR;
 #endif
 
 typedef ULONG_PTR SIZE_T;
@@ -77,7 +88,7 @@ typedef VOID *PVOID, *LPVOID;
 #ifdef __cplusplus
 #define NULL __nullptr
 #else
-#define NULL ((LPVOID*)0)
+#define NULL 0
 #endif
 #endif
 

@@ -111,9 +111,6 @@
     <ClCompile Include="HAL\X64\cpu.c">
       <Filter>Source Files\HAL\X64</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\sheduler.c">
-      <Filter>Source Files\HAL\X64</Filter>
-    </ClCompile>
     <ClCompile Include="loadstub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -171,6 +168,18 @@
     <ClCompile Include="pool.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\scheduler.c">
+      <Filter>Source Files\HAL\X64</Filter>
+    </ClCompile>
+    <ClCompile Include="ntlist.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ntqueue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="kobject.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -198,9 +207,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HAL\X64\cpu.h">
-      <Filter>Header Files\HAL\X64</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\sheduler.h">
       <Filter>Header Files\HAL\X64</Filter>
     </ClInclude>
     <ClInclude Include="object.h">
@@ -286,6 +292,15 @@
     </ClInclude>
     <ClInclude Include="device\Keyboard.h">
       <Filter>Header Files\device</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\scheduler.h">
+      <Filter>Header Files\HAL\X64</Filter>
+    </ClInclude>
+    <ClInclude Include="ntqueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ntlist.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

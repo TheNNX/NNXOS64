@@ -12,46 +12,46 @@ typedef struct
 	QWORD a[2];
 } GUID, DQWORD;
 
-BOOL GPTCompareGUID(GUID a1, GUID a2);
+BOOL GptCompareGuid(GUID a1, GUID a2);
 
 extern GUID GPT_MS_BASIC_DISK;
 extern GUID GPT_MS_EFI_DISK;
 extern GUID GPT_EMPTY_TYPE;
 
-typedef struct GPTPartitionHeader
+typedef struct _GPT_PARTITION_HEADER
 {
-	UINT64 signature;
-	DWORD revision;
-	DWORD headerSize;
-	DWORD crc32Chesksum;
-	DWORD reserved0;
-	QWORD lbaOfThisHeader;
-	QWORD lbaOfMirrorHeader;
-	QWORD firstUsableBlock;
-	QWORD lastUsableBlock;
-	GUID guid;
-	QWORD lbaOfPartitionTable;
-	DWORD numberOfPartitionTableEntries;
-	DWORD bytesPerEntry;
-	DWORD crc32ChecksumOfPartitionTable;
-}GPTPartitionHeader, *PGPTPartitionHeader;
+	UINT64 Signature;
+	DWORD Revision;
+	DWORD HeaderSize;
+	DWORD Crc32Chesksum;
+	DWORD Reserved0;
+	QWORD LbaOfThisHeader;
+	QWORD LbaOfMirrorHeader;
+	QWORD FirstUsableBlock;
+	QWORD LastUsableBlock;
+	GUID Guid;
+	QWORD LbaOfPartitionTable;
+	DWORD NumberOfPartitionTableEntries;
+	DWORD BytesPerEntry;
+	DWORD Crc32ChecksumOfPartitionTable;
+}GPT_PARTITION_HEADER, *PGPT_PARTITION_HEADER;
 
 typedef struct GPT
 {
-	GPTPartitionHeader header;
-	BYTE Reserved[512 - sizeof(GPTPartitionHeader)];
+	GPT_PARTITION_HEADER Header;
+	BYTE Reserved[512 - sizeof(GPT_PARTITION_HEADER)];
 }GPT;
 
-typedef struct GPTPartitionEntry
+typedef struct _GPT_PARTITION_ENTRY
 {
-	GUID typeGUID;
-	GUID uniqueGUID;
-	QWORD lbaPartitionStart;
-	QWORD lbaPartitionEnd;
-	QWORD attributes;
-	//default size: 72, 36 * sizeof(UINT16)
-	UINT16 partitionName[0];
-}GPTPartitionEntry;
+	GUID TypeGuid;
+	GUID UniqueGuid;
+	QWORD LbaPartitionStart;
+	QWORD LbaPartitionEnd;
+	QWORD Attributes;
+	// default size: 72, 36 * sizeof(UINT16)
+	UINT16 PartitionName[0];
+}GPT_PARTITION_ENTRY;
 
 #pragma pack(pop)
 

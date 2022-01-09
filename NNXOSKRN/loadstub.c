@@ -37,7 +37,7 @@ VOID KeLoadStub(
     gWidth = bootdata->dwWidth;
     gHeight = bootdata->dwHeight;
     gPixelsPerScanline = bootdata->dwPixelsPerScanline;
-	gRdspPhysical = bootdata->pRdsp;
+	gRdspPhysical = (ULONG_PTR)bootdata->pRdsp;
 
     bootdata->ExitBootServices(bootdata->pImageHandle, bootdata->mapKey);
 
@@ -56,10 +56,11 @@ VOID KeLoadStub(
 		STACK_SIZE / PAGE_SIZE_SMALL,
 		PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END,
 		PAGE_PRESENT | PAGE_WRITE,
-		(PVOID)(currentStackPage - STACK_SIZE));
+		currentStackPage - STACK_SIZE
+	);
 	
 	newStack += STACK_SIZE;
 	newStack -= (currentStack - currentStackPage);
 
-	SetupStack(newStack, mainReloc, currentStack, currentStackPage);
+	SetupStack(newStack, mainReloc);
 }

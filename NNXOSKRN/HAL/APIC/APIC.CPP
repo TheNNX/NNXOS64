@@ -11,18 +11,19 @@
 
 extern "C" 
 {
-	UINT64 ApicLocalApicBase;
-	UINT64 ApicVirtualLocalApicBase;
-	UINT64 ApicNumberOfCoresDetected;
+	ULONG_PTR ApicLocalApicBase;
+	ULONG_PTR ApicVirtualLocalApicBase;
+	UINT ApicNumberOfCoresDetected;
 	UINT8* ApicLocalApicIDs;
-	UINT64 ApicNumberOfCoresInitialized = 1;
+	UINT ApicNumberOfCoresInitialized = 0;
 
 	BOOL ApicBspLapicInitialized = FALSE;
-	UINT64 ApicTimerTicksPerSecond = 0;
+	ULONG_PTR HalpTimerTicksPerSecond = 0;
 	extern BOOL HalpInteruptInitialized;
 	extern UINT8* GlobalPhysicalMemoryMap;
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
+	extern UINT KeNumberOfProcessors;
 
 	VOID KiEnableInterrupts();
 }
@@ -45,7 +46,7 @@ public:
 			PAGING_KERNEL_SPACE,
 			PAGING_KERNEL_SPACE_END,
 			PAGE_WRITE | PAGE_PRESENT | PAGE_NO_CACHE,
-			(PVOID) (((UINT64) IoApicBasePhys) & PAGE_SIZE_SMALL)
+			((ULONG_PTR) IoApicBasePhys) & PAGE_SIZE_SMALL
 		);
 		
 		this->IoApicBase = (volatile UINT32*) (((UINT64)this->IoApicBase) + (((UINT64)IoApicBasePhys) & PAGE_SIZE_SMALL));
@@ -160,11 +161,15 @@ UINT64 IoApicCount;
 
 extern "C"
 {
+	extern ULONG_PTR KeMaximumIncrement;
+	ULONG_PTR KiCyclesPerClockQuantum;
+	ULONG_PTR KiCyclesPerQuantum;
+
 	VOID ApicInit(ACPI_MADT* madt)
 	{
 		UINT64 i = 0, currentLocalApicIdIndex = 0, currentIoApicIndex = 0;
 		UINT8* currentPointer = (UINT8*)&(madt->InteruptControlerStruct);
-		NNXLogger* logger = new NNXLogger(VfsGetPointerToVfs(0)->Functions.OpenOrCreateFile(VfsGetPointerToVfs(0), (char*)"APICLOG.TXT"));
+		NNXLogger* logger = new NNXLogger(VfsGetSystemVfs()->Functions.OpenOrCreateFile(VfsGetSystemVfs(), (char*)"APICLOG.TXT"));
 
 		logger->Log("LAPIC initialization started\n");
 
@@ -236,11 +241,13 @@ extern "C"
 			}
 			else if (type == ACPI_MADT_TYPE_IOAPIC)
 			{
+#pragma warning(push)
 				ACPI_MADT_IOAPIC* ioapic = (ACPI_MADT_IOAPIC*) madtEntry;
 				logger->Log("Starting IOAPIC initialization\n");
-				#pragma warning(disable: 4316)
-				IoApics[currentIoApicIndex++] = new IoApic((volatile UINT32*)(ULONG_PTR)ioapic->IoApicAddress, ioapic->IoApicInterruptBase);
-				
+#pragma warning(disable: 6386)
+				IoApics[currentIoApicIndex] = new IoApic((volatile UINT32*)(ULONG_PTR)ioapic->IoApicAddress, ioapic->IoApicInterruptBase);
+				currentIoApicIndex++;
+#pragma warning(pop)
 			}
 
 			i += madtEntry->Length;
@@ -251,7 +258,7 @@ extern "C"
 		/* find virtual address space for the APIC registers */
 		ApicVirtualLocalApicBase = (UINT64) PagingAllocatePageWithPhysicalAddress(
 			PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, 
-			PAGE_PRESENT | PAGE_WRITE, (VOID*) PAGE_ALIGN(ApicLocalApicBase)
+			PAGE_PRESENT | PAGE_WRITE, PAGE_ALIGN(ApicLocalApicBase)
 		);
 		ApicVirtualLocalApicBase += (ApicLocalApicBase % PAGE_SIZE_SMALL);
 
@@ -306,7 +313,7 @@ extern "C"
 		return (UINT8) ((ApicLocalApicReadRegister(LAPIC_ID_REGISTER_OFFSET) & 0xFF000000) >> 24);
 	}
 
-	VOID ApicSetupTimer(UINT8 interruptVector)
+	VOID ApicSetupTimer(UINT8 interruptVector, ULONG_PTR hundredsOfNsInterval)
 	{
 		/* make sure the timer is not running */
 		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, 0x00000000);
@@ -316,7 +323,10 @@ extern "C"
 		ApicLocalApicWriteRegister(LAPIC_DIVIDE_TIMER_REGISTER_OFFSET, LAPIC_TIMER_DIVISOR_1);
 
 		/* tick once every second */
-		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, (UINT32)ApicTimerTicksPerSecond);
+		KiCyclesPerClockQuantum = (HalpTimerTicksPerSecond * hundredsOfNsInterval / 10000000);
+		PrintT("KiCyclesPerClockQuantum %X %X %X\n", KiCyclesPerClockQuantum, HalpTimerTicksPerSecond * 15 / 1000, HalpTimerTicksPerSecond);
+		KiCyclesPerQuantum = KiCyclesPerClockQuantum / 3;
+		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, (UINT32)KiCyclesPerClockQuantum);
 	}
 
 	UINT64 ApicTestTimer()
@@ -326,6 +336,8 @@ extern "C"
 
 		/* wait for 1/20th of a second using PIT and count how many ticks have elapsed on APIC Timer 
 		to aproximate the frequency */
+
+		/* arbitrary big number so we have something to substract from */
 		const UINT32 initialTicks = 0xFFFFFFFF;
 
 		PitUniprocessorSetupCalibrationSleep();
@@ -348,16 +360,17 @@ extern "C"
 		
 		if (!ApicBspLapicInitialized)
 		{
-			ApicTimerTicksPerSecond = ApicTestTimer();
+			HalpTimerTicksPerSecond = ApicTestTimer();
 		}
 
-		ApicSetupTimer(0x20);
+		ApicSetupTimer(0x20, KeMaximumIncrement);
 
 		if (!ApicBspLapicInitialized)
 		{
 			ApicBspLapicInitialized = TRUE;
 		}
 
-		KiEnableInterrupts();
+		ApicNumberOfCoresInitialized++;
+		KeNumberOfProcessors = ApicNumberOfCoresInitialized;
 	}
 }

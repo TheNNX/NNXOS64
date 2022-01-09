@@ -149,6 +149,11 @@ NNXLogger::~NNXLogger()
 
 extern "C" void NNXLogG(const char* str, ...)
 {
+	if (gLogger == nullptr)
+	{
+		PrintT("Logger not ready\n");
+		return;
+	}
 	va_list args;
 	va_start(args, str);
 	gLogger->Log(str, args);
@@ -157,11 +162,21 @@ extern "C" void NNXLogG(const char* str, ...)
 
 extern "C" void NNXClearG()
 {
+	if (gLogger == nullptr)
+	{
+		PrintT("Logger not ready\n");
+		return;
+	}
 	gLogger->Clear();
 }
 
 extern "C" void NNXSetLoggerG(void* input)
 {
+	if (gLogger == nullptr)
+	{
+		PrintT("Logger not ready\n");
+		return;
+	}
 	if (gLogger)
 		delete gLogger;
 	gLogger = (NNXLogger*) input;
@@ -203,13 +218,4 @@ extern "C" void NNXLoggerTest(VFS* filesystem)
 			delete gLogger;
 		gLogger = new NNXLogger(loggerFile);
 	}
-
-	gLogger->Log("the system is alive for sure...");
-	gLogger->Log("%s started!\n\n", __FUNCDNAME__);
-	gLogger->Log("Numbers:\n Hex: 0x%x 0x%X \n Decimal: %i %d \n Octal: %u\n Binary: %b\n\n", 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL, 0xabcd1234LL);
-	gLogger->Log("Strings:\n normal %%s: %s \n fixed size %%S: %S\n\n", "hello i am a string and i am very happy to be able to be shown in all of my length", "hello i am a fixed size string and i'll be cut probably", 26LL);
-	gLogger->Log("Characters: \n %c %c %c %c\n\n", 'a', 'b', 'c', 'd');
-	gLogger->Log("This will be flushed now...?\n\n");
-	gLogger->Flush();
-	PrintT("DONE\n");
 }

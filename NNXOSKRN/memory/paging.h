@@ -10,24 +10,29 @@ extern "C"
 {
 #endif
 
-    VOID PagingInit(PBYTE PhysMemoryMap, QWORD PhysMemMapSize);
+    VOID PagingInit(PBYTE PhysMemoryMap, SIZE_T PhysMemMapSize);
     VOID PagingKernelInit();
-    VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage); 
-    VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType);
-    VOID* PagingAllocatePage();
-    VOID* PagingAllocatePageFromRange(UINT64 min, UINT64 max);
-    VOID PagingMapPage(VOID* v, VOID* p, UINT16 f);
+    ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage);
+    ULONG_PTR PagingAllocatePageEx(ULONG_PTR min, ULONG_PTR max, UINT16 flags, UINT8 physMemType);
+    ULONG_PTR PagingAllocatePage();
+    ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max);
+    VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f);
     VOID PagingTLBFlush();
-    VOID PagingTLBFlushPage(UINT64 page);
-    PVOID PagingAllocatePageBlockWithPhysicalAddresses(UINT64 n, UINT64 min, UINT64 max, UINT16 flags, PVOID physFirstPage);
-    PVOID PagingAllocatePageBlock(UINT64 n, UINT16 flags);
+    VOID PagingTLBFlushPage(ULONG_PTR page);
+    ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage);
+    ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max);
+    ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags);
     VOID PagingMapFramebuffer();
-	ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT8 flags);
+    ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags);
+    VOID PagingInvalidatePage(ULONG_PTR);
+    ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count);
 
+#ifdef _M_AMD64
     inline UINT64 ToCanonicalAddress(UINT64 address)
     {
         return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
     }
+#endif
 
 #ifdef __cplusplus
 }

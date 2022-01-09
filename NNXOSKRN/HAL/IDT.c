@@ -7,6 +7,7 @@
 
 BOOL HalpInteruptInitialized;
 
+VOID KeStop();
 
 VOID DefHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
@@ -25,8 +26,10 @@ void ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	KeStop();
 }
 
-void IrqHandler(UINT32 n)
+void IrqHandler(UINT64 n)
 {
+	PrintT("AAAAAAAAAAAAAAAAAAA%x\n", n);
+	while (1);
 	if (n == 1)
 	{
 		UINT8 character = KeyboardInterrupt();
@@ -94,8 +97,8 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 								HalpTaskSwitchHandler, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 								IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
-	KIDTR64* idtr = PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	KIDTENTRY64* idt = (((ULONG_PTR) idtr) + sizeof(KIDTR64));
+	KIDTR64* idtr = (KIDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+	PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
 
 	idtr->Size = sizeof(KIDTENTRY64) * 128 - 1;
 	idtr->Base = idt;
@@ -134,7 +137,7 @@ UINT64 HalpSetGdtEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, UINT32 base, UINT32
 
 UINT64 HalpSetGdtTssDescriptorEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, PVOID tss, SIZE_T tssSize)
 {
-	HalpSetGdtEntry(gdt, entryIndex, ((ULONG_PTR)tss) & UINT32_MAX, tssSize, 0x40, 0x89);
+	HalpSetGdtEntry(gdt, entryIndex, ((ULONG_PTR)tss) & UINT32_MAX, (UINT32)tssSize, 0x40, 0x89);
 	*((UINT64*) (gdt + entryIndex + 1)) = (((ULONG_PTR) tss) & ~((UINT64)UINT32_MAX)) >> 32;
 
 	return sizeof(KGDTENTRY64) * entryIndex;
@@ -144,7 +147,7 @@ VOID HalpInitializeGdt(KGDTR64* gdtr)
 {
 	UINT64 null, code0, data0, code3, data3, tr;
 	PKGDTENTRY64 gdt = (PKGDTENTRY64) gdtr->Base;
-	KTSS* tss = PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+	KTSS* tss = (KTSS*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
 	tss->IopbBase = sizeof(*tss);
 
 	null = HalpSetGdtEntry(gdt, 0, 0x00000000UL, 0x00000UL, 0x0, 0x00);
@@ -160,8 +163,8 @@ VOID HalpInitializeGdt(KGDTR64* gdtr)
 
 PKGDTENTRY64 HalpAllocateAndInitializeGdt()
 {
-	KGDTR64* gdtr = PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	KGDTENTRY64* gdt = (((ULONG_PTR)gdtr) + sizeof(KGDTR64));
+	KGDTR64* gdtr = (KGDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+	KGDTENTRY64* gdt = (KGDTENTRY64*)((ULONG_PTR)gdtr + sizeof(KGDTR64));
 
 	gdtr->Size = sizeof(KGDTENTRY64) * 7 - 1;
 	gdtr->Base = gdt;

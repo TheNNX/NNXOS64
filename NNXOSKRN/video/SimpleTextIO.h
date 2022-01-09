@@ -18,7 +18,7 @@ extern "C"
 	void TextIoSetAlignment(UINT8 alignment);
 	void TextIoInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
 	void TextIoOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop);
-	void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2);
+	void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2);
 	void TextIoTest(UINT64 mode);
 	UINT8 TextIoGetAlignment();
 	UINT8 TextIoIsInitialized();

@@ -14,20 +14,20 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{67E77DD1-D078-48E7-8F75-159C6130C693}</ProjectGuid>
     <RootNamespace>NNXOSKRN</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -72,7 +72,10 @@
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <TreatSpecificWarningsAsErrors>4716;4715</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>
+      </TreatSpecificWarningsAsErrors>
+      <DisableSpecificWarnings>4200</DisableSpecificWarnings>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -132,7 +135,10 @@
       <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <TreatSpecificWarningsAsErrors>4716;4715</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>
+      </TreatSpecificWarningsAsErrors>
+      <DisableSpecificWarnings>4200</DisableSpecificWarnings>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -195,7 +201,8 @@
     <ClCompile Include="HAL\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
-    <ClCompile Include="HAL\X64\sheduler.c" />
+    <ClCompile Include="HAL\X64\scheduler.c" />
+    <ClCompile Include="kobject.c" />
     <ClCompile Include="loadstub.c" />
     <ClCompile Include="main.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -208,6 +215,8 @@
     <ClCompile Include="memory\physical_allocator.c" />
     <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="nnxlog.cpp" />
+    <ClCompile Include="ntlist.c" />
+    <ClCompile Include="ntqueue.c" />
     <ClCompile Include="pool.c" />
     <ClCompile Include="text.c" />
     <ClCompile Include="video\SimpleTextIO.c" />
@@ -236,7 +245,7 @@
     <ClInclude Include="HAL\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
-    <ClInclude Include="HAL\X64\sheduler.h" />
+    <ClInclude Include="HAL\X64\scheduler.h" />
     <ClInclude Include="HAL\X64\pcr.h" />
     <ClInclude Include="klist.h" />
     <ClInclude Include="memory\MemoryOperations.h" />
@@ -247,6 +256,8 @@
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxlog.h" />
     <ClInclude Include="nnxosdbg.h" />
+    <ClInclude Include="ntlist.h" />
+    <ClInclude Include="ntqueue.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="pool.h" />
     <ClInclude Include="text.h" />

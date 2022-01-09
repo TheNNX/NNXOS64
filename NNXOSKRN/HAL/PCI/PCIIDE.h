@@ -1,6 +1,7 @@
 #ifndef NNX_PCIIDE_HEADER
 #define NNX_PCIIDE_HEADER
 #include "HAL/PCI/PCI.h"
+#include "../../device/fs/vfs.h"
 
 //All consts from https://wiki.osdev.org/PCI_IDE_Controller
 
@@ -9,11 +10,11 @@ extern "C"
 {
 #endif
 
-	typedef struct PCI_IDE_CONTROLLER PCI_IDE_CONTROLLER;
+	typedef struct _PCI_IDE_CONTROLLER PCI_IDE_CONTROLLER;
 
 #include "device/hdd/hdd.h"
 
-	typedef struct IDE_DRIVE
+	typedef struct _IDE_DRIVE
 	{
 		UINT8 Reserved;
 		UINT8 channel;
@@ -28,7 +29,6 @@ extern "C"
 		CHS geometry;
 	} IDE_DRIVE;
 
-	UINT64 PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
 
 #define ATA_REG_DATA       0x00
 #define ATA_REG_ERROR      0x01
@@ -85,43 +85,45 @@ extern "C"
 #define      ATAPI_CMD_READ       0xA8
 #define      ATAPI_CMD_EJECT      0x1B
 
-	struct PCI_IDE_CONTROLLER
-	{
-		UINT8 functionNumber;
-		UINT8 deviceNumber;
-		UINT8 busNumber;
-		UINT8 progIf;
-
-		UINT32 BAR0;
-		UINT32 BAR1;
-		UINT32 BAR2;
-		UINT32 BAR3;
-		UINT32 BAR4;
-
-		struct IDE_Channels
-		{
-			unsigned short base;
-			unsigned short ctrl;
-			unsigned short bus_master_ide;
-			bool no_interrupt;
-		} channels[2];
-
-		unsigned char ide_irq_invoked;
-		unsigned char atapi_packet[12];
-		unsigned char ide_buffer[2048];
-
-		unsigned char interrupt_number;
-
-		IDE_DRIVE drives[4];
-	};
-
+#define MAX_PCI_IDE_CONTROLLERS 32
 #define IDE_LBA_SUPPORT 0x200
 
-	PCI_IDE_CONTROLLER PciIdeInitPciDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+	struct _PCI_IDE_CONTROLLER
+	{
+		UINT8 FunctionNumber;
+		UINT8 DeviceNumber;
+		UINT8 BusNumber;
+		UINT8 ProgIf;
 
-#define MAX_PCI_IDE_CONTROLLERS 32
-	extern IDE_DRIVE drives[MAX_PCI_IDE_CONTROLLERS * 4];
-	extern PCI_IDE_CONTROLLER controllers[MAX_PCI_IDE_CONTROLLERS];
+		UINT32 Bar0;
+		UINT32 Bar1;
+		UINT32 Bar2;
+		UINT32 Bar3;
+		UINT32 Bar4;
+
+		struct IDE_CHANNELS
+		{
+			unsigned short Base;
+			unsigned short Ctrl;
+			unsigned short BusMasterIde;
+			BOOL NoInterrupt;
+		} Channels[2];
+
+		unsigned char IdeIrqInvoked;
+		unsigned char AtapiPacket[12];
+		unsigned char IdeBuffer[2048];
+
+		unsigned char InterruptNumber;
+
+		IDE_DRIVE Drives[4];
+	};
+
+	extern IDE_DRIVE Drives[MAX_PCI_IDE_CONTROLLERS * 4];
+	extern PCI_IDE_CONTROLLER Controllers[MAX_PCI_IDE_CONTROLLERS];
+	
+	VOID SearchForDevices(PCI_IDE_CONTROLLER* pic);
+	PCI_IDE_CONTROLLER PciIdeInitPciDevice(UINT8 bus, UINT8 device, UINT8 function, UINT8 progIf);
+	VFS_STATUS PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 numberOfSectors, UINT8* dest);
 
 #ifdef __cplusplus
 }

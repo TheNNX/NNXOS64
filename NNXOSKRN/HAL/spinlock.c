@@ -1,27 +1,47 @@
 #include "spinlock.h"
 #include <HAL/APIC/APIC.h>
 
+/* kinda hacky, but as long as no locks are acquired after MP initialization but before releasing all initialization locks, it will be fine*/
+LONG LockedDuringInitialization = 0;
+
+KSPIN_LOCK PrintLock;
+
+VOID NTAPI KeAcquireSpinLockAtDpcLevel(PKSPIN_LOCK Lock)
+{
+	HalAcquireLockRaw(Lock);
+}
+
+VOID NTAPI KeReleaseSpinLockFromDpcLevel(PKSPIN_LOCK Lock)
+{
+	HalReleaseLockRaw(Lock);
+}
+
 KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock) 
 {
 	KIRQL temp = 0;
 	if (ApicNumberOfCoresDetected != ApicNumberOfCoresInitialized)
 	{
-		lock->LockedDuringInitialization = TRUE;
+		LockedDuringInitialization++;
 	}
 	else
 	{
 		KeRaiseIrql(DISPATCH_LEVEL, &temp);
 	}
-	HalAcquireLockRaw(&lock->Lock);
+
+	KeAcquireSpinLockAtDpcLevel(lock);
 	return temp;
 }
 
 VOID FASTCALL KfReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql) 
 {
-	HalReleaseLockRaw(&lock->Lock);
-	if (lock->LockedDuringInitialization)
+	KeReleaseSpinLockFromDpcLevel(lock);
+
+	if (LockedDuringInitialization)
 	{
-		lock->LockedDuringInitialization = FALSE;
+		LockedDuringInitialization--;
+	}
+	else
+	{
 		KeLowerIrql(newIrql);
 	}
 }
@@ -38,6 +58,5 @@ VOID NTAPI KeReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql)
 
 VOID NTAPI KeInitializeSpinLock(PKSPIN_LOCK lock)
 {
-	lock->Lock = 0ULL;
-	lock->LockedDuringInitialization = FALSE;
+	*lock = 0;
 }

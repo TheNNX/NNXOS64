@@ -6,6 +6,10 @@
 
 #pragma warning(disable : 4189)
 
+void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
+void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
+VOID PciIdeEnumerate();
+
 UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset)
 {
 	UINT32 address = (UINT32) ((((UINT32) bus) << 16) | (((UINT32) slot) << 11) | (((UINT32) function) << 8) | (offset & 0xfc) | 0x80000000);
@@ -27,7 +31,6 @@ VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UIN
 	outb(CONFIG_DATA, byte);
 }
 
-VOID PciIdeEnumerate();
 
 VOID PciScan()
 {
@@ -79,8 +82,6 @@ void PciScanDevice(UINT8 busNumber, UINT8 deviceNumber)
 	}
 }
 
-void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
-void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
 
 void PciScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber)
 {
@@ -116,16 +117,16 @@ void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNum
 
 #include "HAL/PCI/PCIIDE.h"
 
-PCI_IDE_CONTROLLER controllers[MAX_PCI_IDE_CONTROLLERS] = { 0 };
+PCI_IDE_CONTROLLER Controllers[MAX_PCI_IDE_CONTROLLERS] = { 0 };
 
 BOOL AlreadyContainsController(PCI_IDE_CONTROLLER* controller)
 {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
 	{
-		if (controllers[i].channels[0].base == controller->channels[0].base &&
-			controllers[i].channels[0].ctrl == controller->channels[0].ctrl &&
-			controllers[i].channels[1].base == controller->channels[1].base &&
-			controllers[i].channels[1].ctrl == controller->channels[1].ctrl)
+		if (Controllers[i].Channels[0].Base == controller->Channels[0].Base &&
+			Controllers[i].Channels[0].Ctrl == controller->Channels[0].Ctrl &&
+			Controllers[i].Channels[1].Base == controller->Channels[1].Base &&
+			Controllers[i].Channels[1].Ctrl == controller->Channels[1].Ctrl)
 		{
 			return true;
 		}
@@ -138,7 +139,7 @@ UINT64 NumberOfControllers()
 	UINT64 result = 0;
 
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
-		result += ((controllers[i].channels[0].base) != 0);
+		result += ((Controllers[i].Channels[0].Base) != 0);
 
 	return result;
 }
@@ -147,9 +148,9 @@ int AddController(PCI_IDE_CONTROLLER p_ide_ctrl)
 {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
 	{
-		if (!(controllers[i].channels[0].base))
+		if (!(Controllers[i].Channels[0].Base))
 		{
-			controllers[i] = p_ide_ctrl;
+			Controllers[i] = p_ide_ctrl;
 			return i;
 		}
 	}
@@ -173,7 +174,7 @@ void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumb
 				PrintT("Command word: 0b%b\n", commandByte);
 				commandByte |= 2;
 				PciConfigWriteByte(busNumber, deviceNumber, functionNumber, 4, commandByte);
-				SearchForDevices(controllers + ID);
+				SearchForDevices(Controllers + ID);
 			}
 			else
 			{
@@ -188,15 +189,15 @@ void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumb
 
 }
 
-IDE_DRIVE drives[MAX_PCI_IDE_CONTROLLERS * 4] = { 0 };
+IDE_DRIVE Drives[MAX_PCI_IDE_CONTROLLERS * 4] = { 0 };
 
 int AddDrive(IDE_DRIVE* drive)
 {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++)
 	{
-		if (drives[i].Reserved == 0)
+		if (Drives[i].Reserved == 0)
 		{
-			drives[i] = *drive;
+			Drives[i] = *drive;
 			return i;
 		}
 	}
@@ -208,21 +209,21 @@ void PciIdeEnumerate()
 {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++)
 	{
-		drives[i].Reserved = 0;
+		Drives[i].Reserved = 0;
 	}
 
 	PrintT("Enumerating PCI IDE devices.\n");
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
 	{
-		if (controllers[i].channels[0].base)
+		if (Controllers[i].Channels[0].Base)
 		{
-			PCI_IDE_CONTROLLER* c = controllers + i;
+			PCI_IDE_CONTROLLER* c = Controllers + i;
 			for (int j = 0; j < 4; j++)
 			{
-				if (c->drives[j].Reserved == 1)
+				if (c->Drives[j].Reserved == 1)
 				{
-					c->drives[j].controller = controllers + i;
-					AddDrive(c->drives + j);
+					c->Drives[j].controller = Controllers + i;
+					AddDrive(c->Drives + j);
 				}
 			}
 		}

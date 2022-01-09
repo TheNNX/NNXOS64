@@ -309,7 +309,7 @@ void TextIoOutputStringGlobal(const char* input)
 	TextIoOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
-void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
+void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
 {
 
 	void* args = args2;
@@ -347,13 +347,13 @@ void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
 					case '%':
 						goto display;
 					case 's':;
-						char* toDisplay = *((UINT64*) args);
+						char* toDisplay = (char*)*((UINT64*) args);
 						args = ((UINT64*) args) + 1;
 						TextIoOutputStringGlobal(toDisplay);
 						break;
 					case 'S':
 					{
-						char* toDisplay = *((UINT64*) args);
+						char* toDisplay = (char*)*((UINT64*) args);
 						args = ((UINT64*) args) + 1;
 						UINT64 lenght = *((UINT64*) args);
 						args = ((UINT64*) args) + 1;
@@ -367,7 +367,7 @@ void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
 					}
 					case 'c':;
 						char string[2] = { 0,0 };
-						string[0] = *((UINT64*) args);
+						string[0] = (char)*((UINT64*) args);
 						if (string[0] == 0)
 							string[0] = 0xff;
 						((UINT64*) args) += 1;
@@ -439,7 +439,7 @@ void TextIoOutputFormatedString(char* input, UINT32 size, va_list args2)
 	}
 }
 
-void PrintTA(char* input, ...)
+void PrintTA(const char* input, ...)
 {
 
 	va_list		args;
@@ -471,15 +471,16 @@ void TextIoTest(UINT64 mode)
 
 void DrawMap()
 {
-	int x = 0;
-	int y = 0;
+	UINT x = 0;
+	UINT y = 0;
+	UINT a;
 
 	TextIoGetCursorPosition(&x, &y);
 
 	x = 0;
 	y += 10;
 
-	for (int a = 0; a < GlobalPhysicalMemoryMapSize; a++)
+	for (a = 0; a < GlobalPhysicalMemoryMapSize; a++)
 	{
 		if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_FREE)
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;

@@ -8,6 +8,8 @@ extern "C" {
 #endif
 
 	typedef CHAR	KPROCESSOR_MODE;
+
+#define KAFFINITY_ALL 0xFFFFFFFFFFFFFFFFULL
 	typedef UINT64	KAFFINITY;
 
 	typedef enum _MODE

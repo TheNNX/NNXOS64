@@ -1,12 +1,13 @@
 #include "text.h"
 
-UINT64 FindCharacterLast(char* string, UINT64 len, char character)
+SIZE_T FindCharacterLast(const char* string, SIZE_T len, char character)
 {
+	SIZE_T current = -1;
+	SIZE_T i;
+
 	NNXAssertAndStop(len != -1, "Cannot find the last character of string with unknown length.");
 
-	UINT64 current = -1;
-
-	for (UINT64 i = 0; i < len; i++)
+	for (i = 0; i < len; i++)
 	{
 		if (string[i] == character)
 		{
@@ -17,9 +18,11 @@ UINT64 FindCharacterLast(char* string, UINT64 len, char character)
 	return current;
 }
 
-UINT64 FindCharacterFirst(char* string, UINT64 len, char character)
+SIZE_T FindCharacterFirst(const char* string, SIZE_T len, char character)
 {
-	for (UINT64 i = 0; i < len; i++)
+	SIZE_T i;
+
+	for (i = 0; i < len; i++)
 	{
 		if (string[i] == character)
 		{
@@ -30,11 +33,11 @@ UINT64 FindCharacterFirst(char* string, UINT64 len, char character)
 	return -1;
 }
 
-UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit)
+SIZE_T IntegerToAsciiBase(ULONG_PTR i, INT8 base, char *b, const char *digit)
 {
-	UINT64 counter = 0;
+	SIZE_T counter = 0;
 	char* p = b;
-	UINT64 shifter = i;
+	SIZE_T shifter = i;
 
 	if (base == 0)
 		return 0;
@@ -89,7 +92,7 @@ UINT64 IntegerToAsciiBase(UINT64 i, INT8 base, char *b, const char *digit)
 /*
 	Negative bases for signed numbers
 */
-UINT64 IntegerToAscii(UINT64 i, INT8 base, char *b)
+SIZE_T IntegerToAscii(ULONG_PTR i, INT8 base, char *b)
 {
 	return IntegerToAsciiBase(i, base, b, "0123456789abcdef");
 }
@@ -98,7 +101,7 @@ UINT64 IntegerToAscii(UINT64 i, INT8 base, char *b)
 /*
 	Negative bases for signed numbers
 */
-UINT64 IntegerToAsciiCapital(UINT64 i, INT8 base, char *b)
+SIZE_T IntegerToAsciiCapital(ULONG_PTR i, INT8 base, char *b)
 {
 	return IntegerToAsciiBase(i, base, b, "0123456789ABCDEF");
 }

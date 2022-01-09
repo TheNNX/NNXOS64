@@ -17,24 +17,23 @@ extern "C"
 	/* TODO */
 	typedef struct _KPCR
 	{
-		PKGDTENTRY64 Gdt;
-		PKTSS Tss;
-		ULONG Reserved[2];
-		struct _KPCR *SelfPcr;
-		struct _KPRCB *Prcb;
-		KIRQL   Irql;
-		ULONG   Reserved1[5];
-		PKIDTENTRY64 Idt;
-		ULONG	Reserved4;
-		ULONG	Reserved2[2];
-		USHORT  MajorVersion;
-		USHORT  MinorVersion;
-		ULONG   Reserved3[36];
+		PKGDTENTRY64	Gdt;
+		PKTSS			Tss;
+		LONG_PTR		CyclesLeft;
+		struct _KPCR	*SelfPcr;
+		struct _KPRCB	*Prcb;
+		KIRQL			Irql;
+		ULONG			Reserved1[5];
+		PKIDTENTRY64	Idt;
+		ULONG			Reserved4[3];
+		USHORT			MajorVersion;
+		USHORT			MinorVersion;
+		ULONG			Reserved3[36];
 	}KPCR, *LPKPCR, *PKPCR;
 
 	PKPCR KeGetPcr();
-	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt);
-	VOID HalpSetupPcrForCurrentCpu(UINT64 id);
+	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
+	VOID HalpSetupPcrForCurrentCpu(UCHAR id);
 
 	typedef struct _KPRCB
 	{
@@ -48,7 +47,7 @@ extern "C"
 		UCHAR NestingLevel;
 		UCHAR Pad0[3];
 		ULONG Number;
-		ULONG64 RspBase;
+		ULONG_PTR CpuCyclesRemaining;
 		KSPIN_LOCK Lock;
 	}KPRCB, *PKPRCB, *LPKRCB;
 

@@ -1,6 +1,6 @@
 #include "pool.h"
 #include <memory/MemoryOperations.h>
-#define NNX_ALLOC_DEBUG 1
+#define NNX_ALLOC_DEBUG 0
 #include <memory/nnxalloc.h>
 #include "bugcheck.h"
 
@@ -17,7 +17,7 @@ PVOID ExAllocatePoolWithTag(POOL_TYPE type, SIZE_T size, ULONG tag)
 	}
 
 	if (type != NonPagedPool)
-		KeBugCheck(BC_HAL_MEMORY_ALLOCATION);
+		KeBugCheck(HAL_MEMORY_ALLOCATION);
 
 	/* TODO: care about pool type */
 	return NNXAllocatorAlloc(size);
@@ -51,5 +51,5 @@ VOID ExFreePoolWithTag(PVOID data, ULONG tag)
 
 VOID ExFreePool(PVOID data)
 {
-	return ExFreePoolWithTag(data, 0);
+	ExFreePoolWithTag(data, 0);
 }

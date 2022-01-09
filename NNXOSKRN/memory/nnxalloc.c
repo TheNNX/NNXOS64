@@ -6,7 +6,7 @@
 #include <HAL/APIC/APIC.h>
 #include <HAL/PIT.h>
 
-MemoryBlock* first;
+MEMORY_BLOCK* first;
 BOOL dirty = FALSE;
 BOOL noMerge = FALSE;
 KSPIN_LOCK AllocatorLock;
@@ -37,8 +37,9 @@ VOID ForceScreenUpdate()
     const UINT32 pad = 10;
     UINT32* cFramebuffer = gFramebuffer + minX;
     UINT32 oldBoundingBox[4], newBoundingBox[4] = { minX, maxX, minY, maxY };
-    UINT32 cursorX, cursorY, oldColor, oldBackground, oldRenderBack, currentPosX, currentPosY, i;
-    UINT32 pixelsUsed = 0;
+    UINT32 cursorX, cursorY, oldColor, oldBackground, currentPosX, currentPosY, i;
+    UINT8 oldRenderBack;
+    UINT64 pixelsUsed = 0;
 
     for (UINT32 y = minY; y < maxY; y++)
     {
@@ -128,11 +129,11 @@ UINT64 CountBlockSize(UINT8 flags)
 {
     UINT64 result = 0;
 
-    MemoryBlock* current = first;
+    MEMORY_BLOCK* current = first;
     while (current)
     {
         if (current->flags == flags || (flags & 0x80))
-            result += current->size + ((flags & 0x80) ? sizeof(MemoryBlock) : 0);
+            result += current->size + ((flags & 0x80) ? sizeof(MEMORY_BLOCK) : 0);
         current = current->next;
     }
 
@@ -161,18 +162,18 @@ UINT64 NNXAllocatorGetFreeMemory()
 
 VOID NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
 {
-	KIRQL Irql;
-	KeAcquireSpinLock(&AllocatorLock, &Irql);
+	KIRQL irql;
+	KeAcquireSpinLock(&AllocatorLock, &irql);
 	if (!first)
     {
         first = memblock;
-        first->size = memblockSize - sizeof(MemoryBlock) - 1;
+        first->size = memblockSize - sizeof(MEMORY_BLOCK) - 1;
         first->next = 0;
         first->flags = MEMBLOCK_FREE;
     }
     else
     {
-        MemoryBlock* current = first;
+        MEMORY_BLOCK* current = first;
         UINT64 i = 0;
         while (current->next)
         {
@@ -181,18 +182,18 @@ VOID NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
         }
 
         current->next = memblock;
-        current->next->size = memblockSize - sizeof(MemoryBlock);
+        current->next->size = memblockSize - sizeof(MEMORY_BLOCK);
         current->next->next = 0;
         current->next->flags = MEMBLOCK_FREE;
     }
     dirty = true;
     UpdateScreen();
-	KeReleaseSpinLock(&AllocatorLock, Irql);
+	KeReleaseSpinLock(&AllocatorLock, irql);
 }
 
 VOID PrintBlocks()
 {
-	MemoryBlock* current = first;
+	MEMORY_BLOCK* current = first;
 
 	while (current)
 	{
@@ -204,8 +205,8 @@ VOID PrintBlocks()
 
 VOID TryMerge()
 {
-	MemoryBlock* current = first;
-	KIRQL Irql;
+	MEMORY_BLOCK* current = first;
+	KIRQL irql;
 
     if (noMerge == TRUE)
     {
@@ -216,18 +217,18 @@ VOID TryMerge()
     PrintT("System memory allocation utility is attempting to merge free memory blocks (%i dirty)\n", dirty);
 
     if (current == 0)
-        return 0;
+        return;
 
-	KeAcquireSpinLock(&AllocatorLock, &Irql);
+	KeAcquireSpinLock(&AllocatorLock, &irql);
 
     dirty = FALSE;
 
     while (current->next)
     {
         if (!(current->flags & MEMBLOCK_USED) && !(current->next->flags & MEMBLOCK_USED) &&
-            (((UINT64) current) + current->size + sizeof(MemoryBlock)) == current->next)
+            ((ULONG_PTR) current + current->size + sizeof(MEMORY_BLOCK)) == (ULONG_PTR)current->next)
         {
-            current->size += current->next->size + sizeof(MemoryBlock);
+            current->size += current->next->size + sizeof(MEMORY_BLOCK);
             current->next = current->next->next;
         }
         else
@@ -238,12 +239,12 @@ VOID TryMerge()
     }
 
     UpdateScreen();
-	KeReleaseSpinLock(&AllocatorLock, Irql);
+	KeReleaseSpinLock(&AllocatorLock, irql);
 }
 
 PVOID NNXAllocatorAllocInternal(UINT64 size)
 {
-    MemoryBlock* current = first;
+    MEMORY_BLOCK* current = first;
 
     while (current)
     {
@@ -269,20 +270,20 @@ PVOID NNXAllocatorAllocInternal(UINT64 size)
                 current->flags |= MEMBLOCK_USED;
                 dirty = TRUE;
                 UpdateScreen();
-                return (void*) (((UINT64) current) + sizeof(MemoryBlock));
+                return (void*) (((UINT64) current) + sizeof(MEMORY_BLOCK));
             }
-            else if (current->size > size + sizeof(MemoryBlock))
+            else if (current->size > size + sizeof(MEMORY_BLOCK))
             {
                 current->flags |= MEMBLOCK_USED;
-                MemoryBlock* newBlock = (MemoryBlock*) ((((UINT64) current) + size + sizeof(MemoryBlock)));
+                MEMORY_BLOCK* newBlock = (MEMORY_BLOCK*) ((((UINT64) current) + size + sizeof(MEMORY_BLOCK)));
                 newBlock->next = current->next;
                 current->next = newBlock;
-                newBlock->size = current->size - (size + sizeof(MemoryBlock));
+                newBlock->size = current->size - (size + sizeof(MEMORY_BLOCK));
                 current->size = size;
                 newBlock->flags = MEMBLOCK_FREE;
                 dirty = TRUE;
                 UpdateScreen();
-                return (void*) (((UINT64) current) + sizeof(MemoryBlock));
+                return (void*) (((UINT64) current) + sizeof(MEMORY_BLOCK));
             }
         }
         current = current->next;
@@ -301,16 +302,16 @@ PVOID NNXAllocatorAllocInternal(UINT64 size)
 
 PVOID NNXAllocatorAllocP(UINT64 size, BOOL debug, UINT64 line, const CHAR* function)
 {
-	PVOID Result;
-	KIRQL Irql;
+	PVOID result;
+	KIRQL irql;
 	if (debug)
-		PrintT("%s(%i) at %s:%i, %i %X\n", __FUNCDNAME__, size, function, line, (UINT64)ApicGetCurrentLapicId(), AllocatorLock.Lock);
-	KeAcquireSpinLock(&AllocatorLock, &Irql);
-	Result = NNXAllocatorAllocInternal(size);
-	KeReleaseSpinLock(&AllocatorLock, Irql);
-	if(AllocatorLock.Lock)
+		PrintT("%s(%i) at %s:%i, %i %X\n", __FUNCDNAME__, size, function, line, (UINT64)ApicGetCurrentLapicId(), AllocatorLock);
+	KeAcquireSpinLock(&AllocatorLock, &irql);
+	result = NNXAllocatorAllocInternal(size);
+	KeReleaseSpinLock(&AllocatorLock, irql);
+	if(AllocatorLock)
 		PrintT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	return Result;
+	return result;
 }
 
 PVOID NNXAllocatorAllocArray(UINT64 n, UINT64 size)
@@ -323,15 +324,15 @@ PVOID NNXAllocatorAllocArray(UINT64 n, UINT64 size)
 
 VOID NNXAllocatorFreeP(PVOID address, BOOL debug, UINT64 line, const CHAR* function)
 {
-	KIRQL Irql;
-	KeAcquireSpinLock(&AllocatorLock, &Irql);
+	KIRQL irql;
+	KeAcquireSpinLock(&AllocatorLock, &irql);
 	if (debug)
-		PrintT("%s(%X) at %s:%i, %i\n", __FUNCDNAME__, address, function, line, (UINT64)ApicGetCurrentLapicId());
+		PrintT("%s(%X) at %s:%i, %i\n", __FUNCDNAME__, address, function, line, (ULONG_PTR)ApicGetCurrentLapicId());
     dirty = true;
-    MemoryBlock* toBeFreed = ((UINT64) address - sizeof(MemoryBlock));
+    MEMORY_BLOCK* toBeFreed = (MEMORY_BLOCK*)((ULONG_PTR) address - sizeof(MEMORY_BLOCK));
     toBeFreed->flags &= (~MEMBLOCK_USED);
     UpdateScreen();
-	KeReleaseSpinLock(&AllocatorLock, Irql);
+	KeReleaseSpinLock(&AllocatorLock, irql);
 }
 
 VOID NNXAllocatorF()

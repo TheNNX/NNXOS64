@@ -1,5 +1,7 @@
 #include "bugcheck.h"
 #include <video/SimpleTextIO.h>
+#include <HAL/IDT.h>
+#include <HAL/APIC/APIC.h>
 
 VOID KeBugCheck(ULONG code)
 {
@@ -11,7 +13,7 @@ __declspec(noreturn) VOID KeStop();
 VOID KeBugCheckEx(ULONG code, 
 				  ULONG_PTR param1, ULONG_PTR param2, ULONG_PTR param3, ULONG_PTR param4)
 {
-	
+	DisableInterrupts();
 	/* TODO: notify other CPUs */
 	if (FALSE)
 	{
@@ -20,18 +22,18 @@ VOID KeBugCheckEx(ULONG code,
 		TextIoSetCursorPosition(0, 8);
 	}
 
-	PrintT("Critical system failure\n");
+	PrintT("\nCore %i\nCritical system failure\n", ApicGetCurrentLapicId());
 
 	/* TODO */
-	if (code == BC_KMODE_EXCEPTION_NOT_HANDLED)
+	if (code == KMODE_EXCEPTION_NOT_HANDLED)
 	{
 		PrintT("KMODE_EXCEPTION_NOT_HANDLED");	
 	}
-	else if (code == BC_PHASE1_INITIALIZATION_FAILED)
+	else if (code == PHASE1_INITIALIZATION_FAILED)
 	{
 		PrintT("PHASE1_INITIALIZATION_FAILED");
 	}
-	else if (code == BC_HAL_INITIALIZATION_FAILED)
+	else if (code == HAL_INITIALIZATION_FAILED)
 	{
 		PrintT("HAL_INITIALIZATION_FAILED");
 	}

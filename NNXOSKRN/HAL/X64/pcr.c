@@ -7,14 +7,11 @@
 PKPCR HalGetPcr();
 VOID HalSetPcr(PKPCR);
 
-VOID HalAcquireLockRaw(UINT64* lock);
-VOID HalReleaseLockRaw(UINT64* lock);
-
-__declspec(align(64)) UINT64 PcrCreationLock = 0;
+KSPIN_LOCK PcrCreationLock = 0;
 
 VOID HalpTaskSwitchHandler();
 
-VOID HalpSetupPcrForCurrentCpu(UINT64 id)
+VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 {
 	PKPCR pcr;
 	PKIDTENTRY64 idt;
@@ -25,7 +22,7 @@ VOID HalpSetupPcrForCurrentCpu(UINT64 id)
 	idt = HalpAllocateAndInitializeIdt();
 	// HalpSetIdtEntry(idt, 0x20, HalpTaskSwitchHandler, TRUE, FALSE);
 
-	pcr = HalCreatePcr(gdt, idt);
+	pcr = HalCreatePcr(gdt, idt, id);
 	HalReleaseLockRaw(&PcrCreationLock);
 }
 
@@ -49,16 +46,17 @@ PKPCR KeGetPcr()
 	return HalGetPcr();
 }
 
-PKPRCB HalCreatePrcb()
+PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 {
 	PKPRCB prcb = (PKPRCB) NNXAllocatorAlloc(sizeof(KPRCB));
 	KeInitializeSpinLock(&prcb->Lock);
 	prcb->CurrentThread = prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
+	prcb->Number = CoreNumber;
 
 	return prcb;
 }
 
-PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt)
+PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 {
 	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
 
@@ -74,7 +72,7 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt)
 
 	pcr->SelfPcr = pcr;
 
-	pcr->Prcb = HalCreatePrcb();
+	pcr->Prcb = HalCreatePrcb(CoreNumber);
 
 	HalSetPcr(pcr);
 

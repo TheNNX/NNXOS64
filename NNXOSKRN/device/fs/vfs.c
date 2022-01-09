@@ -8,16 +8,19 @@ VIRTUAL_FILE_SYSTEM virtualFileSystems[VFS_MAX_NUMBER];
 
 void VfsInit()
 {
+	int i;
 	VFS empty = { 0 };
-	for (int i = 0; i < VFS_MAX_NUMBER; i++)
+	
+	for (i = 0; i < VFS_MAX_NUMBER; i++)
 		virtualFileSystems[i] = empty;
 }
 
-UINT32 VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functions)
+SIZE_T VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functions)
 {
-	UINT32 found = -1;
+	SIZE_T found = -1;
+	SIZE_T i;
 
-	for (UINT32 i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++)
+	for (i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++)
 	{
 		if (virtualFileSystems[i].Drive == 0)
 		{
@@ -33,17 +36,17 @@ UINT32 VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, 
 	return found;
 }
 
-UINT64 VfsReadSector(VIRTUAL_FILE_SYSTEM* vfs, UINT64 n, BYTE* destination)
+VFS_STATUS VfsReadSector(VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* destination)
 {
-	return PciIdeDiskIo(vfs->Drive, 0, vfs->LbaStart + n, 1, destination);
+	return PciIdeDiskIo(vfs->Drive, 0, vfs->LbaStart + sectorIndex, 1, destination);
 }
 
-UINT64 VfsWriteSector(VIRTUAL_FILE_SYSTEM* vfs, UINT64 n, BYTE* source)
+VFS_STATUS VfsWriteSector(VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* source)
 {
-	return PciIdeDiskIo(vfs->Drive, 1, vfs->LbaStart + n, 1, source);
+	return PciIdeDiskIo(vfs->Drive, 1, vfs->LbaStart + sectorIndex, 1, source);
 }
 
-VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(unsigned int n)
+VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(SIZE_T n)
 {
 	return virtualFileSystems + n;
 }
@@ -54,30 +57,35 @@ VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs()
 	return VfsGetPointerToVfs(0);
 }
 
-UINT64 FindFirstSlash(const char * path)
+SIZE_T FindFirstSlash(const char * path)
 {
-	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
-	UINT64 forwardSlash = FindCharacterFirst(path, pathLenght, '/');
-	UINT64 backSlash = FindCharacterFirst(path, pathLenght, '\\');
+	SIZE_T pathLenght = FindCharacterFirst(path, -1, 0);
+	SIZE_T forwardSlash = FindCharacterFirst(path, pathLenght, '/');
+	SIZE_T backSlash = FindCharacterFirst(path, pathLenght, '\\');
 
 	return ((forwardSlash < backSlash) ? (forwardSlash) : (backSlash));
 }
 
-UINT64 FindLastSlash(const char * path)
+SIZE_T FindLastSlash(const char * path)
 {
-	UINT64 pathLenght = FindCharacterFirst(path, -1, 0);
-	UINT64 forwardSlash = FindCharacterLast(path, pathLenght, '/');
-	UINT64 backSlash = FindCharacterLast(path, pathLenght, '\\');
+	SIZE_T pathLenght = FindCharacterFirst(path, -1, 0);
+	SIZE_T forwardSlash = FindCharacterLast(path, pathLenght, '/');
+	SIZE_T backSlash = FindCharacterLast(path, pathLenght, '\\');
+
 	return (((forwardSlash != -1) && ((forwardSlash > backSlash) || (backSlash == -1))) ? (forwardSlash) : (backSlash));
 }
 
-VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path)
+VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, const char* path)
 {
 	VFS_FILE* file = NNXAllocatorAlloc(sizeof(VFS_FILE));
+	SIZE_T pathLength;
+	SIZE_T lastSlash;
+	SIZE_T fileNameLenght;
+	
 	if (!file)
 		return 0;
 
-	UINT64 pathLength = FindCharacterFirst(path, -1, 0) + 1;
+	pathLength = FindCharacterFirst(path, -1, 0) + 1;
 
 	if (pathLength > VFS_MAX_PATH)
 	{
@@ -93,10 +101,10 @@ VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path)
 		return 0;
 	}
 
-	MemCopy(file->Path, path, pathLength);
+	MemCopy(file->Path, (void*)path, pathLength);
 
-	UINT64 lastSlash = FindLastSlash(path) + 1;
-	UINT64 fileNameLenght = pathLength - lastSlash;
+	lastSlash = FindLastSlash(path) + 1;
+	fileNameLenght = pathLength - lastSlash;
 
 	file->Name = NNXAllocatorAlloc(fileNameLenght);
 	if (!file->Name)
@@ -106,7 +114,7 @@ VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path)
 		return 0;
 	}
 
-	MemCopy(file->Name, path + lastSlash, fileNameLenght);
+	MemCopy(file->Name, (void*)(path + lastSlash), fileNameLenght);
 
 	file->Filesystem = filesystem;
 	file->FilePointer = 0;
@@ -122,44 +130,46 @@ VOID VfsDeallocateVfsFile(VFS_FILE* file)
 	NNXAllocatorFree(file);
 }
 
-UINT64 GetParentPathLength(const char * path)
+SIZE_T GetParentPathLength(const char * path)
 {
-	UINT64 lastSlash = FindLastSlash(path);
+	SIZE_T lastSlash = FindLastSlash(path);
 	return lastSlash;
 }
 
-UINT64 GetParentPath(char* path, char* dst)
+SIZE_T GetParentPath(const char* path, char* dst)
 {
-	UINT64 parentPathLength = GetParentPathLength(path);
-	MemCopy(dst, path, parentPathLength);
+	SIZE_T parentPathLength = GetParentPathLength(path);
+	MemCopy(dst, (void*)path, parentPathLength);
 	dst[parentPathLength] = 0;
 	return parentPathLength;
 }
 
-UINT64 GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension)
+SIZE_T GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension)
 {
-	UINT64 length = FindCharacterFirst(path, -1, 0);
-	UINT64 begin = FindLastSlash(path) + 1;
-	UINT64 dot = FindCharacterLast(path + begin, length - begin, '.');
-	UINT64 filenameEnd = dot == -1 ? length - begin : dot;
+	SIZE_T length = FindCharacterFirst(path, -1, 0);
+	SIZE_T begin = FindLastSlash(path) + 1;
+	SIZE_T dot = FindCharacterLast(path + begin, length - begin, '.');
+	SIZE_T filenameEnd = dot == -1 ? length - begin : dot;
+	SIZE_T i, j;
+	
 	NNXAssertAndStop(filenameEnd <= 8, "Invalid filename");
 
-	for (UINT64 i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++)
 		name[i] = ' ';
 
-	for (UINT64 i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++)
 		extension[i] = ' ';
 
-	for (UINT64 i = 0; i < filenameEnd; i++)
+	for (i = 0; i < filenameEnd; i++)
 	{
 		name[i] = (path + begin)[i];
 	}
 	if (dot != -1)
 	{
 		NNXAssertAndStop(length - begin - dot - 1 <= 3, "Invalid extension");
-		for (UINT64 i = 0; i < length - begin - dot - 1; i++)
+		for (j = 0; j < length - begin - dot - 1; j++)
 		{
-			extension[i] = (path + begin + dot + 1)[i];
+			extension[j] = (path + begin + dot + 1)[j];
 		}
 	}
 	return begin;

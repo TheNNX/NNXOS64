@@ -391,7 +391,7 @@ extern "C" {
 		tAMLName = AML_OPCODE_NAMEOPCODE
 	};
 
-	inline void ACPI_ERROR(UINT32 code)
+	inline void AcpiError(UINT32 code)
 	{
 		switch (code)
 		{

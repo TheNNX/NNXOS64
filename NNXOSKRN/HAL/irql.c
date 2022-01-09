@@ -2,7 +2,7 @@
 #include "APIC/APIC.h"
 #include "X64/pcr.h"
 
-/* Aparently, these FASTCALL versions are somewhat-often used and therefore I'll provide them */
+/* Aparently, these FASTCALL versions are somewhat-often used and therefore I'll provide      */
 KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql)
 {
 	return NULL;
@@ -23,4 +23,9 @@ VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL oldIrql)
 VOID NTAPI KeLowerIrql(KIRQL newIrql)
 {
 	KfLowerIrql(newIrql);
+}
+
+KIRQL KeGetCurrentIrql()
+{
+	return 0;
 }

@@ -12,8 +12,8 @@ BOOL RegisterPartition(UINT64 number)
 {
 	VIRTUAL_FILE_SYSTEM* filesystem = VfsGetPointerToVfs(number);
 
-	BPB _bpb, *bpb = &_bpb;
-	VfsReadSector(filesystem, 0, bpb);
+	BPB _bpb = { 0 }, * bpb = &_bpb;
+	VfsReadSector(filesystem, 0, (PBYTE)bpb);
 
 	BYTE *FatTypeInfo = 0, *VolumeLabel = 0;
 	UINT32 serialNumber = 0;
@@ -28,7 +28,7 @@ BOOL RegisterPartition(UINT64 number)
 	else if (bpb->RootEntryCount == 0)
 	{
 		PrintT("FAT32 disk detected\n");
-		BPB_EXT_FAT32* extBPB = &(bpb->_);
+		BPB_EXT_FAT32* extBPB = (BPB_EXT_FAT32*)&(bpb->_);
 		FatTypeInfo = extBPB->FatTypeInfo;
 		if (extBPB->HasNameOrID == 0x29)
 		{
@@ -40,7 +40,7 @@ BOOL RegisterPartition(UINT64 number)
 	else
 	{
 		PrintT("FAT12/16 disk detected\n");
-		BPB_EXT_FAT1X* extBPB = &(bpb->_);
+		BPB_EXT_FAT1X* extBPB = (BPB_EXT_FAT1X*)&(bpb->_);
 		FatTypeInfo = extBPB->FatTypeInfo;
 		if (extBPB->HasNameOrID == 0x29);
 		{
@@ -51,7 +51,7 @@ BOOL RegisterPartition(UINT64 number)
 
 	if (FatTypeInfo)
 	{
-		filesystem->AllocationUnitSize = bpb->SectorsPerCluster * bpb->BytesPerSector;
+		filesystem->AllocationUnitSize = (UINT64)bpb->SectorsPerCluster * (UINT64)bpb->BytesPerSector;
 		BYTE nameCopy[12] = { 0 };
 
 		for (int n = 0; n < 8; n++)
@@ -93,41 +93,41 @@ void DiskCheck()
 	UINT8 diskReadBuffer[4096];
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++)
 	{
-		if (!drives[i].Reserved || drives[i].type)
+		if (!Drives[i].Reserved || Drives[i].type)
 			continue;
 		MBR mbr;
-		PciIdeDiskIo(drives + i, 0, 0, 1, &diskReadBuffer);
+		PciIdeDiskIo(Drives + i, 0, 0, 1, diskReadBuffer);
 		mbr = *((MBR*) diskReadBuffer);
 		if (mbr.mbrtable.magicNumber == MBR_SIGNATURE)
 		{
-			GPT gpt;
-			PciIdeDiskIo(drives + i, 0, 1, 1, &gpt);
+			GPT gpt = { 0 };
+			PciIdeDiskIo(Drives + i, 0, 1, 1, (PBYTE)&gpt);
 
-			UINT32 number = -1;
+			SIZE_T number = -1;
 
-			if (gpt.header.signature == GPT_SIGNATURE)
+			if (gpt.Header.Signature == GPT_SIGNATURE)
 			{
 				//TODO: GPT Disks
 				PrintT("An GPT disk. (todo)\n");
-				UINT32 bytesPerEntry = gpt.header.bytesPerEntry;
-				UINT32 numberOfEntries = gpt.header.numberOfPartitionTableEntries;
-				UINT32 startOfArray = gpt.header.lbaOfPartitionTable;
+				UINT32 bytesPerEntry = gpt.Header.BytesPerEntry;
+				UINT32 numberOfEntries = gpt.Header.NumberOfPartitionTableEntries;
+				UINT64 startOfArray = gpt.Header.LbaOfPartitionTable;
 
 				UINT8 buffer[1024];
 				UINT32 entryNumber = 0;
 
-				UINT32 sectorCountForPartitionArray = (numberOfEntries * bytesPerEntry - 1) / 512 + 1;
-				for (UINT32 currentSector = 0; currentSector < sectorCountForPartitionArray; currentSector++)
+				UINT64 sectorCountForPartitionArray = ((UINT64)numberOfEntries * (UINT64)bytesPerEntry - 1) / 512 + 1;
+				for (UINT64 currentSector = 0; currentSector < sectorCountForPartitionArray; currentSector++)
 				{
-					PciIdeDiskIo(drives + i, 0, startOfArray + currentSector, 2, buffer);
+					PciIdeDiskIo(Drives + i, 0, startOfArray + currentSector, 2, buffer);
 
-					UINT32 entryStartInSector = entryNumber * bytesPerEntry % 512;
-					for (UINT32 currentEntryPos = entryStartInSector; currentEntryPos < 512; currentEntryPos += bytesPerEntry)
+					UINT64 entryStartInSector = entryNumber * bytesPerEntry % 512;
+					for (UINT64 currentEntryPos = entryStartInSector; currentEntryPos < 512; currentEntryPos += bytesPerEntry)
 					{
-						GPTPartitionEntry* entry = (buffer + currentEntryPos);
-						if (!GPTCompareGUID(entry->typeGUID, GPT_EMPTY_TYPE))
+						GPT_PARTITION_ENTRY* entry = (GPT_PARTITION_ENTRY*)(buffer + currentEntryPos);
+						if (!GptCompareGuid(entry->TypeGuid, GPT_EMPTY_TYPE))
 						{
-							number = VfsAddPartition(drives + i, entry->lbaPartitionStart, entry->lbaPartitionEnd - entry->lbaPartitionStart - 1, FatVfsInterfaceGetFunctionSet());
+							number = VfsAddPartition(Drives + i, entry->LbaPartitionStart, entry->LbaPartitionEnd - entry->LbaPartitionStart - 1, FatVfsInterfaceGetFunctionSet());
 							FatInitVfs(VfsGetPointerToVfs(number));
 						}
 						entryNumber++;
@@ -144,7 +144,7 @@ void DiskCheck()
 					if (entry.partitionSizeInSectors == 0)
 						continue;
 
-					number = VfsAddPartition(drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FatVfsInterfaceGetFunctionSet());
+					number = VfsAddPartition(Drives + i, entry.partitionStartLBA28, entry.partitionSizeInSectors, FatVfsInterfaceGetFunctionSet());
 					FatInitVfs(VfsGetPointerToVfs(number));
 				}
 			}

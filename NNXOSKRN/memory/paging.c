@@ -2,6 +2,7 @@
 #include "video/SimpleTextIo.h"
 #include "physical_allocator.h"
 #include "MemoryOperations.h"
+#include <HAL/spinlock.h>
 
 /*
     Virtual memory layout:
@@ -27,6 +28,7 @@
 #define RecursivePagingPML4Size                    PAGE_SIZE_SMALL
 
 extern BOOL HalpInteruptInitialized;
+KSPIN_LOCK PagingSpinlock;
 
 VOID PagingTLBFlushPage(UINT64 page)
 {
@@ -56,7 +58,7 @@ BOOL PagingCheckIsPageIndexFree(UINT64 pageIndex)
     return FALSE;
 }
 
-VOID* PagingFindFreePages(UINT64 min, UINT64 max, UINT64 count)
+ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count)
 {
     UINT64 i;
 
@@ -105,38 +107,42 @@ VOID* PagingFindFreePages(UINT64 min, UINT64 max, UINT64 count)
     return -1LL;
 }
 
-VOID* PagingAllocatePageWithPhysicalAddress(UINT64 min, UINT64 max, UINT16 flags, VOID* physPage)
+ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage)
 {
-    UINT64 result = PagingFindFreePages(min, max, 1);
+    KIRQL irql;
+    ULONG_PTR result;
+    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    result = PagingFindFreePages(min, max, 1);
     PagingMapPage(result, physPage, flags);
+    KeReleaseSpinLock(&PagingSpinlock, irql);
     return ToCanonicalAddress(result);
 }
 
-VOID* PagingAllocatePageEx(UINT64 min, UINT64 max, UINT16 flags, UINT8 physMemType)
+ULONG_PTR PagingAllocatePageEx(ULONG_PTR min, ULONG_PTR max, UINT16 flags, UINT8 physMemType)
 {
-    return PagingAllocatePageWithPhysicalAddress(min, max, flags, InternalAllocatePhysicalPageWithType(physMemType));
+    return PagingAllocatePageWithPhysicalAddress(min, max, flags, (ULONG_PTR)InternalAllocatePhysicalPageWithType(physMemType));
 }
 
-VOID* PagingAllocatePageFromRange(UINT64 min, UINT64 max)
+ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max)
 {
     UINT16 user = (min < PAGING_KERNEL_SPACE && max < PAGING_KERNEL_SPACE) ? (PAGE_USER) : 0;
     return PagingAllocatePageEx(min, max, PAGE_PRESENT | PAGE_WRITE | user, MEM_TYPE_USED);
 }
 
-VOID* PagingAllocatePage()
+ULONG_PTR PagingAllocatePage()
 {
     return PagingAllocatePageFromRange(0, (PML4EntryForRecursivePaging - 1) * PDP_COVERED_SIZE - 1);
 }
 
-VOID PagingMapPage(VOID* v, VOID* p, UINT16 f)
+VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
 {
     UINT64 ptIndex, pdIndex, pdpIndex, pml4Index, vUINT;
     UINT64* const cRecursivePagingPML4Base = RecursivePagingPML4Base;
     UINT64* const cRecursivePagingPDPsBase = RecursivePagingPDPsBase;
     UINT64* const cRecursivePagingPDsBase = RecursivePagingPDsBase;
     UINT64* const cRecursivePagingPTsBase = RecursivePagingPTsBase;
-    v = (PVOID) PAGE_ALIGN(v);
-    p = (PVOID) PAGE_ALIGN(p);
+    v = PAGE_ALIGN(v);
+    p = PAGE_ALIGN(p);
     vUINT = (UINT64) v; /* used to avoid annoying type casts */
     vUINT &= 0xFFFFFFFFFFFF; /* ignore bits 63-48, they are just a sign extension */
 
@@ -200,17 +206,17 @@ VOID SetupCR0()
     SetCR0(CR0);
 }
 
-UINT64 PhysicalAddressFunctionAllocPages(UINT64 irrelevant, UINT64 relativeIrrelevant, UINT8 physMemoryType)
+ULONG_PTR PhysicalAddressFunctionAllocPages(ULONG_PTR irrelevant, ULONG_PTR relativeIrrelevant, UINT8 physMemoryType)
 {
-    return InternalAllocatePhysicalPageWithType(physMemoryType);
+    return (ULONG_PTR)InternalAllocatePhysicalPageWithType(physMemoryType);
 }
 
-UINT64 PhysicalAddressFunctionIdentify(UINT64 a, UINT64 b, UINT8 physMemoryType)
+ULONG_PTR PhysicalAddressFunctionIdentify(ULONG_PTR a, ULONG_PTR b, UINT8 physMemoryType)
 {
     return a;
 }
 
-UINT64 PhysicalAddressFunctionKernel(UINT64 a, UINT64 b, UINT8 physMemoryType)
+ULONG_PTR PhysicalAddressFunctionKernel(ULONG_PTR a, ULONG_PTR b, UINT8 physMemoryType)
 {
     return KERNEL_INITIAL_ADDRESS + b;
 }
@@ -218,9 +224,9 @@ UINT64 PhysicalAddressFunctionKernel(UINT64 a, UINT64 b, UINT8 physMemoryType)
 extern PBYTE GlobalPhysicalMemoryMap;
 extern UINT64 GlobalPhysicalMemoryMapSize;
 
-UINT64 PhysicalAddressFunctionGlobalMemoryMap(UINT64 address, UINT64 relativeAddrss, UINT8 physMemoryType)
+UINT64 PhysicalAddressFunctionGlobalMemoryMap(ULONG_PTR address, ULONG_PTR relativeAddrss, UINT8 physMemoryType)
 {
-    return PAGE_ALIGN((UINT64) GlobalPhysicalMemoryMap) + relativeAddrss;
+    return PAGE_ALIGN((ULONG_PTR) GlobalPhysicalMemoryMap) + relativeAddrss;
 }
 
 
@@ -273,18 +279,19 @@ const UINT64 loaderTemporaryKernelPTSize = 32;
 
 /*    
     TODO: Map ACPI structures, so they're always accessible
-    (and mark them as used in the GlobalPhysicalMemoryMap)
+    (and mark      as used in the GlobalPhysicalMemoryMap)
 
     Perhaps it should be done on structure first use, ex.
     when the OS retrieves the RDSP it should map it, and set
     the pointer to the updated value. Later, upon (X/R)SDT's
-    first usage, map them, change their pointer in the RDSP
-    (ACPI doesn't use the tables once it creates them, right?? right??)
+    first usage, map     , change their pointer in the RDSP
+    (ACPI doesn't use the tables once it creates     , right?? right??)
 */
 
 VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
 {
-    UINT64 *PML4, const pageTableKernelReserve = 16, RSP;
+    UINT64 *pml4, rsp;
+    const UINT64 pageTableKernelReserve = 16;
     const UINT64 virtualGlobalPhysicalMemoryMap = ToCanonicalAddress((KERNEL_DESIRED_PML4_ENTRY * 512 * 512 + pageTableKernelReserve) * 512 * 4096);
     
     GlobalPhysicalMemoryMap = pbPhysicalMemoryMap;
@@ -292,29 +299,29 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
     
     SetupCR0();
     SetupCR4();
-    RSP = GetRSP();
+    rsp = GetRSP();
 
-    PML4 = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
-    MemSet(PML4, 0, PAGE_SIZE_SMALL);
+    pml4 = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
+    MemSet(pml4, 0, PAGE_SIZE_SMALL);
 
     /* for loader-temporary kernel */
-    InternalPagingAllocatePagingStructures(PML4, 0, 0, loaderTemporaryKernelPTStart, loaderTemporaryKernelPTSize, PhysicalAddressFunctionIdentify, 0, MEM_TYPE_USED);
+    InternalPagingAllocatePagingStructures(pml4, 0, 0, loaderTemporaryKernelPTStart, loaderTemporaryKernelPTSize, PhysicalAddressFunctionIdentify, 0, MEM_TYPE_USED);
 
     /* for stack */
-    InternalPagingAllocatePagingStructures(PML4, 0, 0, RSP / PAGE_SIZE_SMALL / 512 - 2, 3, PhysicalAddressFunctionIdentify, 0, MEM_TYPE_USED_PERM);
+    InternalPagingAllocatePagingStructures(pml4, 0, 0, rsp / PAGE_SIZE_SMALL / 512 - 2, 3, PhysicalAddressFunctionIdentify, 0, MEM_TYPE_USED_PERM);
 
     /* for main kernel */
-    InternalPagingAllocatePagingStructures(PML4, KERNEL_DESIRED_PML4_ENTRY, 0, 0, pageTableKernelReserve, PhysicalAddressFunctionKernel, PAGE_GLOBAL, MEM_TYPE_USED_PERM);
+    InternalPagingAllocatePagingStructures(pml4, KERNEL_DESIRED_PML4_ENTRY, 0, 0, pageTableKernelReserve, PhysicalAddressFunctionKernel, PAGE_GLOBAL, MEM_TYPE_USED_PERM);
 
     /* for physical memory map */
-    InternalPagingAllocatePagingStructures(PML4, KERNEL_DESIRED_PML4_ENTRY, 0, pageTableKernelReserve,
+    InternalPagingAllocatePagingStructures(pml4, KERNEL_DESIRED_PML4_ENTRY, 0, pageTableKernelReserve,
                                            dwPhysicalMemoryMapSize / (PAGE_SIZE_SMALL * 512) + 2, PhysicalAddressFunctionGlobalMemoryMap, 0, MEM_TYPE_USED_PERM);
 
     /* for recursive paging */
-    PML4[PML4EntryForRecursivePaging] = ((UINT64) PML4) | (PAGE_WRITE | PAGE_PRESENT);
+    pml4[PML4EntryForRecursivePaging] = ((UINT64) pml4) | (PAGE_WRITE | PAGE_PRESENT);
     GlobalPhysicalMemoryMap = (PBYTE)(virtualGlobalPhysicalMemoryMap | (((UINT64) pbPhysicalMemoryMap) & 0xFFF));
 
-    SetCR3((UINT64)PML4);
+    SetCR3((UINT64)pml4);
 }
 
 VOID PagingMapFramebuffer()
@@ -353,38 +360,58 @@ VOID PagingKernelInit()
 
 }
 
-PVOID PagingAllocatePageBlockWithPhysicalAddresses(UINT64 n, UINT64 min, UINT64 max, UINT16 flags, PVOID physFirstPage)
+ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage)
 {
     UINT64 i;
-    PVOID virt = PagingFindFreePages(min, max, n);
+    ULONG_PTR virt;
+    KIRQL irql;
+
+    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    virt = PagingFindFreePages(min, max, n);
     for (i = 0; i < n; i++)
     {
-        PagingMapPage(((UINT64)virt) + i * PAGE_SIZE_SMALL, ((UINT64)physFirstPage) + i * PAGE_SIZE_SMALL, flags);
+        PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, (ULONG_PTR)physFirstPage + i * PAGE_SIZE_SMALL, flags);
     }
+    KeReleaseSpinLock(&PagingSpinlock, irql);
 
 	return virt;
 }
 
-PVOID PagingAllocatePageBlock(UINT64 n, UINT16 flags)
+ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags)
 {
     UINT64 i;
-    PVOID virt = PagingFindFreePages(0, (1ULL << 47ULL) - PAGE_SIZE_SMALL, n);
+    ULONG_PTR virt;
+    KIRQL irql;
+
+    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    virt = PagingFindFreePages(min, max, n);
     for (i = 0; i < n; i++)
     {
-        PagingMapPage(((UINT64)virt) + i * PAGE_SIZE_SMALL, InternalAllocatePhysicalPageWithType(MEM_TYPE_USED), flags);
+        PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, (ULONG_PTR)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED), flags);
     }
+    KeReleaseSpinLock(&PagingSpinlock, irql);
 
-	return virt;
+    return virt;
 }
 
-ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT8 flags)
+ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags)
+{
+    return PagingAllocatePageBlockEx(n, 0, (1ULL << 47ULL) - PAGE_SIZE_SMALL, flags);
+}
+
+ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max)
+{
+    return PagingAllocatePageBlockEx(n, min, max, PAGE_PRESENT | PAGE_WRITE);
+}
+
+ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags)
 {
 	ULONG_PTR virt = (ULONG_PTR) PagingAllocatePageBlockWithPhysicalAddresses(
 		(PAGE_ALIGN(physicalAddress + structureSize) - PAGE_ALIGN(physicalAddress)) / PAGE_SIZE_SMALL + 1,
 		PAGING_KERNEL_SPACE,
 		PAGING_KERNEL_SPACE_END,
 		flags,
-		(PVOID) PAGE_ALIGN(physicalAddress));
+		PAGE_ALIGN(physicalAddress));
 
 	ULONG_PTR delta = physicalAddress - PAGE_ALIGN(physicalAddress);
 	return virt + delta;

@@ -122,7 +122,9 @@ extern "C" {
 	void PciScanBus(UINT8 bus);
 	void PciScanDevice(UINT8 bus, UINT8 device);
 	void PciScanFunction(UINT8 bus, UINT8 device, UINT8 function);
-
+	UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+	UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+	VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UINT8 byte);
 #ifdef __cplusplus
 }
 #endif

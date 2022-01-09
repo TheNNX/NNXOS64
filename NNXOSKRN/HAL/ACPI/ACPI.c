@@ -20,7 +20,7 @@ ACPI_RSDT* GetRsdt(ACPI_RDSP* rdsp)
 
 	if (gRsdt == NULL)
 	{
-		gRsdt = PagingMapStrcutureToVirtual(rdsp->RSDTAddress, sizeof(ACPI_RSDT), PAGE_PRESENT | PAGE_WRITE);
+		gRsdt = (ACPI_RSDT*)PagingMapStrcutureToVirtual(rdsp->RSDTAddress, sizeof(ACPI_RSDT), PAGE_PRESENT | PAGE_WRITE);
 		PrintT("Allocated RSDT %X\n", gRsdt);
 	}
 	return gRsdt;
@@ -40,7 +40,7 @@ ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp)
 	}
 	if (gXsdt == NULL)
 	{
-		gXsdt = PagingMapStrcutureToVirtual(rdsp->v20.XSDTAddress, sizeof(ACPI_XSDT), PAGE_PRESENT | PAGE_WRITE);
+		gXsdt = (ACPI_XSDT*)PagingMapStrcutureToVirtual((ULONG_PTR)rdsp->v20.XSDTAddress, sizeof(ACPI_XSDT), PAGE_PRESENT | PAGE_WRITE);
 		PrintT("Allocated XSDT %X\n", gXsdt);
 	}
 
@@ -58,7 +58,7 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 	{
 		rsdt = GetRsdt(rdsp);
 		
-		if (!rsdt || !AcpiVerifySdt(rsdt))
+		if (!rsdt || !AcpiVerifySdt((ACPI_SDT_HEADER*)rsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_RSDT;
 			return 0;
@@ -70,7 +70,7 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 	{
 		xsdt = GetXsdt(rdsp);
 
-		if (!xsdt || !AcpiVerifySdt(xsdt))
+		if (!xsdt || !AcpiVerifySdt((ACPI_SDT_HEADER*)xsdt))
 		{
 			localLastError = ACPI_ERROR_INVALID_XSDT;
 			return 0;
@@ -81,7 +81,7 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 
 	for (a = 0; a < numberOfEntries; a++)
 	{
-		ACPI_SDT_HEADER* tableAddress = (xsdt == 0) ? ((ACPI_SDT_HEADER*) rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
+		ACPI_SDT_HEADER* tableAddress = (xsdt == 0) ? ((ACPI_SDT_HEADER*) (ULONG_PTR)rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
 
 		if (*((UINT32*) name) == *((UINT32*) tableAddress->Signature))
 			return (ACPI_FADT*) tableAddress;

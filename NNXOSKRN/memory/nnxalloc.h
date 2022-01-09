@@ -4,12 +4,12 @@
 
 #include <nnxtype.h>
 
-typedef struct MemoryBlock
+typedef struct _MEMORY_BLOCK
 {
     UINT64 size;
-    struct MemoryBlock* next;
+    struct _MEMORY_BLOCK* next;
     UINT8 flags;
-}MemoryBlock;
+}MEMORY_BLOCK, *PMEMORY_BLOCK;
 
 #pragma pack(pop)
 

@@ -1,7 +1,6 @@
 #ifndef NNX_VFS_HEADER
 #define NNX_VFS_HEADER
 
-#include "../../HAL/PCI/PCIIDE.h"
 #include "../../HAL/PCI/PCI.h"
 #include "../../memory/nnxalloc.h"
 #include "../../../NNXOSKRN/HAL/spinlock.h"
@@ -10,6 +9,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+	typedef ULONG VFS_STATUS;
 
 	typedef struct VFS_FILE
 	{
@@ -22,7 +23,7 @@ extern "C" {
 
 	typedef struct VFS_FUNCTION_SET
 	{
-		BOOL(*CheckIfFileExists)(struct VIRTUAL_FILE_SYSTEM* filesystem, char* path);
+		BOOL(*CheckIfFileExists)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
 
 		/* Allocate and initialize VFS_FILE structure */
 		VFS_FILE* (*OpenFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
@@ -34,28 +35,30 @@ extern "C" {
 		VOID(*CloseFile)(VFS_FILE* file);
 
 		/* Delete the file without closing the structure */
-		UINT64(*DeleteFile)(VFS_FILE* file);
+		VFS_STATUS(*DeleteFile)(VFS_FILE* file);
 
 		/* Delete the file and deallocate VFS_FILE structure */
-		UINT64(*DeleteAndCloseFile)(VFS_FILE* file);
+		VFS_STATUS(*DeleteAndCloseFile)(VFS_FILE* file);
 
 		/* Create file at given Path*/
-		UINT64(*CreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
+		VFS_STATUS(*CreateFile)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
 
 		/* Create a file for a given VFS_FILE structure of a file deleted by DeleteFile */
-		UINT64(*RecreateDeletedFile)(VFS_FILE* file);
+		VFS_STATUS(*RecreateDeletedFile)(VFS_FILE* file);
 
 		/* This does NOT modify the file pointer */
-		UINT64(*AppendFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
+		VFS_STATUS(*AppendFile)(VFS_FILE* file, SIZE_T size, VOID* buffer);
 
-		UINT64(*ResizeFile)(VFS_FILE* file, UINT64 newsize);
-		UINT64(*WriteFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
-		UINT64(*ReadFile)(VFS_FILE* file, UINT64 size, VOID* buffer);
+		VFS_STATUS(*ResizeFile)(VFS_FILE* file, SIZE_T newsize);
+		VFS_STATUS(*WriteFile)(VFS_FILE* file, SIZE_T size, VOID* buffer);
+		VFS_STATUS(*ReadFile)(VFS_FILE* file, SIZE_T size, VOID* buffer);
 
-		UINT64(*CreateDirectory)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
-		UINT64(*MoveFile)(const char* oldPath, const char* newPath);
-		UINT64(*RenameFile)(VFS_FILE* file, const char* newFileName);
+		VFS_STATUS(*CreateDirectory)(struct VIRTUAL_FILE_SYSTEM* filesystem, const char* path);
+		VFS_STATUS(*MoveFile)(const char* oldPath, const char* newPath);
+		VFS_STATUS(*RenameFile)(VFS_FILE* file, const char* newFileName);
 	} VFS_FUNCTION_SET;
+
+	typedef struct _IDE_DRIVE IDE_DRIVE;
 
 	typedef struct VIRTUAL_FILE_SYSTEM
 	{
@@ -67,6 +70,7 @@ extern "C" {
 		VOID* FilesystemSpecificData;
 		KSPIN_LOCK DeviceSpinlock;
 	}VIRTUAL_FILE_SYSTEM, VFS;
+
 
 #define VFS_ERR_INVALID_FILENAME			0xFFFF0001
 #define VFS_ERR_INVALID_PATH				0xFFFF0002
@@ -80,27 +84,27 @@ extern "C" {
 #define VFS_ERR_FILE_ALREADY_EXISTS			0xFFFF000A
 #define VFS_ERR_ARGUMENT_INVALID				0xFFFF000B
 
-#define VFS_MAX_PATH (4096 - sizeof(MemoryBlock) - 1)
+#define VFS_MAX_PATH (4096 - sizeof(MEMORY_BLOCK) - 1)
 
 	void VfsInit();
-	UINT32 VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functionSet);
-	VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(unsigned int n);
+	SIZE_T VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functionSet);
+	VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(SIZE_T n);
 	VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs();
-	UINT64 VfsReadSector(VIRTUAL_FILE_SYSTEM*, UINT64 n, BYTE* destination);
-	UINT64 VfsWriteSector(VIRTUAL_FILE_SYSTEM*, UINT64 n, BYTE* source);
-	VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, char* path);
+	VFS_STATUS VfsReadSector(VIRTUAL_FILE_SYSTEM*, SIZE_T sectorIndex, BYTE* destination);
+	VFS_STATUS VfsWriteSector(VIRTUAL_FILE_SYSTEM*, SIZE_T sectorIndex, BYTE* source);
+	VFS_FILE* VfsAllocateVfsFile(VFS* filesystem, const char* path);
 	VOID VfsDeallocateVfsFile(VFS_FILE* vfsFile);
 
-	UINT64 FindFirstSlash(const char * path);
-	UINT64 FindLastSlash(const char * path);
+	SIZE_T FindFirstSlash(const char * path);
+	SIZE_T FindLastSlash(const char * path);
 
 	/* REMEMBER TO RESERVE SPACE FOR NULL TERMINATOR (THIS FUNCTION'S RESULT HAS TO BE INCREMENTED BY 1, IN ORDER TO USE THIS STRING) */
-	UINT64 GetParentPathLength(const char * path);
+	SIZE_T GetParentPathLength(const char * path);
 
 	/* REMEMBER TO RESERVE SPACE FOR NULL TERMINATION */
-	UINT64 GetParentPath(char* path, char* dst);
+	SIZE_T GetParentPath(const char* path, char* dst);
 
-	UINT64 GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension);
+	SIZE_T GetFileNameAndExtensionFromPath(const char * path, char* name, char* extension);
 
 #ifdef __cplusplus
 }
