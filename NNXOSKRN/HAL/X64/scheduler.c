@@ -198,9 +198,6 @@ static VOID Test()
 NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThread, UINT8 coreNumber) 
 {
     NTSTATUS status;
-    UINT64 originalAddressSpace;
-    ULONG_PTR idleThreadTempUserProc;
-    PETHREAD newThread, newThread2;
 
     status = PspCreateProcessInternal(IdleProcess);
     if (status)
@@ -208,32 +205,9 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
 
     (*IdleProcess)->Pcb.AffinityMask = (1ULL << (ULONG_PTR)coreNumber);
 
-    originalAddressSpace = GetCR3();
-
-    SetCR3((UINT64)(*IdleProcess)->Pcb.AddressSpacePhysicalPointer);
-
-    idleThreadTempUserProc = PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
-    MemCopy((PVOID)idleThreadTempUserProc, PspTestAsmUser, ((ULONG_PTR)PspTestAsmUserEnd) - ((ULONG_PTR)PspTestAsmUser));
-
-    SetCR3(originalAddressSpace);
-
-    status = PspCreateThreadInternal(IdleThread, *IdleProcess, FALSE, idleThreadTempUserProc);
+    status = PspCreateThreadInternal(IdleThread, *IdleProcess, TRUE, (ULONG_PTR)PspIdleThreadProcedure);
     if (status)
         return status;
-
-    status = PspCreateThreadInternal(&newThread, *IdleProcess, FALSE, idleThreadTempUserProc);
-    if (status)
-        return status;
-
-    status = PspCreateThreadInternal(&newThread2, *IdleProcess, FALSE, idleThreadTempUserProc);
-    if (status)
-        return status;
-
-    newThread->Tcb.ThreadPriority = +5;
-    PsCheckThreadIsReady(&newThread->Tcb);
-
-    newThread2->Tcb.ThreadPriority = +2;
-    PsCheckThreadIsReady(&newThread2->Tcb);
 
     (*IdleThread)->Tcb.ThreadPriority = 0;
 
@@ -319,73 +293,6 @@ PVOID PspCreateAddressSpace()
 
     return (PVOID)physicalPML4;
 }
-
-NTSTATUS PspDebugTest2()
-{
-    BOOL kernelMode = FALSE;
-    PEPROCESS process1, process2;
-    PETHREAD thread1, thread2;
-    NTSTATUS status;
-    ULONG_PTR code1, code2;
-
-    process1 = NULL;
-    process2 = NULL;
-    thread1 = NULL;
-    thread2 = NULL;
-
-    status = PspCreateProcessInternal(&process1);
-    if (status)
-    {
-        return status;
-    }
-
-    status = PspCreateProcessInternal(&process2);
-    if (status)
-    {
-        PspDestroyProcessInternal(process1);
-        return status;
-    }
-    
-    DebugFramebufferPosition = gFramebuffer + gPixelsPerScanline * (DebugFramebufferLen + 2);
-
-    SetCR3((UINT64) process1->Pcb.AddressSpacePhysicalPointer);
-    code1 = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
-    MemCopy((PVOID)code1, PspTestAsmUser, ((ULONG_PTR) PspTestAsmUserEnd) - ((ULONG_PTR) PspTestAsmUser));
-    status = PspCreateThreadInternal(&thread1, process1, kernelMode, code1);
-    if (status)
-    {
-        PspDestroyProcessInternal(process1);
-        PspDestroyProcessInternal(process2);
-        return status;
-    }
-
-    SetCR3((UINT64) process2->Pcb.AddressSpacePhysicalPointer);
-    code2 = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
-    MemCopy((PVOID)code2, PspTestAsmUser, ((ULONG_PTR) PspTestAsmUserEnd) - ((ULONG_PTR) PspTestAsmUser));
-    status = PspCreateThreadInternal(&thread2, process2, kernelMode, code2);
-    if (status)
-    {
-        PspDestroyThreadInternal(thread1);
-        PspDestroyProcessInternal(process1);
-        PspDestroyProcessInternal(process2);
-        return status;
-    }
-
-    thread1->Tcb.ThreadState = THREAD_STATE_READY;
-    thread2->Tcb.ThreadState = THREAD_STATE_READY;
-    process1->Initialized = TRUE;
-    process2->Initialized = TRUE;
-
-    HalpUpdateThreadKernelStack((PVOID)((ULONG_PTR)thread1->Tcb.KernelStackPointer + sizeof(KTASK_STATE)));
-
-    KeGetPcr()->Prcb->CurrentThread = &thread1->Tcb;
-    KeGetPcr()->Prcb->NextThread = &thread2->Tcb;
-    
-    SetCR3((ULONG_PTR)process1->Pcb.AddressSpacePhysicalPointer);
-    PspSwitchContextTo64(thread1->Tcb.KernelStackPointer);
-}
-
-INT64 i = 0, j = 0;
 
 ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 {

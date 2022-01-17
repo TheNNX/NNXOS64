@@ -7,17 +7,21 @@
 
 func HalpUpdateThreadKernelStack 
     push QWORD rdi
-    mov QWORD rdi, [gs:0x08] 
+    mov QWORD rdi, [gs:0x08]
+    ; set RSP0
     mov QWORD [rdi+0x04], rcx
+    ; set IST1 (used for ring 0 to ring 0 task switch)
+    mov QWORD [rdi+0x24], rcx
     add QWORD [rdi+0x04], 152
     pop QWORD rdi
     ret
 
 [extern ApicSendEoi]
 func HalpTaskSwitchHandler
+    ; TODO: nested interrupts?
     ; interupts during sheduling and context switching are not desired
     ; other interupts should be nestable, though
-    ; RFLAGS are already pushed onto the stack, no need to (re)store     
+    ; RFLAGS are already pushed onto the stack, no need to (re)store   
     cli
     
     cmp QWORD [rsp+8], 0x08

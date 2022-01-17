@@ -5,11 +5,9 @@
 #include "GDT.h"
 #include "../memory/physical_allocator.h"
 
-BOOL HalpInteruptInitialized;
-
 VOID KeStop();
 
-VOID DefHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
+VOID DefExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
 	PrintT("error: %x %x at RIP 0x%X\n\nRegisters:\nRAX %X  RBX %X  RCX %X  RDX %X\nRDI %X  RSI %X  RSP %X  RBP %X\nCR2 %X", n, errcode, rip,
 		   GetRAX(), GetRBX(), GetRCX(), GetRDX(),
@@ -18,34 +16,14 @@ VOID DefHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	);
 }
 
-VOID(*gExceptionHandlerPtr) (UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip) = DefHandler;
+VOID HalpDefInterruptHandler();
+VOID(*gExceptionHandlerPtr) (UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip) = DefExceptionHandler;
 
 void ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
 	gExceptionHandlerPtr(n, errcode, errcode2, rip);
 	KeStop();
 }
-
-void IrqHandler(UINT64 n)
-{
-	PrintT("AAAAAAAAAAAAAAAAAAA%x\n", n);
-	while (1);
-	if (n == 1)
-	{
-		UINT8 character = KeyboardInterrupt();
-		switch (character)
-		{
-			case 0:
-				return;
-			default:
-				PrintT("%c", character);
-				return;
-				/* TODO: AddKeyToKeyboardBuffer(character); */
-		};
-	}
-}
-
-void IntTestASM();
 
 ULONG HalpGetGdtBase(KGDTENTRY64 entry)
 {
@@ -57,36 +35,25 @@ PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
 	return (PKTSS)(HalpGetGdtBase(tssEntryLow) | ((*((UINT64*) &tssEntryHigh)) << 32UL));
 }
 
-VOID PrintIdt(PKIDTENTRY64 idt, int to)
+VOID HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Usermode, BOOL Trap)
 {
-	for (int entryNo = 0; entryNo < to; entryNo++)
-		PrintT("IDT[%i] (0x%X) set: %X 0x%X\n", 
-			   entryNo, 
-			   idt + entryNo, 
-			   (UINT64) idt[entryNo].Type, 
-			   ((UINT64)idt[entryNo].Offset0to15) | (((UINT64)idt[entryNo].Offset16to31) << 16ULL) | (((UINT64)idt[entryNo].Offset32to63) << 32ULL)
-		);
+	Idt[EntryNo].Selector = 0x8;
+	Idt[EntryNo].Zero = 0;
+	Idt[EntryNo].Offset0to15 = (UINT16) (((ULONG_PTR) Handler) & UINT16_MAX);
+	Idt[EntryNo].Offset16to31 = (UINT16) ((((ULONG_PTR) Handler) >> 16) & UINT16_MAX);
+	Idt[EntryNo].Offset32to63 = (UINT32) ((((ULONG_PTR) Handler) >> 32) & UINT32_MAX);
+	Idt[EntryNo].Type = 0x8E | (Usermode ? (0x60) : 0x00) | (Trap ? 0 : 1);
+	Idt[EntryNo].Ist = 0;
 }
 
-VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL usermode, BOOL trap)
+VOID HalpSetInterruptIdt(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
 {
-	idt[entryNo].Selector = 0x8;
-	idt[entryNo].Zero = 0;
-	idt[entryNo].Offset0to15 = (UINT16) (((ULONG_PTR) handler) & UINT16_MAX);
-	idt[entryNo].Offset16to31 = (UINT16) ((((ULONG_PTR) handler) >> 16) & UINT16_MAX);
-	idt[entryNo].Offset32to63 = (UINT32) ((((ULONG_PTR) handler) >> 32) & UINT32_MAX);
-	idt[entryNo].Type = 0x8E | (usermode ? (0x60) : 0x00) | (trap ? 0 : 1);
-	idt[entryNo].Ist = 0;
-}
-
-VOID Irq0C()
-{
-	PrintT("Timer tick\n");
+	Idt[EntryNo].Ist = Ist;
 }
 
 KIDTENTRY64* HalpAllocateAndInitializeIdt()
 {
-	void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
+	const void(*interrupts[])() = { Exception0, Exception1, Exception2, Exception3,
 								Exception4, Exception5, Exception6, Exception7,
 								Exception8, ExceptionReserved, Exception10, Exception11,
 								Exception12, Exception13, Exception14, ExceptionReserved,
@@ -97,6 +64,7 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 								HalpTaskSwitchHandler, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 								IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
+
 	KIDTR64* idtr = (KIDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
 	PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
 
@@ -106,18 +74,25 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 	for (int a = 0; a < 128; a++)
 	{
 		VOID(*handler)();
-		handler = IntTestASM;
+		handler = HalpDefInterruptHandler;
 
 		if (a < sizeof(interrupts) / sizeof(*interrupts))
-			handler = interrupts[a];
+			handler = (VOID(*)())interrupts[a];
 
 		HalpSetIdtEntry(idt, a, handler, FALSE, FALSE);
+		if (handler == HalpTaskSwitchHandler)
+		{
+			HalpSetInterruptIdt(idt, a, 1);
+		}
 	}
 
 	HalpLoadIdt(idtr);
 
-	HalpInteruptInitialized = TRUE;
 	return idt;
+}
+
+VOID IrqHandler(UINT64 a)
+{
 }
 
 /* TODO: move code below to GDT.c */

@@ -19,7 +19,6 @@ extern "C"
 
 	BOOL ApicBspLapicInitialized = FALSE;
 	ULONG_PTR HalpTimerTicksPerSecond = 0;
-	extern BOOL HalpInteruptInitialized;
 	extern UINT8* GlobalPhysicalMemoryMap;
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;

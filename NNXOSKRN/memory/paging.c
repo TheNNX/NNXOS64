@@ -27,7 +27,6 @@
 #define RecursivePagingPML4Base                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDPsBase + (UINT64)RecursivePagingPDPsSizePreBoundary))
 #define RecursivePagingPML4Size                    PAGE_SIZE_SMALL
 
-extern BOOL HalpInteruptInitialized;
 KSPIN_LOCK PagingSpinlock;
 
 VOID PagingTLBFlushPage(UINT64 page)
@@ -170,14 +169,6 @@ VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
         cRecursivePagingPDsBase[pdIndex] = ((UINT64) InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM)) | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64) cRecursivePagingPTsBase + 512 * pdIndex);
         MemSet(cRecursivePagingPTsBase + 512 * pdIndex, 0, PAGE_SIZE_SMALL);
-    }
-
-    if (cRecursivePagingPTsBase[ptIndex])
-    {
-        if (HalpInteruptInitialized)
-        {
-            PrintT("Warning: page overriden %x to %x (%x/%x)\n", cRecursivePagingPTsBase[ptIndex], ((UINT64) p) | f, ptIndex, v);
-        }
     }
 
     cRecursivePagingPTsBase[ptIndex] = ((UINT64) p) | f;

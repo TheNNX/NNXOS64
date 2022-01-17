@@ -81,7 +81,7 @@ func HalpLoadIdt
 	lidt [rcx]
 	ret
 
-func IntTestASM
+func HalpDefInterruptHandler
 	iretq
 
 func HalpStoreIdt
@@ -140,28 +140,6 @@ exception_error 0xffffffffffffffff
 func IrqHandlerInternal
 	call IrqHandler
 	ret
-
-[EXTERN ApicSendEoi]
-[EXTERN Irq0C]
-func IRQ0
-	pushf
-	cli
-	cmp QWORD [rsp+8], 0x08
-	je .noswap
-	swapgs
-.noswap:
-	popf
-	pushstate
-	
-	call Irq0C
-	call ApicSendEoi
-	
-	popstate
-	cmp QWORD [rsp+8], 0x08
-	je .noswapExit
-	swapgs
-.noswapExit:
-	iretq
 
 irq 1
 irq 2
