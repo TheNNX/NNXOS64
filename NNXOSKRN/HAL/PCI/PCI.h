@@ -1,7 +1,7 @@
 #ifndef NNX_PCI_HEADER
 #define NNX_PCI_HEADER
 #include <nnxtype.h>
-#include "../../video/SimpleTextIo.h"
+#include <SimpleTextIo.h>
 
 #ifdef __cplusplus
 extern "C" {

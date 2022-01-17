@@ -1,8 +1,8 @@
-#include <memory/nnxalloc.h>
+#include <nnxalloc.h>
 #include "pcr.h"
-#include <HAL/GDT.h>
-#include <HAL/IDT.h>
-#include <video/SimpleTextIo.h>
+#include <HAL/x64/GDT.h>
+#include <HAL/x64/IDT.h>
+#include <SimpleTextIo.h>
 
 PKPCR HalGetPcr();
 VOID HalSetPcr(PKPCR);

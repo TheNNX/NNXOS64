@@ -9,8 +9,8 @@
 #define PRINT_IN_DEBUG_ONLY
 
 #include "AML.h"
-#include "memory/nnxalloc.h"
-#include "memory/MemoryOperations.h"
+#include <nnxalloc.h>
+#include <MemoryOperations.h>
 
 #ifndef  NULL
 #define NULL 0

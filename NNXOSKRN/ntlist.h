@@ -2,7 +2,7 @@
 #define NNX_NT_LIST_HEADER
 
 #include <nnxtype.h>
-#include "HAL/spinlock.h"
+#include <HAL/spinlock.h>
 
 typedef struct _LIST_ENTRY
 {

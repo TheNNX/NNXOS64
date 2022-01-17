@@ -1,50 +1,7 @@
 #ifndef NNX_PAGING_HEADER
 #define NNX_PAGING_HEADER
 #include <nnxtype.h>
-#include "../HAL/registers.h"
 
-#define PML4EntryForRecursivePaging 510ULL
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-    VOID PagingInit(PBYTE PhysMemoryMap, SIZE_T PhysMemMapSize);
-    VOID PagingKernelInit();
-    ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage);
-    ULONG_PTR PagingAllocatePageEx(ULONG_PTR min, ULONG_PTR max, UINT16 flags, UINT8 physMemType);
-    ULONG_PTR PagingAllocatePage();
-    ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max);
-    VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f);
-    VOID PagingTLBFlush();
-    VOID PagingTLBFlushPage(ULONG_PTR page);
-    ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage);
-    ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max);
-    ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags);
-    VOID PagingMapFramebuffer();
-    ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags);
-    VOID PagingInvalidatePage(ULONG_PTR);
-    ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count);
-
-#ifdef _M_AMD64
-    inline UINT64 ToCanonicalAddress(UINT64 address)
-    {
-        return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
-    }
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#define PML4_COVERED_SIZE 0x1000000000000ULL
-#define PDP_COVERED_SIZE 0x8000000000ULL
-#define PD_COVERED_SIZE 0x40000000ULL
-#define PT_COVERED_SIZE 0x200000ULL
-#define PAGE_SIZE_SMALL 4096ULL
-
-#define PAGE_ADDRESS_MASK 0xFFF
 #define PAGE_PRESENT 1
 #define PAGE_WRITE 2
 #define PAGE_USER 4
@@ -67,5 +24,43 @@ extern "C"
 #define PAGE_READ 0
 #define PAGE_NOT_PRESENT 0
 
+#define PAGE_SIZE 4096
+#define PAGE_ADDRESS_MASK 0xFFF
 #define PAGE_ALIGN(x) (((UINT64)x)&(~PAGE_ADDRESS_MASK))
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    VOID PagingInit(PBYTE PhysMemoryMap, SIZE_T PhysMemMapSize);
+    VOID PagingKernelInit();
+    ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage);
+    ULONG_PTR PagingAllocatePageEx(ULONG_PTR min, ULONG_PTR max, UINT16 flags, UINT8 physMemType);
+    ULONG_PTR PagingAllocatePage();
+    ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max);
+    VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f);
+    VOID PagingTLBFlush();
+    VOID PagingTLBFlushPage(ULONG_PTR page);
+    ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage);
+    ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max);
+    ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags);
+    VOID PagingMapFramebuffer();
+    ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags);
+    VOID PagingInvalidatePage(ULONG_PTR);
+    ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count);
+    ULONG_PTR PagingCreateAddressSpace();
+    ULONG_PTR PagingGetAddressSpace();
+    VOID PagingSetAddressSpace(ULONG_PTR);
+#ifdef _M_AMD64
+    inline UINT64 ToCanonicalAddress(UINT64 address)
+    {
+        return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
+    }
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

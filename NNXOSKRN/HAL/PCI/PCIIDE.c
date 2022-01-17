@@ -1,5 +1,5 @@
 #include "HAL/PCI/PCIIDE.h"
-#include "video/SimpleTextIo.h"
+#include <SimpleTextIo.h>
 #include "HAL/Port.h"
 #include "device/hdd/hdd.h"
 

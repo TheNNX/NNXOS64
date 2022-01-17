@@ -1,6 +1,6 @@
 #include "cpu.h"
 #include "pcr.h"
-#include <HAL/registers.h>
+#include "registers.h"
 
 VOID HalSetPcr(PKPCR pcr)
 {

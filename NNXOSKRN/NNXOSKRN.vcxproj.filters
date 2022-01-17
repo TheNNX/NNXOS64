@@ -90,23 +90,8 @@
     <ClCompile Include="HAL\ACPI\AML.cpp">
       <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\APIC\APIC.CPP">
-      <Filter>Source Files\HAL\APIC</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\MP\MP.cpp">
-      <Filter>Source Files\HAL\MP</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\spinlock.c">
-      <Filter>Source Files\HAL</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\irql.c">
-      <Filter>Source Files\HAL</Filter>
-    </ClCompile>
     <ClCompile Include="HAL\X64\pcr.c">
       <Filter>Source Files\HAL\X64</Filter>
-    </ClCompile>
-    <ClCompile Include="bugcheck.c">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HAL\X64\cpu.c">
       <Filter>Source Files\HAL\X64</Filter>
@@ -120,29 +105,11 @@
     <ClCompile Include="text.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\IDT.c">
-      <Filter>Source Files\HAL</Filter>
-    </ClCompile>
     <ClCompile Include="HAL\PCI\PCI.c">
       <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
     <ClCompile Include="HAL\PCI\PCIIDE.c">
       <Filter>Source Files\HAL\PCI</Filter>
-    </ClCompile>
-    <ClCompile Include="memory\MemoryOperations.c">
-      <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="memory\nnxalloc.c">
-      <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="memory\paging.c">
-      <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="memory\physical_allocator.c">
-      <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="video\SimpleTextIO.c">
-      <Filter>Source Files\video</Filter>
     </ClCompile>
     <ClCompile Include="device\Keyboard.c">
       <Filter>Source Files\device</Filter>
@@ -180,6 +147,39 @@
     <ClCompile Include="kobject.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\IDT.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\irql.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\APIC.CPP">
+      <Filter>Source Files\HAL\APIC</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\MP.cpp">
+      <Filter>Source Files\HAL\MP</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\paging.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\physical_allocator.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryOperations.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxalloc.c">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleTextIO.c">
+      <Filter>Source Files\video</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\spinlock.c">
+      <Filter>Source Files\HAL</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\bugcheck.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -187,18 +187,6 @@
     </ClInclude>
     <ClInclude Include="HAL\ACPI\AMLCPP.h">
       <Filter>Header Files\HAL\ACPI</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\APIC\APIC.h">
-      <Filter>Header Files\HAL\APIC</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\MP\MP.h">
-      <Filter>Header Files\HAL\MP</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\irql.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\spinlock.h">
-      <Filter>Header Files\HAL</Filter>
     </ClInclude>
     <ClInclude Include="HAL\X64\pcr.h">
       <Filter>Header Files\HAL\X64</Filter>
@@ -218,24 +206,6 @@
     <ClInclude Include="klist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\PIC.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\PIT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\Port.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\registers.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\IDT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\GDT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
     <ClInclude Include="HAL\PCI\PCIIDE.h">
       <Filter>Header Files\HAL\PCI</Filter>
     </ClInclude>
@@ -248,29 +218,11 @@
     <ClInclude Include="nnxlog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxosdbg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="nnxcfg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="nnxllist.hpp">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\MemoryOperations.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\nnxalloc.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\paging.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="memory\physical_allocator.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="video\SimpleTextIO.h">
-      <Filter>Header Files\video</Filter>
     </ClInclude>
     <ClInclude Include="device\fs\vfs.h">
       <Filter>Header Files\device\fs</Filter>
@@ -302,11 +254,53 @@
     <ClInclude Include="ntlist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HAL\X64\IDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\GDT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\PIC.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\PIT.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\registers.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\APIC.h">
+      <Filter>Header Files\HAL\APIC</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\irql.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\paging.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxalloc.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryOperations.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleTextIO.h">
+      <Filter>Header Files\video</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\physical_allocator.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\Port.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\spinlock.h">
+      <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\MP.h">
+      <Filter>Header Files\HAL\MP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\MP\ApEntry.asm">
-      <Filter>Source Files\HAL\MP</Filter>
-    </CustomBuild>
     <CustomBuild Include="HAL\X64\pcr.asm">
       <Filter>Source Files\HAL\X64</Filter>
     </CustomBuild>
@@ -316,25 +310,28 @@
     <CustomBuild Include="HAL\X64\thread.asm">
       <Filter>Source Files\HAL\X64</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\GDT.asm">
+    <CustomBuild Include="HAL\X64\IDT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\IDT.asm">
+    <CustomBuild Include="HAL\X64\GDT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\PIC.asm">
+    <CustomBuild Include="HAL\X64\PIC.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\PIT.asm">
+    <CustomBuild Include="HAL\X64\PIT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\Port.asm">
+    <CustomBuild Include="HAL\X64\Port.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\registers.asm">
+    <CustomBuild Include="HAL\X64\registers.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
-    <CustomBuild Include="memory\memory.asm">
+    <CustomBuild Include="HAL\X64\ApEntry.asm">
+      <Filter>Source Files\HAL\MP</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\X64\memory.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>

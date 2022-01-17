@@ -2,8 +2,8 @@
 #define NNX_MP_HEADER
 
 #include <nnxtype.h>
-#include <HAL/GDT.h>
-#include <HAL/IDT.h>
+#include <HAL/X64/GDT.h>
+#include <HAL/X64/IDT.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +12,7 @@ extern "C" {
 	VOID ApProcessorInit(UINT8 lapicID);
 
 #pragma pack(push, 1)
-	typedef struct ApData
+	typedef struct _AP_DATA
 	{
 		UINT16 ApSpinlock;
 		UINT8 Padding[62];
@@ -22,7 +22,7 @@ extern "C" {
 		VOID(*ApProcessorInit)(UINT8 lapicId);
 		KGDTR64 ApGdtr;
 		_KIDTR64 ApIdtr;
-	}ApData;
+	}AP_DATA;
 #pragma pack(pop)
 
 #ifdef __cplusplus

@@ -2,7 +2,6 @@
 #define NNX_TEXT_HEADER
 
 #include <nnxtype.h>
-#include "nnxosdbg.h"
 
 #ifdef __cplusplus
 extern "C" {

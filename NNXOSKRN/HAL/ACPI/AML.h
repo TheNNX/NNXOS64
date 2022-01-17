@@ -14,7 +14,7 @@ AS LONG AS IT WORKS (WHICH AT THE MOMENT
 IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 */
 
-#include "video/SimpleTextIo.h"
+#include <SimpleTextIo.h>
 #include <nnxtype.h>
 #include "nnxllist.hpp"
 

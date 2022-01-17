@@ -1,6 +1,6 @@
-#include "irql.h"
-#include "APIC/APIC.h"
-#include "X64/pcr.h"
+#include <HAL/irql.h>
+#include <HAL/X64/APIC.H>
+#include <HAL/x64/pcr.h>
 
 /* Aparently, these FASTCALL versions are somewhat-often used and therefore I'll provide      */
 KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql)

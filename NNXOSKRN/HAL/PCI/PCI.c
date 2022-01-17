@@ -1,6 +1,6 @@
 #include "PCI.h"
-#include "video/SimpleTextIo.h"
-#include "HAL/Port.h"
+#include <SimpleTextIo.h>
+#include <HAL/Port.h>
 #include "device/fs/mbr.h"
 #include "device/fs/gpt.h"
 

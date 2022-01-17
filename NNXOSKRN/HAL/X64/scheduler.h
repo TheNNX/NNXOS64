@@ -2,7 +2,7 @@
 #define NNX_SHEDULER_HEADER
 
 #include "cpu.h"
-#include "../spinlock.h"
+#include <HAL/spinlock.h>
 #include <object.h>
 
 #ifdef __cplusplus
@@ -26,7 +26,7 @@ extern "C" {
 		*/
 		UCHAR BasePriority;
 		KAFFINITY AffinityMask;
-		PVOID AddressSpacePhysicalPointer;
+		ULONG_PTR AddressSpacePhysicalPointer;
 		LIST_ENTRY ThreadListHead;
 		UINT64 NumberOfThreads;
 		/**

@@ -1,9 +1,9 @@
 #ifndef NNX_VFS_HEADER
 #define NNX_VFS_HEADER
 
-#include "../../HAL/PCI/PCI.h"
-#include "../../memory/nnxalloc.h"
-#include "../../../NNXOSKRN/HAL/spinlock.h"
+#include <HAL/PCI/PCI.h>
+#include <nnxalloc.h>
+#include <HAL/spinlock.h>
 #define VFS_MAX_NUMBER 64
 
 #ifdef __cplusplus

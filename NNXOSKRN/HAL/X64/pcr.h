@@ -2,9 +2,9 @@
 #define NNX_PCR_HEADER
 
 #include <nnxtype.h>
-#include "../spinlock.h"
-#include <HAL/GDT.h>
-#include <HAL/IDT.h>
+#include <HAL/spinlock.h>
+#include <HAL/X64/GDT.h>
+#include <HAL/X64/IDT.h>
 #include "../irql.h"
 
 #ifdef __cplusplus

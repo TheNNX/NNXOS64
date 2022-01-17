@@ -1,7 +1,7 @@
 #ifndef NNX_LIST_HEADER
 #define NNX_LIST_HEADER
-#include "video/SimpleTextIo.h"
-#include "memory/nnxalloc.h"
+#include <SimpleTextIo.h>
+#include <nnxalloc.h>
 #ifdef __cplusplus
 template<typename T> struct NNXLinkedListEntry
 {

@@ -7,10 +7,10 @@ extern "C"
 {
 #endif
 
-    PVOID InternalAllocatePhysicalPage();
-    UINT8 InternalFreePhysicalPage(void*);
-    PVOID InternalAllocatePhysicalPageEx(UINT8 type, UINT64 seekFromAddress, UINT64 seekToAddress);
-    PVOID InternalAllocatePhysicalPageWithType(UINT8 type);
+    ULONG_PTR InternalAllocatePhysicalPage();
+    UINT8 InternalFreePhysicalPage(ULONG_PTR);
+    ULONG_PTR InternalAllocatePhysicalPageEx(UINT8 type, ULONG_PTR seekFromAddress, ULONG_PTR seekToAddress);
+    ULONG_PTR InternalAllocatePhysicalPageWithType(UINT8 type);
     
 #define MEM_TYPE_USED 0
 #define MEM_TYPE_FREE 1

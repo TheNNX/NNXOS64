@@ -1,9 +1,9 @@
 #include "IDT.h"
-#include "video/SimpleTextIo.h"
+#include <SimpleTextIo.h>
 #include "device/Keyboard.h"
 #include "registers.h"
 #include "GDT.h"
-#include "../memory/physical_allocator.h"
+#include <HAL/paging.h>
 
 VOID KeStop();
 

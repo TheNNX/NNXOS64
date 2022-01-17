@@ -1,12 +1,12 @@
 #define NNX_ALLOC_DEBUG 1
-#include <memory/nnxalloc.h>
+#include <nnxalloc.h>
 #include "APIC.h"
-#include <HAL/PIC.h>
-#include <memory/paging.h>
-#include <memory/physical_allocator.h>
+#include "PIC.h"
+#include <HAL/paging.h>
+#include <HAL/physical_allocator.h>
 #include <nnxlog.h>
 #include <device/fs/fat.h>
-#include <HAL/PIT.h>
+#include "PIT.h"
 #include "../spinlock.h"
 
 extern "C" 
@@ -45,10 +45,10 @@ public:
 			PAGING_KERNEL_SPACE,
 			PAGING_KERNEL_SPACE_END,
 			PAGE_WRITE | PAGE_PRESENT | PAGE_NO_CACHE,
-			((ULONG_PTR) IoApicBasePhys) & PAGE_SIZE_SMALL
+			((ULONG_PTR) IoApicBasePhys) & PAGE_SIZE
 		);
 		
-		this->IoApicBase = (volatile UINT32*) (((UINT64)this->IoApicBase) + (((UINT64)IoApicBasePhys) & PAGE_SIZE_SMALL));
+		this->IoApicBase = (volatile UINT32*) (((UINT64)this->IoApicBase) + (((UINT64)IoApicBasePhys) & PAGE_SIZE));
 		this->Id = (ReadRegister(0x00) >> 24) & 0xF0;
 		this->RedirectionEntriesCount = (ReadRegister(0x01) >> 16) + 1;
 
@@ -259,10 +259,10 @@ extern "C"
 			PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, 
 			PAGE_PRESENT | PAGE_WRITE, PAGE_ALIGN(ApicLocalApicBase)
 		);
-		ApicVirtualLocalApicBase += (ApicLocalApicBase % PAGE_SIZE_SMALL);
+		ApicVirtualLocalApicBase += (ApicLocalApicBase % PAGE_SIZE);
 
 		/* ensure the physical page is marked as used in the memory map */
-		GlobalPhysicalMemoryMap[ApicLocalApicBase / PAGE_SIZE_SMALL] = MEM_TYPE_USED_PERM;
+		GlobalPhysicalMemoryMap[ApicLocalApicBase / PAGE_SIZE] = MEM_TYPE_USED_PERM;
 
 		ApicLocalApicInitializeCore();
 	}

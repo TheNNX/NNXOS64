@@ -1,17 +1,16 @@
 #include <HAL/ACPI/AML.h>
-#include <video/SimpleTextIo.h>
+#include <SimpleTextIo.h>
 #include <nnxcfg.h>
-#include <memory/paging.h>
-#include <memory/physical_allocator.h>
-#include <HAL/IDT.h>
-#include <HAL/APIC/APIC.h>
+#include <HAL/paging.h>
+#include <HAL/physical_allocator.h>
 #include <device/fs/vfs.h>
-#include <HAL/MP/MP.h>
+#include <HAL/x64/MP.h>
+#include <HAL/X64/APIC.h>
 #include "bugcheck.h"
 #include "HAL/X64/cpu.h"
 #include "HAL/X64/pcr.h"
 #include "HAL/X64/scheduler.h"
-#include <HAL/PIT.h>
+#include <HAL/X64/PIT.h>
 #include <nnxlog.h>
 
 int basicallyATest = 0;

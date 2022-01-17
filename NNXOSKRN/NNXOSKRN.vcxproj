@@ -184,7 +184,7 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bugcheck.c" />
+    <ClCompile Include="HAL\X64\bugcheck.c" />
     <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\gpt.c" />
     <ClCompile Include="device\fs\vfs.c" />
@@ -192,13 +192,13 @@
     <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
-    <ClCompile Include="HAL\APIC\APIC.CPP" />
-    <ClCompile Include="HAL\IDT.c" />
-    <ClCompile Include="HAL\irql.c" />
-    <ClCompile Include="HAL\MP\MP.cpp" />
+    <ClCompile Include="HAL\X64\APIC.CPP" />
+    <ClCompile Include="HAL\X64\IDT.c" />
+    <ClCompile Include="HAL\X64\irql.c" />
+    <ClCompile Include="HAL\X64\MP.cpp" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
-    <ClCompile Include="HAL\spinlock.c" />
+    <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
     <ClCompile Include="HAL\X64\scheduler.c" />
@@ -209,17 +209,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="memory\MemoryOperations.c" />
-    <ClCompile Include="memory\nnxalloc.c" />
-    <ClCompile Include="memory\paging.c" />
-    <ClCompile Include="memory\physical_allocator.c" />
+    <ClCompile Include="MemoryOperations.c" />
+    <ClCompile Include="nnxalloc.c" />
+    <ClCompile Include="HAL\X64\paging.c" />
+    <ClCompile Include="HAL\X64\physical_allocator.c" />
     <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="ntlist.c" />
     <ClCompile Include="ntqueue.c" />
     <ClCompile Include="pool.c" />
     <ClCompile Include="text.c" />
-    <ClCompile Include="video\SimpleTextIO.c" />
+    <ClCompile Include="SimpleTextIO.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bugcheck.h" />
@@ -232,39 +232,38 @@
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
-    <ClInclude Include="HAL\APIC\APIC.h" />
-    <ClInclude Include="HAL\GDT.h" />
-    <ClInclude Include="HAL\IDT.h" />
+    <ClInclude Include="HAL\X64\APIC.h" />
+    <ClInclude Include="HAL\X64\GDT.h" />
+    <ClInclude Include="HAL\X64\IDT.h" />
     <ClInclude Include="HAL\irql.h" />
-    <ClInclude Include="HAL\MP\MP.h" />
+    <ClInclude Include="HAL\X64\MP.h" />
     <ClInclude Include="HAL\PCI\PCI.h" />
     <ClInclude Include="HAL\PCI\PCIIDE.h" />
-    <ClInclude Include="HAL\PIC.h" />
-    <ClInclude Include="HAL\PIT.h" />
+    <ClInclude Include="HAL\X64\PIC.h" />
+    <ClInclude Include="HAL\X64\PIT.h" />
     <ClInclude Include="HAL\Port.h" />
-    <ClInclude Include="HAL\registers.h" />
+    <ClInclude Include="HAL\X64\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
     <ClInclude Include="HAL\X64\scheduler.h" />
     <ClInclude Include="HAL\X64\pcr.h" />
     <ClInclude Include="klist.h" />
-    <ClInclude Include="memory\MemoryOperations.h" />
-    <ClInclude Include="memory\nnxalloc.h" />
-    <ClInclude Include="memory\paging.h" />
-    <ClInclude Include="memory\physical_allocator.h" />
+    <ClInclude Include="MemoryOperations.h" />
+    <ClInclude Include="nnxalloc.h" />
+    <ClInclude Include="HAL\paging.h" />
+    <ClInclude Include="HAL\physical_allocator.h" />
     <ClInclude Include="nnxcfg.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxlog.h" />
-    <ClInclude Include="nnxosdbg.h" />
     <ClInclude Include="ntlist.h" />
     <ClInclude Include="ntqueue.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="pool.h" />
     <ClInclude Include="text.h" />
-    <ClInclude Include="video\SimpleTextIO.h" />
+    <ClInclude Include="SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\MP\ApEntry.asm">
+    <CustomBuild Include="HAL\X64\ApEntry.asm">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">nasm -f bin %(FullPath) -o $(IntDir)..\..\image\APSTART.BIN</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">nasm -f bin %(FullPath) -o $(IntDir)..\..\image\APSTART.BIN</Command>
@@ -297,27 +296,27 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\GDT.asm">
+    <CustomBuild Include="HAL\X64\GDT.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\IDT.asm">
+    <CustomBuild Include="HAL\X64\IDT.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\PIC.asm">
+    <CustomBuild Include="HAL\X64\PIC.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\PIT.asm">
+    <CustomBuild Include="HAL\X64\PIT.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\Port.asm">
+    <CustomBuild Include="HAL\X64\Port.asm">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="HAL\registers.asm">
+    <CustomBuild Include="HAL\X64\registers.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="memory\memory.asm">
+    <CustomBuild Include="HAL\X64\memory.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

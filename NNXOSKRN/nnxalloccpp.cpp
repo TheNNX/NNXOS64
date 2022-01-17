@@ -1,4 +1,4 @@
-#include "memory/nnxalloc.h"
+#include <nnxalloc.h>
 
 void* operator new(size_t a)
 {

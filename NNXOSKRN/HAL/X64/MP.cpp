@@ -1,9 +1,9 @@
 #define NNX_ALLOC_DEBUG 1
-#include <memory/nnxalloc.h>
+#include <nnxalloc.h>
 #include "MP.h"
-#include "../APIC/APIC.h"
-#include <HAL/PIT.h>
-#include <memory/paging.h>
+#include "APIC.h"
+#include "PIT.h"
+#include <HAL/paging.h>
 #include <device/fs/vfs.h>
 #include "../X64/pcr.h"
 #include <bugcheck.h>
@@ -18,7 +18,7 @@ extern "C" {
 		VFS_FILE* apCodeFile;
 		VFS* systemPartition;
 		PVOID code = (PVOID) 0x0000;
-		ApData* data = (ApData*) (((UINT64) code) + 0x800);
+		_AP_DATA* data = (_AP_DATA*) (((UINT64) code) + 0x800);
 		systemPartition = VfsGetSystemVfs();
 
 		apCodeFile = systemPartition->Functions.OpenFile(systemPartition, (char*)"EFI\\BOOT\\APSTART.BIN");
@@ -33,7 +33,7 @@ extern "C" {
 			systemPartition->Functions.CloseFile(apCodeFile);
 		}
 
-		data->ApCR3 = GetCR3();
+		data->ApCR3 = PagingGetAddressSpace();
 		data->ApStackPointerArray = ApStackPointerArray;
 		data->ApProcessorInit = ApProcessorInit;
 		HalpStoreGdt(&data->ApGdtr);
@@ -83,7 +83,7 @@ extern "C" {
 			if (ApicLocalApicIDs[i] == currentLapicId)
 				continue;
 
-			ApStackPointerArray[i] = (PVOID)((ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE_SMALL);
+			ApStackPointerArray[i] = (PVOID)((ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
 			ApicInitIpi(ApicLocalApicIDs[i], 0x00);
 			PitUniprocessorPollSleepMs(10);
 

@@ -5,8 +5,6 @@ SIZE_T FindCharacterLast(const char* string, SIZE_T len, char character)
 	SIZE_T current = -1;
 	SIZE_T i;
 
-	NNXAssertAndStop(len != -1, "Cannot find the last character of string with unknown length.");
-
 	for (i = 0; i < len; i++)
 	{
 		if (string[i] == character)

@@ -1,10 +1,9 @@
 #include "vfs.h"
-#include "../../memory/nnxalloc.h"
-#include "../../memory/MemoryOperations.h"
+#include <nnxalloc.h>
+#include <MemoryOperations.h>
 #include "fat.h"
 #include "fat32.h"
-#include "../../nnxosdbg.h"
-#include "../../text.h"
+#include <text.h>
 
 #define DEBUG_STATUS PrintT("[%s:%i] %x\n", __FUNCTION__, __LINE__, status);
 

@@ -1,10 +1,10 @@
 #include "nnxalloc.h"
-#include "../video/SimpleTextIo.h"
+#include <SimpleTextIo.h>
 #include "MemoryOperations.h"
 #include "text.h"
 #include <HAL/spinlock.h>
-#include <HAL/APIC/APIC.h>
-#include <HAL/PIT.h>
+#include <HAL/x64/APIC.h>
+#include <HAL/x64/PIT.h>
 
 MEMORY_BLOCK* first;
 BOOL dirty = FALSE;

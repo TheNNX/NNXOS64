@@ -1,8 +1,16 @@
-#include "paging.h"
-#include "video/SimpleTextIo.h"
-#include "physical_allocator.h"
-#include "MemoryOperations.h"
+#include "../paging.h"
+#include <SimpleTextIo.h>
+#include <HAL/physical_allocator.h>
+#include <MemoryOperations.h>
 #include <HAL/spinlock.h>
+#include <HAL/X64/registers.h>
+
+#define PML4EntryForRecursivePaging 510ULL
+#define PML4_COVERED_SIZE 0x1000000000000ULL
+#define PDP_COVERED_SIZE 0x8000000000ULL
+#define PD_COVERED_SIZE 0x40000000ULL
+#define PT_COVERED_SIZE 0x200000ULL
+#define PAGE_SIZE_SMALL 4096ULL
 
 /*
     Virtual memory layout:
@@ -55,6 +63,19 @@ BOOL PagingCheckIsPageIndexFree(UINT64 pageIndex)
     }
 
     return FALSE;
+}
+
+ULONG_PTR PagingCreateAddressSpace()
+{
+    ULONG_PTR physicalPML4 = (ULONG_PTR) InternalAllocatePhysicalPage();
+    ULONG_PTR virtualPML4 = PagingAllocatePageWithPhysicalAddress(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, PAGE_PRESENT | PAGE_WRITE, physicalPML4);
+
+    MemSet((UINT8*) virtualPML4, 0, PAGE_SIZE);
+
+    ((UINT64*) virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
+    ((UINT64*) virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = ((UINT64*) GetCR3())[KERNEL_DESIRED_PML4_ENTRY];
+
+    return physicalPML4;
 }
 
 ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count)
@@ -292,7 +313,7 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
     SetupCR4();
     rsp = GetRSP();
 
-    pml4 = InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
+    pml4 = (UINT64*)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED_PERM);
     MemSet(pml4, 0, PAGE_SIZE_SMALL);
 
     /* for loader-temporary kernel */
@@ -406,4 +427,14 @@ ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structur
 
 	ULONG_PTR delta = physicalAddress - PAGE_ALIGN(physicalAddress);
 	return virt + delta;
+}
+
+ULONG_PTR PagingGetAddressSpace()
+{
+    return (ULONG_PTR) GetCR3();
+}
+
+VOID PagingSetAddressSpace(ULONG_PTR AddressSpace)
+{
+    SetCR3(AddressSpace);
 }

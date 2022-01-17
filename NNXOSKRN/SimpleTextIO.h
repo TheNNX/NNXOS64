@@ -6,8 +6,8 @@ extern "C"
 #endif
 
 #include <nnxtype.h>
-#include "nnxarg.h"
-#include "../nnxcfg.h"
+#include <nnxarg.h>
+#include <nnxcfg.h>
 
 	void TextIoSetBoundingBox(UINT32 *boundingBox);
 	void TextIoGetBoundingBox(UINT32 *boundingBox);

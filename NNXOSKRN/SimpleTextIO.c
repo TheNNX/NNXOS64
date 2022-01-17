@@ -1,7 +1,7 @@
 
 #include  "SimpleTextIo.h"
-#include "memory/physical_allocator.h"
-#include "memory/MemoryOperations.h"
+#include <HAL/physical_allocator.h>
+#include "MemoryOperations.h"
 #include "text.h"
 
 #define TIMES8(x) x x x x x x x x

@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 #include <nnxtype.h>
-#include "irql.h"
-#include <video/SimpleTextIO.h>
+#include <HAL/irql.h>
+#include <SimpleTextIO.h>
 
 #pragma warning(push)
 #pragma warning(disable: 4324)

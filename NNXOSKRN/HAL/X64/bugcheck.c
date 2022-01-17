@@ -1,7 +1,8 @@
 #include "bugcheck.h"
-#include <video/SimpleTextIO.h>
-#include <HAL/IDT.h>
-#include <HAL/APIC/APIC.h>
+#include <SimpleTextIO.h>
+#include <HAL/X64/IDT.h>
+#include <HAL/X64/APIC.h>
+#include <HAL/X64/registers.h>
 
 VOID KeBugCheck(ULONG code)
 {

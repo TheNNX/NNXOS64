@@ -1,7 +1,8 @@
 #include "device/Keyboard.h"
-#include "video/SimpleTextIo.h"
-#include "HAL/Port.h"
-#include "HAL/IDT.h"
+#include <SimpleTextIo.h>
+#include <HAL/Port.h>
+
+
 
 KEY_STATE state;
 UINT8 ScancodeSet = 0;
@@ -144,7 +145,6 @@ UINT8 KeyboardInterrupt()
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
 
-	DisableInterrupts();
 	if (!keyboardInitialized)
 		return 0;
 	UINT8 scancode = inb(KEYBOARD_PORT);
@@ -171,13 +171,11 @@ UINT8 KeyboardInterrupt()
 
 UINT8 GetScancodeSet()
 {
-	DisableInterrupts();
 	outb(KEYBOARD_PORT, 0xf0);
 	while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
 	outb(KEYBOARD_PORT, 0);
 	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 	UINT8 byte = inb(KEYBOARD_PORT);
-	EnableInterrupts();
 	if (byte == KB_ACK)
 	{
 		while (byte = inb(KEYBOARD_PORT) == KB_ACK);
@@ -211,13 +209,11 @@ UINT8 SetScancodeSet(UINT8 setNumber)
 {
 	if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
 		return 0;
-	DisableInterrupts();
 	outb(KEYBOARD_PORT, 0xf0);
 	while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
 	outb(KEYBOARD_PORT, setNumber);
 	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
 	UINT8 status = inb(KEYBOARD_PORT);
-	EnableInterrupts();
 	if (status == KB_ACK)
 		return 1;
 	else

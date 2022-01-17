@@ -1,12 +1,12 @@
 #include "hdd.h"
 #include "../fs/gpt.h"
 #include "../fs/mbr.h"
-#include "HAL/PCI/PCI.h"
-#include "HAL/PCI/PCIIDE.h"
+#include <HAL/PCI/PCI.h>
+#include <HAL/PCI/PCIIDE.h>
 #include "../fs/fat.h"
 #include "../fs/fat32.h"
 #include "../fs/vfs.h"
-#include "../../memory/nnxalloc.h"
+#include <nnxalloc.h>
 
 BOOL RegisterPartition(UINT64 number)
 {

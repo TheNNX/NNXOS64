@@ -1,8 +1,8 @@
 #include "vfs.h"
-#include "../../HAL/PCI/PCIIDE.h"
-#include "../../memory/nnxalloc.h"
-#include "../../text.h"
-#include "../../memory/MemoryOperations.h"
+#include <HAL/PCI/PCIIDE.h>
+#include <nnxalloc.h>
+#include <text.h>
+#include <MemoryOperations.h>
 
 VIRTUAL_FILE_SYSTEM virtualFileSystems[VFS_MAX_NUMBER];
 
@@ -151,8 +151,6 @@ SIZE_T GetFileNameAndExtensionFromPath(const char * path, char* name, char* exte
 	SIZE_T dot = FindCharacterLast(path + begin, length - begin, '.');
 	SIZE_T filenameEnd = dot == -1 ? length - begin : dot;
 	SIZE_T i, j;
-	
-	NNXAssertAndStop(filenameEnd <= 8, "Invalid filename");
 
 	for (i = 0; i < 8; i++)
 		name[i] = ' ';
@@ -166,7 +164,6 @@ SIZE_T GetFileNameAndExtensionFromPath(const char * path, char* name, char* exte
 	}
 	if (dot != -1)
 	{
-		NNXAssertAndStop(length - begin - dot - 1 <= 3, "Invalid extension");
 		for (j = 0; j < length - begin - dot - 1; j++)
 		{
 			extension[j] = (path + begin + dot + 1)[j];

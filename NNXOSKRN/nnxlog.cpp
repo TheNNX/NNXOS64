@@ -1,6 +1,6 @@
 #include "nnxlog.h"
 #include "text.h"
-#include "memory/MemoryOperations.h"
+#include <MemoryOperations.h>
 
 NNXLogger* gLogger = 0;
 

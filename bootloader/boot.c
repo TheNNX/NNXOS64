@@ -7,7 +7,7 @@
 #include <NNXOSKRN/nnxcfg.h>
 #include <nnxpe.h>
 #include <bootdata.h>
-#include <NNXOSKRN/memory/physical_allocator.h>
+#include <NNXOSKRN/HAL/physical_allocator.h>
 
 #define ALLOC(x) AllocateZeroPool(x)
 #define DEALLOC(x) FreePool(x)
@@ -376,12 +376,12 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
 
         for (relativePageIndex = 0; relativePageIndex < currentDescriptor->NumberOfPages; relativePageIndex++)
         {
-            UINTN pageIndex = currentDescriptor->PhysicalStart / PAGE_SIZE_SMALL + relativePageIndex;
+            UINTN pageIndex = currentDescriptor->PhysicalStart / PAGE_SIZE + relativePageIndex;
 
             memoryBitmap[pageIndex] = memoryType;
             
-            if ((ULONG_PTR)pageIndex * PAGE_SIZE_SMALL >= (ULONG_PTR)memoryBitmap && 
-                (ULONG_PTR)pageIndex * PAGE_SIZE_SMALL <= ((ULONG_PTR) memoryBitmap + pages))
+            if ((ULONG_PTR)pageIndex * PAGE_SIZE >= (ULONG_PTR)memoryBitmap &&
+                (ULONG_PTR)pageIndex * PAGE_SIZE <= ((ULONG_PTR) memoryBitmap + pages))
             {
                 memoryBitmap[pageIndex] = MEM_TYPE_USED;
                 continue;

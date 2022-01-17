@@ -1,14 +1,14 @@
 #include "scheduler.h"
 #include "../../pool.h"
-#include <memory/paging.h>
-#include <HAL/PIT.h>
-#include <video/SimpleTextIo.h>
-#include <memory/MemoryOperations.h>
-#include <memory/physical_allocator.h>
+#include <HAL/paging.h>
+#include <HAL/x64/PIT.h>
+#include <SimpleTextIo.h>
+#include <MemoryOperations.h>
+#include <HAL/physical_allocator.h>
 #include <HAL/X64/pcr.h>
 #include "ntqueue.h"
 #include <bugcheck.h>
-#include <HAL/APIC/APIC.h>
+#include <HAL/x64/APIC.h>
 #include <nnxlog.h>
 
 KSPIN_LOCK ProcessListLock = 0;
@@ -116,7 +116,7 @@ NTSTATUS PspInitializeScheduler()
         InitializeListHead(&ProcessListHead);
 
         CoresSchedulerData = (PKCORE_SCHEDULER_DATA)PagingAllocatePageBlockFromRange(
-            (ApicNumberOfCoresDetected * sizeof(KCORE_SCHEDULER_DATA) + PAGE_SIZE_SMALL - 1) / PAGE_SIZE_SMALL,
+            (ApicNumberOfCoresDetected * sizeof(KCORE_SCHEDULER_DATA) + PAGE_SIZE - 1) / PAGE_SIZE,
             PAGING_KERNEL_SPACE,
             PAGING_KERNEL_SPACE_END
         );
@@ -270,29 +270,13 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     KeReleaseSpinLock(&SchedulerCommonLock, irql);
     
     HalpUpdateThreadKernelStack((PVOID)((ULONG_PTR)pPrcb->IdleThread->KernelStackPointer + sizeof(KTASK_STATE)));
-    SetCR3((UINT64)pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
+    PagingSetAddressSpace(pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
     pPrcb->IdleThread->ThreadState = THREAD_STATE_RUNNING;
     PspSwitchContextTo64(pPrcb->IdleThread->KernelStackPointer);
 
     return STATUS_SUCCESS;
 }
 #pragma warning(pop)
-
-/*
-    TODO: move to paging
-*/
-PVOID PspCreateAddressSpace()
-{
-    ULONG_PTR physicalPML4 = (ULONG_PTR) InternalAllocatePhysicalPage();
-    ULONG_PTR virtualPML4 = PagingAllocatePageWithPhysicalAddress(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, PAGE_PRESENT | PAGE_WRITE, physicalPML4);
-
-    MemSet((UINT8*)virtualPML4, 0, PAGE_SIZE_SMALL);
-
-    ((UINT64*) virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
-    ((UINT64*) virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = ((UINT64*) GetCR3())[KERNEL_DESIRED_PML4_ENTRY];
-
-    return (PVOID)physicalPML4;
-}
 
 ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 {
@@ -358,7 +342,7 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
         {
             if (pcr->Prcb->CurrentThread->Process != pcr->Prcb->NextThread->Process)
             {
-                SetCR3((ULONG_PTR)pcr->Prcb->CurrentThread->Process->AddressSpacePhysicalPointer);
+                PagingSetAddressSpace((ULONG_PTR)pcr->Prcb->CurrentThread->Process->AddressSpacePhysicalPointer);
             }
         }
 
@@ -406,7 +390,7 @@ PKTHREAD KeGetCurrentThread()
 
 ULONG_PTR PspCreateKernelStack()
 {
-    return (ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE_SMALL;
+    return (ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE;
 }
 
 VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR Entrypoint, ULONG_PTR Userstack)
@@ -459,7 +443,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     pProcess->Pcb.BasePriority = 0;
     pProcess->Pcb.AffinityMask = KAFFINITY_ALL;
     pProcess->Pcb.NumberOfThreads = 0;
-    pProcess->Pcb.AddressSpacePhysicalPointer = PspCreateAddressSpace();
+    pProcess->Pcb.AddressSpacePhysicalPointer = PagingCreateAddressSpace();
     pProcess->Pcb.QuantumReset = 6;
 
     InsertTailList(&ProcessListHead, (PLIST_ENTRY)processEntry);
@@ -523,12 +507,12 @@ NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, B
 
     KeAcquireSpinLockAtDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
-    originalAddressSpace = GetCR3();
-    SetCR3((UINT64)pThread->Process->Pcb.AddressSpacePhysicalPointer);
+    originalAddressSpace = PagingGetAddressSpace();
+    PagingSetAddressSpace(pThread->Process->Pcb.AddressSpacePhysicalPointer);
 
-    userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END) + (ULONG_PTR)PAGE_SIZE_SMALL;
+    userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END) + (ULONG_PTR)PAGE_SIZE;
 
-    SetCR3((UINT64)originalAddressSpace);
+    PagingSetAddressSpace(originalAddressSpace);
 
     InitializeDispatcherHeader(&pThread->Tcb.Header, OBJECT_TYPE_KTHREAD);
     InitializeListHead((PLIST_ENTRY)&pThread->Tcb.WaitHead);

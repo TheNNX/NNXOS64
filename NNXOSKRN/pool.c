@@ -1,8 +1,8 @@
-#include "pool.h"
-#include <memory/MemoryOperations.h>
+#include <pool.h>
+#include <MemoryOperations.h>
 #define NNX_ALLOC_DEBUG 0
-#include <memory/nnxalloc.h>
-#include "bugcheck.h"
+#include <nnxalloc.h>
+#include <bugcheck.h>
 
 PVOID ExAllocatePool(POOL_TYPE type, SIZE_T size)
 {

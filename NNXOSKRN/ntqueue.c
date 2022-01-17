@@ -2,8 +2,8 @@
 
 #include "ntqueue.h"
 #include <HAL/X64/scheduler.h>
-#include "video/SimpleTextIO.h"
-#include <HAL/APIC/APIC.h>
+#include <SimpleTextIO.h>
+#include <HAL/x64/APIC.h>
 
 extern UINT KeNumberOfProcessors;
 
