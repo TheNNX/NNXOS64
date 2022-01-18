@@ -6,10 +6,10 @@
 #include <device/fs/vfs.h>
 #include <HAL/x64/MP.h>
 #include <HAL/X64/APIC.h>
-#include "bugcheck.h"
-#include "HAL/X64/cpu.h"
-#include "HAL/X64/pcr.h"
-#include "HAL/X64/scheduler.h"
+#include <bugcheck.h>
+#include <HAL/cpu.h>
+#include <HAL/pcr.h>
+#include <scheduler.h>
 #include <HAL/X64/PIT.h>
 #include <nnxlog.h>
 

@@ -1,7 +1,5 @@
 #include <nnxalloc.h>
-#include "pcr.h"
-#include <HAL/x64/GDT.h>
-#include <HAL/x64/IDT.h>
+#include <HAL/pcr.h>
 #include <SimpleTextIo.h>
 
 PKPCR HalGetPcr();

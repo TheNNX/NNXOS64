@@ -1,8 +1,8 @@
 #include "bugcheck.h"
 #include <SimpleTextIO.h>
-#include <HAL/X64/IDT.h>
-#include <HAL/X64/APIC.h>
-#include <HAL/X64/registers.h>
+#include "IDT.h"
+#include "APIC.h"
+#include "registers.h"
 
 VOID KeBugCheck(ULONG code)
 {

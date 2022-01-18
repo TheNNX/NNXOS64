@@ -1,6 +1,7 @@
 #include "cpu.h"
-#include "pcr.h"
 #include "registers.h"
+#include <HAL/pcr.h>
+#include "APIC.h"
 
 VOID HalSetPcr(PKPCR pcr)
 {
@@ -11,4 +12,9 @@ VOID HalSetPcr(PKPCR pcr)
 PKPCR HalSwapInPcr()
 {
 	return HalX64SwapGs();
+}
+
+ULONG_PTR KeGetCurrentProcessorId()
+{
+	return (ULONG_PTR)ApicGetCurrentLapicId();
 }

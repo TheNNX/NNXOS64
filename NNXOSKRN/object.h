@@ -3,7 +3,7 @@
 
 #include <nnxtype.h>
 #include <ntlist.h>
-#include "HAL/X64/cpu.h"
+#include "HAL/cpu.h"
 
 #ifdef __cplusplus
 extern "C" {

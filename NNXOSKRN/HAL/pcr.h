@@ -3,9 +3,7 @@
 
 #include <nnxtype.h>
 #include <HAL/spinlock.h>
-#include <HAL/X64/GDT.h>
-#include <HAL/X64/IDT.h>
-#include "../irql.h"
+#include <HAL/irql.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -14,7 +12,12 @@ extern "C"
 
 #pragma pack(push)
 #pragma pack(1)
-	/* TODO */
+
+#ifdef _M_AMD64
+
+#include <HAL/X64/GDT.h>
+#include <HAL/X64/IDT.h>
+
 	typedef struct _KPCR
 	{
 		PKGDTENTRY64	Gdt;
@@ -31,8 +34,13 @@ extern "C"
 		ULONG			Reserved3[36];
 	}KPCR, *LPKPCR, *PKPCR;
 
-	PKPCR KeGetPcr();
 	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
+
+#else
+#error "Architecture unsupported"
+#endif
+
+	PKPCR KeGetPcr();
 	VOID HalpSetupPcrForCurrentCpu(UCHAR id);
 
 	typedef struct _KPRCB

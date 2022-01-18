@@ -201,7 +201,7 @@
     <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
-    <ClCompile Include="HAL\X64\scheduler.c" />
+    <ClCompile Include="scheduler.c" />
     <ClCompile Include="kobject.c" />
     <ClCompile Include="loadstub.c" />
     <ClCompile Include="main.c">
@@ -232,6 +232,8 @@
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
+    <ClInclude Include="HAL\cpu.h" />
+    <ClInclude Include="HAL\mp.h" />
     <ClInclude Include="HAL\X64\APIC.h" />
     <ClInclude Include="HAL\X64\GDT.h" />
     <ClInclude Include="HAL\X64\IDT.h" />
@@ -245,8 +247,8 @@
     <ClInclude Include="HAL\X64\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
-    <ClInclude Include="HAL\X64\scheduler.h" />
-    <ClInclude Include="HAL\X64\pcr.h" />
+    <ClInclude Include="scheduler.h" />
+    <ClInclude Include="HAL\pcr.h" />
     <ClInclude Include="klist.h" />
     <ClInclude Include="MemoryOperations.h" />
     <ClInclude Include="nnxalloc.h" />

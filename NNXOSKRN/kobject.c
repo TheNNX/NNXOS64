@@ -1,5 +1,5 @@
 #include "object.h"
-#include "HAL/X64/scheduler.h"
+#include <scheduler.h>
 
 VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable)
 {

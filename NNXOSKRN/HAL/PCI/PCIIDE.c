@@ -5,6 +5,8 @@
 
 #define WAIT_MACRO for (int __ = 0; __ < 10000; __++);
 
+VOID DiskReadLong(UINT16 port, UCHAR * buffer, UINT32 count);
+
 VOID IdeWrite(PCI_IDE_CONTROLLER* pic, UINT8 channel, UINT8 reg, UINT8 data)
 {
 	if (reg > 0x07 && reg < 0x0C)

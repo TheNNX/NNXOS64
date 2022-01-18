@@ -2,6 +2,7 @@
 #define NNX_PAGING_HEADER
 #include <nnxtype.h>
 
+#ifdef _M_AMD64
 #define PAGE_PRESENT 1
 #define PAGE_WRITE 2
 #define PAGE_USER 4
@@ -28,6 +29,17 @@
 #define PAGE_ADDRESS_MASK 0xFFF
 #define PAGE_ALIGN(x) (((UINT64)x)&(~PAGE_ADDRESS_MASK))
 
+inline UINT64 ToCanonicalAddress(UINT64 address)
+{
+    return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
+}
+
+#elif
+
+#error "Architecture unsupported"
+
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -52,12 +64,6 @@ extern "C"
     ULONG_PTR PagingCreateAddressSpace();
     ULONG_PTR PagingGetAddressSpace();
     VOID PagingSetAddressSpace(ULONG_PTR);
-#ifdef _M_AMD64
-    inline UINT64 ToCanonicalAddress(UINT64 address)
-    {
-        return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
-    }
-#endif
 
 #ifdef __cplusplus
 }

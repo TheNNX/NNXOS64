@@ -3,7 +3,7 @@
 #include <HAL/physical_allocator.h>
 #include <MemoryOperations.h>
 #include <HAL/spinlock.h>
-#include <HAL/X64/registers.h>
+#include "registers.h"
 
 #define PML4EntryForRecursivePaging 510ULL
 #define PML4_COVERED_SIZE 0x1000000000000ULL

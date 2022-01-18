@@ -1,15 +1,14 @@
 #include "scheduler.h"
-#include "../../pool.h"
+#include <pool.h>
 #include <HAL/paging.h>
-#include <HAL/x64/PIT.h>
 #include <SimpleTextIo.h>
 #include <MemoryOperations.h>
 #include <HAL/physical_allocator.h>
-#include <HAL/X64/pcr.h>
+#include <HAL/pcr.h>
 #include "ntqueue.h"
 #include <bugcheck.h>
-#include <HAL/x64/APIC.h>
 #include <nnxlog.h>
+#include <HAL/mp.h>
 
 KSPIN_LOCK ProcessListLock = 0;
 LIST_ENTRY ProcessListHead;
@@ -116,7 +115,7 @@ NTSTATUS PspInitializeScheduler()
         InitializeListHead(&ProcessListHead);
 
         CoresSchedulerData = (PKCORE_SCHEDULER_DATA)PagingAllocatePageBlockFromRange(
-            (ApicNumberOfCoresDetected * sizeof(KCORE_SCHEDULER_DATA) + PAGE_SIZE - 1) / PAGE_SIZE,
+            (KeNumberOfProcessors * sizeof(KCORE_SCHEDULER_DATA) + PAGE_SIZE - 1) / PAGE_SIZE,
             PAGING_KERNEL_SPACE,
             PAGING_KERNEL_SPACE_END
         );
@@ -165,7 +164,7 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
 static VOID Test()
 {
     const UINT32 coreColors[] = {0xff0000ff, 0xff00ff00, 0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
-    UINT8 coreNumber = ApicGetCurrentLapicId();
+    UINT8 coreNumber = KeGetCurrentProcessorId();
     UINT32 coreColor = coreColors[coreNumber];
     UINT32 clearColor = 0x00000000;
     const SIZE_T bufferHeight = 16, bufferWidth = 16;
@@ -195,9 +194,40 @@ static VOID Test()
     }
 }
 
+VOID Test1()
+{
+    while (1)
+    {
+        if (KeGetCurrentProcessorId() == 0)
+        {
+            for (unsigned x = gWidth * gHeight; x > 0 ; x--)
+            {
+                for (int i = 0; i < 1000; i++);
+                gFramebuffer[x] = 0x00FF00FF;
+            }
+        }
+    }
+}
+
+VOID Test2()
+{
+    while (1)
+    {
+        if (KeGetCurrentProcessorId() == 0)
+        {
+            for (unsigned x = 0; x < gWidth * gHeight; x++)
+            {
+                for (int i = 0; i < 1000; i++);
+                gFramebuffer[x] = 0xFF00FF00;
+            }
+        }
+    }
+}
+
 NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThread, UINT8 coreNumber) 
 {
     NTSTATUS status;
+    PETHREAD test1, test2;
 
     status = PspCreateProcessInternal(IdleProcess);
     if (status)
@@ -208,6 +238,14 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
     status = PspCreateThreadInternal(IdleThread, *IdleProcess, TRUE, (ULONG_PTR)PspIdleThreadProcedure);
     if (status)
         return status;
+
+    status = PspCreateThreadInternal(&test1, *IdleProcess, TRUE, (ULONG_PTR) Test1);
+    status = PspCreateThreadInternal(&test2, *IdleProcess, TRUE, (ULONG_PTR) Test2);
+
+    test1->Tcb.ThreadPriority = 2;
+    test2->Tcb.ThreadPriority = 2;
+    PspInsertIntoSharedQueue(&test2->Tcb);
+    PspInsertIntoSharedQueue(&test1->Tcb);
 
     (*IdleThread)->Tcb.ThreadPriority = 0;
 
@@ -315,7 +353,7 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 
     if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread)
     {
-        PspSelectNextReadyThread(pcr->Prcb->Number);
+        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
     }
 
     /* 
@@ -324,7 +362,8 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
         (thread of higher priority than NextThread would automaticaly be
         written to NextThread on for example end of waiting) 
     */
-    if (pcr->Prcb->NextThread == pcr->Prcb->IdleThread && pcr->Prcb->CurrentThread != pcr->Prcb->IdleThread)
+    if ((pcr->Prcb->NextThread == pcr->Prcb->IdleThread && pcr->Prcb->CurrentThread != pcr->Prcb->IdleThread) ||
+        (originalRunningThreadPriority > pcr->Prcb->NextThread->ThreadPriority + pcr->Prcb->NextThread->Process->BasePriority))
     {
         pcr->Prcb->NextThread = originalRunningThread;
         pcr->CyclesLeft = originalRunningProcess->QuantumReset * KiCyclesPerQuantum;
@@ -332,7 +371,6 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 
     if (pcr->CyclesLeft < (LONG_PTR)KiCyclesPerQuantum)
     {
-        
         /* switch to next thread */
         nextThread = pcr->Prcb->NextThread;
         pcr->CyclesLeft = nextThread->Process->QuantumReset * KiCyclesPerQuantum;
@@ -348,25 +386,27 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 
         nextThread->ThreadState = THREAD_STATE_RUNNING;
         
+        /* select thread before setting the original one to ready */
+        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
+        pcr->Prcb->CurrentThread = nextThread;
+
         /*
             thread could have volountarily given up control, it could be waiting - then its state shouldn't be changed
         */
-       
         if (originalRunningThread->ThreadState == THREAD_STATE_RUNNING)
         {
             PspInsertIntoSharedQueue(originalRunningThread);
             originalRunningThread->ThreadState = THREAD_STATE_READY;
         }
-
-        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
-        pcr->Prcb->CurrentThread = nextThread;
-
     }
     else
     {
         pcr->CyclesLeft -= KiCyclesPerQuantum;
+
         if (pcr->CyclesLeft < 0)
+        {
             pcr->CyclesLeft = 0;
+        }
     }
 
     KeReleaseSpinLockFromDpcLevel(originalRunningProcessSpinlock);
@@ -424,7 +464,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
         return STATUS_NO_MEMORY;
     }
 
-    PrintT("Core %i initialization started\n", ApicGetCurrentLapicId());
+    PrintT("Core %i initialization started\n", KeGetCurrentProcessorId());
     /* lock the process list */
     KeAcquireSpinLock(&ProcessListLock, &irql);
 
@@ -757,7 +797,7 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
         that there was a higher bit in PspSharedReadyQueue's summary, which means
         it has a thread with a higher priority ready
     */
-    if (coreSchedulerData->ThreadReadyQueuesSummary < (PspSharedReadyQueue.ThreadReadyQueuesSummary ^ coreSchedulerData->ThreadReadyQueuesSummary))
+    if (coreSchedulerData->ThreadReadyQueuesSummary <= (PspSharedReadyQueue.ThreadReadyQueuesSummary ^ coreSchedulerData->ThreadReadyQueuesSummary))
     {
         
         for (checkedPriority = 31; checkedPriority >= 0; checkedPriority--)

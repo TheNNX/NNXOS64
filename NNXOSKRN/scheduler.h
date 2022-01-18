@@ -1,7 +1,7 @@
 #ifndef NNX_SHEDULER_HEADER
 #define NNX_SHEDULER_HEADER
 
-#include "cpu.h"
+#include <HAL/cpu.h>
 #include <HAL/spinlock.h>
 #include <object.h>
 
@@ -107,6 +107,8 @@ extern "C" {
 		UINT64 Rflags;
 		UINT64 Rsp;
 		UINT64 Ss;
+#else
+#error "Architecture unsupported"
 #endif
 	}KTASK_STATE, *PKTASK_STATE;
 

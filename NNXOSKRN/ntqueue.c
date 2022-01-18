@@ -1,9 +1,8 @@
 /* implements NT's KQUEUE's functions */
 
 #include "ntqueue.h"
-#include <HAL/X64/scheduler.h>
+#include <scheduler.h>
 #include <SimpleTextIO.h>
-#include <HAL/x64/APIC.h>
 
 extern UINT KeNumberOfProcessors;
 

@@ -8,6 +8,7 @@
 #include <device/fs/fat.h>
 #include "PIT.h"
 #include "../spinlock.h"
+#include <HAL/mp.h>
 
 extern "C" 
 {
@@ -22,7 +23,6 @@ extern "C"
 	extern UINT8* GlobalPhysicalMemoryMap;
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
-	extern UINT KeNumberOfProcessors;
 
 	VOID KiEnableInterrupts();
 }
@@ -321,9 +321,7 @@ extern "C"
 		ApicLocalApicWriteRegister(LAPIC_LVT_TIMER_REGISTER_OFFSET, interruptVector | LAPIC_TIMER_MODE_PERIODIC);
 		ApicLocalApicWriteRegister(LAPIC_DIVIDE_TIMER_REGISTER_OFFSET, LAPIC_TIMER_DIVISOR_1);
 
-		/* tick once every second */
-		KiCyclesPerClockQuantum = (HalpTimerTicksPerSecond * hundredsOfNsInterval / 10000000);
-		PrintT("KiCyclesPerClockQuantum %X %X %X\n", KiCyclesPerClockQuantum, HalpTimerTicksPerSecond * 15 / 1000, HalpTimerTicksPerSecond);
+		KiCyclesPerClockQuantum = (HalpTimerTicksPerSecond * (hundredsOfNsInterval * 100) / 1000 / 1000 / 1000);
 		KiCyclesPerQuantum = KiCyclesPerClockQuantum / 3;
 		ApicLocalApicWriteRegister(LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, (UINT32)KiCyclesPerClockQuantum);
 	}

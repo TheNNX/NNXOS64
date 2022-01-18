@@ -5,9 +5,9 @@
 #include "PIT.h"
 #include <HAL/paging.h>
 #include <device/fs/vfs.h>
-#include "../X64/pcr.h"
+#include <HAL/pcr.h>
 #include <bugcheck.h>
-#include <HAL/X64/scheduler.h>
+#include <scheduler.h>
 
 extern "C" {
 

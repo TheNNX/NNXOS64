@@ -3,8 +3,7 @@
 #include "MemoryOperations.h"
 #include "text.h"
 #include <HAL/spinlock.h>
-#include <HAL/x64/APIC.h>
-#include <HAL/x64/PIT.h>
+#include <bugcheck.h>
 
 MEMORY_BLOCK* first;
 BOOL dirty = FALSE;
@@ -251,15 +250,7 @@ PVOID NNXAllocatorAllocInternal(UINT64 size)
 
         if (current->flags & (~MEMBLOCK_USED))
         {
-			PrintT("Invalid block of size %x at address %x leading to address %x (flags %b) in kernel allocator\n"
-				   "trying to allocate %i bytes\n",
-				   current->size, current, current->next, current->flags, size);
-			
-			PitUniprocessorPollSleepMs(2000);
-			
-			PrintBlocks();
-
-			while (1);
+            KeBugCheckEx(HAL_MEMORY_ALLOCATION, __LINE__, 0, 0, 0);
         }
 
         if (!(current->flags & MEMBLOCK_USED))
@@ -296,21 +287,16 @@ PVOID NNXAllocatorAllocInternal(UINT64 size)
         UpdateScreen();
         return NNXAllocatorAllocInternal(size);
     }
-    PrintT("No memory block of size %iB found, system halted.\n", size);
-    while (1);
+    KeBugCheckEx(HAL_MEMORY_ALLOCATION, __LINE__, 0, 0, 0);
 }
 
 PVOID NNXAllocatorAllocP(UINT64 size, BOOL debug, UINT64 line, const CHAR* function)
 {
 	PVOID result;
 	KIRQL irql;
-	if (debug)
-		PrintT("%s(%i) at %s:%i, %i %X\n", __FUNCDNAME__, size, function, line, (UINT64)ApicGetCurrentLapicId(), AllocatorLock);
 	KeAcquireSpinLock(&AllocatorLock, &irql);
 	result = NNXAllocatorAllocInternal(size);
 	KeReleaseSpinLock(&AllocatorLock, irql);
-	if(AllocatorLock)
-		PrintT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	return result;
 }
 
@@ -326,8 +312,6 @@ VOID NNXAllocatorFreeP(PVOID address, BOOL debug, UINT64 line, const CHAR* funct
 {
 	KIRQL irql;
 	KeAcquireSpinLock(&AllocatorLock, &irql);
-	if (debug)
-		PrintT("%s(%X) at %s:%i, %i\n", __FUNCDNAME__, address, function, line, (ULONG_PTR)ApicGetCurrentLapicId());
     dirty = true;
     MEMORY_BLOCK* toBeFreed = (MEMORY_BLOCK*)((ULONG_PTR) address - sizeof(MEMORY_BLOCK));
     toBeFreed->flags &= (~MEMBLOCK_USED);

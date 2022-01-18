@@ -3,16 +3,18 @@
 %strcat INC_FUNC __FILE__,"/../../../../CommonInclude/func.inc"
 %include INC_FUNC
 
+; note: stack broken, registers don't save, investigate alignment, todo
+
 [extern PspScheduleThread]
 
 func HalpUpdateThreadKernelStack 
     push QWORD rdi
     mov QWORD rdi, [gs:0x08]
+    add rcx, 152
     ; set RSP0
     mov QWORD [rdi+0x04], rcx
     ; set IST1 (used for ring 0 to ring 0 task switch)
     mov QWORD [rdi+0x24], rcx
-    add QWORD [rdi+0x04], 152
     pop QWORD rdi
     ret
 

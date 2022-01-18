@@ -5,7 +5,7 @@
 #ifndef NNX_NT_QUEUE_HEADER
 #define NNX_NT_QUEUE_HEADER
 
-#include "HAL/X64/cpu.h"
+#include "HAL/cpu.h"
 #include "object.h"
 
 #ifdef __cplusplus
