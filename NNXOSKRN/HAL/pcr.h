@@ -18,6 +18,18 @@ extern "C"
 #include <HAL/X64/GDT.h>
 #include <HAL/X64/IDT.h>
 
+	/* idea for those from ReactOS */
+	unsigned __int64 __readgsqword(unsigned long);
+	unsigned long	 __readgsdword(unsigned long);
+	unsigned short	 __readgsword(unsigned long);
+	unsigned char    __readgsbyte(unsigned long);
+	void __writegsbyte(unsigned long, unsigned char);
+	void __writegsword(unsigned long, unsigned short);
+	void __writegsdword(unsigned long, unsigned long);
+	void __writegsqword(unsigned long, unsigned __int64);
+
+#define FIELD_OFFSET(t,field) ((ULONG_PTR)&(((t*)0)->field))
+
 	typedef struct _KPCR
 	{
 		PKGDTENTRY64	Gdt;

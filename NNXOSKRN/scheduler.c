@@ -202,7 +202,7 @@ VOID Test1()
         {
             for (unsigned x = gWidth * gHeight; x > 0 ; x--)
             {
-                for (int i = 0; i < 1000; i++);
+                for (int i = 0; i < 10000; i++);
                 gFramebuffer[x] = 0x00FF00FF;
             }
         }
@@ -217,17 +217,38 @@ VOID Test2()
         {
             for (unsigned x = 0; x < gWidth * gHeight; x++)
             {
-                for (int i = 0; i < 1000; i++);
+                for (int i = 0; i < 10000; i++);
                 gFramebuffer[x] = 0xFF00FF00;
             }
         }
     }
 }
 
+NTSTATUS PspTestScheduler(PEPROCESS IdleProcess)
+{
+    PETHREAD test1, test2;
+    NTSTATUS status;
+
+    status = PspCreateThreadInternal(&test1, IdleProcess, TRUE, (ULONG_PTR)Test1);
+    if (status)
+        return status;
+
+    status = PspCreateThreadInternal(&test2, IdleProcess, TRUE, (ULONG_PTR)Test2);
+    if (status)
+        return status;
+
+    test1->Tcb.ThreadPriority = 1;
+    test2->Tcb.ThreadPriority = 2;
+
+    PspInsertIntoSharedQueue(&test1->Tcb);
+    PspInsertIntoSharedQueue(&test2->Tcb);
+
+    return status;
+}
+
 NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThread, UINT8 coreNumber) 
 {
     NTSTATUS status;
-    PETHREAD test1, test2;
 
     status = PspCreateProcessInternal(IdleProcess);
     if (status)
@@ -239,15 +260,13 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
     if (status)
         return status;
 
-    status = PspCreateThreadInternal(&test1, *IdleProcess, TRUE, (ULONG_PTR) Test1);
-    status = PspCreateThreadInternal(&test2, *IdleProcess, TRUE, (ULONG_PTR) Test2);
-
-    test1->Tcb.ThreadPriority = 2;
-    test2->Tcb.ThreadPriority = 2;
-    PspInsertIntoSharedQueue(&test2->Tcb);
-    PspInsertIntoSharedQueue(&test1->Tcb);
-
     (*IdleThread)->Tcb.ThreadPriority = 0;
+
+    /* uncomment the lines below to do some basic scheduler testing */
+    /*
+    if (coreNumber == 0)
+        PspTestScheduler(*IdleProcess);
+    */
 
     return STATUS_SUCCESS;
 }

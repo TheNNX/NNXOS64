@@ -5,6 +5,9 @@
 
 typedef CHAR	KPROCESSOR_MODE;
 
+#define UserMode 1
+#define KernelMode 0
+
 #define KAFFINITY_ALL 0xFFFFFFFFFFFFFFFFULL
 typedef ULONG_PTR	KAFFINITY;
 

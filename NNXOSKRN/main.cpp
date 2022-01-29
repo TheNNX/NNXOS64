@@ -12,6 +12,7 @@
 #include <scheduler.h>
 #include <HAL/X64/PIT.h>
 #include <nnxlog.h>
+#include <nnxver.h>
 
 int basicallyATest = 0;
 
@@ -86,6 +87,8 @@ extern "C"
 
 		ApicInit(madt);
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
+
+		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);
 
 		MpInitialize();
 

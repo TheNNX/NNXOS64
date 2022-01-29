@@ -1,30 +1,53 @@
 #include <HAL/irql.h>
 #include "APIC.H"
 #include <HAL/pcr.h>
+#include <bugcheck.h>
+#include "cpu.h"
 
-KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql)
+VOID HalX64SetTpr(UBYTE Value)
 {
-	return NULL;
+	SetCR8(Value);
 }
 
-VOID FASTCALL KfLowerIrql(KIRQL newIrql)
+KIRQL FASTCALL KfRaiseIrql(KIRQL NewIrql)
 {
-	
+	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+
+	if (NewIrql < oldIrql)
+		KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfRaiseIrql);
+
+	HalX64SetTpr(NewIrql);
+
+	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
+
+	return oldIrql;
 }
 
-VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL oldIrql)
+VOID FASTCALL KfLowerIrql(KIRQL NewIrql)
 {
-	if (oldIrql == (PKIRQL) NULL)
+	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+
+	if (NewIrql > oldIrql)
+		KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfRaiseIrql);
+
+	HalX64SetTpr(NewIrql);
+
+	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
+}
+
+VOID NTAPI KeRaiseIrql(KIRQL NewIrql, PKIRQL OldIrql)
+{
+	if (OldIrql == (PKIRQL) NULL)
 		return;
-	*oldIrql = KfRaiseIrql(newIrql);
+	*OldIrql = KfRaiseIrql(NewIrql);
 }
 
-VOID NTAPI KeLowerIrql(KIRQL newIrql)
+VOID NTAPI KeLowerIrql(KIRQL NewIrql)
 {
-	KfLowerIrql(newIrql);
+	KfLowerIrql(NewIrql);
 }
 
 KIRQL KeGetCurrentIrql()
 {
-	return 0;
+	return __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 }

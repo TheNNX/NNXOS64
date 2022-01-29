@@ -69,6 +69,16 @@ SetCR4:
 	mov cr4, rcx
 	ret
 
+[GLOBAL SetCR8]
+SetCR8:
+	mov cr8, rcx
+	ret
+
+[GLOBAL GetCR8]
+GetCR8:
+	mov rax, cr8
+	ret
+
 func KeStop
 	cli
 	hlt

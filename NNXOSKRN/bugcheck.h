@@ -6,12 +6,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	__declspec(noreturn) VOID KeBugCheck(ULONG code);
-	__declspec(noreturn) VOID KeBugCheckEx(ULONG code, ULONG_PTR param1, ULONG_PTR param2, ULONG_PTR param3, ULONG_PTR param4);
+	__declspec(noreturn) VOID NTAPI KeBugCheck(ULONG code);
+	__declspec(noreturn) VOID NTAPI KeBugCheckEx(ULONG code, ULONG_PTR param1, ULONG_PTR param2, ULONG_PTR param3, ULONG_PTR param4);
 #ifdef __cplusplus
 }
 #endif
 
+#define IRQL_NOT_GREATER_OR_EQUAL		((ULONG)0x9)
+#define IRQL_NOT_LESS_OR_EQUAL			((ULONG)0xA)
 #define KMODE_EXCEPTION_NOT_HANDLED		((ULONG)0x1E)
 #define PHASE1_INITIALIZATION_FAILED	((ULONG)0x32)
 #define HAL_INITIALIZATION_FAILED		((ULONG)0x5C)

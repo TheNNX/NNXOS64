@@ -15,7 +15,10 @@ extern "C" {
 
 	KIRQL NTAPI KeGetCurrentIrql();
 
-#define DISPATCH_LEVEL 32
+#define DISPATCH_LEVEL 2
+#define DPC_LEVEL DISPATCH_LEVEL
+#define APC_LEVEL 1
+#define PASSIVE_LEVEL 0
 
 #ifdef __cplusplus
 }
