@@ -1,12 +1,7 @@
 {
   "ExpandedNodes": [
-    "",
-    "\\NNXOSKRN",
-    "\\NNXOSKRN\\HAL",
-    "\\NNXOSKRN\\HAL\\X64",
-    "\\NNXOSLDR\\device",
-    "\\NNXOSLDR\\device\\fs"
+    ""
   ],
-  "SelectedNode": "\\NNXOSKRN\\HAL\\spinlock.c",
+  "SelectedNode": "\\nnxos64.sln",
   "PreviewInSolutionExplorer": false
 }
