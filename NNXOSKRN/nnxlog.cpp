@@ -99,7 +99,8 @@ void NNXLogger::AppendText(const char* text, UINT64 textLength)
 {
 	for (int i = 0; i < textLength; i++)
 	{
-		PrintT("%c", text[i]);
+		if (this->OutputToScreen)
+            PrintT("%c", text[i]);
 	}
 
 	if (position + textLength >= 512)
@@ -118,10 +119,11 @@ void NNXLogger::Flush()
 	this->position = 0;
 }
 
-NNXLogger::NNXLogger(VFS_FILE* file)
+NNXLogger::NNXLogger(VFS_FILE* file, bool OutputToScreen)
 {
 	this->loggerFile = file;
 	this->filesystem = file->Filesystem;
+    this->OutputToScreen = OutputToScreen;
 	buffer = new unsigned char[512];
 	position = 0;
 }

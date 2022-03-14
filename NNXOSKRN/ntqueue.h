@@ -6,7 +6,7 @@
 #define NNX_NT_QUEUE_HEADER
 
 #include "HAL/cpu.h"
-#include "object.h"
+#include <ob/object.h>
 
 #ifdef __cplusplus
 extern "C" 

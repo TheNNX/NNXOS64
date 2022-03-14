@@ -271,7 +271,7 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
     return STATUS_SUCCESS;
 }
 
-VOID PspInitializecoreSchedulerData(UINT8 CoreNumber)
+VOID PspInitializeCoreSchedulerData(UINT8 CoreNumber)
 {
     INT i;
     PKCORE_SCHEDULER_DATA thiscoreSchedulerData = &CoresSchedulerData[CoreNumber];
@@ -311,7 +311,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     }
 
     KeAcquireSpinLock(&SchedulerCommonLock, &irql);
-    PspInitializecoreSchedulerData(CoreNumber);
+    PspInitializeCoreSchedulerData(CoreNumber);
 
     pPcr = KeGetPcr();
     pPrcb = pPcr->Prcb;
@@ -483,7 +483,6 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
         return STATUS_NO_MEMORY;
     }
 
-    PrintT("Core %i initialization started\n", KeGetCurrentProcessorId());
     /* lock the process list */
     KeAcquireSpinLock(&ProcessListLock, &irql);
 
@@ -504,6 +503,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     pProcess->Pcb.NumberOfThreads = 0;
     pProcess->Pcb.AddressSpacePhysicalPointer = PagingCreateAddressSpace();
     pProcess->Pcb.QuantumReset = 6;
+    InitializeListHead(&pProcess->Pcb.HandleDatabaseHead);
 
     InsertTailList(&ProcessListHead, (PLIST_ENTRY)processEntry);
 
@@ -684,7 +684,8 @@ NTSTATUS PspDestroyThreadInternal(PETHREAD Thread)
 }
 
 /**
- * @brief removes pProcess from process list and if that is successful, performs ExFreePool
+ * @brief removes pProcess from process list, destroys process' the handle database, 
+ * and if that is successful, performs ExFreePool
  * @param pProcess - pointer to EPROCESS to be terminated 
  * @return STATUS_SUCCESS, STATUS_INVALID_PARAMETER
 */
@@ -693,9 +694,9 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
     KIRQL irql;
     PLIST_ENTRY_POINTER processListEntry;
     PLIST_ENTRY_POINTER current;
+    PHANDLE_DATABASE currentHandleDatabase;
 
     KeAcquireSpinLock(&ProcessListLock, &irql);
-    processListEntry = (PLIST_ENTRY_POINTER)NULL;
 
     KeAcquireSpinLockAtDpcLevel(&pProcess->Pcb.ProcessLock);
     
@@ -705,28 +706,39 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
         PETHREAD Thread;
         Thread = (PETHREAD)current->Pointer;
         current = (PLIST_ENTRY_POINTER)current->Next;
+        
         /* don't lock the process, it has been already locked */
         PspDestroyThreadInternalOptionalProcessLock(Thread, FALSE);
     }
 
-
-    current = (PLIST_ENTRY_POINTER)ProcessListHead.First;
-    while ((PLIST_ENTRY)current != &ProcessListHead)
+    currentHandleDatabase = (PHANDLE_DATABASE) pProcess->Pcb.HandleDatabaseHead.First;
+    while (currentHandleDatabase != (PHANDLE_DATABASE)&pProcess->Pcb.HandleDatabaseHead)
     {
-        if (current->Pointer == pProcess)
+        PHANDLE_DATABASE next;
+        INT i;
+
+        next = (PHANDLE_DATABASE)currentHandleDatabase->HandleDatabaseChainEntry.Next;
+
+        for (i = 0; i < ENTRIES_PER_HANDLE_DATABASE; i++)
         {
-            processListEntry = (PLIST_ENTRY_POINTER)current;
-            break;
+            ObDestroyHandleEntry(&currentHandleDatabase->Entries[i]);
         }
 
-        current = (PLIST_ENTRY_POINTER)current->Next;
+        ExFreePool(currentHandleDatabase);
+        currentHandleDatabase = next;
     }
+
+    processListEntry = FindElementInPointerList((PLIST_ENTRY_POINTER)&ProcessListHead, (PVOID)pProcess);
 
     if ((PVOID)processListEntry == NULL)
     {
         KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
         KeReleaseSpinLock(&ProcessListLock, irql);
         return STATUS_INVALID_PARAMETER;
+    }
+    else
+    {
+        RemoveEntryList((PLIST_ENTRY)processListEntry);
     }
 
     InternalFreePhysicalPage(pProcess->Pcb.AddressSpacePhysicalPointer);

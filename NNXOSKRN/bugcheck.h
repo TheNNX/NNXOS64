@@ -12,6 +12,7 @@ extern "C" {
 }
 #endif
 
+#define IRQL_NOT_DISPATCH_LEVEL         ((ULONG)0x8)
 #define IRQL_NOT_GREATER_OR_EQUAL		((ULONG)0x9)
 #define IRQL_NOT_LESS_OR_EQUAL			((ULONG)0xA)
 #define KMODE_EXCEPTION_NOT_HANDLED		((ULONG)0x1E)

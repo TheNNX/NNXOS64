@@ -3,7 +3,8 @@
 
 #include <HAL/cpu.h>
 #include <HAL/spinlock.h>
-#include <object.h>
+#include <ob/object.h>
+#include <ob/handle.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,7 +34,9 @@ extern "C" {
 		 * @brief Stores quantum units (3rds of timer interval), multiply by KiCyclesPerQuantum to get value for CyclesLeft.
 		*/
 		ULONG_PTR QuantumReset;
-	} KPROCESS, *PKPROCESS;
+	
+        LIST_ENTRY HandleDatabaseHead;
+    } KPROCESS, *PKPROCESS;
 
 	typedef struct _EPROCESS 
 	{

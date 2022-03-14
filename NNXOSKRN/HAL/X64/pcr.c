@@ -15,13 +15,16 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	PKIDTENTRY64 idt;
 	PKGDTENTRY64 gdt;
 	HalAcquireLockRaw(&PcrCreationLock);
-	DisableInterrupts();
+	
+    DisableInterrupts();
+
 	gdt = HalpAllocateAndInitializeGdt();
 	idt = HalpAllocateAndInitializeIdt();
-	// HalpSetIdtEntry(idt, 0x20, HalpTaskSwitchHandler, TRUE, FALSE);
 
 	pcr = HalCreatePcr(gdt, idt, id);
 	HalReleaseLockRaw(&PcrCreationLock);
+
+    KfRaiseIrql(DISPATCH_LEVEL);
 }
 
 PKIDTENTRY64 HalpGetIdt()
@@ -61,7 +64,6 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);
-	PrintT("Set pcr->Tss to %x\n", pcr->Tss);
 
 	pcr->Irql = 0;
 

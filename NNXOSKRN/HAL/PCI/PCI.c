@@ -37,12 +37,10 @@ VOID PciScan()
 	UINT8 header = PciGetHeader(0, 0, 0);
 	if (header & 0x80)
 	{
-		PrintT("One PCI bus\n");
 		PciScanBus(0);
 	}
 	else
 	{
-		PrintT("Multiple PCI buses\n");
 		for (UINT8 function = 0;; function++)
 		{
 			UINT8 bus = function;
@@ -168,17 +166,16 @@ void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumb
 			PCI_IDE_CONTROLLER controller = PciIdeInitPciDevice(busNumber, deviceNumber, functionNumber, PciGetProgIf(busNumber, deviceNumber, functionNumber));
 			if (!AlreadyContainsController(&controller))
 			{
-				int ID = AddController(controller);
-				PrintT("Added controller %d\n", ID);
-				UINT8 commandByte = PciConfigReadWord(busNumber, deviceNumber, functionNumber, 4) & 0xFF;
-				PrintT("Command word: 0b%b\n", commandByte);
+                int id;
+                UINT8 commandByte;
+
+                id = AddController(controller);
+
+				commandByte = PciConfigReadWord(busNumber, deviceNumber, functionNumber, 4) & 0xFF;
 				commandByte |= 2;
+
 				PciConfigWriteByte(busNumber, deviceNumber, functionNumber, 4, commandByte);
-				SearchForDevices(Controllers + ID);
-			}
-			else
-			{
-				PrintT("Controller already added.\n");
+				SearchForDevices(Controllers + id);
 			}
 		}
 		else
@@ -212,7 +209,6 @@ void PciIdeEnumerate()
 		Drives[i].Reserved = 0;
 	}
 
-	PrintT("Enumerating PCI IDE devices.\n");
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
 	{
 		if (Controllers[i].Channels[0].Base)
