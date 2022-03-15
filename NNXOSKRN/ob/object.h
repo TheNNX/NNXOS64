@@ -4,6 +4,7 @@
 #include <nnxtype.h>
 #include <ntlist.h>
 #include "handle.h"
+#include "namespace.h"
 #include <rtl/rtlstring.h>
 #include <HAL/cpu.h>
 
@@ -160,6 +161,8 @@ extern "C" {
     );
 
     NTSTATUS ObDereferenceObject(PVOID object);
+
+    NTSTATUS ObInit();
 
     inline VOID InitializeObjectAttributes(
         POBJECT_ATTRIBUTES pAttributes,

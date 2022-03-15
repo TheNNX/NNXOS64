@@ -3,6 +3,7 @@
 
 #include <nnxtype.h>
 #include <ntlist.h>
+#include <HAL/cpu.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,9 +30,10 @@ extern "C" {
 
 #define INVALID_HANDLE_VALUE (HANDLE)((ULONG_PTR)-1)
 
-    VOID ObDestroyHandleEntry(PHANDLE_DATABASE_ENTRY entry);
-    VOID ObCloseHandle(HANDLE handle);
-    HANDLE ObGetGlobalNamespaceHandle();
+    VOID ObCloseHandleByEntry(PHANDLE_DATABASE_ENTRY entry);
+    NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode);
+    NTSTATUS ObInitHandleManager();
+    NTSTATUS ObExtractAndReferenceObjectFromHandle(HANDLE handle, PVOID *pObject, KPROCESSOR_MODE accessMode);
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,8 @@ extern "C"
 {
 #endif
 
-    VOID NTAPI ObpInitNamespace();
+    NTSTATUS ObpInitNamespace();
+    HANDLE ObGetGlobalNamespaceHandle();
 
     extern HANDLE GlobalNamespace;
 

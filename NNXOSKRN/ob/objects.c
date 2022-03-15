@@ -2,8 +2,26 @@
 #include <pool.h>
 #include <bugcheck.h>
 
+NTSTATUS ObInit()
+{
+    NTSTATUS status;
+
+    status = ObInitHandleManager();
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    status = ObpInitNamespace();
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS ObpDeleteObject(PVOID Object);
 
+/* @brief This function first tries to reference the object without any checks. 
+ * If it succeds, it tries to reference it by pointer. 
+ * The function dereferences all its references on failure, and leaves one reference on success. */
 NTSTATUS ObReferenceObjectByHandle(
     HANDLE handle,
     ACCESS_MASK desiredAccess,
@@ -13,13 +31,34 @@ NTSTATUS ObReferenceObjectByHandle(
     PVOID unused
 )
 {
+    PVOID localObjectPtr;
+    NTSTATUS status;
+
     if (handle == INVALID_HANDLE_VALUE)
         return STATUS_INVALID_HANDLE;
 
     if (pObject == NULL)
         return STATUS_INVALID_PARAMETER;
 
+    /* try extracting the object pointer */
+    status = ObExtractAndReferenceObjectFromHandle(handle, &localObjectPtr, accessMode);
+    if (status != STATUS_SUCCESS)
+        return status;
 
+    /* reference once again, but this time with access checks */
+    status = ObReferenceObjectByPointer(localObjectPtr, desiredAccess, objectType, accessMode);
+    if (status != STATUS_SUCCESS)
+    {
+        /* access checks failed */
+
+        /* derefence the original refernece */
+        ObDereferenceObject(localObjectPtr);
+        return status;
+    }
+
+    /* derefence the original refernece */
+    ObDereferenceObject(localObjectPtr);
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS ObReferenceObject(PVOID object)
@@ -53,11 +92,25 @@ NTSTATUS ObReferenceObjectByPointer(
 
     KeAcquireSpinLock(&header->Lock, &irql);
 
+    /* if ReferenceCount is 0, the object was deleted when the code was waiting for it's lock */
+    if (header->ReferenceCount > 0)
+    {
+        KeReleaseSpinLock(&header->Lock, irql);
+        return STATUS_INVALID_PARAMETER;
+    }
+
     /* check the object attributes */
     if (header->Attributes & ~(OBJ_VALID_ATTRIBUTES))
     {
         KeReleaseSpinLock(&header->Lock, irql);
         return STATUS_INVALID_PARAMETER;
+    }
+
+    /* check if the object is a kenrel-only object */
+    if ((header->Attributes & OBJ_KERNEL_HANDLE) && accessMode != KernelMode)
+    {
+        KeReleaseSpinLock(&header->Lock, irql);
+        return STATUS_INVALID_HANDLE;
     }
 
     /* if checks should be done */
@@ -130,7 +183,7 @@ NTSTATUS ObpDeleteObject(PVOID object)
 
     if (!header->Lock)
     {
-        KeBugCheck(SPIN_LOCK_NOT_OWNED);
+        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, (ULONG_PTR) &header->Lock, __LINE__, 0, 0);
     }
 
     /* destroy all handles */
@@ -140,8 +193,10 @@ NTSTATUS ObpDeleteObject(PVOID object)
     {
         PHANDLE_DATABASE_ENTRY next;
 
+        /* the entry has to be stored at this point, as ObCloseHandleByEntry invalidates the entry */
         next = (PHANDLE_DATABASE_ENTRY)currentHandleEntry->ObjectHandleEntry.Next;
-        ObDestroyHandleEntry(currentHandleEntry);
+        
+        ObCloseHandleByEntry(currentHandleEntry);
         currentHandleEntry = next;
     }
 

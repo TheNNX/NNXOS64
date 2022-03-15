@@ -721,7 +721,7 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
 
         for (i = 0; i < ENTRIES_PER_HANDLE_DATABASE; i++)
         {
-            ObDestroyHandleEntry(&currentHandleDatabase->Entries[i]);
+            ObCloseHandleByEntry(&currentHandleDatabase->Entries[i]);
         }
 
         ExFreePool(currentHandleDatabase);
