@@ -65,14 +65,14 @@ NTSTATUS ObReferenceObjectByPointer(
         /* if there's an object mismatch (objectType == NULL means that no check is done) */
         if (header->ObjectType != objectType && objectType != NULL)
         {
-            KeAcquireSpinLock(&header->Lock, irql);
+            KeReleaseSpinLock(&header->Lock, irql);
             return STATUS_OBJECT_TYPE_MISMATCH;
         }
         
         /* if there are desired access bits that are not set in granted access */
         if (desiredAccess & ~header->Access)
         {
-            KeAcquireSpinLock(&header->Lock, irql);
+            KeReleaseSpinLock(&header->Lock, irql);
             return STATUS_ACCESS_DENIED;
         }
     }
@@ -199,6 +199,8 @@ NTSTATUS ObCreateObject(
     if (status != STATUS_SUCCESS)
         return status;
 
+    rootType = ObGetHeaderFromObject(rootObject)->ObjectType;
+
     /* try traversing root to the object - if it succeded, object with this name already exists */
     status = rootType->Traverse(
         rootObject, 
@@ -206,7 +208,7 @@ NTSTATUS ObCreateObject(
         DesiredAccess, 
         AccessMode, 
         Attributes->ObjectName,
-        Attributes->Attributes & OBJ_CASE_INSENSITIVE != 0
+        (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
     );
 
     if (status == STATUS_SUCCESS)
@@ -232,7 +234,7 @@ NTSTATUS ObCreateObject(
     if (header == NULL)
         return STATUS_NO_MEMORY;
 
-    KeInitializeSpinLock(header->Lock);
+    KeInitializeSpinLock(&header->Lock);
     header->Access = DesiredAccess;
     header->Attributes = Attributes->Attributes;
     header->Root = root;
