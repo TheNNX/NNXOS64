@@ -1,5 +1,6 @@
 #include "object.h"
 #include <pool.h>
+#include <bugcheck.h>
 
 NTSTATUS ObpDeleteObject(PVOID Object);
 
@@ -116,6 +117,7 @@ NTSTATUS ObDereferenceObject(PVOID object)
     return STATUS_SUCCESS;
 }
 
+/* this requires objects lock to be acquired */
 NTSTATUS ObpDeleteObject(PVOID object)
 {
     PHANDLE_DATABASE_ENTRY currentHandleEntry;
@@ -125,6 +127,23 @@ NTSTATUS ObpDeleteObject(PVOID object)
     KIRQL irql;
 
     header = ObGetHeaderFromObject(object);
+
+    if (!header->Lock)
+    {
+        KeBugCheck(SPIN_LOCK_NOT_OWNED);
+    }
+
+    /* destroy all handles */
+    currentHandleEntry = (PHANDLE_DATABASE_ENTRY)header->HandlesHead.First;
+
+    while (currentHandleEntry != (PHANDLE_DATABASE_ENTRY)&header->HandlesHead)
+    {
+        PHANDLE_DATABASE_ENTRY next;
+
+        next = (PHANDLE_DATABASE_ENTRY)currentHandleEntry->ObjectHandleEntry.Next;
+        ObDestroyHandleEntry(currentHandleEntry);
+        currentHandleEntry = next;
+    }
 
     /* if has a root, remove own entry from root's children */
     if (header->Root)
@@ -144,18 +163,6 @@ NTSTATUS ObpDeleteObject(PVOID object)
          * and one for when root was assigned to the object */
         ObDereferenceObject(rootObject);
         ObDereferenceObject(rootObject);
-    }
-
-    /* destroy all handles */
-    currentHandleEntry = (PHANDLE_DATABASE_ENTRY)header->HandlesHead.First;
-    
-    while (currentHandleEntry != (PHANDLE_DATABASE_ENTRY)&header->HandlesHead)
-    {
-        PHANDLE_DATABASE_ENTRY next;
-
-        next = (PHANDLE_DATABASE_ENTRY)currentHandleEntry->ObjectHandleEntry.Next;
-        ObDestroyHandleEntry(currentHandleEntry);
-        currentHandleEntry = next;
     }
 
     ExFreePool(header);
