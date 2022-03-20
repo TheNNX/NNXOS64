@@ -46,6 +46,7 @@ NTSTATUS ObReferenceObjectByHandle(
         return status;
 
     /* reference once again, but this time with access checks */
+    /* this is done to avoid code duplication, and we open the object first to avoid having it deleted mid-checking */
     status = ObReferenceObjectByPointer(localObjectPtr, desiredAccess, objectType, accessMode);
     if (status != STATUS_SUCCESS)
     {
@@ -68,6 +69,7 @@ NTSTATUS ObReferenceObject(PVOID object)
 
     header = ObGetHeaderFromObject(object);
 
+    /* acquire the objects lock and increment ref count */
     KeAcquireSpinLock(&header->Lock, &irql);
     header->ReferenceCount++;
     KeReleaseSpinLock(&header->Lock, irql);
@@ -75,6 +77,9 @@ NTSTATUS ObReferenceObject(PVOID object)
     return STATUS_SUCCESS;
 }
 
+/* @brief does the same thing as ObReferenceObjectByHandle 
+ * but only if the access checks succed
+ * if objectType == NULL, objectType check is ignored */
 NTSTATUS ObReferenceObjectByPointer(
     PVOID object,
     ACCESS_MASK desiredAccess,
@@ -132,8 +137,8 @@ NTSTATUS ObReferenceObjectByPointer(
     }
 
     header->ReferenceCount++;
-
     KeReleaseSpinLock(&header->Lock, irql);
+
     return STATUS_SUCCESS;
 }
 
@@ -264,14 +269,21 @@ NTSTATUS ObCreateObject(
     rootType = ObGetHeaderFromObject(rootObject)->ObjectType;
 
     /* try traversing root to the object - if it succeded, object with this name already exists */
-    status = rootType->Traverse(
-        rootObject, 
-        &potentialCollision, 
-        DesiredAccess, 
-        AccessMode, 
-        Attributes->ObjectName,
-        (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
-    );
+    if (rootType->ObjectOpen == NULL)
+    {
+        status = STATUS_OBJECT_PATH_INVALID;
+    }
+    else
+    {
+        status = rootType->ObjectOpen(
+            rootObject,
+            &potentialCollision,
+            DesiredAccess,
+            AccessMode,
+            Attributes->ObjectName,
+            (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
+        );
+    }
 
     if (status == STATUS_SUCCESS)
     {
@@ -285,6 +297,7 @@ NTSTATUS ObCreateObject(
         /* fail otherwise */
         else
         {
+            ObDereferenceObject(potentialCollision);
             return STATUS_OBJECT_NAME_COLLISION;
         }
     }

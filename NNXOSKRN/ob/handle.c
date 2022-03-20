@@ -154,3 +154,40 @@ NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode)
 
     return STATUS_SUCCESS;
 }
+
+NTSTATUS ObCreateHandle(PHANDLE* pOutHandle, KPROCESSOR_MODE accessMode, PVOID object)
+{
+    PLIST_ENTRY databaseHead;
+    PLIST_ENTRY current;
+    NTSTATUS status;
+    KIRQL irql;
+
+    /* get the appropriate handle database */
+    databaseHead = ObpGetHandleDatabaseHead(
+        (accessMode == KernelMode) ?
+        NULL :
+        /* EPROCESS starts with KPROCESS, and KPROCESS never exists alone */
+        (PEPROCESS)KeGetCurrentThread()->Process
+    );
+
+    KeAcquireSpinLock(&HandleManagerLock, &irql);
+
+    current = databaseHead->First;
+    while (current != databaseHead)
+    {
+        PHANDLE_DATABASE_ENTRY handleDatabaseEntry;
+        handleDatabaseEntry = (PHANDLE_DATABASE_ENTRY)current;
+
+        if (handleDatabaseEntry->Object == 0)
+        {
+            handleDatabaseEntry->Object = object;
+            KeReleaseSpinLock(&HandleManagerLock, irql);
+            return STATUS_SUCCESS;
+        }
+
+        current = current->Next;
+    }
+
+    KeReleaseSpinLock(&HandleManagerLock, irql);
+    return STATUS_NO_MEMORY;
+}

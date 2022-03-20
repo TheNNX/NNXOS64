@@ -91,7 +91,7 @@ extern "C" {
 
     typedef struct _OBJECT_TYPE
     {
-        NTSTATUS(*Traverse)(
+        NTSTATUS(*ObjectOpen)(
             PVOID SelfObject, 
             PVOID* pOutObject, 
             ACCESS_MASK DesiredAccess, 
