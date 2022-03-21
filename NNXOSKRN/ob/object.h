@@ -174,6 +174,8 @@ extern "C" {
     {
         pAttributes->Attributes = flags;
         pAttributes->ObjectName = name;
+        if (root == NULL)
+            root = INVALID_HANDLE_VALUE;
         pAttributes->Root = root;
         pAttributes->SecurityDescriptor = security;
         pAttributes->Length = sizeof(*pAttributes);
@@ -182,12 +184,12 @@ extern "C" {
 
     inline POBJECT_HEADER ObGetHeaderFromObject(PVOID Object)
     {
-        return (POBJECT_HEADER)((ULONG_PTR)Object - sizeof(POBJECT_HEADER));
+        return (POBJECT_HEADER)((ULONG_PTR)Object - sizeof(OBJECT_HEADER));
     }
 
     inline PVOID ObGetObjectFromHeader(POBJECT_HEADER Header)
     {
-        return (PVOID)((ULONG_PTR)Header + sizeof(POBJECT_HEADER));
+        return (PVOID)((ULONG_PTR)Header + sizeof(OBJECT_HEADER));
     }
 
     extern POBJECT_TYPE pDirectoryObjectType;

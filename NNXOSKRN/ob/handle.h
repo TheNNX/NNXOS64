@@ -34,7 +34,7 @@ extern "C" {
     NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode);
     NTSTATUS ObInitHandleManager();
     NTSTATUS ObExtractAndReferenceObjectFromHandle(HANDLE handle, PVOID *pObject, KPROCESSOR_MODE accessMode);
-
+    NTSTATUS ObCreateHandle(PHANDLE pOutHandle, KPROCESSOR_MODE accessMode, PVOID object);
 #ifdef __cplusplus
 }
 #endif

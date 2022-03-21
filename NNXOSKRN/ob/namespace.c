@@ -1,6 +1,8 @@
 #include "object.h"
 #include <text.h>
 
+#pragma pack(push, 1)
+
 typedef struct _OBJECT_DIRECTORY_IMPL
 {
     LIST_ENTRY ChildrenHead;
@@ -13,7 +15,23 @@ typedef struct _OBJECT_TYPE_IMPL
     struct _OBJECT_TYPE Data;
 }OBJECT_TYPE_IMPL, *POBJCECT_TYPE_IMPL;
 
+#pragma pack(pop)
+
 HANDLE GlobalNamespace = INVALID_HANDLE_VALUE;
+
+static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
+{
+    POBJECT_HEADER header, newHeader;
+    POBJECT_DIRECTORY selfDir;
+
+    selfDir = (POBJECT_DIRECTORY)selfObject;
+    header = ObGetHeaderFromObject(selfObject);
+    newHeader = ObGetHeaderFromObject(newObject);
+    
+    InsertTailList(&selfDir->ChildrenHead, &newHeader->ParentChildListEntry);
+
+    return STATUS_SUCCESS;
+}
 
 /* @brief Internal function for opening a child object in a directory object. 
  * All name and path parsing has to be done BEFORE calling this function.
@@ -168,27 +186,133 @@ static NTSTATUS DirObjTypeOpenObject(
 }
 
 static OBJECT_TYPE_IMPL ObTypeTypeImpl = {
-    {{NULL, NULL}, RTL_CONSTANT_STRING(L"ObjectType"), NULL, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
+    {{NULL, NULL}, RTL_CONSTANT_STRING(L"Type"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
     {NULL, NULL, NULL, NULL}
 };
 
 static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = {
-    {NULL, NULL, RTL_CONSTANT_STRING(L"Directory"), NULL, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
-    {DirObjTypeOpenObject, NULL, NULL, NULL}
+    {{NULL, NULL}, RTL_CONSTANT_STRING(L"Directory"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0 },
+    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL}
 };
 
 POBJECT_TYPE ObTypeType = &ObTypeTypeImpl.Data;
 POBJECT_TYPE ObDirectoryType = &ObDirectoryTypeImpl.Data;
 
-static const UNICODE_STRING GlobalNamespaceEmptyName = RTL_CONSTANT_STRING(L"");
+static UNICODE_STRING GlobalNamespaceEmptyName = RTL_CONSTANT_STRING(L"");
+static UNICODE_STRING TypesDirName = RTL_CONSTANT_STRING(L"ObjectTypes");
+
+NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
+{
+    POBJECT_HEADER header, rootHeader;
+    NTSTATUS statusToReturn;
+    POBJECT_TYPE rootType;
+    PVOID originalRoot;
+    KIRQL irql1, irql2;
+    HANDLE rootHandle;
+    PVOID rootObject;
+    NTSTATUS status;
+    BOOL failed;
+
+    originalRoot = NULL;
+
+    ObReferenceObject(object);
+    header = ObGetHeaderFromObject(object);
+    KeAcquireSpinLock(&header->Lock, &irql1);
+
+    rootHandle = header->Root;
+
+    if (rootHandle != INVALID_HANDLE_VALUE)
+    {
+        /* reference the old root */
+        status = ObReferenceObjectByHandle(
+            rootHandle,
+            0,
+            NULL,
+            accessMode,
+            &rootObject,
+            NULL
+        );
+
+        if (status != STATUS_SUCCESS)
+        {
+            KeReleaseSpinLock(&header->Lock, irql1);
+            ObDereferenceObject(object);
+            return status;
+        }
+
+        header->Root = INVALID_HANDLE_VALUE;
+
+        /* remove child entry from child chain in root */
+        RemoveEntryList(&header->ParentChildListEntry);
+
+        ObDereferenceObject(rootObject);
+        originalRoot = rootObject;
+    }
+
+    /* from now on, rootObject is the new root's object */
+    /* this is not to be dereferenced, as setting an object as a root increments its reference count */
+    ObReferenceObjectByHandle(newRoot, 0, NULL, accessMode, &rootObject, NULL);
+    rootHeader = ObGetHeaderFromObject(rootObject);
+
+    KeAcquireSpinLock(&rootHeader->Lock, &irql2);
+
+    rootType = rootHeader->ObjectType; 
+    /* try adding object as a child of the new root object - try to undo all prior changes on failure */
+    /* fail if there's no rootType->AddChildObject method */
+    failed = (rootType->AddChildObject == NULL);
+
+    /* if it still haven't failed, try calling the method */
+    if (failed == FALSE)
+    {
+        status = rootType->AddChildObject(rootObject, object);
+        failed = (status != STATUS_SUCCESS);
+    }
+    else
+    {
+        statusToReturn = STATUS_OBJECT_PATH_INVALID;
+    }
+
+    /* if it failed, release locks, dereference objects and quit with appriopriate error code */
+    if (failed)
+    {
+        KeReleaseSpinLock(&rootHeader->Lock, irql2);
+
+        KeReleaseSpinLock(&header->Lock, irql1);
+        ObDereferenceObject(object);
+        ObDereferenceObject(rootObject);
+
+        /* try setting the root back */
+        if (originalRoot != NULL)
+        {
+            status = ObChangeRoot(object, originalRoot, accessMode);
+            if (status)
+                return statusToReturn;
+        }
+
+        return statusToReturn;
+    }
+
+    KeReleaseSpinLock(&rootHeader->Lock, irql2);
+
+    KeReleaseSpinLock(&header->Lock, irql1);
+    ObDereferenceObject(object);
+
+    /* if the object originally had any parent, dereference the parent */
+    if (originalRoot != NULL)
+        ObDereferenceObject(originalRoot);
+
+    return STATUS_SUCCESS;
+}
 
 NTSTATUS ObpInitNamespace()
 {
     NTSTATUS status;
-    OBJECT_ATTRIBUTES objAttributes;
+    OBJECT_ATTRIBUTES objAttributes, typeDirAttrbiutes;
     POBJECT_DIRECTORY globalNamespaceRoot;
-    
-    /* initialize attributes */
+    POBJECT_DIRECTORY typesDirectory;
+    HANDLE objectTypeDirHandle;
+
+    /* initialize root's attributes */
     InitializeObjectAttributes(
         &objAttributes,
         &GlobalNamespaceEmptyName,
@@ -207,9 +331,62 @@ NTSTATUS ObpInitNamespace()
         ObDirectoryType
     );
 
-    /* TODO: create handle for global namespace */
+    if (status != STATUS_SUCCESS)
+        return status;
 
-    return status;
+    /* initalize root's children head */
+    InitializeListHead(&globalNamespaceRoot->ChildrenHead);
+
+    /* if handle creation fails, return */
+    status = ObCreateHandle(&GlobalNamespace, KernelMode, (PVOID)globalNamespaceRoot);
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* initalize ObjectTypes directory attributes */
+    InitializeObjectAttributes(
+        &typeDirAttrbiutes,
+        &TypesDirName,
+        OBJ_PERMANENT,
+        GlobalNamespace,
+        NULL
+    );
+
+    /* create the ObjectTypes directory object */
+    status = ObCreateObject(
+        &typesDirectory,
+        0,
+        KernelMode,
+        &typeDirAttrbiutes,
+        sizeof(OBJECT_DIRECTORY),
+        ObDirectoryType
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* initalize ObjectTypes directory's children head */
+    InitializeListHead(&typesDirectory->ChildrenHead);
+
+    /* create handle for the ObjectTYpes directory */
+    status = ObCreateHandle(
+        &objectTypeDirHandle,
+        KernelMode,
+        (PVOID)typesDirectory
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* add premade type objects to ObjectTypes directory */
+    status = ObChangeRoot((PVOID)ObDirectoryType, objectTypeDirHandle, KernelMode);
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    status = ObChangeRoot((PVOID)ObTypeType, objectTypeDirHandle, KernelMode);
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    return STATUS_SUCCESS;
 }
 
 HANDLE ObGetGlobalNamespaceHandle()

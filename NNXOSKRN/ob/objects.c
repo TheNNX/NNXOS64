@@ -6,13 +6,21 @@ NTSTATUS ObInit()
 {
     NTSTATUS status;
 
+    PrintT("Starting ObInit\n");
+
     status = ObInitHandleManager();
     if (status != STATUS_SUCCESS)
         return status;
 
+    PrintT("ObInitHandleManager done\n");
+
     status = ObpInitNamespace();
     if (status != STATUS_SUCCESS)
         return status;
+
+    PrintT("ObpInitNamespace done\n");
+
+    PrintT("ObInit done\n");
 
     return STATUS_SUCCESS;
 }
@@ -57,8 +65,11 @@ NTSTATUS ObReferenceObjectByHandle(
         return status;
     }
 
+    /* return our pointer */
+    *pObject = localObjectPtr;
     /* derefence the original refernece */
     ObDereferenceObject(localObjectPtr);
+
     return STATUS_SUCCESS;
 }
 
@@ -92,13 +103,13 @@ NTSTATUS ObReferenceObjectByPointer(
     
     if (object == NULL)
         return STATUS_INVALID_PARAMETER;
-    
+
     header = ObGetHeaderFromObject(object);
 
     KeAcquireSpinLock(&header->Lock, &irql);
 
     /* if ReferenceCount is 0, the object was deleted when the code was waiting for it's lock */
-    if (header->ReferenceCount > 0)
+    if (header->ReferenceCount == 0)
     {
         KeReleaseSpinLock(&header->Lock, irql);
         return STATUS_INVALID_PARAMETER;
@@ -253,52 +264,58 @@ NTSTATUS ObCreateObject(
     if (root == INVALID_HANDLE_VALUE)
         root = ObGetGlobalNamespaceHandle();
 
-    /* reference the root handle to get access to root's type */
-    status = ObReferenceObjectByHandle(
-        root, 
-        DesiredAccess, 
-        NULL, 
-        AccessMode, 
-        &rootObject, 
-        NULL
-    );
-
-    if (status != STATUS_SUCCESS)
-        return status;
-
-    rootType = ObGetHeaderFromObject(rootObject)->ObjectType;
-
-    /* try traversing root to the object - if it succeded, object with this name already exists */
-    if (rootType->ObjectOpen == NULL)
+    /* if root still INVALID_HANDLE_VALUE after setting to global namespace, 
+     * it means object manager is not initialized yet */
+    if (root != INVALID_HANDLE_VALUE)
     {
-        status = STATUS_OBJECT_PATH_INVALID;
-    }
-    else
-    {
-        status = rootType->ObjectOpen(
-            rootObject,
-            &potentialCollision,
+        /* reference the root handle to get access to root's type */
+        status = ObReferenceObjectByHandle(
+            root,
             DesiredAccess,
+            NULL,
             AccessMode,
-            Attributes->ObjectName,
-            (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
+            &rootObject,
+            NULL
         );
-    }
 
-    if (status == STATUS_SUCCESS)
-    {
-        /* if OBJ_OPENIF was specifed to this function, simply return the existing object */
-        /* TODO: check if NT checks for types in this situation */
-        if (Attributes->Attributes & OBJ_OPENIF)
+        if (status != STATUS_SUCCESS)
+            return status;
+
+        POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
+        rootType = rootHeader->ObjectType;
+
+        /* try traversing root to the object - if it succeded, object with this name already exists */
+        if (rootType->ObjectOpen == NULL)
         {
-            *pObject = potentialCollision;
-            return STATUS_SUCCESS;
+            status = STATUS_OBJECT_PATH_INVALID;
         }
-        /* fail otherwise */
         else
         {
-            ObDereferenceObject(potentialCollision);
-            return STATUS_OBJECT_NAME_COLLISION;
+            status = rootType->ObjectOpen(
+                rootObject,
+                &potentialCollision,
+                DesiredAccess,
+                AccessMode,
+                Attributes->ObjectName,
+                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
+            );
+        }
+
+        if (status == STATUS_SUCCESS)
+        {
+            /* if OBJ_OPENIF was specifed to this function, simply return the existing object */
+            /* TODO: check if NT checks for types in this situation */
+            if (Attributes->Attributes & OBJ_OPENIF)
+            {
+                *pObject = potentialCollision;
+                return STATUS_SUCCESS;
+            }
+            /* fail otherwise */
+            else
+            {
+                ObDereferenceObject(potentialCollision);
+                return STATUS_OBJECT_NAME_COLLISION;
+            }
         }
     }
 
@@ -328,7 +345,15 @@ NTSTATUS ObCreateObject(
     *pObject = ObGetObjectFromHeader(header);
     
     /* add to roots children */
-    rootType->AddChildObject(root, *pObject);
+    if (root != INVALID_HANDLE_VALUE)
+    {
+        status = rootType->AddChildObject(root, *pObject);
+        if (status != STATUS_SUCCESS)
+        {
+            ExFreePool(header);
+            return status;
+        }
+    }
 
     return STATUS_SUCCESS;
 }

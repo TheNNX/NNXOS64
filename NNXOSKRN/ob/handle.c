@@ -62,7 +62,6 @@ NTSTATUS ObGetHandleDatabaseEntryFromHandle(HANDLE handle, PLIST_ENTRY databaseH
         if (currentIndex <= handleAsIndex && currentIndex + ENTRIES_PER_HANDLE_DATABASE > handleAsIndex)
         {
             *outpEntry = &((PHANDLE_DATABASE)current)->Entries[handleAsIndex % ENTRIES_PER_HANDLE_DATABASE];
-
             KeReleaseSpinLock(&HandleManagerLock, irql);
             return STATUS_SUCCESS;
         }
@@ -155,11 +154,11 @@ NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObCreateHandle(PHANDLE* pOutHandle, KPROCESSOR_MODE accessMode, PVOID object)
+NTSTATUS ObCreateHandle(PHANDLE pOutHandle, KPROCESSOR_MODE accessMode, PVOID object)
 {
     PLIST_ENTRY databaseHead;
     PLIST_ENTRY current;
-    NTSTATUS status;
+    SIZE_T currentIndex;
     KIRQL irql;
 
     /* get the appropriate handle database */
@@ -172,17 +171,25 @@ NTSTATUS ObCreateHandle(PHANDLE* pOutHandle, KPROCESSOR_MODE accessMode, PVOID o
 
     KeAcquireSpinLock(&HandleManagerLock, &irql);
 
+    currentIndex = 1;
     current = databaseHead->First;
     while (current != databaseHead)
     {
-        PHANDLE_DATABASE_ENTRY handleDatabaseEntry;
-        handleDatabaseEntry = (PHANDLE_DATABASE_ENTRY)current;
+        SIZE_T i;
+        PHANDLE_DATABASE handleDatabase;
+        handleDatabase = (PHANDLE_DATABASE)current;
 
-        if (handleDatabaseEntry->Object == 0)
+        for (i = 0; i < ENTRIES_PER_HANDLE_DATABASE; i++)
         {
-            handleDatabaseEntry->Object = object;
-            KeReleaseSpinLock(&HandleManagerLock, irql);
-            return STATUS_SUCCESS;
+            if (handleDatabase->Entries[i].Object == 0)
+            {
+                *pOutHandle = (HANDLE)currentIndex;
+                handleDatabase->Entries[i].Object = object;
+                KeReleaseSpinLock(&HandleManagerLock, irql);
+                return STATUS_SUCCESS;
+            }
+
+            currentIndex++;
         }
 
         current = current->Next;

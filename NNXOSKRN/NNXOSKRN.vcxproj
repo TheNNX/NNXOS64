@@ -84,7 +84,7 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -147,7 +147,7 @@ $(SolutionDir)genverh.bat</Command>
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
