@@ -18,7 +18,7 @@ extern "C" {
         PVOID Object;
     }HANDLE_DATABASE_ENTRY, *PHANDLE_DATABASE_ENTRY;
 
-#define ENTRIES_PER_HANDLE_DATABASE (PAGE_SIZE - sizeof(LIST_ENTRY)) / sizeof(HANDLE_DATABASE_ENTRY)
+#define ENTRIES_PER_HANDLE_DATABASE ((PAGE_SIZE - sizeof(LIST_ENTRY)) / sizeof(HANDLE_DATABASE_ENTRY))
 
     typedef __declspec(align(4096)) struct _HANDLE_DATABASE
     {

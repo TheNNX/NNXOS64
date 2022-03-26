@@ -51,7 +51,8 @@ NTSTATUS ObGetHandleDatabaseEntryFromHandle(HANDLE handle, PLIST_ENTRY databaseH
     handleAsIndex = (ULONG_PTR)handle;
 
     /* skip zero to avoid bugs due to assuming INVALID_HANDLE_VALUE = 0 */
-    currentIndex = 1;
+    currentIndex = 0;
+    handleAsIndex--;
 
     /* enumerate the database until we find the database part with the handle */
     current = databaseHead->First;
@@ -173,6 +174,7 @@ NTSTATUS ObCreateHandle(PHANDLE pOutHandle, KPROCESSOR_MODE accessMode, PVOID ob
 
     currentIndex = 1;
     current = databaseHead->First;
+
     while (current != databaseHead)
     {
         SIZE_T i;

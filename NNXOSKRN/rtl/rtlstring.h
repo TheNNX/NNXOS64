@@ -32,6 +32,16 @@ extern "C"
     BOOL NTAPI RtlEqualString(PCSTRING, PCSTRING, BOOL IgnoreCase);
     LONG NTAPI RtlCompareString(PCSTRING, PCSTRING, BOOL IgnoreCase);
 
+    inline static void DebugWPrint(PUNICODE_STRING unicodeStr)
+    {
+        VOID PrintTA(const char*, ...);
+
+        USHORT i;
+
+        for (i = 0; i < unicodeStr->Length / sizeof(*unicodeStr->Buffer); i++)
+            PrintTA("%c", (UCHAR)(unicodeStr->Buffer[i]));
+    }
+
 #define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), s}
 
 #ifdef __cplusplus

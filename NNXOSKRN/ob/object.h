@@ -107,6 +107,11 @@ extern "C" {
 
         NTSTATUS(*OnOpen)(PVOID SelfObject);
         NTSTATUS(*OnClose)(PVOID SelfObject);
+
+        NTSTATUS(*EnumerateChildren)(
+            PVOID SelfObject, 
+            PLIST_ENTRY CurrentEntry
+        );
     }OBJECT_TYPE, *POBJECT_TYPE;
 
     typedef struct _OBJECT_HEADER
@@ -192,10 +197,6 @@ extern "C" {
         return (PVOID)((ULONG_PTR)Header + sizeof(OBJECT_HEADER));
     }
 
-    extern POBJECT_TYPE pDirectoryObjectType;
-    extern POBJECT_TYPE pTypeObjectType;
-    extern POBJECT_TYPE pThreadObjectType;
-    extern POBJECT_TYPE pProcessObjectType;
 #ifdef __cplusplus
 }
 #endif

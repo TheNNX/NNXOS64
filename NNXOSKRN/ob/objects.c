@@ -2,6 +2,25 @@
 #include <pool.h>
 #include <bugcheck.h>
 
+NTSTATUS ObpTestNamespace();
+NTSTATUS ObpMpTestNamespace();
+
+NTSTATUS ObpTest()
+{
+    NTSTATUS status;
+
+    status = ObpTestNamespace();
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS ObpMpTest()
+{
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS ObInit()
 {
     NTSTATUS status;
@@ -22,7 +41,11 @@ NTSTATUS ObInit()
 
     PrintT("ObInit done\n");
 
-    return STATUS_SUCCESS;
+    PrintT("Starting tests\n");
+    status = ObpTest();
+    PrintT("NTSTATUS=0x%X\n", status);
+
+    return status;
 }
 
 NTSTATUS ObpDeleteObject(PVOID Object);
@@ -347,7 +370,7 @@ NTSTATUS ObCreateObject(
     /* add to roots children */
     if (root != INVALID_HANDLE_VALUE)
     {
-        status = rootType->AddChildObject(root, *pObject);
+        status = rootType->AddChildObject(rootObject, *pObject);
         if (status != STATUS_SUCCESS)
         {
             ExFreePool(header);

@@ -28,7 +28,7 @@ static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
     header = ObGetHeaderFromObject(selfObject);
     newHeader = ObGetHeaderFromObject(newObject);
     
-    InsertTailList(&selfDir->ChildrenHead, &newHeader->ParentChildListEntry);
+    InsertHeadList(&selfDir->ChildrenHead, &newHeader->ParentChildListEntry);
 
     return STATUS_SUCCESS;
 }
@@ -110,8 +110,9 @@ static NTSTATUS DirObjTypeOpenObject(
 )
 {
     USHORT firstSlashPosition;
-    
+
     if (Name->Length == 0)
+        return STATUS_OBJECT_PATH_INVALID;
 
     for (firstSlashPosition = 0; firstSlashPosition < Name->Length / sizeof(*Name->Buffer); firstSlashPosition++)
     {
@@ -122,7 +123,7 @@ static NTSTATUS DirObjTypeOpenObject(
     if (firstSlashPosition == Name->Length / sizeof(*Name->Buffer))
     {
         /* last path part */
-        return DirObjTypeOpenObjectWithNameDecoded(SelfObject, *pOutObject, DesiredAccess, AccessMode, Name, CaseInsensitive);
+        return DirObjTypeOpenObjectWithNameDecoded(SelfObject, pOutObject, DesiredAccess, AccessMode, Name, CaseInsensitive);
     }
     else if (firstSlashPosition == 0) 
     {
@@ -187,12 +188,12 @@ static NTSTATUS DirObjTypeOpenObject(
 
 static OBJECT_TYPE_IMPL ObTypeTypeImpl = {
     {{NULL, NULL}, RTL_CONSTANT_STRING(L"Type"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
-    {NULL, NULL, NULL, NULL}
+    {NULL, NULL, NULL, NULL, NULL}
 };
 
 static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = {
     {{NULL, NULL}, RTL_CONSTANT_STRING(L"Directory"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0 },
-    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL}
+    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL, NULL}
 };
 
 POBJECT_TYPE ObTypeType = &ObTypeTypeImpl.Data;
@@ -367,7 +368,7 @@ NTSTATUS ObpInitNamespace()
     /* initalize ObjectTypes directory's children head */
     InitializeListHead(&typesDirectory->ChildrenHead);
 
-    /* create handle for the ObjectTYpes directory */
+    /* create handle for the ObjectTypes directory */
     status = ObCreateHandle(
         &objectTypeDirHandle,
         KernelMode,
@@ -392,4 +393,49 @@ NTSTATUS ObpInitNamespace()
 HANDLE ObGetGlobalNamespaceHandle()
 {
     return GlobalNamespace;
+}
+
+static UNICODE_STRING ObpTestPath = RTL_CONSTANT_STRING(L"ObjectTypes\\Directory");
+NTSTATUS ObpTestNamespace()
+{
+    NTSTATUS status;
+    PVOID globalNamespaceObject;
+    PVOID directoryTypeObject;
+
+    /* get the pointer to global namespace */
+    status = ObReferenceObjectByHandle(
+        GlobalNamespace,
+        0,
+        ObDirectoryType,
+        KernelMode,
+        &globalNamespaceObject,
+        NULL
+    );
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* try opening one of the predefined objects */
+    status = ObDirectoryType->ObjectOpen(
+        globalNamespaceObject,
+        &directoryTypeObject,
+        0,
+        KernelMode,
+        &ObpTestPath,
+        TRUE
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* this too, theoreticaly, can fail (on deletion, but we don't expect deletion anyway) */
+    status = ObDereferenceObject(globalNamespaceObject);
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS ObpMpTestNamespace()
+{
+    return STATUS_SUCCESS;
 }
