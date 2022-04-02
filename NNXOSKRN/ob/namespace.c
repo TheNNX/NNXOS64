@@ -1,4 +1,5 @@
 #include "object.h"
+#include <bugcheck.h>
 #include <text.h>
 
 #pragma pack(push, 1)
@@ -396,11 +397,15 @@ HANDLE ObGetGlobalNamespaceHandle()
 }
 
 static UNICODE_STRING ObpTestPath = RTL_CONSTANT_STRING(L"ObjectTypes\\Directory");
+static UNICODE_STRING ObpInvalidTestPath = RTL_CONSTANT_STRING(L"ObjectTypes\\");
+static UNICODE_STRING ObpNonExistentTestPath = RTL_CONSTANT_STRING(L"ObjectTypes\\Nonexistent");
+
 NTSTATUS ObpTestNamespace()
 {
     NTSTATUS status;
     PVOID globalNamespaceObject;
     PVOID directoryTypeObject;
+    PVOID invalidObject;
 
     /* get the pointer to global namespace */
     status = ObReferenceObjectByHandle(
@@ -426,6 +431,32 @@ NTSTATUS ObpTestNamespace()
 
     if (status != STATUS_SUCCESS)
         return status;
+
+    /* try opening an invalid object */
+    status = ObDirectoryType->ObjectOpen(
+        globalNamespaceObject,
+        &invalidObject,
+        0,
+        KernelMode,
+        &ObpInvalidTestPath,
+        TRUE
+    );
+
+    if (status != STATUS_OBJECT_PATH_INVALID)
+        KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, STATUS_OBJECT_PATH_INVALID, 0);
+
+    /* try opening a non-existent object */
+    status = ObDirectoryType->ObjectOpen(
+        globalNamespaceObject,
+        &invalidObject,
+        0,
+        KernelMode,
+        &ObpNonExistentTestPath,
+        TRUE
+    );
+
+    if (status != STATUS_OBJECT_NAME_NOT_FOUND)
+        KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, STATUS_OBJECT_NAME_NOT_FOUND, 0);
 
     /* this too, theoreticaly, can fail (on deletion, but we don't expect deletion anyway) */
     status = ObDereferenceObject(globalNamespaceObject);
