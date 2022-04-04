@@ -197,6 +197,16 @@ extern "C" {
         return (PVOID)((ULONG_PTR)Header + sizeof(OBJECT_HEADER));
     }
 
+    NTSTATUS ObCreateSchedulerTypes(
+        POBJECT_TYPE* poutProcessType,
+        POBJECT_TYPE* poutThreadType
+    );
+
+    extern POBJECT_TYPE ObTypeObjectType;
+    extern POBJECT_TYPE ObDirectoryObjectType;
+    extern POBJECT_TYPE PsProcessType;
+    extern POBJECT_TYPE PsThreadType;
+
 #ifdef __cplusplus
 }
 #endif

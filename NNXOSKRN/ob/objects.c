@@ -1,6 +1,7 @@
 #include "object.h"
 #include <pool.h>
 #include <bugcheck.h>
+#include <rtl/rtl.h>
 
 NTSTATUS ObpTestNamespace();
 NTSTATUS ObpMpTestNamespace();
@@ -155,7 +156,7 @@ NTSTATUS ObReferenceObjectByPointer(
     /* if checks should be done */
     if (header->Attributes & OBJ_FORCE_ACCESS_CHECK || accessMode != KernelMode)
     {
-        /* if there's an object mismatch (objectType == NULL means that no check is done) */
+        /* if there's an object type mismatch (objectType == NULL means that no check is done) */
         if (header->ObjectType != objectType && objectType != NULL)
         {
             KeReleaseSpinLock(&header->Lock, irql);
@@ -283,61 +284,66 @@ NTSTATUS ObCreateObject(
     if (pObject == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    root = Attributes->Root;
-    if (root == INVALID_HANDLE_VALUE)
-        root = ObGetGlobalNamespaceHandle();
+    root = INVALID_HANDLE_VALUE;
 
-    /* if root still INVALID_HANDLE_VALUE after setting to global namespace, 
-     * it means object manager is not initialized yet */
-    if (root != INVALID_HANDLE_VALUE)
+    if (Attributes->ObjectName != NULL)
     {
-        /* reference the root handle to get access to root's type */
-        status = ObReferenceObjectByHandle(
-            root,
-            DesiredAccess,
-            NULL,
-            AccessMode,
-            &rootObject,
-            NULL
-        );
+        root = Attributes->Root;
+        if (root == INVALID_HANDLE_VALUE)
+            root = ObGetGlobalNamespaceHandle();
 
-        if (status != STATUS_SUCCESS)
-            return status;
-
-        POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
-        rootType = rootHeader->ObjectType;
-
-        /* try traversing root to the object - if it succeded, object with this name already exists */
-        if (rootType->ObjectOpen == NULL)
+        /* if root still INVALID_HANDLE_VALUE after setting to global namespace,
+         * it means object manager is not initialized yet */
+        if (root != INVALID_HANDLE_VALUE)
         {
-            status = STATUS_OBJECT_PATH_INVALID;
-        }
-        else
-        {
-            status = rootType->ObjectOpen(
-                rootObject,
-                &potentialCollision,
+            /* reference the root handle to get access to root's type */
+            status = ObReferenceObjectByHandle(
+                root,
                 DesiredAccess,
+                NULL,
                 AccessMode,
-                Attributes->ObjectName,
-                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
+                &rootObject,
+                NULL
             );
-        }
 
-        if (status == STATUS_SUCCESS)
-        {
-            /* if OBJ_OPENIF was specifed to this function, simply return the existing object */
-            /* TODO: check if NT checks for types in this situation */
-            if (Attributes->Attributes & OBJ_OPENIF)
+            if (status != STATUS_SUCCESS)
+                return status;
+
+            POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
+            rootType = rootHeader->ObjectType;
+
+            /* try traversing root to the object - if it succeded, object with this name already exists */
+            if (rootType->ObjectOpen == NULL)
             {
-                *pObject = potentialCollision;
-                return STATUS_SUCCESS;
+                status = STATUS_OBJECT_PATH_INVALID;
             }
-            /* fail otherwise */
             else
             {
-                ObDereferenceObject(potentialCollision);
-                return STATUS_OBJECT_NAME_COLLISION;
+                status = rootType->ObjectOpen(
+                    rootObject,
+                    &potentialCollision,
+                    DesiredAccess,
+                    AccessMode,
+                    Attributes->ObjectName,
+                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
+                );
+            }
+
+            if (status == STATUS_SUCCESS)
+            {
+                /* if OBJ_OPENIF was specifed to this function, simply return the existing object */
+                /* TODO: check if NT checks for types in this situation */
+                if (Attributes->Attributes & OBJ_OPENIF)
+                {
+                    *pObject = potentialCollision;
+                    return STATUS_SUCCESS;
+                }
+                /* fail otherwise */
+                else
+                {
+                    ObDereferenceObject(potentialCollision);
+                    return STATUS_OBJECT_NAME_COLLISION;
+                }
             }
         }
     }
@@ -363,7 +369,16 @@ NTSTATUS ObCreateObject(
     InitializeListHead(&header->HandlesHead);
     
     /* copy the struct (it doesn't copy the buffer though, but according to MSDN that is a-okay) */
-    header->Name = *Attributes->ObjectName;
+    if (Attributes->ObjectName != NULL)
+    {
+        header->Name = *Attributes->ObjectName;
+    }
+    else
+    {
+        header->Name.Buffer = NULL;
+        header->Name.MaxLength = 0;
+        header->Name.Length = 0;
+    }
 
     *pObject = ObGetObjectFromHeader(header);
     
@@ -377,6 +392,80 @@ NTSTATUS ObCreateObject(
             return status;
         }
     }
+
+    return STATUS_SUCCESS;
+}
+
+static UNICODE_STRING ThreadObjName = RTL_CONSTANT_STRING(L"Thread");
+static UNICODE_STRING ProcObjName = RTL_CONSTANT_STRING(L"Process");
+
+/* creates the object types neccessary for the scheduler */
+NTSTATUS ObCreateSchedulerTypes(
+    POBJECT_TYPE* poutProcessType, 
+    POBJECT_TYPE* poutThreadType
+)
+{
+    NTSTATUS status;
+    HANDLE typeDirHandle;
+    POBJECT_TYPE procType, threadType;
+    OBJECT_ATTRIBUTES procAttrib, threadAttrib;
+
+    typeDirHandle = ObpGetTypeDirHandle();
+
+    /* initialize attributes */
+    InitializeObjectAttributes(
+        &procAttrib,
+        &ProcObjName,
+        0,
+        typeDirHandle,
+        NULL
+    );
+
+    InitializeObjectAttributes(
+        &threadAttrib,
+        &ThreadObjName,
+        0,
+        typeDirHandle,
+        NULL
+    );
+
+    /* create objects */
+    status = ObCreateObject(
+        &procType,
+        0,
+        KernelMode,
+        &procAttrib,
+        sizeof(OBJECT_TYPE),
+        ObTypeObjectType
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    status = ObCreateObject(
+        &threadType,
+        0,
+        KernelMode,
+        &threadAttrib,
+        sizeof(OBJECT_TYPE),
+        ObTypeObjectType
+    );
+
+    if (status != STATUS_SUCCESS)
+    {
+        /* dereferencing this isn't really needed, as the OS is dead anyway if we're here
+         * but it doesn't hurt us in any way */
+        ObDereferenceObject((PVOID)procType);
+        return status;
+    }
+
+    /* no methods defined yet */
+    RtlZeroMemory(threadType, sizeof(OBJECT_TYPE));
+    RtlZeroMemory(procType, sizeof(OBJECT_TYPE));
+
+    /* output through the pointer parameters */
+    *poutProcessType = procType;
+    *poutThreadType = threadType;
 
     return STATUS_SUCCESS;
 }

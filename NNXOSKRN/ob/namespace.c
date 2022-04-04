@@ -1,6 +1,7 @@
 #include "object.h"
 #include <bugcheck.h>
 #include <text.h>
+#include <scheduler.h>
 
 #pragma pack(push, 1)
 
@@ -197,8 +198,8 @@ static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = {
     {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL, NULL}
 };
 
-POBJECT_TYPE ObTypeType = &ObTypeTypeImpl.Data;
-POBJECT_TYPE ObDirectoryType = &ObDirectoryTypeImpl.Data;
+POBJECT_TYPE ObTypeObjectType = &ObTypeTypeImpl.Data;
+POBJECT_TYPE ObDirectoryObjectType = &ObDirectoryTypeImpl.Data;
 
 static UNICODE_STRING GlobalNamespaceEmptyName = RTL_CONSTANT_STRING(L"");
 static UNICODE_STRING TypesDirName = RTL_CONSTANT_STRING(L"ObjectTypes");
@@ -306,6 +307,13 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
     return STATUS_SUCCESS;
 }
 
+static HANDLE ObpTypeDirHandle = INVALID_HANDLE_VALUE;
+
+HANDLE ObpGetTypeDirHandle()
+{
+    return ObpTypeDirHandle;
+}
+
 NTSTATUS ObpInitNamespace()
 {
     NTSTATUS status;
@@ -330,7 +338,7 @@ NTSTATUS ObpInitNamespace()
         KernelMode, 
         &objAttributes, 
         sizeof(OBJECT_DIRECTORY),
-        ObDirectoryType
+        ObDirectoryObjectType
     );
 
     if (status != STATUS_SUCCESS)
@@ -360,7 +368,7 @@ NTSTATUS ObpInitNamespace()
         KernelMode,
         &typeDirAttrbiutes,
         sizeof(OBJECT_DIRECTORY),
-        ObDirectoryType
+        ObDirectoryObjectType
     );
 
     if (status != STATUS_SUCCESS)
@@ -379,12 +387,14 @@ NTSTATUS ObpInitNamespace()
     if (status != STATUS_SUCCESS)
         return status;
 
+    ObpTypeDirHandle = objectTypeDirHandle;
+
     /* add premade type objects to ObjectTypes directory */
-    status = ObChangeRoot((PVOID)ObDirectoryType, objectTypeDirHandle, KernelMode);
+    status = ObChangeRoot((PVOID)ObDirectoryObjectType, objectTypeDirHandle, KernelMode);
     if (status != STATUS_SUCCESS)
         return status;
 
-    status = ObChangeRoot((PVOID)ObTypeType, objectTypeDirHandle, KernelMode);
+    status = ObChangeRoot((PVOID)ObTypeObjectType, objectTypeDirHandle, KernelMode);
     if (status != STATUS_SUCCESS)
         return status;
 
@@ -411,7 +421,7 @@ NTSTATUS ObpTestNamespace()
     status = ObReferenceObjectByHandle(
         GlobalNamespace,
         0,
-        ObDirectoryType,
+        ObDirectoryObjectType,
         KernelMode,
         &globalNamespaceObject,
         NULL
@@ -420,7 +430,7 @@ NTSTATUS ObpTestNamespace()
         return status;
 
     /* try opening one of the predefined objects */
-    status = ObDirectoryType->ObjectOpen(
+    status = ObDirectoryObjectType->ObjectOpen(
         globalNamespaceObject,
         &directoryTypeObject,
         0,
@@ -433,7 +443,7 @@ NTSTATUS ObpTestNamespace()
         return status;
 
     /* try opening an invalid object */
-    status = ObDirectoryType->ObjectOpen(
+    status = ObDirectoryObjectType->ObjectOpen(
         globalNamespaceObject,
         &invalidObject,
         0,
@@ -446,7 +456,7 @@ NTSTATUS ObpTestNamespace()
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, STATUS_OBJECT_PATH_INVALID, 0);
 
     /* try opening a non-existent object */
-    status = ObDirectoryType->ObjectOpen(
+    status = ObDirectoryObjectType->ObjectOpen(
         globalNamespaceObject,
         &invalidObject,
         0,
@@ -466,7 +476,55 @@ NTSTATUS ObpTestNamespace()
     return STATUS_SUCCESS;
 }
 
+NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
+NTSTATUS PspCreateThreadInternal(
+    PETHREAD* ppThread,
+    PEPROCESS pParentProcess,
+    BOOL IsKernel,
+    ULONG_PTR EntryPoint
+);
+NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess);
+
+VOID ObpNamespaceTestThreadEntry()
+{
+
+    while (1);
+}
+
 NTSTATUS ObpMpTestNamespace()
 {
-    return STATUS_SUCCESS;
+    KWAIT_BLOCK waitBlockArray[16];
+    PEPROCESS thisCpuTestProc;
+    NTSTATUS status, status2;
+    ETHREAD threads[16];
+    SIZE_T i;
+
+    status = PspCreateProcessInternal(&thisCpuTestProc);
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    for (i = 0; i < 16; i++)
+    {
+        status = PspCreateThreadInternal(
+            &threads[i],
+            thisCpuTestProc,
+            TRUE,
+            ObpNamespaceTestThreadEntry
+        );
+
+        if (status != STATUS_SUCCESS)
+            break;
+    }
+
+    if (status == STATUS_SUCCESS)
+    {
+        status = KeWaitForMultipleObjects(16, threads, WaitAll, 0, KernelMode, FALSE, -1, &waitBlockArray);
+        /* check result after waiting */
+    }
+
+    status2 = PspDestroyProcessInternal(&thisCpuTestProc);
+    if (status2 != STATUS_SUCCESS)
+        return status2;
+
+    return status;
 }

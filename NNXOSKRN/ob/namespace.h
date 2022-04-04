@@ -10,6 +10,7 @@ extern "C"
 
     NTSTATUS ObpInitNamespace();
     HANDLE ObGetGlobalNamespaceHandle();
+    HANDLE ObpGetTypeDirHandle();
 
     extern HANDLE GlobalNamespace;
 

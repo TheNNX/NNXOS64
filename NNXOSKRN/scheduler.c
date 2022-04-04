@@ -9,6 +9,7 @@
 #include <bugcheck.h>
 #include <nnxlog.h>
 #include <HAL/mp.h>
+#include <ob/object.h>
 
 KSPIN_LOCK ProcessListLock = 0;
 LIST_ENTRY ProcessListHead;
@@ -98,13 +99,29 @@ inline VOID SetSummaryBitIfNeccessary(PKQUEUE ThreadReadyQueues, PULONG Summary,
     }
 }
 
+POBJECT_TYPE PsProcessType = NULL;
+POBJECT_TYPE PsThreadType = NULL;
+
 NTSTATUS PspInitializeScheduler()
 {
     INT i;
     KIRQL irql;
+    NTSTATUS status;
 
     KeInitializeSpinLock(&SchedulerCommonLock);
     KeAcquireSpinLock(&SchedulerCommonLock, &irql);
+
+    status = ObCreateSchedulerTypes(
+        &PsProcessType, 
+        &PsThreadType
+    );
+
+    if (status != STATUS_SUCCESS)
+    {
+        KeReleaseSpinLock(&SchedulerCommonLock, irql);
+        return status;
+    }
+
     if (CoresSchedulerData == NULL)
     {
         KeInitializeSpinLock(&ProcessListLock);
@@ -468,18 +485,43 @@ VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR Ent
 
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
 {
-    PEPROCESS pProcess;
     KIRQL irql;
+    NTSTATUS status;
+    PEPROCESS pProcess;
     PLIST_ENTRY_POINTER processEntry;
+    OBJECT_ATTRIBUTES processObjAttributes;
 
-    pProcess = ExAllocatePoolWithTag(NonPagedPool, sizeof(EPROCESS), POOL_TAG_FROM_STR(PspProcPoolTag));
-    if (pProcess == NULL)
-        return STATUS_NO_MEMORY;
+    /* create process object */
+    InitializeObjectAttributes(
+        &processObjAttributes,
+        NULL,
+        0,
+        INVALID_HANDLE_VALUE,
+        NULL
+    );
+
+    status = ObCreateObject(
+        &pProcess, 
+        0, 
+        KernelMode, 
+        &processObjAttributes, 
+        sizeof(EPROCESS), 
+        PsProcessType
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
+
+    /* TODO:
+     * Code above should be moved to some NtCreateProcess like function
+     * code below should be run as a OnCreate method of the process type object 
+     * (automatically ObCreateObject).
+     * Same thing goes for other thread/process creation/deletion functions */
 
     processEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(*processEntry), POOL_TAG_FROM_STR(PspProcPoolTag));
     if (processEntry == NULL)
     {
-        ExFreePool(pProcess);
+        ObDereferenceObject(pProcess);
         return STATUS_NO_MEMORY;
     }
 
@@ -523,31 +565,52 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
  * @param EntryPoint entrypoint function for the thread, caller is responsible for making any neccessary changes in the parent process' address space 
  * @return STATUS_SUCCESS, STATUS_NO_MEMORY
 */
-NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, BOOL IsKernel, ULONG_PTR EntryPoint)
+NTSTATUS PspCreateThreadInternal(
+    PETHREAD* ppThread, 
+    PEPROCESS pParentProcess, 
+    BOOL IsKernel, 
+    ULONG_PTR EntryPoint
+)
 {
     KIRQL irql;
+    NTSTATUS status;
     PETHREAD pThread;
-    PLIST_ENTRY_POINTER threadListEntry, threadListInProcessEntry;
     ULONG_PTR userstack;
     ULONG_PTR originalAddressSpace;
+    OBJECT_ATTRIBUTES threadObjAttributes;
+    PLIST_ENTRY_POINTER threadListEntry, threadListInProcessEntry;
 
-    pThread = ExAllocatePoolWithTag(NonPagedPool, sizeof(*pThread), POOL_TAG_FROM_STR(PspThrePoolTag));
-    if (pThread == NULL)
-    {
-        return STATUS_NO_MEMORY;
-    }
+    InitializeObjectAttributes(
+        &threadObjAttributes,
+        NULL,
+        0,
+        INVALID_HANDLE_VALUE,
+        NULL
+    );
+
+    status = ObCreateObject(
+        &pThread,
+        0,
+        KernelMode,
+        &threadObjAttributes,
+        sizeof(ETHREAD),
+        PsThreadType
+    );
+
+    if (status != STATUS_SUCCESS)
+        return status;
 
     threadListEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(LIST_ENTRY_POINTER), POOL_TAG_FROM_STR(PspThrePoolTag));
     if (threadListEntry == NULL)
     {
-        ExFreePool(pThread);
+        ObDereferenceObject(pThread);
         return STATUS_NO_MEMORY;
     }
 
     threadListInProcessEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(LIST_ENTRY_POINTER), POOL_TAG_FROM_STR(PspThrePoolTag));
     if ((PVOID)threadListInProcessEntry == NULL)
     {
-        ExFreePool(pThread);
+        ObDereferenceObject(pThread);
         ExFreePool(threadListEntry);
         return STATUS_NO_MEMORY;
     }
@@ -599,7 +662,6 @@ NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, B
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
     *ppThread = pThread;
-
 
     return STATUS_SUCCESS;
 }
@@ -673,7 +735,7 @@ NTSTATUS PspDestroyThreadInternalOptionalProcessLock(PETHREAD pThread, BOOL Lock
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
-    ExFreePool(pThread);
+    ObDereferenceObject(pThread);
 
     return STATUS_SUCCESS;
 }
@@ -746,7 +808,7 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);
 
-    ExFreePool(pProcess);
+    ObDereferenceObject(pProcess);
     return STATUS_SUCCESS;
 }
 
