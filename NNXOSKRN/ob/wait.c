@@ -42,12 +42,12 @@ NTSTATUS KeWaitForMultipleObjects(
     ULONG ready = 0;
     KIRQL originalIrql;
 
+    /* if there are more objects than the internal wait heads can handle */
     if (Count > THREAD_WAIT_OBJECTS && WaitBlockArray == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
-
     /* lock all objects */
+    KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
     for (i = 0; i < Count; i++)
     {
         DISPATCHER_HEADER* dispHeader = (DISPATCHER_HEADER*)Objects[i];
@@ -60,7 +60,10 @@ NTSTATUS KeWaitForMultipleObjects(
         ready += (dispHeader->SignalState != 0);
     }
 
+    /* if all objects were ready */
     done |= (WaitType == WaitAll && ready == Count);
+
+    /* if any object was ready */
     done |= (WaitType == WaitAny && ready > 0);
 
     if (done)
@@ -89,19 +92,19 @@ NTSTATUS KeWaitForMultipleObjects(
         KeReleaseSpinLockFromDpcLevel(&dispHeader->Lock);
     }
 
-    /* timeout of lenght 0 and yet, none of the objects were signaling */
-    if (pTimeout != NULL && *pTimeout == 0)
-    {
-        KeLowerIrql(originalIrql);
-        return STATUS_TIMEOUT;
-    }
-
     /* waiting is neccessary */
     if (!done)
     {
         PKTHREAD currentThread = PspGetCurrentThread();
         ULONG i;
-        
+
+        /* timeout of lenght 0 and yet, none of the objects were signaling */
+        if (pTimeout != NULL && *pTimeout == 0)
+        {
+            KeLowerIrql(originalIrql);
+            return STATUS_TIMEOUT;
+        }
+ 
         /* this will elevate us to IRQL = DISPATCH_LEVEL */
         KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
         

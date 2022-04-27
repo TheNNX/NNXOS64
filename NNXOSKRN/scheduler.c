@@ -25,7 +25,6 @@ SIZE_T DebugFramebufferLen = 16;
 
 KSPIN_LOCK PrintLock = 0;
 KSPIN_LOCK SchedulerCommonLock = 0;
-BOOL gSchedulerInitialized = FALSE;
 
 const CHAR PspThrePoolTag[4] = "Thre";
 const CHAR PspProcPoolTag[4] = "Proc";
@@ -155,21 +154,21 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
 {
     INT priority;
     PKTHREAD result;
-    PKCORE_SCHEDULER_DATA coreSchedulerData = &CoresSchedulerData[CoreNumber];
+    PKCORE_SCHEDULER_DATA coreOwnData = &CoresSchedulerData[CoreNumber];
 
     PspManageSharedReadyQueue(CoreNumber);
 
-    result = &CoresSchedulerData->IdleThread->Tcb;
+    result = &coreOwnData->IdleThread->Tcb;
 
     /* start with the highest priority */
     for (priority = 31; priority >= 0; priority--)
     {
-        if (TestBit(coreSchedulerData->ThreadReadyQueuesSummary, priority))
+        if (TestBit(coreOwnData->ThreadReadyQueuesSummary, priority))
         {
-            PLIST_ENTRY_POINTER dequeuedEntry = (PLIST_ENTRY_POINTER)RemoveHeadList(&coreSchedulerData->ThreadReadyQueues[priority].EntryListHead);
+            PLIST_ENTRY_POINTER dequeuedEntry = (PLIST_ENTRY_POINTER)RemoveHeadList(&coreOwnData->ThreadReadyQueues[priority].EntryListHead);
             result = dequeuedEntry->Pointer;
 
-            ClearSummaryBitIfNeccessary(coreSchedulerData->ThreadReadyQueues, &coreSchedulerData->ThreadReadyQueuesSummary, priority);
+            ClearSummaryBitIfNeccessary(coreOwnData->ThreadReadyQueues, &coreOwnData->ThreadReadyQueuesSummary, priority);
             break;
         }
     }
@@ -219,7 +218,7 @@ VOID Test1()
         {
             for (unsigned x = gWidth * gHeight; x > 0 ; x--)
             {
-                for (int i = 0; i < 10000; i++);
+                for (int i = 0; i < 99999; i++);
                 gFramebuffer[x] = 0x00FF00FF;
             }
         }
@@ -234,7 +233,7 @@ VOID Test2()
         {
             for (unsigned x = 0; x < gWidth * gHeight; x++)
             {
-                for (int i = 0; i < 10000; i++);
+                for (int i = 0; i < 99999; i++);
                 gFramebuffer[x] = 0xFF00FF00;
             }
         }
@@ -280,10 +279,8 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
     (*IdleThread)->Tcb.ThreadPriority = 0;
 
     /* uncomment the lines below to do some basic scheduler testing */
-    /*
     if (coreNumber == 0)
         PspTestScheduler(*IdleProcess);
-    */
 
     return STATUS_SUCCESS;
 }
@@ -337,7 +334,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     pPrcb->IdleThread = &CoresSchedulerData[CoreNumber].IdleThread->Tcb;
     pPrcb->NextThread = pPrcb->IdleThread;
     pPrcb->CurrentThread = pPrcb->IdleThread;
-    pPrcb->CpuCyclesRemaining = 0;
+    pPcr->CyclesLeft = (LONG_PTR)KiCyclesPerQuantum * 100;
     KeReleaseSpinLockFromDpcLevel(&pPrcb->Lock);
 
     PspCoresInitialized++;
@@ -346,6 +343,16 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     HalpUpdateThreadKernelStack((PVOID)((ULONG_PTR)pPrcb->IdleThread->KernelStackPointer + sizeof(KTASK_STATE)));
     PagingSetAddressSpace(pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
     pPrcb->IdleThread->ThreadState = THREAD_STATE_RUNNING;
+
+    if (PspCoresInitialized == KeNumberOfProcessors)
+    {
+        NTSTATUS status;
+
+        NTSTATUS ObpMpTest();
+        status = ObpMpTest();
+    }
+    
+    KeLowerIrql(0);
     PspSwitchContextTo64(pPrcb->IdleThread->KernelStackPointer);
 
     return STATUS_SUCCESS;
@@ -524,7 +531,6 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
         ObDereferenceObject(pProcess);
         return STATUS_NO_MEMORY;
     }
-
     /* lock the process list */
     KeAcquireSpinLock(&ProcessListLock, &irql);
 
@@ -632,7 +638,13 @@ NTSTATUS PspCreateThreadInternal(
     originalAddressSpace = PagingGetAddressSpace();
     PagingSetAddressSpace(pThread->Process->Pcb.AddressSpacePhysicalPointer);
 
-    userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END) + (ULONG_PTR)PAGE_SIZE;
+    /* allocate stack even if in kernel mode */
+    if (IsKernel)
+        userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+    else
+        userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
+    
+    userstack += (ULONG_PTR)PAGE_SIZE;;
 
     PagingSetAddressSpace(originalAddressSpace);
 
@@ -929,4 +941,26 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
     KeReleaseSpinLock(&PspSharedReadyQueue.Lock, irql);
 
     return result;
+}
+
+VOID PsExitThread(DWORD exitCode)
+{
+    PKTHREAD currentThread;
+    KIRQL originalIrql;
+
+    /* raise irql as the CPU shouldn't try to schedule here */
+    KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
+    
+    currentThread = KeGetCurrentThread();
+    KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
+    KeAcquireSpinLockAtDpcLevel(&currentThread->Header.Lock);
+
+    currentThread->ThreadState = THREAD_STATE_TERMINATED;
+    currentThread->ThreadExitCode = exitCode;
+
+    /* TODO: exit process if no threads left */
+
+    KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
+    KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
+    KeLowerIrql(originalIrql);
 }

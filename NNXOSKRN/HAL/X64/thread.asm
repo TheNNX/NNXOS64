@@ -18,6 +18,7 @@ func HalpUpdateThreadKernelStack
     pop QWORD rdi
     ret
 
+
 [extern ApicSendEoi]
 func HalpTaskSwitchHandler
     ; TODO: nested interrupts?

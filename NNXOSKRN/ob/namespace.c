@@ -264,6 +264,8 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
     /* fail if there's no rootType->AddChildObject method */
     failed = (rootType->AddChildObject == NULL);
 
+    statusToReturn = STATUS_SUCCESS;
+
     /* if it still haven't failed, try calling the method */
     if (failed == FALSE)
     {
@@ -484,47 +486,90 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR EntryPoint
 );
 NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess);
+VOID PspInsertIntoSharedQueue(PKTHREAD Thread);
 
-VOID ObpNamespaceTestThreadEntry()
+#define WORKER_PROCESSES_NUMBER 4
+#define WORKER_THREADS_PER_PROCESS 8
+
+UINT NextTesterId = 0;
+KSPIN_LOCK NextTesterIdLock;
+
+NTSTATUS WorkerStatus[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
+PETHREAD WorkerThreads[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
+PEPROCESS WorkerProcesses[WORKER_PROCESSES_NUMBER];
+
+static VOID ObpWorkerThreadFunction()
 {
+    UINT ownId;
+    KIRQL irql;
 
+    /* acquire lock for getting the worker id */
+    KeAcquireSpinLock(&NextTesterIdLock, &irql);
+    ownId = NextTesterId++;
+    PrintT("Worker %i started\n", ownId);
+    KeReleaseSpinLock(&NextTesterIdLock, irql);
+
+    /* no thread exiting function yet */
     while (1);
+}
+
+/* @brief this function should be run in a thread */
+NTSTATUS ObpMpTestNamespaceThread()
+{
+    INT i;
+
+    KeInitializeSpinLock(&NextTesterIdLock);
+
+    /* initialize worker threads with some invalid status values */
+    for (i = 0; i < WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER; i++)
+        WorkerStatus[i] = (NTSTATUS)(-1);
+
+    for (i = 0; i < WORKER_PROCESSES_NUMBER; i++)
+    {
+        INT j;
+
+        PspCreateProcessInternal(&WorkerProcesses[i]);
+    
+        for (j = 0; j < WORKER_THREADS_PER_PROCESS; j++)
+        {
+            PspCreateThreadInternal(
+                WorkerThreads + j + i * WORKER_THREADS_PER_PROCESS,
+                WorkerProcesses[i],
+                TRUE,
+                (ULONG_PTR) ObpWorkerThreadFunction
+            );
+            
+        }
+    }
+
+    /* deallocation on return from those all things */
+    while (1);
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS ObpMpTestNamespace()
 {
-    KWAIT_BLOCK waitBlockArray[16];
-    PEPROCESS thisCpuTestProc;
-    NTSTATUS status, status2;
-    ETHREAD threads[16];
-    SIZE_T i;
+    PEPROCESS process;
+    PETHREAD testThread;
+    NTSTATUS status;
 
-    status = PspCreateProcessInternal(&thisCpuTestProc);
+    status = PspCreateProcessInternal(&process);
     if (status != STATUS_SUCCESS)
+    {
+        PrintT("NTSTATUS: %X\n", status);
         return status;
-
-    for (i = 0; i < 16; i++)
-    {
-        status = PspCreateThreadInternal(
-            &threads[i],
-            thisCpuTestProc,
-            TRUE,
-            ObpNamespaceTestThreadEntry
-        );
-
-        if (status != STATUS_SUCCESS)
-            break;
     }
 
-    if (status == STATUS_SUCCESS)
+    status = PspCreateThreadInternal(&testThread, process, TRUE, (ULONG_PTR)ObpMpTestNamespaceThread);
+    if (status != STATUS_SUCCESS)
     {
-        status = KeWaitForMultipleObjects(16, threads, WaitAll, 0, KernelMode, FALSE, -1, &waitBlockArray);
-        /* check result after waiting */
+        PrintT("NTSTATUS: %X\n", status);
+        return status;
     }
 
-    status2 = PspDestroyProcessInternal(&thisCpuTestProc);
-    if (status2 != STATUS_SUCCESS)
-        return status2;
+    testThread->Process->Pcb.BasePriority = 10;
+    PspInsertIntoSharedQueue(&testThread->Tcb);
 
-    return status;
+    /* no returning yet */
+    return STATUS_SUCCESS;
 }

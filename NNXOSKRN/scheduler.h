@@ -34,7 +34,7 @@ extern "C" {
 		 * @brief Stores quantum units (3rds of timer interval), multiply by KiCyclesPerQuantum to get value for CyclesLeft.
 		*/
 		ULONG_PTR QuantumReset;
-	
+		NTSTATUS ProcessResult;
         LIST_ENTRY HandleDatabaseHead;
     } KPROCESS, *PKPROCESS;
 
@@ -66,10 +66,10 @@ extern "C" {
 		BOOL TimeoutIsAbsolute;
 
 		UCHAR ThreadState;
+		DWORD ThreadExitCode;
 
 		/* TODO */
 		BOOL Alertable;
-
 		NTSTATUS WaitStatus;
 	} KTHREAD, *PKTHREAD;
 

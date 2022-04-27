@@ -46,6 +46,7 @@ VOID HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Userm
 	Idt[EntryNo].Ist = 0;
 }
 
+
 VOID HalpSetInterruptIdt(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
 {
 	Idt[EntryNo].Ist = Ist;

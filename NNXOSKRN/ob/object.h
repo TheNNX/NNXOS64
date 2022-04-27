@@ -60,7 +60,6 @@ extern "C" {
     inline VOID InitializeDispatcherHeader(DISPATCHER_HEADER* Header, UCHAR Type)
     {
         KeInitializeSpinLock(&Header->Lock);
-        // Header->Type = Type;
         Header->SignalState = 0;
         InitializeListHead(&Header->WaitHead);
     }

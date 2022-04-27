@@ -22,7 +22,7 @@ VOID KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads)
     KeReleaseSpinLock(&Queue->Header.Lock, irql);
 }
 
-PLIST_ENTRY KeRemvoeQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout)
+PLIST_ENTRY KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout)
 { 
     KIRQL irql;
     PLIST_ENTRY result;

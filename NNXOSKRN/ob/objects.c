@@ -19,6 +19,12 @@ NTSTATUS ObpTest()
 
 NTSTATUS ObpMpTest()
 {
+    NTSTATUS status;
+
+    status = ObpMpTestNamespace();
+    if (status != STATUS_SUCCESS)
+        return status;
+
     return STATUS_SUCCESS;
 }
 
