@@ -165,8 +165,8 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
     {
         if (TestBit(coreOwnData->ThreadReadyQueuesSummary, priority))
         {
-            PLIST_ENTRY_POINTER dequeuedEntry = (PLIST_ENTRY_POINTER)RemoveHeadList(&coreOwnData->ThreadReadyQueues[priority].EntryListHead);
-            result = dequeuedEntry->Pointer;
+            PLIST_ENTRY dequeuedEntry = (PLIST_ENTRY)RemoveHeadList(&coreOwnData->ThreadReadyQueues[priority].EntryListHead);
+            result = (PKTHREAD)((ULONG_PTR)dequeuedEntry - FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
 
             ClearSummaryBitIfNeccessary(coreOwnData->ThreadReadyQueues, &coreOwnData->ThreadReadyQueuesSummary, priority);
             break;
@@ -495,7 +495,6 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     KIRQL irql;
     NTSTATUS status;
     PEPROCESS pProcess;
-    PLIST_ENTRY_POINTER processEntry;
     OBJECT_ATTRIBUTES processObjAttributes;
 
     /* create process object */
@@ -525,16 +524,8 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
      * (automatically ObCreateObject).
      * Same thing goes for other thread/process creation/deletion functions */
 
-    processEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(*processEntry), POOL_TAG_FROM_STR(PspProcPoolTag));
-    if (processEntry == NULL)
-    {
-        ObDereferenceObject(pProcess);
-        return STATUS_NO_MEMORY;
-    }
     /* lock the process list */
     KeAcquireSpinLock(&ProcessListLock, &irql);
-
-    processEntry->Pointer = pProcess;
 
     /* make sure it is not prematurely used */
     pProcess->Initialized = FALSE;
@@ -553,7 +544,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     pProcess->Pcb.QuantumReset = 6;
     InitializeListHead(&pProcess->Pcb.HandleDatabaseHead);
 
-    InsertTailList(&ProcessListHead, (PLIST_ENTRY)processEntry);
+    InsertTailList(&ProcessListHead, &pProcess->Pcb.ProcessListEntry);
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);
@@ -584,7 +575,6 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR userstack;
     ULONG_PTR originalAddressSpace;
     OBJECT_ATTRIBUTES threadObjAttributes;
-    PLIST_ENTRY_POINTER threadListEntry, threadListInProcessEntry;
 
     InitializeObjectAttributes(
         &threadObjAttributes,
@@ -606,25 +596,7 @@ NTSTATUS PspCreateThreadInternal(
     if (status != STATUS_SUCCESS)
         return status;
 
-    threadListEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(LIST_ENTRY_POINTER), POOL_TAG_FROM_STR(PspThrePoolTag));
-    if (threadListEntry == NULL)
-    {
-        ObDereferenceObject(pThread);
-        return STATUS_NO_MEMORY;
-    }
-
-    threadListInProcessEntry = ExAllocatePoolWithTag(NonPagedPool, sizeof(LIST_ENTRY_POINTER), POOL_TAG_FROM_STR(PspThrePoolTag));
-    if ((PVOID)threadListInProcessEntry == NULL)
-    {
-        ObDereferenceObject(pThread);
-        ExFreePool(threadListEntry);
-        return STATUS_NO_MEMORY;
-    }
-    
     KeAcquireSpinLock(&ThreadListLock, &irql);
-
-    threadListInProcessEntry->Pointer = &pThread->Tcb;
-    threadListEntry->Pointer = pThread;
 
     pThread->Tcb.ThreadState = THREAD_STATE_INITIALIZATION;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
@@ -664,10 +636,10 @@ NTSTATUS PspCreateThreadInternal(
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
     PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, IsKernel, EntryPoint, userstack);
 
-    InsertTailList(&pParentProcess->Pcb.ThreadListHead, (PLIST_ENTRY)threadListInProcessEntry);
+    InsertTailList(&pParentProcess->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
     KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
-    InsertTailList(&ThreadListHead, (PLIST_ENTRY)threadListEntry);
+    InsertTailList(&ThreadListHead, &pThread->Tcb.ThreadListEntry);
     
     pThread->Tcb.ThreadState = THREAD_STATE_READY;
 
@@ -683,11 +655,6 @@ TODO: free auto-allocated user stack (somehow, maybe store the original stack in
 NTSTATUS PspDestroyThreadInternalOptionalProcessLock(PETHREAD pThread, BOOL LockParent)
 {
     KIRQL irql;
-    PLIST_ENTRY_POINTER current;
-    PLIST_ENTRY_POINTER threadListEntry, threadListInProcessEntry;
-
-    threadListEntry = (PLIST_ENTRY_POINTER)NULL;
-    threadListInProcessEntry = (PLIST_ENTRY_POINTER)NULL;
 
     KeAcquireSpinLockAtDpcLevel(&pThread->Tcb.ThreadLock);
     KeAcquireSpinLock(&ThreadListLock, &irql);
@@ -696,54 +663,11 @@ NTSTATUS PspDestroyThreadInternalOptionalProcessLock(PETHREAD pThread, BOOL Lock
     if (LockParent)
         KeAcquireSpinLockAtDpcLevel(&pThread->Process->Pcb.ProcessLock);
     
-    current = (PLIST_ENTRY_POINTER)pThread->Process->Pcb.ThreadListHead.First;
-    while ((PLIST_ENTRY)current != &pThread->Process->Pcb.ThreadListHead)
-    {
-        if (current->Pointer == &pThread->Tcb)
-        {
-            threadListInProcessEntry = current;
-            break;
-        }
-
-        current = (PLIST_ENTRY_POINTER)current->Next;
-    }
-
-    if ((PVOID)threadListInProcessEntry == NULL)
-    {
-        if (LockParent)
-            KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
-        KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
-        KeReleaseSpinLock(&ThreadListLock, irql);
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    RemoveEntryList((PLIST_ENTRY)threadListInProcessEntry);
-    ExFreePool(threadListInProcessEntry);
+    RemoveEntryList(&pThread->Tcb.ProcessChildListEntry);
     if (LockParent)
         KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
-    
-    current = (PLIST_ENTRY_POINTER)ThreadListHead.First;
-    while (current != (PLIST_ENTRY_POINTER)&ThreadListHead)
-    {
-        if (current->Pointer == pThread)
-        {
-            threadListEntry = current;
-            break;
-        }
-
-        current = (PLIST_ENTRY_POINTER)current->Next;
-    }
-
-    if ((PVOID)threadListEntry == NULL)
-    {
-        KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
-        KeReleaseSpinLock(&ThreadListLock, irql);
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    RemoveEntryList((PLIST_ENTRY)threadListEntry);
-    ExFreePool(threadListEntry);
+    RemoveEntryList(&pThread->Tcb.ThreadListEntry);
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
@@ -766,20 +690,19 @@ NTSTATUS PspDestroyThreadInternal(PETHREAD Thread)
 NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
 {
     KIRQL irql;
-    PLIST_ENTRY_POINTER processListEntry;
-    PLIST_ENTRY_POINTER current;
+    PLIST_ENTRY current;
     PHANDLE_DATABASE currentHandleDatabase;
 
     KeAcquireSpinLock(&ProcessListLock, &irql);
 
     KeAcquireSpinLockAtDpcLevel(&pProcess->Pcb.ProcessLock);
     
-    current = (PLIST_ENTRY_POINTER)pProcess->Pcb.ThreadListHead.First;
-    while (current != (PLIST_ENTRY_POINTER)&pProcess->Pcb.ThreadListHead)
+    current = pProcess->Pcb.ThreadListHead.First;
+    while (current != &pProcess->Pcb.ThreadListHead)
     {
         PETHREAD Thread;
-        Thread = (PETHREAD)current->Pointer;
-        current = (PLIST_ENTRY_POINTER)current->Next;
+        Thread = (PETHREAD)((ULONG_PTR)current - FIELD_OFFSET(KTHREAD, ProcessChildListEntry));
+        current = current->Next;
         
         /* don't lock the process, it has been already locked */
         PspDestroyThreadInternalOptionalProcessLock(Thread, FALSE);
@@ -802,18 +725,7 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
         currentHandleDatabase = next;
     }
 
-    processListEntry = FindElementInPointerList((PLIST_ENTRY_POINTER)&ProcessListHead, (PVOID)pProcess);
-
-    if ((PVOID)processListEntry == NULL)
-    {
-        KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
-        KeReleaseSpinLock(&ProcessListLock, irql);
-        return STATUS_INVALID_PARAMETER;
-    }
-    else
-    {
-        RemoveEntryList((PLIST_ENTRY)processListEntry);
-    }
+    RemoveEntryList(&pProcess->Pcb.ProcessListEntry);
 
     InternalFreePhysicalPage(pProcess->Pcb.AddressSpacePhysicalPointer);
 
@@ -832,7 +744,6 @@ VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
     KeAcquireSpinLock(&PspSharedReadyQueue.Lock, &irql);
 
     ThreadPriority = (UCHAR)(Thread->ThreadPriority + (CHAR)Thread->Process->BasePriority);
-    Thread->ReadyQueueEntry.Pointer = Thread;
     InsertTailList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority].EntryListHead, (PLIST_ENTRY)&Thread->ReadyQueueEntry);
     PspSharedReadyQueue.ThreadReadyQueuesSummary = (ULONG)SetBit(
         PspSharedReadyQueue.ThreadReadyQueuesSummary,
@@ -910,11 +821,11 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
             
             if (TestBit(PspSharedReadyQueue.ThreadReadyQueuesSummary, checkedPriority))
             {
-                PLIST_ENTRY_POINTER current = (PLIST_ENTRY_POINTER)sharedReadyQueues[checkedPriority].EntryListHead.First;
+                PLIST_ENTRY current = sharedReadyQueues[checkedPriority].EntryListHead.First;
                 
-                while (current != (PLIST_ENTRY_POINTER)&sharedReadyQueues[checkedPriority].EntryListHead)
+                while (current != &sharedReadyQueues[checkedPriority].EntryListHead)
                 {
-                    thread = (PKTHREAD)current->Pointer;
+                    thread = (PKTHREAD)((ULONG_PTR)current - FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
                     
                     /* check if this processor can even run this thread */
                     if (thread->Affinity & (1LL << CoreNumber))
@@ -929,7 +840,7 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
                         break;
                     }
 
-                    current = (PLIST_ENTRY_POINTER)current->Next;
+                    current = current->Next;
                 }
             }
 
@@ -957,6 +868,7 @@ VOID PsExitThread(DWORD exitCode)
 
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
+    currentThread->Header.SignalState = 0x7FFFFFFF;
 
     /* TODO: exit process if no threads left */
 

@@ -209,10 +209,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="scheduler.c" />
     <ClCompile Include="ob\wait.c" />
     <ClCompile Include="loadstub.c" />
-    <ClCompile Include="main.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryOperations.c" />
     <ClCompile Include="nnxalloc.c" />

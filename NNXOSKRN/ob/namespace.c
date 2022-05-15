@@ -539,6 +539,7 @@ NTSTATUS ObpMpTestNamespaceThread()
                 (ULONG_PTR) ObpWorkerThreadFunction
             );
             
+            PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
     }
 

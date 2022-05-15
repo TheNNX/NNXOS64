@@ -30,6 +30,7 @@ extern "C" {
 		ULONG_PTR AddressSpacePhysicalPointer;
 		LIST_ENTRY ThreadListHead;
 		UINT64 NumberOfThreads;
+		LIST_ENTRY ProcessListEntry;
 		/**
 		 * @brief Stores quantum units (3rds of timer interval), multiply by KiCyclesPerQuantum to get value for CyclesLeft.
 		*/
@@ -56,7 +57,9 @@ extern "C" {
 		ULONG NumberOfCustomThreadWaitBlocks;
 		LIST_ENTRY_POINTER WaitHead;
 		KAFFINITY Affinity;
-		LIST_ENTRY_POINTER ReadyQueueEntry;
+		LIST_ENTRY ReadyQueueEntry;
+		LIST_ENTRY ProcessChildListEntry;
+		LIST_ENTRY ThreadListEntry;
 		
 		/**
 		 * @brief in hundreds of nanoseconds;
