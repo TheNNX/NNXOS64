@@ -234,7 +234,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\cpu.h" />
-    <ClInclude Include="HAL\mp.h" />
     <ClInclude Include="HAL\X64\APIC.h" />
     <ClInclude Include="HAL\X64\GDT.h" />
     <ClInclude Include="HAL\X64\IDT.h" />

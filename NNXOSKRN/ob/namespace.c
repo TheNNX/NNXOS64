@@ -2,6 +2,7 @@
 #include <bugcheck.h>
 #include <text.h>
 #include <scheduler.h>
+#include <HAL/cpu.h>
 
 #pragma pack(push, 1)
 
@@ -496,6 +497,7 @@ KSPIN_LOCK NextTesterIdLock;
 
 NTSTATUS WorkerStatus[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
 PETHREAD WorkerThreads[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
+KWAIT_BLOCK WaitBlocks[WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS];
 PEPROCESS WorkerProcesses[WORKER_PROCESSES_NUMBER];
 
 static VOID ObpWorkerThreadFunction()
@@ -506,18 +508,18 @@ static VOID ObpWorkerThreadFunction()
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
     ownId = NextTesterId++;
-    PrintT("Worker %i started\n", ownId);
     KeReleaseSpinLock(&NextTesterIdLock, irql);
 
-    /* no thread exiting function yet */
-    while (1);
+    PsExitThread(0);
 }
 
 /* @brief this function should be run in a thread */
 NTSTATUS ObpMpTestNamespaceThread()
 {
     INT i;
-
+    NTSTATUS waitStatus;
+    if (KeGetCurrentIrql() != 0)
+        PrintT("IRQL > 0, %i\n", __LINE__);
     KeInitializeSpinLock(&NextTesterIdLock);
 
     /* initialize worker threads with some invalid status values */
@@ -529,7 +531,7 @@ NTSTATUS ObpMpTestNamespaceThread()
         INT j;
 
         PspCreateProcessInternal(&WorkerProcesses[i]);
-    
+
         for (j = 0; j < WORKER_THREADS_PER_PROCESS; j++)
         {
             PspCreateThreadInternal(
@@ -543,6 +545,26 @@ NTSTATUS ObpMpTestNamespaceThread()
         }
     }
 
+    PrintT("Prewait, cpu%i, thread%X\n", KeGetCurrentProcessorId(), KeGetCurrentThread());
+    waitStatus = KeWaitForMultipleObjects(
+        WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS,
+        WorkerThreads,
+        WaitAll,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL,
+        WaitBlocks
+    );
+    PrintT("Postwait\n");
+
+    if (waitStatus != STATUS_SUCCESS)
+        return waitStatus;
+
+    for (i = 0; i < WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS; i++)
+        if (WorkerThreads[i]->Tcb.ThreadExitCode != STATUS_SUCCESS)
+            return WorkerThreads[i]->Tcb.ThreadExitCode;
+
     /* deallocation on return from those all things */
     while (1);
     return STATUS_SUCCESS;
@@ -553,6 +575,8 @@ NTSTATUS ObpMpTestNamespace()
     PEPROCESS process;
     PETHREAD testThread;
     NTSTATUS status;
+
+    PrintT("%s %i\n", __FUNCTION__, KeGetCurrentProcessorId());
 
     status = PspCreateProcessInternal(&process);
     if (status != STATUS_SUCCESS)

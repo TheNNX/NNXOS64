@@ -11,4 +11,14 @@ typedef CHAR	KPROCESSOR_MODE;
 #define KAFFINITY_ALL 0xFFFFFFFFFFFFFFFFULL
 typedef ULONG_PTR	KAFFINITY;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    extern UINT KeNumberOfProcessors;
+    ULONG KeGetCurrentProcessorId();
+#ifdef __cplusplus
+}
+#endif
+
+
 #endif

@@ -27,8 +27,6 @@ PLIST_ENTRY KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeo
     KIRQL irql;
     PLIST_ENTRY result;
     NTSTATUS status = STATUS_SUCCESS;
-    PKTHREAD currentThread;
-    PKWAIT_BLOCK waitBlock;
 
     KeAcquireSpinLock(&Queue->Header.Lock, &irql);
 
@@ -40,31 +38,12 @@ PLIST_ENTRY KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeo
     }
     else if (Queue->CurrentWaitingThreads < Queue->MaximumWaitingThreads)
     {
-        currentThread = KeGetCurrentThread();
-        KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
-        Queue->CurrentWaitingThreads++;
-        
-        /* get one of the waitblocks from the current thread */
-        waitBlock = &currentThread->ThreadWaitBlocks[0];
-        waitBlock->Object = (PVOID)Queue;
-        waitBlock->WaitMode = WaitMode;
-        waitBlock->WaitType = WaitAny;
-        
-        KiHandleObjectWaitTimeout(currentThread, Timeout, FALSE);
-
-        /* add to the thread wait list */
-        InsertTailList((PLIST_ENTRY)&currentThread->WaitHead, &waitBlock->WaitEntry);
-        currentThread->ThreadState = THREAD_STATE_WAITING;
-        KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
         KeReleaseSpinLock(&Queue->Header.Lock, irql);
+        status = KeWaitForSingleObject((PVOID)Queue, Executive, WaitMode, FALSE, Timeout);
 
-        PspSchedulerNext();
-
-        status = currentThread->WaitStatus;
-
-        if (status != STATUS_SUCCESS)
+        if (status == STATUS_USER_APC)
             return (PLIST_ENTRY)(ULONG_PTR)status;
-
+        
         KeAcquireSpinLock(&Queue->Header.Lock, &irql);
         result = RemoveHeadList(&Queue->EntryListHead);
         KeReleaseSpinLock(&Queue->Header.Lock, irql);
@@ -82,7 +61,7 @@ LONG KiInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry, BOOL Head)
 {
     LONG initialState;
     KIRQL irql;
-    PLIST_ENTRY_POINTER waitEntry, threadsWaitEntry;
+    PLIST_ENTRY waitEntry;
     PKWAIT_BLOCK waitBlock;
     PKTHREAD thread;
 
@@ -92,17 +71,11 @@ LONG KiInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry, BOOL Head)
 
     if (!IsListEmpty(&Queue->Header.WaitHead))
     {
-        waitEntry = (PLIST_ENTRY_POINTER)Queue->Header.WaitHead.First;
-        waitBlock = waitEntry->Pointer;
+        waitEntry = (PLIST_ENTRY)Queue->Header.WaitHead.First;
+        waitBlock = (PKWAIT_BLOCK)waitEntry;
 
         thread = waitBlock->Thread;
-        KeAcquireSpinLockAtDpcLevel(&thread->ThreadLock);
-
-        threadsWaitEntry = FindElementInPointerList(&thread->WaitHead, waitEntry);
-        RemoveEntryList((PLIST_ENTRY)threadsWaitEntry);
         Queue->CurrentWaitingThreads--;
-
-        KeReleaseSpinLockFromDpcLevel(&thread->ThreadLock);
         PsCheckThreadIsReady(thread);
     }
     else
@@ -110,9 +83,13 @@ LONG KiInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry, BOOL Head)
         Queue->Header.SignalState++;
 
         if (Head)
+        {
             InsertHeadList(&Queue->EntryListHead, Entry);
+        }
         else
+        {
             InsertTailList(&Queue->EntryListHead, Entry);
+        }
     }
 
     KeReleaseSpinLock(&Queue->Header.Lock, irql);

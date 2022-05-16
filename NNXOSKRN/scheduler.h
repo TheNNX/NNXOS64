@@ -53,9 +53,9 @@ extern "C" {
 		PKPROCESS Process;
 		CHAR ThreadPriority;
 		KWAIT_BLOCK ThreadWaitBlocks[THREAD_WAIT_OBJECTS];
-		PKWAIT_BLOCK CustomThreadWaitBlocks;
-		ULONG NumberOfCustomThreadWaitBlocks;
-		LIST_ENTRY_POINTER WaitHead;
+		PKWAIT_BLOCK CurrentWaitBlocks;
+		ULONG NumberOfCurrentWaitBlocks;
+		ULONG NumberOfActiveWaitBlocks;
 		KAFFINITY Affinity;
 		LIST_ENTRY ReadyQueueEntry;
 		LIST_ENTRY ProcessChildListEntry;
@@ -128,6 +128,8 @@ extern "C" {
 	 * @brief Voluntarily ends the calling thread's quantum (that doesn't mean it can't get another one, caller has to ensure it is in wait state)
 	*/
 	VOID PspSchedulerNext();
+
+	VOID PsExitThread(DWORD exitCode);
 	
 	NTSTATUS PspInitializeCore(UINT8 CoreNumber);
 

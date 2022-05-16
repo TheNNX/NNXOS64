@@ -17,13 +17,11 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	HalAcquireLockRaw(&PcrCreationLock);
 	
     DisableInterrupts();
-
 	gdt = HalpAllocateAndInitializeGdt();
 	idt = HalpAllocateAndInitializeIdt();
 
 	pcr = HalCreatePcr(gdt, idt, id);
 	HalReleaseLockRaw(&PcrCreationLock);
-
     KfRaiseIrql(DISPATCH_LEVEL);
 }
 
@@ -60,7 +58,6 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 {
 	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
-
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);
@@ -71,10 +68,10 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 	pcr->MinorVersion = 0;
 
 	pcr->SelfPcr = pcr;
+	
 
 	pcr->Prcb = HalCreatePrcb(CoreNumber);
 
 	HalSetPcr(pcr);
-
 	return pcr;
 }

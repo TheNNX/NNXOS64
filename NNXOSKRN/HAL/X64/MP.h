@@ -1,7 +1,7 @@
 #ifndef NNX_MP_X64_HEADER
 #define NNX_MP_X64_HEADER
 
-#include <HAL/mp.h>
+#include <HAL/cpu.h>
 #include <nnxtype.h>
 #include <HAL/X64/GDT.h>
 #include <HAL/X64/IDT.h>

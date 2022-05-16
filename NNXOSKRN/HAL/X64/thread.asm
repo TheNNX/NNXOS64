@@ -3,8 +3,6 @@
 %strcat INC_FUNC __FILE__,"/../../../../CommonInclude/func.inc"
 %include INC_FUNC
 
-; note: stack broken, registers don't save, investigate alignment, todo
-
 [extern PspScheduleThread]
 
 func HalpUpdateThreadKernelStack 
@@ -17,6 +15,22 @@ func HalpUpdateThreadKernelStack
     mov QWORD [rdi+0x24], rcx
     pop QWORD rdi
     ret
+
+func HalpGetThreadKernelStack
+    push QWORD rdi
+    mov QWORD rdi, [gs:0x08]
+    ; copy RSP0 into RAX
+    mov rax, QWORD [rdi+0x04]
+
+    ; UNCOMMENT THE BELOW FOR A DEBUG ASSERTION (IF RSP0 != IST1)
+    ;xor rax, QWORD [rdi+0x24]
+    ;jnz .DebugStackMismatch
+    ;mov rax, QWORD [rdi+0x04]
+    
+    pop QWORD rdi
+    ret
+.DebugStckMismatch
+    jmp $
 
 
 [extern ApicSendEoi]
@@ -33,11 +47,12 @@ func HalpTaskSwitchHandler
 .noswap:
 
     call PspStoreContextFrom64
-    call ApicSendEoi
 
     mov rcx, rsp
     call PspScheduleThread
-    mov rcx, rax
+    push QWORD rax
+    call ApicSendEoi
+    pop QWORD rcx
     jmp PspSwitchContextTo64
 
 func PspStoreContextFrom64
@@ -117,10 +132,25 @@ func PspTestAsmUserEnd
 
 func PspSchedulerNext
     push QWORD rax
-    ; store SS, RSP, RFLAGS, CS, RIP on the stack, effectively simulating an interrupt
-    mov rax, ss
+
+    ; load new stack pointer into RAX
+    call HalpGetThreadKernelStack
+
+    ; exchange RAX and RSP:
+    ;  the old stack pointer gets saved into RAX
+    ;  the new stack pointer is loaded into RSP
+    xchg rsp, rax
+
+    ; simulate an interrupt
+
+    ; order of pushing is SS, since we have RSP in RAX, we have to push two times to push RSP in its place 
+    ; and later replace the first push manually
     push QWORD rax
-    push QWORD rsp
+    push QWORD rax
+    mov QWORD rax, ss
+    mov [rsp+8], rax
+
+    ; store RFLAGS, CS, RIP
     pushf
     mov rax, cs
     push QWORD rax
@@ -131,7 +161,21 @@ func PspSchedulerNext
     mov QWORD rax, [rsp]
     add QWORD rax, .ReturnAddress - .next
     mov QWORD [rsp], rax
-    jmp HalpTaskSwitchHandler
+
+    cli
+    
+    cmp QWORD [rsp+8], 0x08
+    je .noswap
+    swapgs
+.noswap:
+
+    call PspStoreContextFrom64
+    mov rcx, rsp
+    call PspScheduleThread
+    push QWORD rax
+    pop QWORD rcx
+    jmp PspSwitchContextTo64
+
 .ReturnAddress:
     pop QWORD rax
     ret

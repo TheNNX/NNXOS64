@@ -19,7 +19,6 @@ KIRQL FASTCALL KfRaiseIrql(KIRQL NewIrql)
 	HalX64SetTpr(NewIrql);
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
-
 	return oldIrql;
 }
 
@@ -30,9 +29,8 @@ VOID FASTCALL KfLowerIrql(KIRQL NewIrql)
 	if (NewIrql > oldIrql)
 		KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfLowerIrql);
 
-	HalX64SetTpr(NewIrql);
-
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
+	HalX64SetTpr(NewIrql);
 }
 
 VOID NTAPI KeRaiseIrql(KIRQL NewIrql, PKIRQL OldIrql)

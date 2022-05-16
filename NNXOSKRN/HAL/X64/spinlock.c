@@ -36,36 +36,17 @@ VOID NTAPI KeReleaseSpinLockFromDpcLevel(PKSPIN_LOCK Lock)
 KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock) 
 {
 	KIRQL temp = 0;
-	KIRQL ignore;
 
-	temp = KeGetCurrentIrql();
-
-	if (KeGetCurrentIrql() > DISPATCH_LEVEL)
-		KeLowerIrql(DISPATCH_LEVEL);
-	else
-		KeRaiseIrql(DISPATCH_LEVEL, &ignore);
-
+	KeRaiseIrql(DISPATCH_LEVEL, &temp);
     KiAcquireSpinLock(lock);
+
 	return temp;
 }
 
 VOID FASTCALL KfReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql) 
 {
     KiReleaseSpinLock(lock);
-
-	if (LockedDuringInitialization)
-	{
-		LockedDuringInitialization--;
-	}
-	else
-	{
-		KIRQL ignore;
-
-		if (KeGetCurrentIrql() > newIrql)
-			KeLowerIrql(newIrql);
-		else
-			KeRaiseIrql(newIrql, &ignore);
-	}
+	KeLowerIrql(newIrql);
 }
 
 VOID NTAPI KeAcquireSpinLock(PKSPIN_LOCK lock, PKIRQL oldIrql) 

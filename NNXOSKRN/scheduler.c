@@ -8,7 +8,7 @@
 #include "ntqueue.h"
 #include <bugcheck.h>
 #include <nnxlog.h>
-#include <HAL/mp.h>
+#include <HAL/cpu.h>
 #include <ob/object.h>
 
 KSPIN_LOCK ProcessListLock = 0;
@@ -157,7 +157,6 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
     PKCORE_SCHEDULER_DATA coreOwnData = &CoresSchedulerData[CoreNumber];
 
     PspManageSharedReadyQueue(CoreNumber);
-
     result = &coreOwnData->IdleThread->Tcb;
 
     /* start with the highest priority */
@@ -254,7 +253,7 @@ NTSTATUS PspTestScheduler(PEPROCESS IdleProcess)
         return status;
 
     test1->Tcb.ThreadPriority = 1;
-    test2->Tcb.ThreadPriority = 2;
+    test2->Tcb.ThreadPriority = 1;
 
     PspInsertIntoSharedQueue(&test1->Tcb);
     PspInsertIntoSharedQueue(&test2->Tcb);
@@ -359,6 +358,8 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 }
 #pragma warning(pop)
 
+QWORD GetCR8();
+VOID SetCR8(QWORD);
 ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 {
     PKPCR pcr;
@@ -369,7 +370,7 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
     PKTHREAD originalRunningThread;
     PKPROCESS originalRunningProcess;
     UCHAR originalRunningThreadPriority;
-
+    
     pcr = KeGetPcr();
 
     KeAcquireSpinLock(&ProcessListLock, &irql);
@@ -384,6 +385,9 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
     originalRunningThreadSpinlock = &pcr->Prcb->CurrentThread->ThreadLock;
     KeAcquireSpinLockAtDpcLevel(originalRunningThreadSpinlock);
     
+    if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
+        pcr->CyclesLeft = 0;
+
     originalRunningProcess = originalRunningThread->Process;
     if (originalRunningProcess == NULL)
     {
@@ -394,52 +398,55 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 
     originalRunningThreadPriority = originalRunningThread->ThreadPriority + originalRunningProcess->BasePriority;
 
-    if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread)
+    /* if no next thread has been selected or the currently selected thread is not ready */
+    if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread || 
+        pcr->Prcb->NextThread->ThreadState != THREAD_STATE_READY)
     {
-        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
-    }
 
-    /* 
-        if no next thread was found, reset the quantum for current thread
-        no need to check queues, that should be dealt with scheduler events
-        (thread of higher priority than NextThread would automaticaly be
-        written to NextThread on for example end of waiting) 
-    */
-    if ((pcr->Prcb->NextThread == pcr->Prcb->IdleThread && pcr->Prcb->CurrentThread != pcr->Prcb->IdleThread) ||
-        (originalRunningThreadPriority > pcr->Prcb->NextThread->ThreadPriority + pcr->Prcb->NextThread->Process->BasePriority))
-    {
-        pcr->Prcb->NextThread = originalRunningThread;
-        pcr->CyclesLeft = originalRunningProcess->QuantumReset * KiCyclesPerQuantum;
+        /* select a new next thread */
+        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
     }
 
     if (pcr->CyclesLeft < (LONG_PTR)KiCyclesPerQuantum)
     {
-        /* switch to next thread */
-        nextThread = pcr->Prcb->NextThread;
-        pcr->CyclesLeft = nextThread->Process->QuantumReset * KiCyclesPerQuantum;
-
-        /* if thread was found */
-        if (nextThread != originalRunningThread)
+        /* If no next thread was found, or the next thread can't preempt the current one 
+         * and the current thread is not waiting, reset the quantum for current thread. */
+        if (((pcr->Prcb->NextThread == pcr->Prcb->IdleThread && pcr->Prcb->CurrentThread != pcr->Prcb->IdleThread) ||
+            (originalRunningThreadPriority > pcr->Prcb->NextThread->ThreadPriority + pcr->Prcb->NextThread->Process->BasePriority)) &&
+            pcr->Prcb->CurrentThread->ThreadState == THREAD_STATE_RUNNING)
         {
-            if (pcr->Prcb->CurrentThread->Process != pcr->Prcb->NextThread->Process)
-            {
-                PagingSetAddressSpace((ULONG_PTR)pcr->Prcb->CurrentThread->Process->AddressSpacePhysicalPointer);
-            }
+            pcr->Prcb->NextThread = originalRunningThread;
+            pcr->CyclesLeft = originalRunningProcess->QuantumReset * KiCyclesPerQuantum;
         }
-
-        nextThread->ThreadState = THREAD_STATE_RUNNING;
-        
-        /* select thread before setting the original one to ready */
-        pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
-        pcr->Prcb->CurrentThread = nextThread;
-
-        /*
-            thread could have volountarily given up control, it could be waiting - then its state shouldn't be changed
-        */
-        if (originalRunningThread->ThreadState == THREAD_STATE_RUNNING)
+        else
         {
-            PspInsertIntoSharedQueue(originalRunningThread);
-            originalRunningThread->ThreadState = THREAD_STATE_READY;
+
+            /* switch to next thread */
+            nextThread = pcr->Prcb->NextThread;
+            pcr->CyclesLeft = nextThread->Process->QuantumReset * KiCyclesPerQuantum;
+
+            /* if thread was found */
+            if (nextThread != originalRunningThread)
+            {
+                if (pcr->Prcb->CurrentThread->Process != pcr->Prcb->NextThread->Process)
+                {
+                    PagingSetAddressSpace((ULONG_PTR)pcr->Prcb->CurrentThread->Process->AddressSpacePhysicalPointer);
+                }
+            }
+
+            nextThread->ThreadState = THREAD_STATE_RUNNING;
+
+            /* select thread before setting the original one to ready */
+            pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
+            pcr->Prcb->CurrentThread = nextThread;
+
+            /* thread could have volountarily given up control, 
+             * it could be waiting - then its state shouldn't be changed */
+            if (originalRunningThread->ThreadState == THREAD_STATE_RUNNING)
+            {
+                PspInsertIntoSharedQueue(originalRunningThread);
+                originalRunningThread->ThreadState = THREAD_STATE_READY;
+            }
         }
     }
     else
@@ -521,7 +528,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     /* TODO:
      * Code above should be moved to some NtCreateProcess like function
      * code below should be run as a OnCreate method of the process type object 
-     * (automatically ObCreateObject).
+     * (automatically by ObCreateObject).
      * Same thing goes for other thread/process creation/deletion functions */
 
     /* lock the process list */
@@ -532,7 +539,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     
     /* lock the process */
-    KeAcquireSpinLock(&pProcess->Pcb.ProcessLock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&pProcess->Pcb.ProcessLock);
 
     InitializeDispatcherHeader(&pProcess->Pcb.Header, OBJECT_TYPE_KPROCESS);
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
@@ -621,11 +628,12 @@ NTSTATUS PspCreateThreadInternal(
     PagingSetAddressSpace(originalAddressSpace);
 
     InitializeDispatcherHeader(&pThread->Tcb.Header, OBJECT_TYPE_KTHREAD);
-    InitializeListHead((PLIST_ENTRY)&pThread->Tcb.WaitHead);
+
     MemSet(pThread->Tcb.ThreadWaitBlocks, 0, sizeof(pThread->Tcb.ThreadWaitBlocks));
     pThread->Tcb.ThreadPriority = 0;
-    pThread->Tcb.NumberOfCustomThreadWaitBlocks = 0;
-    pThread->Tcb.CustomThreadWaitBlocks = (PKWAIT_BLOCK)NULL;
+    pThread->Tcb.NumberOfCurrentWaitBlocks = 0;
+    pThread->Tcb.NumberOfActiveWaitBlocks = 0;
+    pThread->Tcb.CurrentWaitBlocks = (PKWAIT_BLOCK)NULL;
     pThread->Tcb.WaitStatus = 0;
     pThread->Tcb.Alertable = FALSE;
     pThread->Tcb.Process = &pParentProcess->Pcb;
@@ -760,14 +768,14 @@ BOOL PsCheckThreadIsReady(PKTHREAD Thread)
 
     KeAcquireSpinLock(&Thread->ThreadLock, &irql);
 
-    if (IsListEmpty((PLIST_ENTRY)&Thread->WaitHead))
+    if (Thread->NumberOfActiveWaitBlocks == 0 && Thread->ThreadState == THREAD_STATE_WAITING)
     {
         Thread->Timeout = 0;
         Thread->TimeoutIsAbsolute = 0;
-        if (Thread->NumberOfCustomThreadWaitBlocks)
+        if (Thread->NumberOfCurrentWaitBlocks)
         {
-            Thread->NumberOfCustomThreadWaitBlocks = 0;
-            Thread->CustomThreadWaitBlocks = 0;
+            Thread->NumberOfCurrentWaitBlocks = 0;
+            Thread->CurrentWaitBlocks = 0;
         }
         Thread->ThreadState = THREAD_STATE_READY;
 
@@ -818,7 +826,6 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
         
         for (checkedPriority = 31; checkedPriority >= 0; checkedPriority--)
         {
-            
             if (TestBit(PspSharedReadyQueue.ThreadReadyQueuesSummary, checkedPriority))
             {
                 PLIST_ENTRY current = sharedReadyQueues[checkedPriority].EntryListHead.First;
@@ -858,6 +865,9 @@ VOID PsExitThread(DWORD exitCode)
 {
     PKTHREAD currentThread;
     KIRQL originalIrql;
+    PKWAIT_BLOCK waitBlock;
+    PLIST_ENTRY waitEntry;
+    PKTHREAD waitingThread;
 
     /* raise irql as the CPU shouldn't try to schedule here */
     KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
@@ -868,11 +878,24 @@ VOID PsExitThread(DWORD exitCode)
 
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
-    currentThread->Header.SignalState = 0x7FFFFFFF;
+    
+    while (!IsListEmpty(&currentThread->Header.WaitHead))
+    { 
+        waitEntry = (PLIST_ENTRY)currentThread->Header.WaitHead.First;
+        waitBlock = (PKWAIT_BLOCK)waitEntry;
+        waitingThread = waitBlock->Thread;
+        
+        waitingThread->NumberOfActiveWaitBlocks--;
+
+        PsCheckThreadIsReady(waitingThread);
+        RemoveEntryList(waitEntry);
+        MemSet(waitBlock, 0, sizeof(*waitBlock));
+    }
 
     /* TODO: exit process if no threads left */
 
-    KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
+    KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeLowerIrql(originalIrql);
+    PspSchedulerNext();
 }

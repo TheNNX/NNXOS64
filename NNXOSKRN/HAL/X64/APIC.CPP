@@ -8,7 +8,7 @@
 #include <device/fs/fat.h>
 #include "PIT.h"
 #include "../spinlock.h"
-#include <HAL/mp.h>
+#include <HAL/cpu.h>
 
 extern "C" 
 {

@@ -1,7 +1,11 @@
+/* this isn't really a object manager part, but i'm to lazy to move it */
+
 #include "object.h"
 #include <scheduler.h>
 #include <pool.h>
+#include <bugcheck.h>
 
+/* this is probably wrong somewhere */
 VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable)
 {
     /* if Timeout != NULL && *Timeout == 0 is handled earlier */
@@ -23,9 +27,11 @@ VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable
         Thread->Timeout = *pTimeout;
     }
 
+    /* for APCs (not implemented yet) */
     Thread->Alertable = Alertable;
 }
 
+/* TODO: implement timeouts */
 NTSTATUS KeWaitForMultipleObjects(
     ULONG Count,
     PVOID *Objects,
@@ -38,26 +44,21 @@ NTSTATUS KeWaitForMultipleObjects(
 )
 {
     ULONG i;
+    KIRQL irql;
+    PKTHREAD currentThread;
     BOOL done = FALSE;
     ULONG ready = 0;
-    KIRQL originalIrql;
 
     /* if there are more objects than the internal wait heads can handle */
     if (Count > THREAD_WAIT_OBJECTS && WaitBlockArray == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    /* lock all objects */
-    KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
     for (i = 0; i < Count; i++)
     {
         DISPATCHER_HEADER* dispHeader = (DISPATCHER_HEADER*)Objects[i];
-        KeAcquireSpinLockAtDpcLevel(&dispHeader->Lock);
-    }
-
-    for (i = 0; i < Count; i++)
-    {
-        DISPATCHER_HEADER* dispHeader = (DISPATCHER_HEADER*)Objects[i];
+        KeAcquireSpinLock(&dispHeader->Lock, &irql);
         ready += (dispHeader->SignalState != 0);
+        KeReleaseSpinLock(&dispHeader->Lock, irql);
     }
 
     /* if all objects were ready */
@@ -71,10 +72,12 @@ NTSTATUS KeWaitForMultipleObjects(
         for (i = 0; i < Count; i++)
         {
             DISPATCHER_HEADER* dispHeader = (DISPATCHER_HEADER*)Objects[i];
+            KeAcquireSpinLock(&dispHeader->Lock, &irql);
 
             if (dispHeader->SignalState && WaitType == WaitAny)
             {
                 dispHeader->SignalState--;
+                KeReleaseSpinLock(&dispHeader->Lock, irql);
                 break;
             }
             /* if Done is true, all objects are signaling */
@@ -82,60 +85,64 @@ NTSTATUS KeWaitForMultipleObjects(
             {
                 dispHeader->SignalState--;
             }
+
+            KeReleaseSpinLock(&dispHeader->Lock, irql);
         }
     }
 
-    /* release all locks */
+    /* no waiting is neccessary */
+    if (done)
+    {
+        return STATUS_SUCCESS;
+    }
+
+    currentThread = PspGetCurrentThread();
+
+    /* timeout of lenght 0 and yet, none of the objects were signaling */
+    if (pTimeout != NULL && *pTimeout == 0)
+    {
+        return STATUS_TIMEOUT;
+    }
+ 
+    /* lock the current thread */
+    KeAcquireSpinLock(&currentThread->ThreadLock, &irql);
+
+    /* if waiting is to be done, IRQL has to be >= DISPATCH_LEVLE*/
+    if (irql >= DISPATCH_LEVEL)
+        KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, (ULONG_PTR)KeWaitForMultipleObjects, irql, 0, 0);
+
+    if (Count <= THREAD_WAIT_OBJECTS)
+    {
+        WaitBlockArray = currentThread->ThreadWaitBlocks;
+    }
+
+    currentThread->NumberOfCurrentWaitBlocks = Count;
+    currentThread->NumberOfActiveWaitBlocks = Count;
+    currentThread->CurrentWaitBlocks = WaitBlockArray;
+
+    /* initializa all wait blocks */
     for (i = 0; i < Count; i++)
     {
         DISPATCHER_HEADER* dispHeader = (DISPATCHER_HEADER*)Objects[i];
+        KeAcquireSpinLockAtDpcLevel(&dispHeader->Lock);
+        WaitBlockArray[i].Object = (DISPATCHER_HEADER*)Objects[i];
+        WaitBlockArray[i].WaitMode = WaitMode;
+        WaitBlockArray[i].WaitType = WaitType;
+        WaitBlockArray[i].Thread = currentThread;
+        /* append the block to the list */
+        InsertTailList((PLIST_ENTRY)&dispHeader->WaitHead, &WaitBlockArray[i].WaitEntry);
         KeReleaseSpinLockFromDpcLevel(&dispHeader->Lock);
     }
 
-    /* waiting is neccessary */
-    if (!done)
-    {
-        PKTHREAD currentThread = PspGetCurrentThread();
-        ULONG i;
+    /* apply the alertable state and the timeout pointer onto the thread */
+    KiHandleObjectWaitTimeout(currentThread, pTimeout, Alertable);
 
-        /* timeout of lenght 0 and yet, none of the objects were signaling */
-        if (pTimeout != NULL && *pTimeout == 0)
-        {
-            KeLowerIrql(originalIrql);
-            return STATUS_TIMEOUT;
-        }
- 
-        /* this will elevate us to IRQL = DISPATCH_LEVEL */
-        KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
-        
-        if (Count > THREAD_WAIT_OBJECTS)
-        {
-            currentThread->NumberOfCustomThreadWaitBlocks = Count;
-            currentThread->CustomThreadWaitBlocks = WaitBlockArray;
-        }
-        else
-        {
-            WaitBlockArray = currentThread->ThreadWaitBlocks;
-        }
+    /* set the threads' state */
+    currentThread->ThreadState = THREAD_STATE_WAITING;
+    KeReleaseSpinLock(&currentThread->ThreadLock, irql);
 
-        InitializeListHead((PLIST_ENTRY)&currentThread->WaitHead);
-        for (i = 0; i < Count; i++)
-        {
-            WaitBlockArray[i].Object = (DISPATCHER_HEADER*)Objects[i];
-            WaitBlockArray[i].WaitMode = WaitMode;
-            WaitBlockArray[i].WaitType = WaitType;
-            InsertTailList((PLIST_ENTRY)&currentThread->WaitHead, &WaitBlockArray[i].WaitEntry);
-        }
-
-        KiHandleObjectWaitTimeout(currentThread, pTimeout, Alertable);
-
-        KeReleaseSpinLock(&currentThread->ThreadLock, originalIrql);
-        PspSchedulerNext();
-    }
-    else
-    {
-        KeLowerIrql(originalIrql);
-    }
+    /* manually trigger the scheduler event */
+    PspSchedulerNext();
 
     return STATUS_SUCCESS;
 }

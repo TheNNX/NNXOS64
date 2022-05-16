@@ -35,15 +35,7 @@ extern "C" {
 
     typedef struct _DISPATCHER_HEADER
     {
-        union
-        {
-            /*struct
-            {
-                UCHAR Padding[3];
-                UCHAR Type;
-            };*/
-            KSPIN_LOCK Lock;
-        };
+        KSPIN_LOCK Lock;
         LONG SignalState;
         LIST_ENTRY WaitHead;
     }DISPATCHER_HEADER;

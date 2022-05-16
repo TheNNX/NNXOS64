@@ -287,9 +287,6 @@
     <ClInclude Include="HAL\pcr.h">
       <Filter>Header Files\HAL\X64</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\mp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HAL\X64\APIC.h">
       <Filter>Header Files\HAL\APIC</Filter>
     </ClInclude>
