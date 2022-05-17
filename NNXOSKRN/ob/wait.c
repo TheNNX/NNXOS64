@@ -117,7 +117,7 @@ NTSTATUS KeWaitForMultipleObjects(
     }
 
     currentThread->NumberOfCurrentWaitBlocks = Count;
-    currentThread->NumberOfActiveWaitBlocks = Count;
+    currentThread->NumberOfActiveWaitBlocks = Count - ready;
     currentThread->CurrentWaitBlocks = WaitBlockArray;
 
     /* initializa all wait blocks */

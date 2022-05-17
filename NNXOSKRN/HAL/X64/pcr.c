@@ -11,14 +11,21 @@ VOID HalpTaskSwitchHandler();
 
 VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 {
-	PKPCR pcr;
+	PKPCR pcr, tempPcr;
 	PKIDTENTRY64 idt;
 	PKGDTENTRY64 gdt;
 	HalAcquireLockRaw(&PcrCreationLock);
 	
     DisableInterrupts();
-	gdt = HalpAllocateAndInitializeGdt();
 	idt = HalpAllocateAndInitializeIdt();
+
+	/* loading gdt invalidates GS, it's necessary to restore temp PCR */
+	/* otherwise, all subsequent IRQL changes (and because of that, spinlock uses) would fail */
+	tempPcr = KeGetPcr();
+
+	gdt = HalpAllocateAndInitializeGdt();
+
+	HalSetPcr(tempPcr);
 
 	pcr = HalCreatePcr(gdt, idt, id);
 	HalReleaseLockRaw(&PcrCreationLock);

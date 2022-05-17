@@ -122,4 +122,9 @@ inline bool GetBit(unsigned int num, unsigned int n) {
 #define UINT16_MAX	0xFFFFU
 #define UINT8_MAX	0xFFU
 
+#define INT64_MAX	0x7FFFFFFFFFFFFFFFLL
+#define INT32_MAX	0x7FFFFFFFL
+#define INT16_MAX	0x7FFF
+#define INT8_MAX	0x7F
+
 #endif

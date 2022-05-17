@@ -3,6 +3,7 @@
 #include "IDT.h"
 #include "APIC.h"
 #include "registers.h"
+#include <HAL/spinlock.h>
 
 VOID KeBugCheck(ULONG code)
 {
@@ -11,10 +12,20 @@ VOID KeBugCheck(ULONG code)
 
 __declspec(noreturn) VOID KeStop();
 
-VOID KeBugCheckEx(ULONG code, 
-				  ULONG_PTR param1, ULONG_PTR param2, ULONG_PTR param3, ULONG_PTR param4)
+static KSPIN_LOCK BugcheckLock = 0;
+
+VOID KeBugCheckEx(
+	ULONG code,
+	ULONG_PTR param1,
+	ULONG_PTR param2,
+	ULONG_PTR param3,
+	ULONG_PTR param4
+)
 {
+	KIRQL irql;
 	DisableInterrupts();
+	KeAcquireSpinLock(&BugcheckLock, &irql);
+
 	/* TODO: notify other CPUs */
 	if (FALSE)
 	{
@@ -47,5 +58,8 @@ VOID KeBugCheckEx(ULONG code,
 	PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
 	PrintT("CR2: %H CR3: %H", GetCR2(), GetCR3());
 
+	KeReleaseSpinLock(&BugcheckLock, irql);
+
+	PrintT("BugCheck\n");
 	KeStop();
 }

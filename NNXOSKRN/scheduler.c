@@ -213,13 +213,10 @@ VOID Test1()
 {
     while (1)
     {
-        if (KeGetCurrentProcessorId() == 0)
+        for (unsigned x = gWidth * gHeight; x > 0 ; x--)
         {
-            for (unsigned x = gWidth * gHeight; x > 0 ; x--)
-            {
-                for (int i = 0; i < 99999; i++);
-                gFramebuffer[x] = 0x00FF00FF;
-            }
+            for (int i = 0; i < 49999; i++);
+            gFramebuffer[x] = 0x00FF00FF;
         }
     }
 }
@@ -228,16 +225,118 @@ VOID Test2()
 {
     while (1)
     {
-        if (KeGetCurrentProcessorId() == 0)
+        for (unsigned x = 0; x < gWidth * gHeight; x++)
         {
-            for (unsigned x = 0; x < gWidth * gHeight; x++)
-            {
-                for (int i = 0; i < 99999; i++);
-                gFramebuffer[x] = 0xFF00FF00;
-            }
+            for (int i = 0; i < 99999; i++);
+            gFramebuffer[x] = 0xFF00FF00;
         }
     }
 }
+
+INT32 exits = 0;
+VOID DiagnosticThread()
+{
+    KIRQL irql;
+    PKPCR pcr;
+
+    pcr = KeGetPcr();
+
+    while (1)
+    {
+        INT i;
+
+        for (i = 0; i < 2999999; i++);
+
+        KeAcquireSpinLock(&ProcessListLock, &irql);
+        KeAcquireSpinLockAtDpcLevel(&pcr->Prcb->Lock);
+
+        const UINT32 minX = gWidth * 7 / 16;
+        const UINT32 maxX = gWidth * 15 / 16;
+        const UINT32 minY = 100;
+        const UINT32 maxY = 400;
+
+        const UINT32 controlColor = 0xFFC3C3C3, controlBckgrd = 0xFF606060;
+        const UINT32 usedColor = 0xFF800000, freeColor = 0xFF008000;
+        const UINT32 pad = 10;
+        UINT32* cFramebuffer = gFramebuffer + minY * gPixelsPerScanline;
+        UINT32 oldBoundingBox[4], newBoundingBox[4] = { minX, maxX, minY, maxY };
+        UINT32 cursorX, cursorY, oldColor, oldBackground, currentPosX, currentPosY;
+        UINT8 oldRenderBack;
+
+        for (UINT32 y = minY; y < maxY; y++)
+        {
+            cFramebuffer += gPixelsPerScanline;
+            for (UINT32 x = minX; x < maxX; x++)
+            {
+                cFramebuffer[x] = controlColor;
+            }
+        }
+
+        TextIoGetCursorPosition(&cursorX, &cursorY);
+        TextIoGetBoundingBox(oldBoundingBox);
+        TextIoSetBoundingBox(newBoundingBox);
+        TextIoGetColorInformation(&oldColor, &oldBackground, &oldRenderBack);
+
+        TextIoSetCursorPosition(minX, minY + 6);
+        TextIoSetColorInformation(0xFF000000, controlColor, 0);
+
+        KeAcquireSpinLockAtDpcLevel(&PspSharedReadyQueue.Lock);
+        PrintT("Debug thread:\n\nSummaries:\n");
+
+        PrintT("%b\n\nQueue sizes:",PspSharedReadyQueue.ThreadReadyQueuesSummary);
+        
+        for (i = 0; i < 32; i++)
+        {
+            int count = 0;
+            PLIST_ENTRY currentEntry = PspSharedReadyQueue.ThreadReadyQueues[i].EntryListHead.First;
+            while (currentEntry != &PspSharedReadyQueue.ThreadReadyQueues[i].EntryListHead)
+            {
+                count++;
+                currentEntry = currentEntry->Next;
+            }
+
+            PrintT(i == 31 ? "%i\n\n" : "%i, ", count);
+        }
+
+        for (i = 0; i < 32; i++)
+        {
+            PLIST_ENTRY currentEntry = PspSharedReadyQueue.ThreadReadyQueues[i].EntryListHead.First;
+            while (currentEntry != &PspSharedReadyQueue.ThreadReadyQueues[i].EntryListHead)
+            {
+                PKTHREAD thread = (PKTHREAD)((ULONG_PTR)currentEntry - FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
+                PrintT("Pr%i %X: state %i\n", i, thread, thread->ThreadState);
+                currentEntry = currentEntry->Next;
+            }
+        }
+        
+        KeReleaseSpinLockFromDpcLevel(&PspSharedReadyQueue.Lock);
+
+        TextIoGetCursorPosition(&currentPosX, &currentPosY);
+
+        cFramebuffer = gFramebuffer + (currentPosX + pad) + currentPosY * gPixelsPerScanline;
+        
+
+        for (i = 0; i < (INT)KeNumberOfProcessors; i++)
+        {
+            PrintT("Core %i summary: %b\n", i, CoresSchedulerData[i].ThreadReadyQueuesSummary);
+        }
+
+        PrintT("\nExits:\n%i\n",exits);
+
+        PrintT("\nI was ran from core %i\n", KeGetCurrentProcessorId());
+
+        KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
+        KeReleaseSpinLockFromDpcLevel(&ProcessListLock);
+        KeLowerIrql(irql);
+
+        TextIoSetColorInformation(oldColor, oldBackground, oldRenderBack);
+        TextIoSetCursorPosition(cursorX, cursorY);
+        TextIoSetBoundingBox(oldBoundingBox);
+
+
+    }
+}
+
 
 NTSTATUS PspTestScheduler(PEPROCESS IdleProcess)
 {
@@ -275,11 +374,9 @@ NTSTATUS PspCreateIdleProcessForCore(PEPROCESS* IdleProcess, PETHREAD* IdleThrea
     if (status)
         return status;
 
-    (*IdleThread)->Tcb.ThreadPriority = 0;
+    PrintT("Core %i's idle thread %X\n", coreNumber, *IdleThread);
 
-    /* uncomment the lines below to do some basic scheduler testing */
-    if (coreNumber == 0)
-        PspTestScheduler(*IdleProcess);
+    (*IdleThread)->Tcb.ThreadPriority = 0;
 
     return STATUS_SUCCESS;
 }
@@ -351,6 +448,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
         status = ObpMpTest();
     }
     
+    DisableInterrupts();
     KeLowerIrql(0);
     PspSwitchContextTo64(pPrcb->IdleThread->KernelStackPointer);
 
@@ -415,7 +513,6 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
             (originalRunningThreadPriority > pcr->Prcb->NextThread->ThreadPriority + pcr->Prcb->NextThread->Process->BasePriority)) &&
             pcr->Prcb->CurrentThread->ThreadState == THREAD_STATE_RUNNING)
         {
-            pcr->Prcb->NextThread = originalRunningThread;
             pcr->CyclesLeft = originalRunningProcess->QuantumReset * KiCyclesPerQuantum;
         }
         else
@@ -873,9 +970,10 @@ VOID PsExitThread(DWORD exitCode)
     KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
     
     currentThread = KeGetCurrentThread();
+    KeAcquireSpinLockAtDpcLevel(&ProcessListLock);
+    exits++;
     KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
     KeAcquireSpinLockAtDpcLevel(&currentThread->Header.Lock);
-
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
     
@@ -885,17 +983,20 @@ VOID PsExitThread(DWORD exitCode)
         waitBlock = (PKWAIT_BLOCK)waitEntry;
         waitingThread = waitBlock->Thread;
         
+        KeAcquireSpinLockAtDpcLevel(&waitingThread->ThreadLock);
         waitingThread->NumberOfActiveWaitBlocks--;
+        PrintT("Newstate: %i by core %i\n", waitingThread->NumberOfActiveWaitBlocks, KeGetCurrentProcessorId());
+        KeReleaseSpinLockFromDpcLevel(&waitingThread->ThreadLock);
 
         PsCheckThreadIsReady(waitingThread);
         RemoveEntryList(waitEntry);
         MemSet(waitBlock, 0, sizeof(*waitBlock));
     }
 
-    /* TODO: exit process if no threads left */
-
+    currentThread->Header.SignalState = INT32_MAX;
     KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
+    KeReleaseSpinLockFromDpcLevel(&ProcessListLock);
     KeLowerIrql(originalIrql);
     PspSchedulerNext();
 }

@@ -513,13 +513,14 @@ static VOID ObpWorkerThreadFunction()
     PsExitThread(0);
 }
 
+VOID DiagnosticThread();
+
 /* @brief this function should be run in a thread */
 NTSTATUS ObpMpTestNamespaceThread()
 {
     INT i;
     NTSTATUS waitStatus;
-    if (KeGetCurrentIrql() != 0)
-        PrintT("IRQL > 0, %i\n", __LINE__);
+
     KeInitializeSpinLock(&NextTesterIdLock);
 
     /* initialize worker threads with some invalid status values */
@@ -540,6 +541,8 @@ NTSTATUS ObpMpTestNamespaceThread()
                 TRUE,
                 (ULONG_PTR) ObpWorkerThreadFunction
             );
+
+            WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 1;
             
             PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
@@ -566,7 +569,7 @@ NTSTATUS ObpMpTestNamespaceThread()
             return WorkerThreads[i]->Tcb.ThreadExitCode;
 
     /* deallocation on return from those all things */
-    while (1);
+    DiagnosticThread();
     return STATUS_SUCCESS;
 }
 
@@ -575,6 +578,9 @@ NTSTATUS ObpMpTestNamespace()
     PEPROCESS process;
     PETHREAD testThread;
     NTSTATUS status;
+    
+    if (KeGetCurrentProcessorId() != 0)
+        return STATUS_SUCCESS;
 
     PrintT("%s %i\n", __FUNCTION__, KeGetCurrentProcessorId());
 

@@ -36,7 +36,6 @@ VOID NTAPI KeReleaseSpinLockFromDpcLevel(PKSPIN_LOCK Lock)
 KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock) 
 {
 	KIRQL temp = 0;
-
 	KeRaiseIrql(DISPATCH_LEVEL, &temp);
     KiAcquireSpinLock(lock);
 

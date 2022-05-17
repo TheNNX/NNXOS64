@@ -19,7 +19,6 @@ int basicallyATest = 0;
 
 extern "C"
 {
-    VOID HalSetPcr(PKPCR);
 	VOID DrawMap();
 	UINT32* gFramebuffer;
 	UINT32* gFramebufferEnd;
