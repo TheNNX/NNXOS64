@@ -57,6 +57,7 @@ extern "C"
     ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage);
     ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max);
     ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags);
+    ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags);
     VOID PagingMapFramebuffer();
     ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags);
     VOID PagingInvalidatePage(ULONG_PTR);
@@ -64,7 +65,6 @@ extern "C"
     ULONG_PTR PagingCreateAddressSpace();
     ULONG_PTR PagingGetAddressSpace();
     VOID PagingSetAddressSpace(ULONG_PTR);
-
 #ifdef __cplusplus
 }
 #endif

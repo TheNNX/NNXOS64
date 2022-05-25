@@ -20,16 +20,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -84,7 +84,7 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -100,12 +100,12 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir)
-$(SolutionDir)genverh.bat</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
       <Command>
       </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)
+$(SolutionDir)genverh.bat</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -147,7 +147,7 @@ $(SolutionDir)genverh.bat</Command>
       <AdditionalDependencies>
       </AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -163,12 +163,12 @@ $(SolutionDir)genverh.bat</Command>
       <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir)
-$(SolutionDir)genverh.bat</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
       <Command>
       </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>cd $(SolutionDir)
+$(SolutionDir)genverh.bat</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -201,13 +201,14 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
+    <ClCompile Include="ob\handle.c" />
+    <ClCompile Include="ob\namespace.c" />
+    <ClCompile Include="ob\objects.c" />
+    <ClCompile Include="rtl\rtl.c" />
+    <ClCompile Include="rtl\rtlstring.c" />
     <ClCompile Include="scheduler.c" />
-    <ClCompile Include="kobject.c" />
+    <ClCompile Include="ob\wait.c" />
     <ClCompile Include="loadstub.c" />
-    <ClCompile Include="main.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryOperations.c" />
     <ClCompile Include="nnxalloc.c" />
@@ -233,7 +234,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\cpu.h" />
-    <ClInclude Include="HAL\mp.h" />
     <ClInclude Include="HAL\X64\APIC.h" />
     <ClInclude Include="HAL\X64\GDT.h" />
     <ClInclude Include="HAL\X64\IDT.h" />
@@ -247,6 +247,11 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\X64\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
+    <ClInclude Include="nnxver.h" />
+    <ClInclude Include="ob\handle.h" />
+    <ClInclude Include="ob\namespace.h" />
+    <ClInclude Include="rtl\rtl.h" />
+    <ClInclude Include="rtl\rtlstring.h" />
     <ClInclude Include="scheduler.h" />
     <ClInclude Include="HAL\pcr.h" />
     <ClInclude Include="klist.h" />
@@ -259,7 +264,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="nnxlog.h" />
     <ClInclude Include="ntlist.h" />
     <ClInclude Include="ntqueue.h" />
-    <ClInclude Include="object.h" />
+    <ClInclude Include="ob\object.h" />
     <ClInclude Include="pool.h" />
     <ClInclude Include="text.h" />
     <ClInclude Include="SimpleTextIO.h" />

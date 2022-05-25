@@ -3,7 +3,8 @@
 
 #include <HAL/cpu.h>
 #include <HAL/spinlock.h>
-#include <object.h>
+#include <ob/object.h>
+#include <ob/handle.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,11 +30,14 @@ extern "C" {
 		ULONG_PTR AddressSpacePhysicalPointer;
 		LIST_ENTRY ThreadListHead;
 		UINT64 NumberOfThreads;
+		LIST_ENTRY ProcessListEntry;
 		/**
 		 * @brief Stores quantum units (3rds of timer interval), multiply by KiCyclesPerQuantum to get value for CyclesLeft.
 		*/
 		ULONG_PTR QuantumReset;
-	} KPROCESS, *PKPROCESS;
+		NTSTATUS ProcessResult;
+        LIST_ENTRY HandleDatabaseHead;
+    } KPROCESS, *PKPROCESS;
 
 	typedef struct _EPROCESS 
 	{
@@ -49,11 +53,13 @@ extern "C" {
 		PKPROCESS Process;
 		CHAR ThreadPriority;
 		KWAIT_BLOCK ThreadWaitBlocks[THREAD_WAIT_OBJECTS];
-		PKWAIT_BLOCK CustomThreadWaitBlocks;
-		ULONG NumberOfCustomThreadWaitBlocks;
-		LIST_ENTRY_POINTER WaitHead;
+		PKWAIT_BLOCK CurrentWaitBlocks;
+		ULONG NumberOfCurrentWaitBlocks;
+		ULONG NumberOfActiveWaitBlocks;
 		KAFFINITY Affinity;
-		LIST_ENTRY_POINTER ReadyQueueEntry;
+		LIST_ENTRY ReadyQueueEntry;
+		LIST_ENTRY ProcessChildListEntry;
+		LIST_ENTRY ThreadListEntry;
 		
 		/**
 		 * @brief in hundreds of nanoseconds;
@@ -63,10 +69,10 @@ extern "C" {
 		BOOL TimeoutIsAbsolute;
 
 		UCHAR ThreadState;
+		DWORD ThreadExitCode;
 
 		/* TODO */
 		BOOL Alertable;
-
 		NTSTATUS WaitStatus;
 	} KTHREAD, *PKTHREAD;
 
@@ -122,6 +128,8 @@ extern "C" {
 	 * @brief Voluntarily ends the calling thread's quantum (that doesn't mean it can't get another one, caller has to ensure it is in wait state)
 	*/
 	VOID PspSchedulerNext();
+
+	__declspec(noreturn) VOID PsExitThread(DWORD exitCode);
 	
 	NTSTATUS PspInitializeCore(UINT8 CoreNumber);
 

@@ -47,7 +47,7 @@ extern "C"
 	}KPCR, *LPKPCR, *PKPCR;
 
 	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
-
+	VOID HalSetPcr(PKPCR);
 #else
 #error "Architecture unsupported"
 #endif

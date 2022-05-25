@@ -22,6 +22,7 @@ VOID(*gExceptionHandlerPtr) (UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 r
 void ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
 	gExceptionHandlerPtr(n, errcode, errcode2, rip);
+	PrintT("ExHandler\n");
 	KeStop();
 }
 
@@ -46,6 +47,7 @@ VOID HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Userm
 	Idt[EntryNo].Ist = 0;
 }
 
+
 VOID HalpSetInterruptIdt(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
 {
 	Idt[EntryNo].Ist = Ist;
@@ -64,7 +66,7 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 								HalpTaskSwitchHandler, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7,
 								IRQ8, IRQ9, IRQ10, IRQ11, IRQ12, IRQ13, IRQ14
 	};
-
+	DisableInterrupts();
 	KIDTR64* idtr = (KIDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
 	PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
 

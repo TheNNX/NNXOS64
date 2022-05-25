@@ -13,6 +13,7 @@
 #include <HAL/X64/PIT.h>
 #include <nnxlog.h>
 #include <nnxver.h>
+#include <ob/object.h>
 
 int basicallyATest = 0;
 
@@ -51,6 +52,21 @@ extern "C"
 
 	__declspec(dllexport) UINT64 KeEntry()
 	{
+        NTSTATUS status;
+
+        KPCR dummyPcr = { 0 };
+        dummyPcr.Irql = DISPATCH_LEVEL;
+        dummyPcr.Prcb = NULL;
+        dummyPcr.SelfPcr = &dummyPcr;
+
+        /* 
+            for all the code that for example has to lock after initialization 
+            if not for this dummy PCR, access to the IRQL would page fault 
+
+            the correct one is set before multi processing init
+        */
+        HalSetPcr(&dummyPcr);
+
 		DisableInterrupts();
 		PitUniprocessorInitialize();
 
@@ -72,23 +88,27 @@ extern "C"
 
 		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE);
 
-		UINT8 status;
+		UINT8 acpiError;
 		ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(pRdsp, "FACP");
 
 		if (!facp)
 		{
-			status = AcpiLastError();
-			AcpiError(status);
-			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
+            acpiError = AcpiLastError();
+			AcpiError(acpiError);
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, acpiError, 0, 0);
 		}
 
 		ACPI_MADT* madt = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
-		PrintT("Found MADT on %x\n", madt);
 
 		ApicInit(madt);
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 
 		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);
+
+        status = ObInit();
+
+        if (status)
+            KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
 
 		MpInitialize();
 

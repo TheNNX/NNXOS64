@@ -8,38 +8,38 @@
 
 #pragma pack(push, 1)
 
-typedef struct MBRPartitionTableEntry
+typedef struct _MBR_PARTITION_TABLE_ENTRY
 {
-	BYTE attributes;
-	HSC partitionStartCHS;
-	BYTE partitionType;
-	HSC partitionEndCHS;
-	DWORD partitionStartLBA28;
-	DWORD partitionSizeInSectors;
-}MBRPartitionTableEntry;
+	BYTE Attributes;
+	HSC PartitionStartCHS;
+	BYTE PartitionType;
+	HSC PartitionEndCHS;
+	DWORD PartitionStartLBA28;
+	DWORD PartitionSizeInSectors;
+}MBR_PARTITION_TABLE_ENTRY;
 
-typedef struct MBRTable
+typedef struct _MBR_TABLE
 {
 	union
 	{
-		DWORD optionalUID;
+		DWORD OptionalUID;
 		DWORD UID;
 	};
 	union
 	{
-		WORD optionalReserved;
+		WORD OptionalReserved;
 		WORD Reserved;
 	};
 
-	MBRPartitionTableEntry tableEntries[4];
+	MBR_PARTITION_TABLE_ENTRY TableEntries[4];
 
-	WORD magicNumber;
-} MBRTable;
+	WORD MagicNumber;
+} MBR_TABLE;
 
 typedef struct MBR
 {
 	UINT8 bootstrap[440];
-	MBRTable mbrtable;
+	MBR_TABLE mbrtable;
 } MBR;
 #pragma pack(pop)
 #endif

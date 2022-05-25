@@ -6,7 +6,7 @@
 #define NNX_NT_QUEUE_HEADER
 
 #include "HAL/cpu.h"
-#include "object.h"
+#include <ob/object.h>
 
 #ifdef __cplusplus
 extern "C" 
@@ -24,7 +24,7 @@ extern "C"
 
     VOID KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads);
 
-    PLIST_ENTRY KeRemvoeQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout);
+    PLIST_ENTRY KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout);
 
     LONG KeInsertHeadQueue(PKQUEUE Queue, PLIST_ENTRY Entry);
     

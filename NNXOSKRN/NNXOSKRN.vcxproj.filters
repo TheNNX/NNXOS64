@@ -93,9 +93,6 @@
     <ClCompile Include="loadstub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="text.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -133,9 +130,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ntqueue.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="kobject.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MemoryOperations.c">
@@ -180,6 +174,24 @@
     <ClCompile Include="HAL\X64\spinlock.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
+    <ClCompile Include="ob\handle.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rtl\rtlstring.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rtl\rtl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ob\objects.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ob\wait.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ob\namespace.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -189,9 +201,6 @@
       <Filter>Header Files\HAL\ACPI</Filter>
     </ClInclude>
     <ClInclude Include="bugcheck.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="object.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pool.h">
@@ -278,9 +287,6 @@
     <ClInclude Include="HAL\pcr.h">
       <Filter>Header Files\HAL\X64</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\mp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HAL\X64\APIC.h">
       <Filter>Header Files\HAL\APIC</Filter>
     </ClInclude>
@@ -304,6 +310,24 @@
     </ClInclude>
     <ClInclude Include="HAL\X64\registers.h">
       <Filter>Header Files\HAL</Filter>
+    </ClInclude>
+    <ClInclude Include="nnxver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ob\object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rtl\rtl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rtl\rtlstring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ob\handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ob\namespace.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -37,6 +37,8 @@
 
 KSPIN_LOCK PagingSpinlock;
 
+ULONG_PTR KernelPml4Entry = NULL;
+
 VOID PagingTLBFlushPage(UINT64 page)
 {
     /* TODO: inform other processors if neccessary */
@@ -73,7 +75,7 @@ ULONG_PTR PagingCreateAddressSpace()
     MemSet((UINT8*) virtualPML4, 0, PAGE_SIZE);
 
     ((UINT64*) virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
-    ((UINT64*) virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = ((UINT64*) GetCR3())[KERNEL_DESIRED_PML4_ENTRY];
+    ((UINT64*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
 
     return physicalPML4;
 }
@@ -332,6 +334,8 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
     /* for recursive paging */
     pml4[PML4EntryForRecursivePaging] = ((UINT64) pml4) | (PAGE_WRITE | PAGE_PRESENT);
     GlobalPhysicalMemoryMap = (PBYTE)(virtualGlobalPhysicalMemoryMap | (((UINT64) pbPhysicalMemoryMap) & 0xFFF));
+
+    KernelPml4Entry = pml4[KERNEL_DESIRED_PML4_ENTRY];
 
     SetCR3((UINT64)pml4);
 }

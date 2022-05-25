@@ -22,18 +22,22 @@ extern "C"
 class NNXLogger
 {
 public:
-	NNXLogger(VFS_FILE* loggerFile);
+	NNXLogger(VFS_FILE* loggerFile, bool OutputToScreen);
+    inline NNXLogger(VFS_FILE* loggerFile) : NNXLogger(loggerFile, true){ }
 	~NNXLogger();
 	void Log(const char* str, ...);
 	void Clear();
 	void Log(const char* str, va_list l);
 	void Flush();
+public:
+    bool OutputToScreen;
+private:
+	void AppendText(const char* text, UINT64 textLength);
 private:
 	VFS_FILE* loggerFile;
 	VFS* filesystem;
 	UINT64 position;
 	unsigned char* buffer;
-	void AppendText(const char* text, UINT64 textLength);
 };
 
 extern NNXLogger* gLogger;

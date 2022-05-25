@@ -441,7 +441,6 @@ void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
 
 void PrintTA(const char* input, ...)
 {
-
 	va_list		args;
 	va_start(args, input);
 

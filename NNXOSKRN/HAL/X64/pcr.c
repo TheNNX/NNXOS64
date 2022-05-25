@@ -11,17 +11,25 @@ VOID HalpTaskSwitchHandler();
 
 VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 {
-	PKPCR pcr;
+	PKPCR pcr, tempPcr;
 	PKIDTENTRY64 idt;
 	PKGDTENTRY64 gdt;
 	HalAcquireLockRaw(&PcrCreationLock);
-	DisableInterrupts();
-	gdt = HalpAllocateAndInitializeGdt();
+	
+    DisableInterrupts();
 	idt = HalpAllocateAndInitializeIdt();
-	// HalpSetIdtEntry(idt, 0x20, HalpTaskSwitchHandler, TRUE, FALSE);
+
+	/* loading gdt invalidates GS, it's necessary to restore temp PCR */
+	/* otherwise, all subsequent IRQL changes (and because of that, spinlock uses) would fail */
+	tempPcr = KeGetPcr();
+
+	gdt = HalpAllocateAndInitializeGdt();
+
+	HalSetPcr(tempPcr);
 
 	pcr = HalCreatePcr(gdt, idt, id);
 	HalReleaseLockRaw(&PcrCreationLock);
+    KfRaiseIrql(DISPATCH_LEVEL);
 }
 
 PKIDTENTRY64 HalpGetIdt()
@@ -57,11 +65,9 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 {
 	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
-
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);
-	PrintT("Set pcr->Tss to %x\n", pcr->Tss);
 
 	pcr->Irql = 0;
 
@@ -69,10 +75,10 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 	pcr->MinorVersion = 0;
 
 	pcr->SelfPcr = pcr;
+	
 
 	pcr->Prcb = HalCreatePrcb(CoreNumber);
 
 	HalSetPcr(pcr);
-
 	return pcr;
 }

@@ -8,7 +8,7 @@
 #include <device/fs/fat.h>
 #include "PIT.h"
 #include "../spinlock.h"
-#include <HAL/mp.h>
+#include <HAL/cpu.h>
 
 extern "C" 
 {
@@ -34,8 +34,6 @@ class IoApic
 public:
 	IoApic(volatile UINT32* base, UINT32 interruptBase)
 	{
-		PrintT("IoApicBase: %x\n", base);
-
 		KeInitializeSpinLock(&Lock);
 		this->IoApicBasePhys = base;
 		this->InterruptBase = interruptBase;
@@ -52,11 +50,9 @@ public:
 		this->Id = (ReadRegister(0x00) >> 24) & 0xF0;
 		this->RedirectionEntriesCount = (ReadRegister(0x01) >> 16) + 1;
 
-		PrintT("IO APIC n %i\n", RedirectionEntriesCount);
 		/* mask all external interrupts */
 		for (UINT32 i = 0; i < this->RedirectionEntriesCount; i++)
 		{
-			PrintT("Masking interrupt %i\n", i + this->InterruptBase);
 			MaskIrq(this->InterruptBase + i);
 		}
 	}
@@ -168,7 +164,8 @@ extern "C"
 	{
 		UINT64 i = 0, currentLocalApicIdIndex = 0, currentIoApicIndex = 0;
 		UINT8* currentPointer = (UINT8*)&(madt->InteruptControlerStruct);
-		NNXLogger* logger = new NNXLogger(VfsGetSystemVfs()->Functions.OpenOrCreateFile(VfsGetSystemVfs(), (char*)"APICLOG.TXT"));
+		NNXLogger* logger = new NNXLogger(VfsGetSystemVfs()->Functions.OpenOrCreateFile(VfsGetSystemVfs(), (char*)"APICLOG.TXT"), false);
+        
 
 		logger->Log("LAPIC initialization started\n");
 
