@@ -196,12 +196,10 @@ NTSTATUS ObDereferenceObject(PVOID object)
     if (header->ReferenceCount == 0)
     {
         NTSTATUS status;
-
         /* clear the name before releasing lock so it's not accessible by name */
         header->Name.Buffer = 0;
         header->Name.Length = 0;
         header->Name.MaxLength = 0;
-
         KeReleaseSpinLock(&header->Lock, irql);
 
         status = ObpDeleteObject(object);
@@ -227,11 +225,6 @@ NTSTATUS ObpDeleteObject(PVOID object)
 
     header = ObGetHeaderFromObject(object);
 
-    if (!header->Lock)
-    {
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, (ULONG_PTR) &header->Lock, __LINE__, 0, 0);
-    }
-
     /* destroy all handles */
     currentHandleEntry = (PHANDLE_DATABASE_ENTRY)header->HandlesHead.First;
 
@@ -247,11 +240,13 @@ NTSTATUS ObpDeleteObject(PVOID object)
     }
 
     /* if has a root, remove own entry from root's children */
-    if (header->Root)
+    if (header->Root && header->Root != INVALID_HANDLE_VALUE)
     {
         status = ObReferenceObjectByHandle(header->Root, 0, NULL, KernelMode, &rootObject, NULL);
         if (status != STATUS_SUCCESS)
+        {
             return status;
+        }
 
         rootHeader = ObGetHeaderFromObject(rootObject);
 
@@ -388,7 +383,7 @@ NTSTATUS ObCreateObject(
 
     *pObject = ObGetObjectFromHeader(header);
     
-    /* add to roots children */
+    /* add to root's children */
     if (root != INVALID_HANDLE_VALUE)
     {
         status = rootType->AddChildObject(rootObject, *pObject);

@@ -958,13 +958,14 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
     return result;
 }
 
-VOID PsExitThread(DWORD exitCode)
+__declspec(noreturn) VOID PsExitThread(DWORD exitCode)
 {
     PKTHREAD currentThread;
     KIRQL originalIrql;
     PKWAIT_BLOCK waitBlock;
     PLIST_ENTRY waitEntry;
     PKTHREAD waitingThread;
+    KIRQL irql;
 
     /* raise irql as the CPU shouldn't try to schedule here */
     KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
@@ -997,6 +998,19 @@ VOID PsExitThread(DWORD exitCode)
     KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&ProcessListLock);
+    
+    /* interrupts are disabled, they will be reenabled by RFLAGS on the idle thread stack */
+    /* IRQL can be lowered now */
+    DisableInterrupts();
     KeLowerIrql(originalIrql);
-    PspSchedulerNext();
+
+    /* dereference the current thread, this could destroy it so caution is neccessary
+     * it is impossible to run PspScheduleNext beacause it could try to save registers on the old kernel stack */
+    ObDereferenceObject(currentThread);
+
+    /* go to the idle thread, on the next tick it will be swapped to some other thread */
+    KeAcquireSpinLock(&KeGetPcr()->Prcb->Lock, &irql);
+    currentThread = KeGetPcr()->Prcb->CurrentThread = KeGetPcr()->Prcb->IdleThread;
+    KeReleaseSpinLock(&KeGetPcr()->Prcb->Lock, irql);
+    PspSwitchContextTo64(currentThread->KernelStackPointer);
 }

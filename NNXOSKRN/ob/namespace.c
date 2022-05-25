@@ -3,6 +3,7 @@
 #include <text.h>
 #include <scheduler.h>
 #include <HAL/cpu.h>
+#include <nnxalloc.h>
 
 #pragma pack(push, 1)
 
@@ -114,9 +115,11 @@ static NTSTATUS DirObjTypeOpenObject(
 {
     USHORT firstSlashPosition;
 
-    if (Name->Length == 0)
+    /* if the name of the object is empty, the path is invalid */
+    if (Name == NULL || Name->Length == 0)
         return STATUS_OBJECT_PATH_INVALID;
 
+    /* find the first slash */
     for (firstSlashPosition = 0; firstSlashPosition < Name->Length / sizeof(*Name->Buffer); firstSlashPosition++)
     {
         if (Name->Buffer[firstSlashPosition] == '\\')
@@ -205,6 +208,14 @@ POBJECT_TYPE ObDirectoryObjectType = &ObDirectoryTypeImpl.Data;
 static UNICODE_STRING GlobalNamespaceEmptyName = RTL_CONSTANT_STRING(L"");
 static UNICODE_STRING TypesDirName = RTL_CONSTANT_STRING(L"ObjectTypes");
 
+/* @brief This function takes a named object and changes it's root to another one
+ * First it checks if the object has any root already. If this is the case, it references
+ * the old root handle to retrieve the old root pointer. This old root is then immediately
+ * dereferenced (the original reference created for the root-child relation is still
+ * in place, though). Then the new root is referenced - if this operation fails, 
+ * its status is returned. If the new root accepts the object as its child, the operations
+ * is complete. Otherwise, the would-be new root is dereferenced and the original root (if any)
+ * is restored. */
 NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
 {
     POBJECT_HEADER header, rootHeader;
@@ -255,7 +266,14 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
 
     /* from now on, rootObject is the new root's object */
     /* this is not to be dereferenced, as setting an object as a root increments its reference count */
-    ObReferenceObjectByHandle(newRoot, 0, NULL, accessMode, &rootObject, NULL);
+    status = ObReferenceObjectByHandle(newRoot, 0, NULL, accessMode, &rootObject, NULL);
+    if (status != STATUS_SUCCESS)
+    {
+        KeReleaseSpinLock(&header->Lock, irql1);
+        ObDereferenceObject(object);
+        return status;
+    }
+
     rootHeader = ObGetHeaderFromObject(rootObject);
 
     KeAcquireSpinLock(&rootHeader->Lock, &irql2);
@@ -282,22 +300,23 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
     if (failed)
     {
         KeReleaseSpinLock(&rootHeader->Lock, irql2);
-
         KeReleaseSpinLock(&header->Lock, irql1);
-        ObDereferenceObject(object);
-        ObDereferenceObject(rootObject);
-
         /* try setting the root back */
         if (originalRoot != NULL)
         {
+            
             status = ObChangeRoot(object, originalRoot, accessMode);
             if (status)
                 return statusToReturn;
         }
+        
+        ObDereferenceObject(object);
+        ObDereferenceObject(rootObject);
 
         return statusToReturn;
     }
 
+    header->Root = newRoot;
     KeReleaseSpinLock(&rootHeader->Lock, irql2);
 
     KeReleaseSpinLock(&header->Lock, irql1);
@@ -500,15 +519,62 @@ PETHREAD WorkerThreads[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
 KWAIT_BLOCK WaitBlocks[WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS];
 PEPROCESS WorkerProcesses[WORKER_PROCESSES_NUMBER];
 
+static NTSTATUS Test1()
+{
+    INT i;
+    NTSTATUS status;
+
+    for (i = 0; i < 64; i++)
+    {
+        status = ObpTestNamespace();
+        if (status != STATUS_SUCCESS)
+            return status;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+static NTSTATUS Test2()
+{
+    INT i;
+    NTSTATUS status;
+
+    for (i = 0; i < 64; i++)
+    {
+        PVOID object;
+        OBJECT_ATTRIBUTES objAttribs;
+        InitializeObjectAttributes(&objAttribs, NULL, 0, INVALID_HANDLE_VALUE, 0);
+
+        status = ObCreateObject(&object, 0, UserMode, &objAttribs, sizeof(OBJECT_TYPE), ObTypeObjectType);
+        if (status != STATUS_SUCCESS)
+            return status;
+
+        status = ObDereferenceObject(object);
+        if (status != STATUS_SUCCESS)
+            return status;
+    }
+
+    return STATUS_SUCCESS;
+}
+
 static VOID ObpWorkerThreadFunction()
 {
     UINT ownId;
     KIRQL irql;
-
+    NTSTATUS status;
+    
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
     ownId = NextTesterId++;
     KeReleaseSpinLock(&NextTesterIdLock, irql);
+
+    status = Test1();
+    if (status)
+        PsExitThread((DWORD)status);
+
+    status = Test2();
+    if (status)
+        PsExitThread((DWORD)status);
 
     PsExitThread(0);
 }
@@ -520,9 +586,11 @@ NTSTATUS ObpMpTestNamespaceThread()
 {
     INT i;
     NTSTATUS waitStatus;
+    UINT64 __lastMemory, __currentMemory;
+    char* __caller;
 
     KeInitializeSpinLock(&NextTesterIdLock);
-
+    SaveStateOfMemory(__FUNCTION__"\n");
     /* initialize worker threads with some invalid status values */
     for (i = 0; i < WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER; i++)
         WorkerStatus[i] = (NTSTATUS)(-1);
@@ -543,7 +611,8 @@ NTSTATUS ObpMpTestNamespaceThread()
             );
 
             WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 1;
-            
+            ObReferenceObject(WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]);
+
             PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
     }
@@ -565,11 +634,17 @@ NTSTATUS ObpMpTestNamespaceThread()
         return waitStatus;
 
     for (i = 0; i < WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS; i++)
+    {
         if (WorkerThreads[i]->Tcb.ThreadExitCode != STATUS_SUCCESS)
             return WorkerThreads[i]->Tcb.ThreadExitCode;
 
+        ObDereferenceObject(WorkerThreads[i]);
+    }
+
+    CheckMemory();
+
     /* deallocation on return from those all things */
-    DiagnosticThread();
+    PsExitThread(0);
     return STATUS_SUCCESS;
 }
 

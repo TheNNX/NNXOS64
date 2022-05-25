@@ -129,7 +129,7 @@ extern "C" {
 	*/
 	VOID PspSchedulerNext();
 
-	VOID PsExitThread(DWORD exitCode);
+	__declspec(noreturn) VOID PsExitThread(DWORD exitCode);
 	
 	NTSTATUS PspInitializeCore(UINT8 CoreNumber);
 
