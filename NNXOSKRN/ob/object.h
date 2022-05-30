@@ -103,6 +103,9 @@ extern "C" {
             PVOID SelfObject, 
             PLIST_ENTRY CurrentEntry
         );
+
+        NTSTATUS(*OnCreate)(PVOID SelfObject, PVOID data);
+        NTSTATUS(*OnDelete)(PVOID SelfObject);
     }OBJECT_TYPE, *POBJECT_TYPE;
 
     typedef struct _OBJECT_HEADER
@@ -135,7 +138,8 @@ extern "C" {
         KPROCESSOR_MODE AccessMode, 
         POBJECT_ATTRIBUTES Attributes,
         ULONG ObjectSize,
-        POBJECT_TYPE objectType
+        POBJECT_TYPE ObjectType,
+        PVOID OptionalData
     );
 
     NTSTATUS ObReferenceObjectByHandle(
@@ -191,6 +195,12 @@ extern "C" {
     NTSTATUS ObCreateSchedulerTypes(
         POBJECT_TYPE* poutProcessType,
         POBJECT_TYPE* poutThreadType
+    );
+
+    NTSTATUS ObChangeRoot(
+        PVOID object, 
+        HANDLE newRoot, 
+        KPROCESSOR_MODE accessMode
     );
 
     extern POBJECT_TYPE ObTypeObjectType;

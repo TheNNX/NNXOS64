@@ -214,7 +214,6 @@ NTSTATUS ObDereferenceObject(PVOID object)
     return STATUS_SUCCESS;
 }
 
-/* this requires objects lock to be acquired */
 NTSTATUS ObpDeleteObject(PVOID object)
 {
     PHANDLE_DATABASE_ENTRY currentHandleEntry;
@@ -223,6 +222,7 @@ NTSTATUS ObpDeleteObject(PVOID object)
     NTSTATUS status;
     KIRQL irql;
 
+    status = STATUS_SUCCESS;
     header = ObGetHeaderFromObject(object);
 
     /* destroy all handles */
@@ -261,9 +261,13 @@ NTSTATUS ObpDeleteObject(PVOID object)
         ObDereferenceObject(rootObject);
     }
 
-    ExFreePool(header);
+    if (header->ObjectType->OnDelete != NULL)
+    {
+        status = header->ObjectType->OnDelete(object);
+    }
 
-    return STATUS_SUCCESS;
+    ExFreePool(header);
+    return status;
 }
 
 NTSTATUS ObCreateObject(
@@ -272,7 +276,8 @@ NTSTATUS ObCreateObject(
     KPROCESSOR_MODE AccessMode, 
     POBJECT_ATTRIBUTES Attributes,
     ULONG ObjectSize,
-    POBJECT_TYPE objectType
+    POBJECT_TYPE objectType,
+    PVOID optionalData
 )
 {
     HANDLE root;
@@ -286,6 +291,7 @@ NTSTATUS ObCreateObject(
         return STATUS_INVALID_PARAMETER;
 
     root = INVALID_HANDLE_VALUE;
+    status = STATUS_SUCCESS;
 
     if (Attributes->ObjectName != NULL)
     {
@@ -386,12 +392,27 @@ NTSTATUS ObCreateObject(
     /* add to root's children */
     if (root != INVALID_HANDLE_VALUE)
     {
-        status = rootType->AddChildObject(rootObject, *pObject);
-        if (status != STATUS_SUCCESS)
-        {
-            ExFreePool(header);
-            return status;
-        }
+        if (rootType->AddChildObject == NULL)
+            status = STATUS_INVALID_HANDLE;
+        else
+            status = rootType->AddChildObject(rootObject, *pObject);
+
+    }
+
+    /* if there was no problem with adding to the root (or no adding was done),
+     * and the object type provides a custom OnCreate method, call it */
+    if (status == STATUS_SUCCESS && header->ObjectType->OnCreate != NULL)
+    {
+        status = header->ObjectType->OnCreate(*pObject, optionalData);
+    }
+
+    /* if there was some problem creating the object, delete it */
+    if (status != STATUS_SUCCESS)
+    {
+        *pObject = NULL;
+        /* derefernce the object to delete it */
+        ObDereferenceObject(pObject);
+        return status;
     }
 
     return STATUS_SUCCESS;
@@ -437,7 +458,8 @@ NTSTATUS ObCreateSchedulerTypes(
         KernelMode,
         &procAttrib,
         sizeof(OBJECT_TYPE),
-        ObTypeObjectType
+        ObTypeObjectType,
+        NULL
     );
 
     if (status != STATUS_SUCCESS)
@@ -449,7 +471,8 @@ NTSTATUS ObCreateSchedulerTypes(
         KernelMode,
         &threadAttrib,
         sizeof(OBJECT_TYPE),
-        ObTypeObjectType
+        ObTypeObjectType,
+        NULL
     );
 
     if (status != STATUS_SUCCESS)
