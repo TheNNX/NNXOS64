@@ -40,8 +40,6 @@ VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR Ent
 VOID HalpUpdateThreadKernelStack(PVOID kernelStack);
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
 NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, BOOL IsKernel, ULONG_PTR EntryPoint);
-NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess);
-NTSTATUS PspDestroyThreadInternal(PETHREAD pThread);
 VOID PspInsertIntoSharedQueue(PKTHREAD Thread);
 __declspec(noreturn) VOID PspTestAsmUser();
 __declspec(noreturn) VOID PspTestAsmUserEnd();
@@ -101,6 +99,11 @@ inline VOID SetSummaryBitIfNeccessary(PKQUEUE ThreadReadyQueues, PULONG Summary,
 POBJECT_TYPE PsProcessType = NULL;
 POBJECT_TYPE PsThreadType = NULL;
 
+NTSTATUS PspProcessOnCreate(PVOID selfObject, PVOID createData);
+NTSTATUS PspProcessOnDelete(PVOID selfObject);
+NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID createData);
+NTSTATUS PspThreadOnDelete(PVOID selfObject);
+
 NTSTATUS PspInitializeScheduler()
 {
     INT i;
@@ -114,6 +117,11 @@ NTSTATUS PspInitializeScheduler()
         &PsProcessType, 
         &PsThreadType
     );
+
+    PsProcessType->OnCreate = PspProcessOnCreate;
+    PsProcessType->OnDelete = PspProcessOnDelete;
+    PsThreadType->OnCreate = PspThreadOnCreate;
+    PsThreadType->OnDelete = PspThreadOnDelete;
 
     if (status != STATUS_SUCCESS)
     {
@@ -596,7 +604,6 @@ VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR Ent
 
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
 {
-    KIRQL irql;
     NTSTATUS status;
     PEPROCESS pProcess;
     OBJECT_ATTRIBUTES processObjAttributes;
@@ -616,7 +623,8 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
         KernelMode, 
         &processObjAttributes, 
         sizeof(EPROCESS), 
-        PsProcessType
+        PsProcessType,
+        NULL
     );
 
     if (status != STATUS_SUCCESS)
@@ -627,6 +635,15 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
      * code below should be run as a OnCreate method of the process type object 
      * (automatically by ObCreateObject).
      * Same thing goes for other thread/process creation/deletion functions */
+    *ppProcess = pProcess;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS PspProcessOnCreate(PVOID selfObject, PVOID createData)
+{
+    KIRQL irql;
+    PEPROCESS pProcess = (PEPROCESS)selfObject;
 
     /* lock the process list */
     KeAcquireSpinLock(&ProcessListLock, &irql);
@@ -634,7 +651,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     /* make sure it is not prematurely used */
     pProcess->Initialized = FALSE;
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
-    
+
     /* lock the process */
     KeAcquireSpinLockAtDpcLevel(&pProcess->Pcb.ProcessLock);
 
@@ -653,10 +670,15 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);
 
-    *ppProcess = pProcess;
-
     return STATUS_SUCCESS;
 }
+
+typedef struct _THREAD_ON_CREATE_DATA
+{
+    ULONG_PTR Entrypoint;
+    BOOL IsKernel;
+    PEPROCESS ParentProcess;
+}THREAD_ON_CREATE_DATA, *PTHREAD_ON_CREATE_DATA;
 
 /**
  * @brief Allocates memory for a new thread, adds it to the scheduler's thread list and parent process' child thread list
@@ -673,12 +695,10 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR EntryPoint
 )
 {
-    KIRQL irql;
     NTSTATUS status;
     PETHREAD pThread;
-    ULONG_PTR userstack;
-    ULONG_PTR originalAddressSpace;
     OBJECT_ATTRIBUTES threadObjAttributes;
+    THREAD_ON_CREATE_DATA data;
 
     InitializeObjectAttributes(
         &threadObjAttributes,
@@ -688,25 +708,44 @@ NTSTATUS PspCreateThreadInternal(
         NULL
     );
 
+    data.Entrypoint = EntryPoint;
+    data.ParentProcess = pParentProcess;
+    data.IsKernel = IsKernel;
+
     status = ObCreateObject(
         &pThread,
         0,
         KernelMode,
         &threadObjAttributes,
         sizeof(ETHREAD),
-        PsThreadType
+        PsThreadType,
+        &data
     );
 
     if (status != STATUS_SUCCESS)
         return status;
 
+    *ppThread = pThread;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
+{
+    KIRQL irql;
+    ULONG_PTR userstack;
+    ULONG_PTR originalAddressSpace;
+    PTHREAD_ON_CREATE_DATA creationData;
+    PETHREAD pThread = (PETHREAD)selfObject;
+    creationData = (PTHREAD_ON_CREATE_DATA)optionalCreateData;
+
     KeAcquireSpinLock(&ThreadListLock, &irql);
 
     pThread->Tcb.ThreadState = THREAD_STATE_INITIALIZATION;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
-    
+
     KeAcquireSpinLockAtDpcLevel(&pThread->Tcb.ThreadLock);
-    pThread->Process = pParentProcess;
+    pThread->Process = creationData->ParentProcess;
     pThread->StartAddress = 0;
 
     KeAcquireSpinLockAtDpcLevel(&pThread->Process->Pcb.ProcessLock);
@@ -715,11 +754,11 @@ NTSTATUS PspCreateThreadInternal(
     PagingSetAddressSpace(pThread->Process->Pcb.AddressSpacePhysicalPointer);
 
     /* allocate stack even if in kernel mode */
-    if (IsKernel)
+    if (creationData->IsKernel)
         userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
     else
         userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
-    
+
     userstack += (ULONG_PTR)PAGE_SIZE;;
 
     PagingSetAddressSpace(originalAddressSpace);
@@ -733,87 +772,69 @@ NTSTATUS PspCreateThreadInternal(
     pThread->Tcb.CurrentWaitBlocks = (PKWAIT_BLOCK)NULL;
     pThread->Tcb.WaitStatus = 0;
     pThread->Tcb.Alertable = FALSE;
-    pThread->Tcb.Process = &pParentProcess->Pcb;
+    pThread->Tcb.Process = &pThread->Process->Pcb;
     pThread->Tcb.Timeout = 0;
     pThread->Tcb.TimeoutIsAbsolute = FALSE;
+    /* TODO: deallocate stacks */
     pThread->Tcb.KernelStackPointer = (PVOID)(PspCreateKernelStack() - sizeof(KTASK_STATE));
     /* inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
-    PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, IsKernel, EntryPoint, userstack);
+    PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, creationData->IsKernel, creationData->Entrypoint, userstack);
 
-    InsertTailList(&pParentProcess->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
+    InsertTailList(&pThread->Process->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
     KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
     InsertTailList(&ThreadListHead, &pThread->Tcb.ThreadListEntry);
-    
+
     pThread->Tcb.ThreadState = THREAD_STATE_READY;
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
-    *ppThread = pThread;
 
     return STATUS_SUCCESS;
 }
 
-/** @brief this version of PspDestoryThreadInternal is needed so PspDestroyProcessInternal doesn't deadlock on trying to destory its threads 
-TODO: free auto-allocated user stack (somehow, maybe store the original stack in KTHREAD?) */
-NTSTATUS PspDestroyThreadInternalOptionalProcessLock(PETHREAD pThread, BOOL LockParent)
+NTSTATUS PspThreadOnDelete(PVOID selfObject)
 {
     KIRQL irql;
+    PETHREAD pThread = (PETHREAD)selfObject;
 
+    KeAcquireSpinLock(&pThread->Process->Pcb.ProcessLock, &irql);
+    
     KeAcquireSpinLockAtDpcLevel(&pThread->Tcb.ThreadLock);
     KeAcquireSpinLock(&ThreadListLock, &irql);
     pThread->Tcb.ThreadState = THREAD_STATE_TERMINATED;
 
-    if (LockParent)
-        KeAcquireSpinLockAtDpcLevel(&pThread->Process->Pcb.ProcessLock);
-    
     RemoveEntryList(&pThread->Tcb.ProcessChildListEntry);
-    if (LockParent)
-        KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
-
     RemoveEntryList(&pThread->Tcb.ThreadListEntry);
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
-    ObDereferenceObject(pThread);
 
+    KeReleaseSpinLock(&pThread->Process->Pcb.ProcessLock, irql);
     return STATUS_SUCCESS;
 }
 
-NTSTATUS PspDestroyThreadInternal(PETHREAD Thread)
-{
-    return PspDestroyThreadInternalOptionalProcessLock(Thread, TRUE);
-}
-
-/**
- * @brief removes pProcess from process list, destroys process' the handle database, 
- * and if that is successful, performs ExFreePool
- * @param pProcess - pointer to EPROCESS to be terminated 
- * @return STATUS_SUCCESS, STATUS_INVALID_PARAMETER
-*/
-NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
+NTSTATUS PspProcessOnDelete(PVOID selfObject)
 {
     KIRQL irql;
     PLIST_ENTRY current;
     PHANDLE_DATABASE currentHandleDatabase;
+    PEPROCESS pProcess;
+
+    pProcess = (PEPROCESS)selfObject;
 
     KeAcquireSpinLock(&ProcessListLock, &irql);
-
     KeAcquireSpinLockAtDpcLevel(&pProcess->Pcb.ProcessLock);
-    
+
     current = pProcess->Pcb.ThreadListHead.First;
     while (current != &pProcess->Pcb.ThreadListHead)
     {
-        PETHREAD Thread;
-        Thread = (PETHREAD)((ULONG_PTR)current - FIELD_OFFSET(KTHREAD, ProcessChildListEntry));
-        current = current->Next;
-        
-        /* don't lock the process, it has been already locked */
-        PspDestroyThreadInternalOptionalProcessLock(Thread, FALSE);
+        /* the list of threads is not empty and somehow the process was dereferenced */
+        KeBugCheckEx(CRITICAL_STRUCTURE_CORRUPTION, (ULONG_PTR)current, __LINE__, 0, 0);
     }
 
-    currentHandleDatabase = (PHANDLE_DATABASE) pProcess->Pcb.HandleDatabaseHead.First;
+    currentHandleDatabase = (PHANDLE_DATABASE)pProcess->Pcb.HandleDatabaseHead.First;
     while (currentHandleDatabase != (PHANDLE_DATABASE)&pProcess->Pcb.HandleDatabaseHead)
     {
         PHANDLE_DATABASE next;
@@ -836,8 +857,6 @@ NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess)
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);
-
-    ObDereferenceObject(pProcess);
     return STATUS_SUCCESS;
 }
 

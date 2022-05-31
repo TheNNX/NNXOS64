@@ -1513,7 +1513,6 @@ VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet()
 	functionSet.RecreateDeletedFile = FatVfsInterfaceRecreateDeletedFile;
 	functionSet.ResizeFile = FatVfsInterfaceResizeFile;
 	functionSet.DeleteFile = FatVfsInterfaceDeleteFile;
-	functionSet.DeleteFile = FatVfsInterfaceDeleteFile;
 	functionSet.DeleteAndCloseFile = FatVfsInterfaceDeleteAndCloseFile;
 	functionSet.CreateDirectory = FatVfsInterfaceCreateDirectory;
 	return functionSet;

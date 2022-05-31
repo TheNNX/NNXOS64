@@ -194,12 +194,12 @@ static NTSTATUS DirObjTypeOpenObject(
 
 static OBJECT_TYPE_IMPL ObTypeTypeImpl = {
     {{NULL, NULL}, RTL_CONSTANT_STRING(L"Type"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
-    {NULL, NULL, NULL, NULL, NULL}
+    {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 };
 
 static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = {
     {{NULL, NULL}, RTL_CONSTANT_STRING(L"Directory"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0 },
-    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL, NULL}
+    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL, NULL, NULL, NULL}
 };
 
 POBJECT_TYPE ObTypeObjectType = &ObTypeTypeImpl.Data;
@@ -228,7 +228,7 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
     NTSTATUS status;
     BOOL failed;
 
-    originalRoot = NULL;
+    originalRoot = INVALID_HANDLE_VALUE;
 
     ObReferenceObject(object);
     header = ObGetHeaderFromObject(object);
@@ -302,12 +302,12 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
         KeReleaseSpinLock(&rootHeader->Lock, irql2);
         KeReleaseSpinLock(&header->Lock, irql1);
         /* try setting the root back */
-        if (originalRoot != NULL)
+        if (originalRoot != INVALID_HANDLE_VALUE)
         {
             
             status = ObChangeRoot(object, originalRoot, accessMode);
             if (status)
-                return statusToReturn;
+                statusToReturn = status;
         }
         
         ObDereferenceObject(object);
@@ -323,7 +323,7 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
     ObDereferenceObject(object);
 
     /* if the object originally had any parent, dereference the parent */
-    if (originalRoot != NULL)
+    if (originalRoot != INVALID_HANDLE_VALUE)
         ObDereferenceObject(originalRoot);
 
     return STATUS_SUCCESS;
@@ -360,7 +360,8 @@ NTSTATUS ObpInitNamespace()
         KernelMode, 
         &objAttributes, 
         sizeof(OBJECT_DIRECTORY),
-        ObDirectoryObjectType
+        ObDirectoryObjectType,
+        NULL
     );
 
     if (status != STATUS_SUCCESS)
@@ -390,7 +391,8 @@ NTSTATUS ObpInitNamespace()
         KernelMode,
         &typeDirAttrbiutes,
         sizeof(OBJECT_DIRECTORY),
-        ObDirectoryObjectType
+        ObDirectoryObjectType,
+        NULL
     );
 
     if (status != STATUS_SUCCESS)
@@ -505,7 +507,7 @@ NTSTATUS PspCreateThreadInternal(
     BOOL IsKernel,
     ULONG_PTR EntryPoint
 );
-NTSTATUS PspDestroyProcessInternal(PEPROCESS pProcess);
+
 VOID PspInsertIntoSharedQueue(PKTHREAD Thread);
 
 #define WORKER_PROCESSES_NUMBER 4
@@ -545,7 +547,16 @@ static NTSTATUS Test2()
         OBJECT_ATTRIBUTES objAttribs;
         InitializeObjectAttributes(&objAttribs, NULL, 0, INVALID_HANDLE_VALUE, 0);
 
-        status = ObCreateObject(&object, 0, UserMode, &objAttribs, sizeof(OBJECT_TYPE), ObTypeObjectType);
+        status = ObCreateObject(
+            &object, 
+            0, 
+            UserMode, 
+            &objAttribs,
+            sizeof(OBJECT_TYPE),
+            ObTypeObjectType,
+            NULL
+        );
+
         if (status != STATUS_SUCCESS)
             return status;
 
@@ -590,10 +601,12 @@ NTSTATUS ObpMpTestNamespaceThread()
     char* __caller;
 
     KeInitializeSpinLock(&NextTesterIdLock);
-    SaveStateOfMemory(__FUNCTION__"\n");
+    
     /* initialize worker threads with some invalid status values */
     for (i = 0; i < WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER; i++)
         WorkerStatus[i] = (NTSTATUS)(-1);
+
+    SaveStateOfMemory(__FUNCTION__"\n");
 
     for (i = 0; i < WORKER_PROCESSES_NUMBER; i++)
     {
@@ -617,7 +630,7 @@ NTSTATUS ObpMpTestNamespaceThread()
         }
     }
 
-    PrintT("Prewait, cpu%i, thread%X\n", KeGetCurrentProcessorId(), KeGetCurrentThread());
+    /* wait for all the threads */
     waitStatus = KeWaitForMultipleObjects(
         WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS,
         WorkerThreads,
@@ -628,7 +641,6 @@ NTSTATUS ObpMpTestNamespaceThread()
         NULL,
         WaitBlocks
     );
-    PrintT("Postwait\n");
 
     if (waitStatus != STATUS_SUCCESS)
         return waitStatus;
@@ -641,8 +653,13 @@ NTSTATUS ObpMpTestNamespaceThread()
         ObDereferenceObject(WorkerThreads[i]);
     }
 
-    CheckMemory();
+    for (i = 0; i < WORKER_PROCESSES_NUMBER; i++)
+    {
+        ObDereferenceObject(WorkerProcesses[i]);
+    }
 
+    CheckMemory();
+    PrintT("Success\n");
     /* deallocation on return from those all things */
     PsExitThread(0);
     return STATUS_SUCCESS;
