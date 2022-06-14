@@ -403,6 +403,7 @@ VOID PspInitializeCoreSchedulerData(UINT8 CoreNumber)
     }
 
     status = PspCreateIdleProcessForCore(&thiscoreSchedulerData->IdleProcess, &thiscoreSchedulerData->IdleThread, CoreNumber);
+    PrintT("PspCreateIdleProcessForCore status: %X\n", status);
     if (status != STATUS_SUCCESS)
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 }
@@ -424,6 +425,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
         
 /* don't care about lock releasing, the system is dead anyway if it returns here */
 #pragma warning(disable: 26115)
+        PrintT("Scheduler initialization status %X\n", status);
         if (status)
             return status;
     }

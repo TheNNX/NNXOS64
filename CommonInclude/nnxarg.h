@@ -7,16 +7,8 @@
 extern "C"
 {
 #endif
-	typedef unsigned char *va_list;
 
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include <intrin.h>
 
 typedef INT64 STACKITEM;
 #define	VA_SIZE(TYPE)					\

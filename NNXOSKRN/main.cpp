@@ -14,6 +14,7 @@
 #include <nnxlog.h>
 #include <nnxver.h>
 #include <ob/object.h>
+#include <pool.h>
 
 int basicallyATest = 0;
 
@@ -72,13 +73,34 @@ extern "C"
 
 		gExceptionHandlerPtr = KeExceptionHandler;
 
-		TextIoInitialize(gFramebuffer, gFramebufferEnd, gWidth, gHeight, gPixelsPerScanline);
+		TextIoInitialize(
+			gFramebuffer, 
+			gFramebufferEnd, 
+			gWidth,
+			gHeight,
+			gPixelsPerScanline
+		);
+
 		TextIoClear();
 
 		DrawMap();
 
+		status = ExInitializePool(
+			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
+			PAGE_SIZE * 32,
+			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
+			PAGE_SIZE * 32
+		);
+
+		if (status)
+			KeBugCheck(HAL_INITIALIZATION_FAILED);
+
+		status = ExPoolSelfCheck();
+		if (status)
+			KeBugCheck(HAL_INITIALIZATION_FAILED);
+
 		NNXAllocatorInitialize();
-		for (int i = 0; i < 64; i++)
+		for (int i = 0; i < 32; i++)
 		{
 			NNXAllocatorAppend((PVOID)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END), 4096);
 		}

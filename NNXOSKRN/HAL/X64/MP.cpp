@@ -102,6 +102,7 @@ extern "C" {
 		}
 
 		status = PspInitializeCore(currentLapicId);
+		PrintT("PspInitializeCore NTSTATUS: %X\n", status);
 		if (status)
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 	}

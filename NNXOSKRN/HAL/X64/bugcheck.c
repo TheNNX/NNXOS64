@@ -14,7 +14,9 @@ __declspec(noreturn) VOID KeStop();
 
 static KSPIN_LOCK BugcheckLock = 0;
 
-VOID KeBugCheckEx(
+__declspec(noreturn)
+VOID
+KeBugCheckEx(
 	ULONG code,
 	ULONG_PTR param1,
 	ULONG_PTR param2,
