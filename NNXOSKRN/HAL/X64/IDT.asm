@@ -124,13 +124,24 @@ exception_error 10
 exception_error 11
 exception_error 12
 exception_error 13
-exception_error 14
 exception 16
 exception_error 17
 exception 18
 exception 19
 exception 20
 exception_error 30
+
+[extern PageFaultHandler]
+func Exception14
+	pushstate
+	mov rcx, 14
+	mov rdx, [rsp+120]
+	xor r8, r8
+	mov r9, [rsp+128]
+	call PageFaultHandler
+	popstate
+	add rsp, 8
+	iretq
 
 [GLOBAL ExceptionReserved]
 ExceptionReserved:

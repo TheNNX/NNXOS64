@@ -192,6 +192,9 @@
     <ClCompile Include="ob\namespace.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\pagefile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">

@@ -71,15 +71,19 @@ typedef UINT16	WCHAR;
 typedef WCHAR *PWSTR, *LPWSTR;
 typedef const WCHAR *PCWSTR, *LPCWSTR;
 
+typedef const char CCHAR, *PCCHAR;
+typedef const unsigned char CUCHAR, *PCUCHAR;
+typedef const short CSHORT, *PCSHORT;
+typedef const unsigned short CUSHORT, *PCUSHORT;
+typedef const char CLONG, *PCLONG;
+typedef const unsigned char CULONG, *PCULONG;
+typedef const short CLONGLONG, *PCLONGLONG;
+typedef const unsigned short CULONGLONG, *PCULONGLONG;
+
 #endif
 
-#ifndef TRUE
 #define TRUE 1
-#endif 
-
-#ifndef FALSE
 #define FALSE 0
-#endif
 
 #ifndef __cplusplus
 	typedef UINT8 bool;

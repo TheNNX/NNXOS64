@@ -4,6 +4,7 @@
 #include <MemoryOperations.h>
 #include <HAL/spinlock.h>
 #include "registers.h"
+#include <bugcheck.h>
 
 #define PML4EntryForRecursivePaging 510ULL
 #define PML4_COVERED_SIZE 0x1000000000000ULL
@@ -74,8 +75,8 @@ ULONG_PTR PagingCreateAddressSpace()
 
     MemSet((UINT8*) virtualPML4, 0, PAGE_SIZE);
 
-    ((UINT64*) virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
-    ((UINT64*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
+    ((ULONG_PTR*) virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
+    ((ULONG_PTR*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
 
     return physicalPML4;
 }
@@ -94,9 +95,7 @@ ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count)
 
     if ((max & 0xFFFF000000000000) != (min & 0xFFFF000000000000))
     {
-        PrintT("Invalid allocation %x %x\n", max, min);
-        while (1);
-        return -1LL;
+        KeBugCheck(0X4D);
     }
     
     max &= 0xFFFFFFFFFFFF;
@@ -206,6 +205,42 @@ VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
     }
 }
 
+ULONG_PTR 
+PagingGetCurrentMapping(
+    ULONG_PTR virtualAddress
+)
+{
+    ULONG_PTR ptIndex, pdIndex, pdpIndex, pml4Index, vUINT;
+    UINT64* const cRecursivePagingPML4Base = RecursivePagingPML4Base;
+    UINT64* const cRecursivePagingPDPsBase = RecursivePagingPDPsBase;
+    UINT64* const cRecursivePagingPDsBase = RecursivePagingPDsBase;
+    UINT64* const cRecursivePagingPTsBase = RecursivePagingPTsBase;
+    vUINT = (UINT64)virtualAddress; /* used to avoid annoying type casts */
+    vUINT &= 0xFFFFFFFFFFFF; /* ignore bits 63-48, they are just a sign extension */
+
+    ptIndex = vUINT >> 12;
+    pdIndex = vUINT >> 21;
+    pdpIndex = vUINT >> 30;
+    pml4Index = vUINT >> 39;
+
+    if (!(cRecursivePagingPML4Base[pml4Index]))
+    {
+        return -1;
+    }
+
+    if (!(cRecursivePagingPDPsBase[pdpIndex]))
+    {
+        return -1;
+    }
+
+    if (!(cRecursivePagingPDsBase[pdIndex]))
+    {
+        return -1;
+    }
+
+    return (ULONG_PTR)cRecursivePagingPTsBase[ptIndex];
+}
+
 VOID SetupCR4()
 {
     UINT64 CR4 = GetCR4();
@@ -291,17 +326,6 @@ VOID InternalPagingAllocatePagingStructures(
 const UINT64 loaderTemporaryKernelPTStart = 0;
 const UINT64 loaderTemporaryKernelPTSize = 32;
 
-/*    
-    TODO: Map ACPI structures, so they're always accessible
-    (and mark      as used in the GlobalPhysicalMemoryMap)
-
-    Perhaps it should be done on structure first use, ex.
-    when the OS retrieves the RDSP it should map it, and set
-    the pointer to the updated value. Later, upon (X/R)SDT's
-    first usage, map     , change their pointer in the RDSP
-    (ACPI doesn't use the tables once it creates     , right?? right??)
-*/
-
 VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
 {
     UINT64 *pml4, rsp;
@@ -340,7 +364,7 @@ VOID PagingInit(PBYTE pbPhysicalMemoryMap, QWORD dwPhysicalMemoryMapSize)
     SetCR3((UINT64)pml4);
 }
 
-VOID PagingMapFramebuffer()
+VOID PagingMapAndInitFramebuffer()
 {
     UINT64 i;
 
@@ -362,18 +386,6 @@ VOID PagingMapFramebuffer()
 
     gFramebuffer = (UINT32*) FRAMEBUFFER_DESIRED_LOCATION;
     gFramebufferEnd = (UINT32*) FRAMEBUFFER_DESIRED_LOCATION + FrameBufferSize();
-}
-
-VOID PagingKernelInit()
-{
-    UINT64 i;
-
-    for (i = loaderTemporaryKernelPTStart; i < loaderTemporaryKernelPTSize + loaderTemporaryKernelPTStart; i++)
-    {
-        //PagingMapPage(RecursivePagingPTsBase + i * 512, 0, 0);
-    }
-    PagingTLBFlush();
-
 }
 
 ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage)

@@ -108,7 +108,7 @@ extern "C"
 		VfsInit();
 		PciScan();
 
-		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE);
+		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
 
 		UINT8 acpiError;
 		ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(pRdsp, "FACP");
@@ -128,6 +128,8 @@ extern "C"
 		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);
 
         status = ObInit();
+
+		PagingInitializePageFile(16 * PAGE_SIZE, "PAGEFILE.SYS", VfsGetSystemVfs());
 
         if (status)
             KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);

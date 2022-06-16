@@ -198,6 +198,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\X64\MP.cpp" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
+    <ClCompile Include="HAL\X64\pagefile.c" />
     <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />

@@ -47,7 +47,7 @@ VOID KeLoadStub(
     
     /* map kernel pages */
     PagingInit(bootdata->pPhysicalMemoryMap, bootdata->qwPhysicalMemoryMapSize);
-    PagingMapFramebuffer();
+    PagingMapAndInitFramebuffer();
 
 	currentStack = GetStack();
 	currentStackPage = PAGE_ALIGN(currentStack);

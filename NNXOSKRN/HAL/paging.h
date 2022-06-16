@@ -45,26 +45,139 @@ extern "C"
 {
 #endif
 
-    VOID PagingInit(PBYTE PhysMemoryMap, SIZE_T PhysMemMapSize);
-    VOID PagingKernelInit();
-    ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage);
-    ULONG_PTR PagingAllocatePageEx(ULONG_PTR min, ULONG_PTR max, UINT16 flags, UINT8 physMemType);
-    ULONG_PTR PagingAllocatePage();
-    ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max);
-    VOID PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f);
-    VOID PagingTLBFlush();
-    VOID PagingTLBFlushPage(ULONG_PTR page);
-    ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physFirstPage);
-    ULONG_PTR PagingAllocatePageBlockFromRange(SIZE_T n, ULONG_PTR min, ULONG_PTR max);
-    ULONG_PTR PagingAllocatePageBlock(SIZE_T n, UINT16 flags);
-    ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT16 flags);
-    VOID PagingMapFramebuffer();
-    ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structureSize, UINT16 flags);
-    VOID PagingInvalidatePage(ULONG_PTR);
-    ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count);
-    ULONG_PTR PagingCreateAddressSpace();
-    ULONG_PTR PagingGetAddressSpace();
-    VOID PagingSetAddressSpace(ULONG_PTR);
+    VOID
+        PagingInit(
+            PBYTE PhysMemoryMap, 
+            SIZE_T PhysMemMapSize
+        );
+
+    VOID 
+        PagingKernelInit();
+
+    ULONG_PTR
+        PagingAllocatePageWithPhysicalAddress(
+            ULONG_PTR min, 
+            ULONG_PTR max, 
+            UINT16 flags,
+            ULONG_PTR physPage
+        );
+
+    ULONG_PTR
+        PagingAllocatePageEx(
+            ULONG_PTR min, 
+            ULONG_PTR max,
+            UINT16 flags,
+            UINT8 physMemType
+        );
+
+    ULONG_PTR
+        PagingAllocatePage();
+
+    ULONG_PTR
+        PagingAllocatePageFromRange(
+            ULONG_PTR min, 
+            ULONG_PTR max
+        );
+
+    VOID
+        PagingMapPage(
+            ULONG_PTR v, 
+            ULONG_PTR p, 
+            UINT16 f
+        );
+
+    VOID 
+        PagingTLBFlush();
+
+    VOID 
+        PagingTLBFlushPage(
+            ULONG_PTR page
+        );
+
+    ULONG_PTR
+        PagingAllocatePageBlockWithPhysicalAddresses(
+            SIZE_T n, 
+            ULONG_PTR min,
+            ULONG_PTR max, 
+            UINT16 flags,
+            ULONG_PTR physFirstPage
+        );
+
+    ULONG_PTR
+        PagingAllocatePageBlockFromRange(
+            SIZE_T n, 
+            ULONG_PTR min,
+            ULONG_PTR max
+        );
+
+    ULONG_PTR 
+        PagingAllocatePageBlock(
+            SIZE_T n,
+            UINT16 flags
+        );
+
+    ULONG_PTR
+        PagingAllocatePageBlockEx(
+            SIZE_T n, 
+            ULONG_PTR min, 
+            ULONG_PTR max, 
+            UINT16 flags
+        );
+
+    VOID 
+        PagingMapAndInitFramebuffer();
+
+    ULONG_PTR 
+        PagingMapStrcutureToVirtual(
+            ULONG_PTR physicalAddress, 
+            SIZE_T structureSize,
+            UINT16 flags
+        );
+
+    VOID 
+        PagingInvalidatePage(
+            ULONG_PTR
+        );
+
+    ULONG_PTR 
+        PagingFindFreePages(
+            ULONG_PTR min, 
+            ULONG_PTR max, 
+            SIZE_T count
+        );
+
+    ULONG_PTR 
+        PagingCreateAddressSpace();
+
+    ULONG_PTR 
+        PagingGetAddressSpace();
+
+    VOID 
+        PagingSetAddressSpace(
+            ULONG_PTR
+        );
+    
+    ULONG_PTR
+        PagingGetCurrentMapping(
+            ULONG_PTR virtualAddress
+        );
+
+    NTSTATUS
+        PagingPageOutPage(
+            ULONG_PTR virtualAddress
+        );
+
+    NTSTATUS
+        PagingPageInPage(
+            ULONG_PTR virtualAddress
+        );
+
+    NTSTATUS
+        PagingInitializePageFile(
+            SIZE_T pageFileSize,
+            const char* filePath,
+            struct VIRTUAL_FILE_SYSTEM* filesystem
+        );
 #ifdef __cplusplus
 }
 #endif
