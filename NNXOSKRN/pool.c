@@ -161,7 +161,7 @@ ExFreePool(
 	PVOID data
 )
 {
-	ExFreePoolWithTag(data, 'LOOP');
+	ExFreePoolWithTag(data, 0);
 }
 
 static
@@ -242,6 +242,7 @@ ExAllocatePoolWithTag(
 	poolDescriptor = Pools[type];
 
 	irql = KeGetCurrentIrql();
+	
 	if (irql > poolDescriptor->MaximalIrql)
 	{
 		PrintT("Call to %s with IRQL %i failed due to required IRQL being %i\n", __FUNCTION__, irql, poolDescriptor->MaximalIrql);
@@ -292,9 +293,9 @@ ExAllocatePoolWithTag(
 			 * with the given alignment in mind */
 			ULONG_PTR potentialDataPtr;
 			/* number of bytes preceding the data if the block was to be used */
-			SIZE_T precedingBytes;
+			LONG_PTR precedingBytes;
 			/* number of bytes following the data if the block was to be used */
-			SIZE_T followingBytes;
+			LONG_PTR followingBytes;
 			/* pointer to the first byte after the data, if the block was to be allocated */
 			ULONG_PTR potentialDataEndPtr;
 
@@ -316,13 +317,13 @@ ExAllocatePoolWithTag(
 
 				/* if a new block has to be created out of the data preceeding, check if there's enough room
 				 * to store a new block header */
-				if (precedingBytes != 0 && precedingBytes < sizeof(POOL_HEADER))
+				if (precedingBytes != 0 && precedingBytes < (LONG_PTR)sizeof(POOL_HEADER))
 				{
 					isAllocationPossible = FALSE;
 				}
 
 				/* the same as above, but for following bytes */
-				if (followingBytes != 0 && followingBytes < sizeof(POOL_HEADER))
+				if (followingBytes != 0 && followingBytes < (LONG_PTR)sizeof(POOL_HEADER))
 				{
 					isAllocationPossible = FALSE;
 				}
@@ -458,7 +459,7 @@ ExFreePoolWithTag(
 		}
 	}
 
-	if (tag != pPoolHeader->AllocationTag || tag == POOL_ALLOCATION_TAG_FREE)
+	if (tag != pPoolHeader->AllocationTag && tag != POOL_ALLOCATION_TAG_FREE)
 	{
 		KeBugCheckEx(
 			BAD_POOL_CALLER, 
@@ -689,13 +690,15 @@ DebugEnumeratePoolBlocks(
 	POOL_TYPE poolType
 )
 {
-	KIRQL irql;
 	PPOOL_DESCRIPTOR poolDescriptor;
 	PPOOL_HEADER current;
 	SIZE_T totalSize;
+
 	PrintT("----------------------------\n");
 	poolDescriptor = Pools[poolType];
-	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
+
+	if (poolDescriptor->PoolLock == 0)
+		KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
 	totalSize = 0;
 	current = (PPOOL_HEADER)poolDescriptor->PoolHead.First;
@@ -704,13 +707,19 @@ DebugEnumeratePoolBlocks(
 		(PLIST_ENTRY)current != &poolDescriptor->PoolHead)
 	{
 		PrintT(
-			"%x: [%X] size=%i pooltype=%i, expected next: %X\n", 
+			"%x: [%X] size=%i pooltype=%i, next: %X\n", 
 			current, 
 			current->AllocationTag,
 			current->Size,
 			(ULONG_PTR)current->PoolType,
 			(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
 		);
+
+		if (current->Size > 0xFFFFFF)
+		{
+			PrintT("Error: invalid size 0x%X\n", current->Size);
+			while (1);
+		}
 
 		totalSize += sizeof(POOL_HEADER) + current->Size;
 		current = (PPOOL_HEADER)current->PoolEntry.Next;
@@ -727,27 +736,36 @@ DebugEnumeratePoolBlocks(
 			current->AllocationTag
 		);
 	}
-
-	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 }
 
 NTSTATUS
 ExPoolSelfCheck()
 {
+	PPOOL_DESCRIPTOR poolDescriptor;
 	PVOID pageSizeAllocation;
 	PVOID smallAllocation;
+	KIRQL irql;
 
 	PrintT("Testing pool\n");
-	DebugEnumeratePoolBlocks(NonPagedPool);
+	poolDescriptor = Pools[NonPagedPool];
 
-	smallAllocation = ExAllocatePool(NonPagedPool, 16);
-	pageSizeAllocation = ExAllocatePool(NonPagedPool, 4096);
-
+	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
 	DebugEnumeratePoolBlocks(NonPagedPool);
+	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
+
+	smallAllocation = ExAllocatePoolWithTag(NonPagedPool, 16, 'TEST');
+	pageSizeAllocation = ExAllocatePoolWithTag(NonPagedPool, 4096, 'TEST');
+
+	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
+	DebugEnumeratePoolBlocks(NonPagedPool);
+	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 
 	ExFreePool(smallAllocation);
 	ExFreePool(pageSizeAllocation);
+
+	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
 	DebugEnumeratePoolBlocks(NonPagedPool);
+	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 
 	return STATUS_SUCCESS;
 }
