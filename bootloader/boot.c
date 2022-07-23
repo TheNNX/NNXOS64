@@ -29,54 +29,18 @@ typedef struct _MODULE_EXPORT
     PVOID Address;
 }MODULE_EXPORT, *PMODULE_EXPORT;
 
-typedef struct _LOADED_MODULE
-{
-    KLINKED_LIST Exports;
-    PVOID Entrypoint;
-    PVOID ImageBase;
-    ULONG ImageSize;
-    CHAR* Name;
-    USHORT OrdinalBase;
-}LOADED_MODULE, *PLOADED_MODULE;
-
-VOID DestroyModuleExport(PVOID exportPointer)
-{
-    MODULE_EXPORT* export = (MODULE_EXPORT*) exportPointer;
-    FreePool(export);
-}
-
 VOID DestroyLoadedModule(PVOID modulePointer)
 {
-    LOADED_MODULE* module = (LOADED_MODULE*) modulePointer;
-    ClearListAndDestroyValues(&module->Exports, DestroyModuleExport);
+    LOADED_BOOT_MODULE* module = (LOADED_BOOT_MODULE*) modulePointer;
     FreePool(module);
 }
 
 KLINKED_LIST LoadedModules;
 
-VOID PrintExports()
-{
-    PKLINKED_LIST c = LoadedModules.Next;
-    while (c)
-    {
-        LOADED_MODULE* module = ((LOADED_MODULE*) c->Value);
-        Print(L"%X\n", module->ImageBase);
-        c = c->Next;
-
-        PKLINKED_LIST e = module->Exports.Next;
-
-        while (e)
-        {
-            Print(L"   %a=%X\n", ((MODULE_EXPORT*) e->Value)->Name, ((MODULE_EXPORT*) e->Value)->Address);
-            e = e->Next;
-        }
-    }
-}
-
 BOOL CompareModuleName(PVOID a, PVOID b)
 {
     CHAR* name = b;
-    CHAR* moduleName = ((LOADED_MODULE*) a)->Name;
+    CHAR* moduleName = ((LOADED_BOOT_MODULE*) a)->Name;
 
     return strcmpa(name, moduleName) == 0;
 }
@@ -86,7 +50,7 @@ EFI_STATUS TryToLoadModule(CHAR* name)
     return EFI_UNSUPPORTED;
 }
 
-EFI_STATUS HandleImportDirectory(LOADED_MODULE* module, IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
+EFI_STATUS HandleImportDirectory(LOADED_BOOT_MODULE* module, IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
 {
     EFI_STATUS status;
     PVOID imageBase = module->ImageBase;
@@ -133,45 +97,7 @@ EFI_STATUS HandleImportDirectory(LOADED_MODULE* module, IMAGE_IMPORT_DIRECTORY_E
     return EFI_SUCCESS;
 }
 
-EFI_STATUS HandleExportDirectory(LOADED_MODULE* module, IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry)
-{
-    PVOID imageBase = module->ImageBase;
-    UINTN numberOfExports = exportDirectoryEntry->NumberOfFunctions;
-    IMAGE_EXPORT_ADDRESS_ENTRY* exportAddressTable =
-        (IMAGE_EXPORT_ADDRESS_ENTRY*) ((ULONG_PTR) exportDirectoryEntry->AddressOfFunctionsRVA + (ULONG_PTR) imageBase);
-
-    UINTN i;
-
-    PKLINKED_LIST exports = &module->Exports;
-
-    module->Name = (CHAR*)((ULONG_PTR)exportDirectoryEntry->NameRVA + (ULONG_PTR)imageBase);
-    module->OrdinalBase = exportDirectoryEntry->Base;
-
-    for (i = 0; i < numberOfExports; i++)
-    {
-        MODULE_EXPORT* e;
-        PKLINKED_LIST exportEntry = AppendList(exports, AllocateZeroPool(sizeof(MODULE_EXPORT)));
-
-        if (exportEntry == NULL)
-        {
-            RemoveFromList(&LoadedModules, module);
-            return EFI_OUT_OF_RESOURCES;
-        }
-
-        e = ((MODULE_EXPORT*) exportEntry->Value);
-        e->Address = (PVOID) ((ULONG_PTR) exportAddressTable[i].AddressRVA + (ULONG_PTR) imageBase);
-        e->Name = (PVOID) ((ULONG_PTR) exportAddressTable[i].NameRVA + (ULONG_PTR) imageBase);
-    }
-
-    return EFI_SUCCESS;
-}
-
-/* 
-    LoadImage function
-    Loads a PE32+ file into memory
-    Recursively loads dependencies
-*/
-EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_MODULE* outModule)
+EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOOT_MODULE* outModule)
 {
     EFI_STATUS status;
     IMAGE_DOS_HEADER dosHeader;
@@ -186,7 +112,7 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_MOD
     SECTION_HEADER* currentSection;
 
     PKLINKED_LIST moduleLinkedListEntry;
-    PLOADED_MODULE module;
+    PLOADED_BOOT_MODULE module;
 
     UINTN dosHeaderSize = sizeof(dosHeader);
     UINTN peHeaderSize = sizeof(peHeader);
@@ -255,20 +181,19 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_MOD
         }
     }
 
-    FreePool(sectionHeaders);
-
     /* add this module to the loaded module list
     if for any reason it is not possible to finish loading, remember to remove from the list */
-    moduleLinkedListEntry = AppendList(&LoadedModules, AllocateZeroPool(sizeof(LOADED_MODULE)));
+    moduleLinkedListEntry = AppendList(&LoadedModules, AllocateZeroPool(sizeof(LOADED_BOOT_MODULE)));
     if (moduleLinkedListEntry == NULL)
         return EFI_OUT_OF_RESOURCES;
 
-    module = ((LOADED_MODULE*) moduleLinkedListEntry->Value);
-
+    module = ((LOADED_BOOT_MODULE*) moduleLinkedListEntry->Value);
     module->ImageBase = imageBase;
     module->Entrypoint = (PVOID)(peHeader.OptionalHeader.EntrypointRVA + (ULONG_PTR)imageBase);
     module->ImageSize = peHeader.OptionalHeader.SizeOfImage;
     module->Name = "";
+    module->SectionHeaders = sectionHeaders;
+    module->NumberOfSectionHeaders = numberOfSectionHeaders;
 
     for (dataDirectoryIndex = 0; dataDirectoryIndex < numberOfDataDirectories; dataDirectoryIndex++)
     {
@@ -281,7 +206,6 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_MOD
         {
             IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry = (IMAGE_EXPORT_DIRECTORY_ENTRY*) dataDirectory;
 
-            status = HandleExportDirectory(module, exportDirectoryEntry);
             return_if_error(status);
         }
         else if (dataDirectoryIndex == IMAGE_DIRECTORY_ENTRY_IMPORT)
@@ -422,7 +346,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
     EFI_FILE_HANDLE root, kernelFile;
     BOOTDATA bootdata;
     VOID (*kernelEntrypoint)(BOOTDATA*);
-    PLOADED_MODULE module;
+    PLOADED_BOOT_MODULE module;
 
     gBootServices = systemTable->BootServices;
 
@@ -445,13 +369,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
 
     kernelEntrypoint = module->Entrypoint;
     Print(L"Kernel entrypoint %X\n", kernelEntrypoint);
-    PrintExports();
 
     bootdata.KernelBase = module->ImageBase;
     bootdata.dwKernelSize = module->ImageSize;
     bootdata.ExitBootServices = gBootServices->ExitBootServices;
     bootdata.pImageHandle = imageHandle;
-    
+    bootdata.MainKernelModule = *module;
+
     LibGetSystemConfigurationTable(&AcpiTableGuid, &bootdata.pRdsp);
 
     status = QueryGraphicsInformation(&bootdata);

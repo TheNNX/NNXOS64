@@ -48,7 +48,7 @@ VOID HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Userm
 }
 
 
-VOID HalpSetInterruptIdt(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
+VOID HalpSetInterruptIst(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
 {
 	Idt[EntryNo].Ist = Ist;
 }
@@ -82,10 +82,6 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 			handler = (VOID(*)())interrupts[a];
 
 		HalpSetIdtEntry(idt, a, handler, FALSE, FALSE);
-		if (handler == HalpTaskSwitchHandler)
-		{
-			HalpSetInterruptIdt(idt, a, 1);
-		}
 	}
 
 	HalpLoadIdt(idtr);

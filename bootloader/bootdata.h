@@ -2,6 +2,20 @@
 #define NNX_BOOTDATA_HEADER
 
 #include <nnxtype.h>
+#include "../CommonInclude/nnxpe.h"
+
+#pragma pack(push, 1)
+typedef struct _LOADED_BOOT_MODULE
+{
+	PVOID Entrypoint;
+	PVOID ImageBase;
+	ULONG ImageSize;
+	CHAR* Name;
+	USHORT OrdinalBase;
+	SECTION_HEADER* SectionHeaders;
+	SIZE_T NumberOfSectionHeaders;
+}LOADED_BOOT_MODULE, * PLOADED_BOOT_MODULE;
+#pragma pack(pop)
 
 typedef struct _BOOTDATA
 {
@@ -18,6 +32,7 @@ typedef struct _BOOTDATA
 	PVOID pRdsp;
 	DWORD dwKernelSize;
 	PVOID KernelBase;
-}BOOTDATA;
+	LOADED_BOOT_MODULE MainKernelModule;
+}BOOTDATA, *PBOOTDATA;
 
-#endif // !NNX_BOOTDATA_HEADER
+#endif

@@ -19,6 +19,13 @@ extern ULONG_PTR gRdspPhysical;
 
 __declspec(noreturn) VOID SetupStack(ULONG_PTR stack, UINT64(*)(PVOID));
 
+static
+VOID
+RemapSections(
+	PSECTION_HEADER SectionHeaders,
+	SIZE_T NumberOfSectionHeaders
+);
+
 ULONG_PTR GetStack();
 
 VOID KeLoadStub(
@@ -46,8 +53,18 @@ VOID KeLoadStub(
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
     
     /* map kernel pages */
-    PagingInit(bootdata->pPhysicalMemoryMap, bootdata->qwPhysicalMemoryMapSize);
+    PagingInit(
+		bootdata->pPhysicalMemoryMap, 
+		bootdata->qwPhysicalMemoryMapSize
+	);
+
     PagingMapAndInitFramebuffer();
+
+	bootdata->MainKernelModule.SectionHeaders = (PSECTION_HEADER)PagingMapStrcutureToVirtual(
+		(ULONG_PTR)bootdata->MainKernelModule.SectionHeaders,
+		bootdata->MainKernelModule.NumberOfSectionHeaders * sizeof(SECTION_HEADER), 
+		PAGE_WRITE | PAGE_PRESENT
+	);
 
 	currentStack = GetStack();
 	currentStackPage = PAGE_ALIGN(currentStack);
@@ -62,5 +79,80 @@ VOID KeLoadStub(
 	newStack += STACK_SIZE;
 	newStack -= (currentStack - currentStackPage);
 
+	PrintT("Sections: %X\n", bootdata->MainKernelModule.SectionHeaders);
+	RemapSections(
+		bootdata->MainKernelModule.SectionHeaders,
+		bootdata->MainKernelModule.NumberOfSectionHeaders
+	);
+
 	SetupStack(newStack, mainReloc);
+}
+
+static 
+VOID 
+RemapSections(
+	PSECTION_HEADER SectionHeaders,
+	SIZE_T NumberOfSectionHeaders
+)
+{
+	PSECTION_HEADER current;
+	INT i, k;
+	SIZE_T j;
+	BOOLEAN usersection;
+	ULONG_PTR currentMapping;
+	ULONG_PTR currentPageAddress;
+	USHORT newFlags;
+
+	/* remap all sections with name starting with ".user"
+	 * to be usermode accessible */
+	const char usermodeSectionName[] = ".user";
+
+	for (i = 0; i < NumberOfSectionHeaders; i++)
+	{
+		current = &SectionHeaders[i];
+		
+		PrintT("%S: Virtual address: base+%X, size: %i, flags: %b\n", current->Name, 8, current->VirtualAddressRVA, current->VirtualSize, current->Characteristics);
+		usersection = TRUE;
+
+		for (k = 0; k < sizeof(usermodeSectionName) - 1; k++)
+		{
+			if (current->Name[k] != usermodeSectionName[k])
+			{
+				usersection = FALSE;
+			}
+		}
+
+		for (j = 0; j < (current->VirtualSize + PAGE_SIZE - 1) / PAGE_SIZE; j++)
+		{
+			/* KERNEL_DESIRED_LOCATION is our current executable base */
+			currentPageAddress = current->VirtualAddressRVA + KERNEL_DESIRED_LOCATION + j * PAGE_SIZE;
+
+			currentMapping = PagingGetCurrentMapping(currentPageAddress);
+
+			/* copy the current flags */
+			newFlags = currentMapping & PAGE_FLAGS_MASK;
+
+			/* if this is an usercode section */
+			if (usersection)
+			{
+				newFlags |= PAGE_USER;
+			}
+			else
+			{
+				newFlags &= ~PAGE_USER;
+			}
+			
+			/* if this is not a writable section, remove the writable attribute */
+			if (!(current->Characteristics & IMAGE_SCN_MEM_WRITE))
+			{
+				newFlags &= ~PAGE_WRITE;
+			}
+			else
+			{
+				newFlags |= PAGE_WRITE;
+			}
+
+			PagingMapPage(currentPageAddress, currentMapping & PAGE_ADDRESS_MASK, newFlags);
+		}
+	}
 }

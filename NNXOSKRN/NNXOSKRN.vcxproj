@@ -202,6 +202,9 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
+    <ClCompile Include="io\apc.c" />
+    <ClCompile Include="io\dpc.c" />
+    <ClCompile Include="io\mdl.c" />
     <ClCompile Include="ob\handle.c" />
     <ClCompile Include="ob\namespace.c" />
     <ClCompile Include="ob\objects.c" />
@@ -222,6 +225,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="pool.c" />
     <ClCompile Include="text.c" />
     <ClCompile Include="SimpleTextIO.c" />
+    <ClCompile Include="userstubs.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bugcheck.h" />
@@ -248,6 +252,10 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\X64\registers.h" />
     <ClInclude Include="HAL\spinlock.h" />
     <ClInclude Include="HAL\X64\cpu.h" />
+    <ClInclude Include="io\apc.h" />
+    <ClInclude Include="io\dpc.h" />
+    <ClInclude Include="io\irp.h" />
+    <ClInclude Include="io\mdl.h" />
     <ClInclude Include="nnxver.h" />
     <ClInclude Include="ob\handle.h" />
     <ClInclude Include="ob\namespace.h" />
@@ -326,6 +334,15 @@ $(SolutionDir)genverh.bat</Command>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\memory.asm">
       <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="HAL\X64\userstubs.asm">
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </DeploymentContent>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

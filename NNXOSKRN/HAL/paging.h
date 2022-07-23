@@ -26,10 +26,11 @@
 #define PAGE_NOT_PRESENT 0
 
 #define PAGE_SIZE 4096
-#define PAGE_ADDRESS_MASK 0xFFF
-#define PAGE_ALIGN(x) (((UINT64)x)&(~PAGE_ADDRESS_MASK))
+#define PAGE_FLAGS_MASK 0xFFFULL
+#define PAGE_ADDRESS_MASK (~PAGE_FLAGS_MASK)
+#define PAGE_ALIGN(x) (((ULONG_PTR)x)&PAGE_ADDRESS_MASK)
 
-inline UINT64 ToCanonicalAddress(UINT64 address)
+inline ULONG_PTR ToCanonicalAddress(ULONG_PTR address)
 {
     return address | ((address & (1ULL << 47ULL)) ? (0xFFFF000000000000) : 0);
 }

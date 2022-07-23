@@ -508,8 +508,6 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR EntryPoint
 );
 
-VOID PspInsertIntoSharedQueue(PKTHREAD Thread);
-
 #define WORKER_PROCESSES_NUMBER 4
 #define WORKER_THREADS_PER_PROCESS 8
 
@@ -682,6 +680,7 @@ NTSTATUS ObpMpTestNamespace()
         PrintT("NTSTATUS: %X\n", status);
         return status;
     }
+    PrintT("Stuck?\n");
 
     status = PspCreateThreadInternal(&testThread, process, TRUE, (ULONG_PTR)ObpMpTestNamespaceThread);
     if (status != STATUS_SUCCESS)
@@ -692,7 +691,6 @@ NTSTATUS ObpMpTestNamespace()
 
     testThread->Process->Pcb.BasePriority = 10;
     PspInsertIntoSharedQueue(&testThread->Tcb);
-
     /* no returning yet */
     return STATUS_SUCCESS;
 }

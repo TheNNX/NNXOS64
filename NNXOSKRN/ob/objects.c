@@ -355,8 +355,9 @@ NTSTATUS ObCreateObject(
         }
     }
 
+
     /* allocate header and the object */
-    header = ExAllocatePool(NonPagedPool, sizeof(OBJECT_HEADER) + ObjectSize);
+    header = ExAllocatePoolWithTag(NonPagedPool, sizeof(OBJECT_HEADER) + ObjectSize, 'OBJ ');
 
     /* if system's out of memory, fail */
     if (header == NULL)

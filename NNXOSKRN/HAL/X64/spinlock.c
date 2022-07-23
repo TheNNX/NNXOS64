@@ -2,7 +2,7 @@
 #include "APIC.h"
 #include <bugcheck.h>
 
-/* kinda hacky, but as long as no locks are acquired after MP initialization but before releasing all initialization locks, it will be fine*/
+/* kinda hacky, but as long as no locks are acquired after MP initialization but before releasing all initialization locks, it will be fine */
 LONG LockedDuringInitialization = 0;
 
 KSPIN_LOCK PrintLock;

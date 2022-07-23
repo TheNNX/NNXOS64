@@ -13,14 +13,14 @@
 #define PT_COVERED_SIZE 0x200000ULL
 #define PAGE_SIZE_SMALL 4096ULL
 
-/*
-    Virtual memory layout:
-
-    PML4:
-    PDPs 0-509 : pages
-    PDP  510   : paging structures
-    PDP  511   : kernel space
-*/
+/**
+ * Virtual memory layout:
+ *
+ * PML4:
+ * PDPs 0-509 : pages
+ * PDP  510   : paging structures
+ * PDP  511   : kernel space
+ */
 
 #define RecursivePagingPagesSizePreBoundary        ((UINT64*)ToCanonicalAddress(PDP_COVERED_SIZE * PML4EntryForRecursivePaging))
 
@@ -42,7 +42,7 @@ ULONG_PTR KernelPml4Entry = NULL;
 
 VOID PagingTLBFlushPage(UINT64 page)
 {
-    /* TODO: inform other processors if neccessary */
+    /* TODO: send IPI to other processors if neccessary */
     PagingInvalidatePage(ToCanonicalAddress(page));
 }
 
@@ -248,11 +248,23 @@ VOID SetupCR4()
     SetCR4(CR4);
 }
 
-VOID SetupCR0()
+VOID EnableWriteProtect()
+{
+    UINT64 CR0 = GetCR0();
+    CR0 |= 65536;
+    SetCR0(CR0);
+}
+
+VOID DisableWriteProtect()
 {
     UINT64 CR0 = GetCR0();
     CR0 &= (~65536);
     SetCR0(CR0);
+}
+
+VOID SetupCR0()
+{
+    EnableWriteProtect();
 }
 
 ULONG_PTR PhysicalAddressFunctionAllocPages(ULONG_PTR irrelevant, ULONG_PTR relativeIrrelevant, UINT8 physMemoryType)

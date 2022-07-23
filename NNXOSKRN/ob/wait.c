@@ -4,6 +4,7 @@
 #include <scheduler.h>
 #include <pool.h>
 #include <bugcheck.h>
+#include <scheduler.h>
 
 /* this is probably wrong somewhere */
 VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable)
@@ -150,4 +151,23 @@ NTSTATUS KeWaitForMultipleObjects(
 NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason, KPROCESSOR_MODE WaitMode, BOOL Alertable, PLONG64 Timeout)
 {
     return KeWaitForMultipleObjects(1, &Object, WaitAll, WaitReason, WaitMode, Alertable, Timeout, NULL);
+}
+
+VOID
+KeUnwaitThread(
+    struct _KTHREAD* pThread,
+    LONG_PTR WaitStatus,
+    LONG PriorityIncrement
+)
+{
+    pThread->Timeout = 0;
+    pThread->TimeoutIsAbsolute = 0;
+    if (pThread->NumberOfCurrentWaitBlocks)
+    {
+        pThread->NumberOfCurrentWaitBlocks = 0;
+        pThread->CurrentWaitBlocks = 0;
+    }
+    
+    pThread->ThreadState = THREAD_STATE_READY;
+    PspInsertIntoSharedQueue(pThread);
 }

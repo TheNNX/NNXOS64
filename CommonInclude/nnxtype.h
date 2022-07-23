@@ -82,8 +82,12 @@ typedef const unsigned short CULONGLONG, *PCULONGLONG;
 
 #endif
 
+#ifndef TRUE
 #define TRUE 1
+#endif
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 #ifndef __cplusplus
 	typedef UINT8 bool;
@@ -91,8 +95,8 @@ typedef const unsigned short CULONGLONG, *PCULONGLONG;
 	#define false FALSE
 #endif
 
-typedef bool BOOL;
-typedef BOOL BOOLEAN;
+typedef int BOOL;
+typedef BYTE BOOLEAN;
 
 #ifndef VOID
 typedef void VOID;

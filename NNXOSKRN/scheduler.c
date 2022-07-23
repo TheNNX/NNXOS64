@@ -35,12 +35,11 @@ extern ULONG_PTR KiCyclesPerQuantum;
 extern UINT KeNumberOfProcessors;
 UINT PspCoresInitialized = 0;
 
-ULONG_PTR PspCreateKernelStack();
+PVOID PspCreateKernelStack();
 VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR EntryPoint, ULONG_PTR Userstack);
 VOID HalpUpdateThreadKernelStack(PVOID kernelStack);
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
 NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, BOOL IsKernel, ULONG_PTR EntryPoint);
-VOID PspInsertIntoSharedQueue(PKTHREAD Thread);
 __declspec(noreturn) VOID PspTestAsmUser();
 __declspec(noreturn) VOID PspTestAsmUserEnd();
 __declspec(noreturn) VOID PspTestAsmUser2();
@@ -453,9 +452,22 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
+        PETHREAD userThread;
 
         NTSTATUS ObpMpTest();
+        VOID TestUserThread();
+
         status = ObpMpTest();
+
+        PspCreateThreadInternal(
+            &userThread,
+            (PEPROCESS)pPrcb->IdleThread->Process,
+            FALSE,
+            (ULONG_PTR)TestUserThread
+        );
+
+        userThread->Tcb.ThreadPriority = 10;
+        PspInsertIntoSharedQueue((PKTHREAD)userThread);
     }
     
     DisableInterrupts();
@@ -493,6 +505,8 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
     originalRunningThreadSpinlock = &pcr->Prcb->CurrentThread->ThreadLock;
     KeAcquireSpinLockAtDpcLevel(originalRunningThreadSpinlock);
     
+    originalRunningThread->KernelStackPointer = (PVOID)stack;
+
     if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
         pcr->CyclesLeft = 0;
 
@@ -585,12 +599,31 @@ PKTHREAD KeGetCurrentThread()
     return PspGetCurrentThread();
 }
 
-ULONG_PTR PspCreateKernelStack()
+PVOID PspCreateKernelStack(SIZE_T nPages)
 {
-    return (ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE;
+    return (PVOID)((ULONG_PTR)PagingAllocatePageBlockFromRange(
+        nPages, 
+        PAGING_KERNEL_SPACE, 
+        PAGING_KERNEL_SPACE_END
+    ) + PAGE_SIZE * nPages);
 }
 
-VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR Entrypoint, ULONG_PTR Userstack)
+VOID
+PspFreeKernelStack(
+    PVOID OriginalStackLocation,
+    SIZE_T nPages
+)
+{
+    /* TODO */
+}
+
+VOID 
+PspSetupThreadState(
+    PKTASK_STATE pThreadState, 
+    BOOL IsKernel, 
+    ULONG_PTR Entrypoint,
+    ULONG_PTR Userstack
+)
 {
     MemSet(pThreadState, 0, sizeof(*pThreadState));
     pThreadState->Rip = (UINT64)Entrypoint;
@@ -671,7 +704,6 @@ NTSTATUS PspProcessOnCreate(PVOID selfObject, PVOID createData)
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);
-
     return STATUS_SUCCESS;
 }
 
@@ -777,17 +809,27 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     pThread->Tcb.Process = &pThread->Process->Pcb;
     pThread->Tcb.Timeout = 0;
     pThread->Tcb.TimeoutIsAbsolute = FALSE;
-    /* TODO: deallocate stacks */
-    pThread->Tcb.KernelStackPointer = (PVOID)(PspCreateKernelStack() - sizeof(KTASK_STATE));
-    /* inherit affinity after the parent process */
+
+    /* Create stacks */
+    /* Main kernel stack */
+    pThread->Tcb.NumberOfKernelStackPages = 1;
+    pThread->Tcb.OriginalKernelStackPointer = PspCreateKernelStack(pThread->Tcb.NumberOfKernelStackPages);
+    pThread->Tcb.KernelStackPointer = (PVOID)((ULONG_PTR)pThread->Tcb.OriginalKernelStackPointer - sizeof(KTASK_STATE));
+    /* Stack for saving the thread context when executing APCs */
+    pThread->Tcb.ApcBackupKernelStackPointer = PspCreateKernelStack(1);
+
+    /* Inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
     PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, creationData->IsKernel, creationData->Entrypoint, userstack);
+
 
     InsertTailList(&pThread->Process->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
     KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
     InsertTailList(&ThreadListHead, &pThread->Tcb.ThreadListEntry);
 
+    KeInitializeApcState(&pThread->Tcb.ApcState);
+    KeInitializeApcState(&pThread->Tcb.SavedApcState);
     pThread->Tcb.ThreadState = THREAD_STATE_READY;
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
@@ -809,6 +851,16 @@ NTSTATUS PspThreadOnDelete(PVOID selfObject)
 
     RemoveEntryList(&pThread->Tcb.ProcessChildListEntry);
     RemoveEntryList(&pThread->Tcb.ThreadListEntry);
+
+    PspFreeKernelStack(
+        pThread->Tcb.OriginalKernelStackPointer, 
+        pThread->Tcb.NumberOfKernelStackPages
+    );
+
+    PspFreeKernelStack(
+        pThread->Tcb.ApcBackupKernelStackPointer,
+        1
+    );
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
@@ -888,16 +940,7 @@ BOOL PsCheckThreadIsReady(PKTHREAD Thread)
 
     if (Thread->NumberOfActiveWaitBlocks == 0 && Thread->ThreadState == THREAD_STATE_WAITING)
     {
-        Thread->Timeout = 0;
-        Thread->TimeoutIsAbsolute = 0;
-        if (Thread->NumberOfCurrentWaitBlocks)
-        {
-            Thread->NumberOfCurrentWaitBlocks = 0;
-            Thread->CurrentWaitBlocks = 0;
-        }
-        Thread->ThreadState = THREAD_STATE_READY;
-
-        PspInsertIntoSharedQueue(Thread);
+        KeUnwaitThread(Thread, 0, 0);
     }
 
     /* 
@@ -999,17 +1042,21 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
     
+    /* satisfy all waits for the thread */
     while (!IsListEmpty(&currentThread->Header.WaitHead))
     { 
+        /* for each wait block */
         waitEntry = (PLIST_ENTRY)currentThread->Header.WaitHead.First;
         waitBlock = (PKWAIT_BLOCK)waitEntry;
         waitingThread = waitBlock->Thread;
         
+        /* decrease the number of active wait blocks */
         KeAcquireSpinLockAtDpcLevel(&waitingThread->ThreadLock);
         waitingThread->NumberOfActiveWaitBlocks--;
         PrintT("Newstate: %i by core %i\n", waitingThread->NumberOfActiveWaitBlocks, KeGetCurrentProcessorId());
         KeReleaseSpinLockFromDpcLevel(&waitingThread->ThreadLock);
 
+        /* check if the waiting thread has become ready */
         PsCheckThreadIsReady(waitingThread);
         RemoveEntryList(waitEntry);
         MemSet(waitBlock, 0, sizeof(*waitBlock));
@@ -1026,12 +1073,110 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
     KeLowerIrql(originalIrql);
 
     /* dereference the current thread, this could destroy it so caution is neccessary
-     * it is impossible to run PspScheduleNext beacause it could try to save registers on the old kernel stack */
+     * it is impossible to run PspScheduleNext beacause it could try to save registers on the old kernel stack 
+     * TODO: deal with this in a more civilized manner */
     ObDereferenceObject(currentThread);
 
     /* go to the idle thread, on the next tick it will be swapped to some other thread */
+    /* TODO: do scheduling instead of switching to the idle thread */
     KeAcquireSpinLock(&KeGetPcr()->Prcb->Lock, &irql);
     currentThread = KeGetPcr()->Prcb->CurrentThread = KeGetPcr()->Prcb->IdleThread;
     KeReleaseSpinLock(&KeGetPcr()->Prcb->Lock, irql);
     PspSwitchContextTo64(currentThread->KernelStackPointer);
+}
+
+BOOL
+KiSetUserMemory(
+    PVOID Address,
+    ULONG_PTR Data
+)
+{
+    /* TODO: do checks before setting data */
+    *((ULONG_PTR*)Address) = Data;
+    return TRUE;
+}
+
+/* TODO: implement a PspGetCallbackParameter maybe? */
+VOID
+PspSetUsercallParameter(
+    PKTHREAD pThread,
+    ULONG ParameterIndex,
+    ULONG_PTR Value
+)
+{
+#ifdef _M_AMD64
+    PKTASK_STATE pTaskState;
+
+    pTaskState = (PKTASK_STATE)pThread->KernelStackPointer;
+
+    switch (ParameterIndex)
+    {
+    case 0:
+        pTaskState->Rcx = Value;
+        break;
+    case 1:
+        pTaskState->Rdx = Value;
+        break;
+    case 2:
+        pTaskState->R8 = Value;
+        break;
+    case 3:
+        pTaskState->R9 = Value;
+        break;
+    default:
+    {
+        /* This is called after allocating the shadow space and the return address */
+        ULONG_PTR stackLocation = pTaskState->Rsp;
+
+        /* skip the return address and shadow space */
+        stackLocation += 4 * sizeof(ULONG_PTR) + 1 * sizeof(PVOID);
+
+        /* parameter's relative stack location */
+        stackLocation += sizeof(ULONG_PTR) * (ParameterIndex - 4);
+
+        KiSetUserMemory((PVOID)stackLocation, Value);
+        break;
+    }
+    }
+#else
+#error Unimplemented
+#endif
+}
+
+VOID
+PspUsercall(
+    PKTHREAD pThread,
+    PVOID Function,
+    ULONG_PTR* Parameters,
+    SIZE_T NumberOfParameters,
+    PVOID ReturnAddress
+)
+{
+#ifdef _M_AMD64
+    PKTASK_STATE pTaskState;
+    INT i;
+
+    pTaskState = (PKTASK_STATE)pThread->KernelStackPointer;
+
+    /* allocate stack space for the registers that don't fit onto the stack */
+    if (NumberOfParameters > 4)
+    {
+        pTaskState->Rsp -= (NumberOfParameters - 4) * sizeof(ULONG_PTR);
+    }
+
+    /* allocate the shadow space */
+    pTaskState->Rsp -= 4 * sizeof(ULONG_PTR);
+
+    /* allocate the return address */
+    pTaskState->Rsp -= sizeof(PVOID);
+    KiSetUserMemory((PVOID)pTaskState->Rsp, (ULONG_PTR)ReturnAddress);
+
+    for (i = 0; i < NumberOfParameters; i++)
+    {
+        PspSetUsercallParameter(pThread, i, Parameters[i]);
+    }
+
+#else
+#error Unimplemented
+#endif 
 }

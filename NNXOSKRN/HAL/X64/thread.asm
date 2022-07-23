@@ -11,8 +11,7 @@ func HalpUpdateThreadKernelStack
     add rcx, 152
     ; set RSP0
     mov QWORD [rdi+0x04], rcx
-    ; set IST1 (used for ring 0 to ring 0 task switch)
-    mov QWORD [rdi+0x24], rcx
+
     pop QWORD rdi
     ret
 
@@ -21,11 +20,6 @@ func HalpGetThreadKernelStack
     mov QWORD rdi, [gs:0x08]
     ; copy RSP0 into RAX
     mov rax, QWORD [rdi+0x04]
-
-    ; UNCOMMENT THE BELOW FOR A DEBUG ASSERTION (IF RSP0 != IST1)
-    ;xor rax, QWORD [rdi+0x24]
-    ;jnz .DebugStackMismatch
-    ;mov rax, QWORD [rdi+0x04]
     
     pop QWORD rdi
     ret
@@ -57,12 +51,21 @@ func HalpTaskSwitchHandler
 
 func PspStoreContextFrom64
     ; store RAX so we can use it for the return address
-    ; +8 because we want to skip the return address on the stack
-    mov QWORD [rsp-152+8], rax 
-    ; pop the return address
-    pop QWORD rax
+
+    ; 152 bytes is the size of the trap frame
+    ; 8 bytes are already allocated by the caller for the return address
+    ; Allocation size is adjusted accordingly, RAX is saved on the trap frame, 
+    ; the return address is saved in RAX.
     
-    sub rsp, 152
+    ; Allocate the trap frame
+    sub rsp, 152 - 8 
+    
+    ; Save RAX in its place on the trap frame
+    mov QWORD [rsp], rax 
+    
+    ; pop the return address
+    mov rax, QWORD [rsp+144]
+    
     mov QWORD [rsp+8], rbx
     mov QWORD [rsp+16], rcx
     mov QWORD [rsp+24], rdx

@@ -245,7 +245,7 @@ VFS_STATUS PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 nu
 
 	if (drive->capabilities & IDE_LBA_SUPPORT)
 	{
-		IdeWrite(controller, channel, ATA_REG_HDDEVSEL, 0xE0 | (isSlave << 4) | ((lba > 0xFFFFFFF) ? 0 : ((lba & 0xF000000) >> 24))); // Drive & LBA
+		IdeWrite(controller, channel, ATA_REG_HDDEVSEL, 0xE0 | (isSlave ? 16 : 0) | ((lba > 0xFFFFFFF) ? 0 : ((lba & 0xF000000) >> 24))); // Drive & LBA
 		if (lba > 0xFFFFFFF)
 		{
 

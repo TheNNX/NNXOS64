@@ -1,4 +1,5 @@
 /* implements NT's KQUEUE's functions */
+/* TODO: waiting threads list */
 
 #include "ntqueue.h"
 #include <scheduler.h>

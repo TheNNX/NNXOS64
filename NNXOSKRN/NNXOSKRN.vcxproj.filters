@@ -195,6 +195,18 @@
     <ClCompile Include="HAL\X64\pagefile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="io\mdl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\apc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\dpc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="userstubs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -332,6 +344,18 @@
     <ClInclude Include="ob\namespace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="io\irp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io\mdl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io\dpc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="io\apc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\ApEntry.asm">
@@ -366,6 +390,9 @@
     </CustomBuild>
     <CustomBuild Include="HAL\X64\thread.asm">
       <Filter>Source Files\HAL\X64</Filter>
+    </CustomBuild>
+    <CustomBuild Include="HAL\X64\userstubs.asm">
+      <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

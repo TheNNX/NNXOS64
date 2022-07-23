@@ -56,18 +56,33 @@ extern "C" {
         InitializeListHead(&Header->WaitHead);
     }
 
-    NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason, KPROCESSOR_MODE WaitMode, BOOL Alertable, PLONG64 Timeout);
+    NTSTATUS 
+        KeWaitForSingleObject(
+            PVOID Object,
+            KWAIT_REASON WaitReason, 
+            KPROCESSOR_MODE WaitMode,
+            BOOL Alertable,
+            PLONG64 Timeout
+        );
 
-    NTSTATUS KeWaitForMultipleObjects(
-        ULONG Count,
-        PVOID *Object,
-        WAIT_TYPE WaitType,
-        KWAIT_REASON WaitReason,
-        KPROCESSOR_MODE WaitMode,
-        BOOLEAN Alertable,
-        PLONG64 Timeout,
-        PKWAIT_BLOCK WaitBlockArray
-    );
+    NTSTATUS 
+        KeWaitForMultipleObjects(
+            ULONG Count,
+            PVOID *Object,
+            WAIT_TYPE WaitType,
+            KWAIT_REASON WaitReason,
+            KPROCESSOR_MODE WaitMode,
+            BOOLEAN Alertable,
+            PLONG64 Timeout,
+            PKWAIT_BLOCK WaitBlockArray
+        );
+
+    VOID
+        KeUnwaitThread(
+            struct _KTHREAD* pThread,
+            LONG_PTR WaitStatus,
+            LONG PriorityIncrement
+        );
 
     VOID KiHandleObjectWaitTimeout(struct _KTHREAD* Thread, PLONG64 pTimeout, BOOL Alertable);
 
