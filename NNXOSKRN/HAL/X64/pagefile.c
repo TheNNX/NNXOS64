@@ -262,10 +262,14 @@ PageFaultHandler(
 {
     NTSTATUS status;
 
-    if (KeGetCurrentIrql() == 0)
+    if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
     {
-        KeBugCheck(
-            PAGE_FAULT_WITH_INTERRUPTS_OFF
+        KeBugCheckEx(
+            PAGE_FAULT_WITH_INTERRUPTS_OFF,
+            (ULONG_PTR)errcode,
+            (ULONG_PTR)rip,
+            (ULONG_PTR)n,
+            (ULONG_PTR)0
         );
     }
 

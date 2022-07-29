@@ -5,7 +5,6 @@
 #include <HAL/spinlock.h>
 #include <ob/object.h>
 #include <ob/handle.h>
-#include <io/apc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +44,18 @@ extern "C" {
         KPROCESS Pcb;
         BOOL Initialized;
     } EPROCESS, * PEPROCESS;
+
+
+    typedef struct _KAPC_STATE
+    {
+        LIST_ENTRY ApcListHeads[2];
+        BOOL KernelApcsDisabled;
+        BOOL UserApcsDisabled;
+        BOOL UserApcPending;
+        BOOL KernelApcPending;
+        BOOL KernelApcInProgress;
+    } KAPC_STATE, * PKAPC_STATE;
+
 
     typedef struct _KTHREAD
     {
@@ -98,8 +109,24 @@ extern "C" {
         BOOL Alertable;
         ULONG64 WaitStatus;
 
-        KAPC_STATE ApcState;
-        KAPC_STATE SavedApcState;
+        union
+        {
+            struct
+            {
+                KAPC_STATE ApcState;
+                KAPC_STATE SavedApcState;
+                PKAPC_STATE OriginalApcStatePointer;
+                PKAPC_STATE AttachedApcStatePointer;
+            };
+            struct
+            {
+                KAPC_STATE ApcStates;
+                PKAPC_STATE ApcStatePointers[2];
+            };
+        };
+
+        CCHAR ApcStateIndex;
+
     } KTHREAD, * PKTHREAD;
 
     typedef struct _ETHREAD
@@ -223,6 +250,11 @@ extern "C" {
         KiSetUserMemory(
             PVOID Address,
             ULONG_PTR Data
+        );
+
+    KPROCESSOR_MODE
+        PsGetProcessorModeFromTrapFrame(
+            PKTASK_STATE TrapFrame
         );
 
 #ifdef __cplusplus

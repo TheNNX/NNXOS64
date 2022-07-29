@@ -168,7 +168,6 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOO
         UINTN sectionSize;
 
         status = file->SetPosition(file, currentSection->PointerToDataRVA);
-        
         sectionSize = (UINTN)currentSection->SizeOfSection;
         
         if (!EFI_ERROR(status))
@@ -182,7 +181,7 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOO
     }
 
     /* add this module to the loaded module list
-    if for any reason it is not possible to finish loading, remember to remove from the list */
+     * if for any reason it is not possible to finish loading, remember to remove from the list */
     moduleLinkedListEntry = AppendList(&LoadedModules, AllocateZeroPool(sizeof(LOADED_BOOT_MODULE)));
     if (moduleLinkedListEntry == NULL)
         return EFI_OUT_OF_RESOURCES;

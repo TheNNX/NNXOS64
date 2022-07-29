@@ -4,6 +4,7 @@
 #include "APIC.h"
 #include "registers.h"
 #include <HAL/spinlock.h>
+#include <scheduler.h>
 
 VOID KeBugCheck(ULONG code)
 {
@@ -36,7 +37,7 @@ KeBugCheckEx(
 		TextIoSetCursorPosition(0, 8);
 	}
 
-	PrintT("\nCore %i\nCritical system failure\n", ApicGetCurrentLapicId());
+	PrintT("\nCore %i, thread %X\n\nCritical system failure\n", ApicGetCurrentLapicId(), KeGetCurrentThread());
 
 	/* TODO */
 	if (code == KMODE_EXCEPTION_NOT_HANDLED)
@@ -62,6 +63,5 @@ KeBugCheckEx(
 
 	KeReleaseSpinLock(&BugcheckLock, irql);
 
-	PrintT("BugCheck\n");
 	KeStop();
 }

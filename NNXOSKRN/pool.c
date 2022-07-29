@@ -415,9 +415,9 @@ ExAllocatePoolWithTag(
 		currentCheckedBlock = (PPOOL_HEADER)currentCheckedBlock->PoolEntry.Next;
 	}
 
-	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 	PrintT("ExAllocatePool failed, size=%x pooltype=%i\n", size, (ULONG_PTR)(type));
 	DebugEnumeratePoolBlocks(type);
+	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 	return NULL;
 }
 

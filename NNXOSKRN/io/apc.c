@@ -51,29 +51,66 @@ KiInsertQueueAPC(
 
     if (Apc->Inserted == FALSE)
     {
-        /* TODO 
-         *
-         * inserting user apc:
-         *
-         *   if thread is in an alertable wait state:
-	     *       exit alertable wait state
-	     *       stage apc
-         *   if thread is not in an alerable state
-	     *       add to queue
-         *
-         * 
-         * entering waits:
-         *
-         *   if wait is to be alertabe and user apc queue not empty
-	     *       do not enter wait
-	     *       stage apc
-	     *       set wait result as STATUS_USER_APC		
-         * 
-         * or something like this, reading is hard
-         */
+        /* special kernel APC */
+        if (Apc->NormalRoutine == NULL && 
+            Apc->ApcMode == KernelMode)
+        {
+            InsertTailList(
+                &pThread->ApcStatePointers[Apc->ApcStateIndex]->ApcListHeads[Apc->ApcMode],
+                &Apc->ApcListEntry
+            );
+        }
 
+        /* regular kernel APC and user APC */
+        else
+        {
+            InsertTailList(
+                &pThread->ApcStatePointers[Apc->ApcStateIndex]->ApcListHeads[Apc->ApcMode],
+                &Apc->ApcListEntry
+            );
+        }
 
+        if (Apc->ApcStateIndex == pThread->ApcStateIndex)
+        {
+            if (Apc->ApcMode == KernelMode)
+            {
+                pThread->ApcStatePointers[Apc->ApcStateIndex]->KernelApcPending = TRUE;
+            }
+        }
+
+        if (pThread->ThreadState == THREAD_STATE_WAITING)
+        {
+            if (pThread->Alertable == TRUE || Apc->ApcMode == KernelMode)
+            {
+                if (Apc->ApcMode == UserMode)
+                {
+                    pThread->ApcStatePointers[Apc->ApcStateIndex]->UserApcPending = TRUE;
+                    KeUnwaitThread(
+                        pThread,
+                        STATUS_USER_APC,
+                        Increment
+                    );
+                }
+                else
+                {
+                    KeUnwaitThread(
+                        pThread,
+                        STATUS_KERNEL_APC,
+                        Increment
+                    );
+                }
+            }
+        }
+
+        Apc->Inserted = TRUE;
         success = TRUE;
+    }
+
+    if (success && 
+        pThread->ApcState.KernelApcPending &&
+        pThread->ThreadState == THREAD_STATE_RUNNING)
+    {
+        /* TODO: send IPI to the core executing the thread to notify about the pending */
     }
 
     KeReleaseSpinLock(
@@ -161,11 +198,12 @@ KeDeliverApcs(
 
     currentThread = KeGetCurrentThread();
 
-    KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    /* lock the thread (the caller should also reference it) */
+    KeAcquireSpinLock(&currentThread->ThreadLock, &irql);
 
     if (!IsListEmpty(&currentThread->ApcState.ApcListHeads[UserMode]))
     {
-        if (currentThread->ApcState.UserApcPending == TRUE || PreviousMode != UserMode)
+        if (currentThread->ApcState.UserApcPending == TRUE && PreviousMode == UserMode)
         {
             PKAPC apc;
 
@@ -176,6 +214,8 @@ KeDeliverApcs(
             sysArg1 = apc->SystemArgument1;
             sysArg2 = apc->SystemArgument2;
 
+            /* release the lock to lower the IRQL to APC_LEVEL */
+            KeReleaseSpinLock(&currentThread->ThreadLock, irql);
             KernelRoutine(
                 apc,
                 &normalRoutine, 
@@ -183,8 +223,12 @@ KeDeliverApcs(
                 &sysArg1, 
                 &sysArg2
             );
+            /* acquire the lock back (the thread should be referenced) */
+            KeAcquireSpinLock(&currentThread->ThreadLock, &irql);
 
             currentThread->ApcState.UserApcPending = FALSE;
+            RemoveEntryList(&apc->ApcListEntry);
+            apc->Inserted = FALSE;
 
             KiExecuteUserApcNormalRoutine(
                 currentThread,
@@ -196,5 +240,5 @@ KeDeliverApcs(
         }
     }
 
-    KeLowerIrql(irql);
+    KeReleaseSpinLock(&currentThread->ThreadLock, irql);
 }

@@ -7,6 +7,7 @@
 #include <SimpleTextIO.h>
 #include <../bootloader/bootdata.h>
 #include <nnxcfg.h>
+#include <HAL/physical_allocator.h>
 
 PDWORD gpdwFramebuffer; PDWORD gpdwFramebufferEnd;
 DWORD gdwWidth; DWORD gdwHeight; DWORD gdwPixelsPerScanline;
@@ -102,6 +103,7 @@ RemapSections(
 	ULONG_PTR currentMapping;
 	ULONG_PTR currentPageAddress;
 	USHORT newFlags;
+	ULONG_PTR physAddress;
 
 	/* remap all sections with name starting with ".user"
 	 * to be usermode accessible */
@@ -126,8 +128,8 @@ RemapSections(
 		{
 			/* KERNEL_DESIRED_LOCATION is our current executable base */
 			currentPageAddress = current->VirtualAddressRVA + KERNEL_DESIRED_LOCATION + j * PAGE_SIZE;
-
 			currentMapping = PagingGetCurrentMapping(currentPageAddress);
+			physAddress = currentMapping & PAGE_ADDRESS_MASK;
 
 			/* copy the current flags */
 			newFlags = currentMapping & PAGE_FLAGS_MASK;
@@ -152,7 +154,8 @@ RemapSections(
 				newFlags |= PAGE_WRITE;
 			}
 
-			PagingMapPage(currentPageAddress, currentMapping & PAGE_ADDRESS_MASK, newFlags);
+			InternalMarkPhysPage(MEM_TYPE_USED_PERM, physAddress);
+			PagingMapPage(currentPageAddress, physAddress, newFlags);
 		}
 	}
 }

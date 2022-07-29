@@ -11,6 +11,7 @@ extern "C"
     UINT8 InternalFreePhysicalPage(ULONG_PTR);
     ULONG_PTR InternalAllocatePhysicalPageEx(UINT8 type, ULONG_PTR seekFromAddress, ULONG_PTR seekToAddress);
     ULONG_PTR InternalAllocatePhysicalPageWithType(UINT8 type);
+    BYTE InternalMarkPhysPage(UINT8 type, ULONG_PTR PhysPage);
     
 #define MEM_TYPE_USED 0
 #define MEM_TYPE_FREE 1

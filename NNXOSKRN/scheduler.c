@@ -10,6 +10,7 @@
 #include <nnxlog.h>
 #include <HAL/cpu.h>
 #include <ob/object.h>
+#include <io/apc.h>
 
 KSPIN_LOCK ProcessListLock = 0;
 LIST_ENTRY ProcessListHead;
@@ -248,11 +249,8 @@ VOID DiagnosticThread()
 
     pcr = KeGetPcr();
 
-    while (1)
     {
         INT i;
-
-        for (i = 0; i < 2999999; i++);
 
         KeAcquireSpinLock(&ProcessListLock, &irql);
         KeAcquireSpinLockAtDpcLevel(&pcr->Prcb->Lock);
@@ -288,8 +286,8 @@ VOID DiagnosticThread()
         TextIoSetColorInformation(0xFF000000, controlColor, 0);
 
         KeAcquireSpinLockAtDpcLevel(&PspSharedReadyQueue.Lock);
-        PrintT("Debug thread:\n\nSummaries:\n");
-
+        PrintT("Debug thread %x:\n\nSummaries:\n", KeGetCurrentThread());
+        
         PrintT("%b\n\nQueue sizes:",PspSharedReadyQueue.ThreadReadyQueuesSummary);
         
         for (i = 0; i < 32; i++)
@@ -452,14 +450,14 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
-        PETHREAD userThread;
+      //  PETHREAD userThread;
 
         NTSTATUS ObpMpTest();
         VOID TestUserThread();
 
         status = ObpMpTest();
 
-        PspCreateThreadInternal(
+        /*PspCreateThreadInternal(
             &userThread,
             (PEPROCESS)pPrcb->IdleThread->Process,
             FALSE,
@@ -468,6 +466,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 
         userThread->Tcb.ThreadPriority = 10;
         PspInsertIntoSharedQueue((PKTHREAD)userThread);
+    */
     }
     
     DisableInterrupts();
@@ -478,14 +477,13 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 }
 #pragma warning(pop)
 
-QWORD GetCR8();
 VOID SetCR8(QWORD);
 ULONG_PTR PspScheduleThread(ULONG_PTR stack)
 {
     PKPCR pcr;
     KIRQL irql;
 
-    PKSPIN_LOCK originalRunningThreadSpinlock, originalRunningProcessSpinlock;
+    PKSPIN_LOCK originalRunningProcessSpinlock;
     PKTHREAD nextThread;
     PKTHREAD originalRunningThread;
     PKPROCESS originalRunningProcess;
@@ -501,9 +499,6 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
     {
         KeBugCheckEx(WORKER_THREAD_TEST_CONDITION, (ULONG_PTR)originalRunningThread, 0, 0, 0);
     }
-
-    originalRunningThreadSpinlock = &pcr->Prcb->CurrentThread->ThreadLock;
-    KeAcquireSpinLockAtDpcLevel(originalRunningThreadSpinlock);
     
     originalRunningThread->KernelStackPointer = (PVOID)stack;
 
@@ -581,10 +576,19 @@ ULONG_PTR PspScheduleThread(ULONG_PTR stack)
     }
 
     KeReleaseSpinLockFromDpcLevel(originalRunningProcessSpinlock);
-    KeReleaseSpinLockFromDpcLevel(originalRunningThreadSpinlock);
     KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
     KeReleaseSpinLock(&ProcessListLock, irql);
 
+    if (pcr->Prcb->CurrentThread->ApcState.KernelApcPending ||
+        pcr->Prcb->CurrentThread->ApcState.UserApcPending)
+    {
+        KeDeliverApcs(
+            PsGetProcessorModeFromTrapFrame(
+                pcr->Prcb->CurrentThread->KernelStackPointer
+            )
+        );
+    }
+   
     return (ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer;
 }
 
@@ -616,6 +620,8 @@ PspFreeKernelStack(
 {
     /* TODO */
 }
+
+ULONG_PTR GetRSP();
 
 VOID 
 PspSetupThreadState(
@@ -772,9 +778,7 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     PTHREAD_ON_CREATE_DATA creationData;
     PETHREAD pThread = (PETHREAD)selfObject;
     creationData = (PTHREAD_ON_CREATE_DATA)optionalCreateData;
-
     KeAcquireSpinLock(&ThreadListLock, &irql);
-
     pThread->Tcb.ThreadState = THREAD_STATE_INITIALIZATION;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
 
@@ -821,8 +825,6 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     /* Inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
     PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, creationData->IsKernel, creationData->Entrypoint, userstack);
-
-
     InsertTailList(&pThread->Process->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
     KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
 
@@ -831,7 +833,6 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     KeInitializeApcState(&pThread->Tcb.ApcState);
     KeInitializeApcState(&pThread->Tcb.SavedApcState);
     pThread->Tcb.ThreadState = THREAD_STATE_READY;
-
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLock(&ThreadListLock, irql);
 
@@ -1033,15 +1034,15 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
 
     /* raise irql as the CPU shouldn't try to schedule here */
     KeRaiseIrql(DISPATCH_LEVEL, &originalIrql);
-    
+
     currentThread = KeGetCurrentThread();
+    KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
     KeAcquireSpinLockAtDpcLevel(&ProcessListLock);
     exits++;
-    KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
     KeAcquireSpinLockAtDpcLevel(&currentThread->Header.Lock);
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
-    
+
     /* satisfy all waits for the thread */
     while (!IsListEmpty(&currentThread->Header.WaitHead))
     { 
@@ -1052,8 +1053,8 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
         
         /* decrease the number of active wait blocks */
         KeAcquireSpinLockAtDpcLevel(&waitingThread->ThreadLock);
+
         waitingThread->NumberOfActiveWaitBlocks--;
-        PrintT("Newstate: %i by core %i\n", waitingThread->NumberOfActiveWaitBlocks, KeGetCurrentProcessorId());
         KeReleaseSpinLockFromDpcLevel(&waitingThread->ThreadLock);
 
         /* check if the waiting thread has become ready */
@@ -1066,7 +1067,6 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
     KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&ProcessListLock);
-    
     /* interrupts are disabled, they will be reenabled by RFLAGS on the idle thread stack */
     /* IRQL can be lowered now */
     DisableInterrupts();
@@ -1091,7 +1091,7 @@ KiSetUserMemory(
     ULONG_PTR Data
 )
 {
-    /* TODO: do checks before setting data */
+    /* TODO: do checks before setting the data */
     *((ULONG_PTR*)Address) = Data;
     return TRUE;
 }
@@ -1179,4 +1179,31 @@ PspUsercall(
 #else
 #error Unimplemented
 #endif 
+}
+
+KPROCESSOR_MODE
+PsGetProcessorModeFromTrapFrame(
+    PKTASK_STATE TrapFrame
+)
+{
+    if ((TrapFrame->Cs & 0x3) == 0x00)
+        return KernelMode;
+    return UserMode;
+}
+
+PKTHREAD
+KiGetCurrentThreadLocked()
+{
+    PKTHREAD pThread;
+    pThread = KeGetCurrentThread();
+    KeAcquireSpinLockAtDpcLevel(&pThread->ThreadLock);
+    return pThread;
+}
+
+VOID
+KiUnlockThread(
+    PKTHREAD pThread
+)
+{
+    KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
 }

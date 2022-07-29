@@ -130,6 +130,7 @@ NTSTATUS KeWaitForMultipleObjects(
         WaitBlockArray[i].WaitMode = WaitMode;
         WaitBlockArray[i].WaitType = WaitType;
         WaitBlockArray[i].Thread = currentThread;
+
         /* append the block to the list */
         InsertTailList((PLIST_ENTRY)&dispHeader->WaitHead, &WaitBlockArray[i].WaitEntry);
         KeReleaseSpinLockFromDpcLevel(&dispHeader->Lock);
@@ -141,7 +142,6 @@ NTSTATUS KeWaitForMultipleObjects(
     /* set the threads' state */
     currentThread->ThreadState = THREAD_STATE_WAITING;
     KeReleaseSpinLock(&currentThread->ThreadLock, irql);
-
     /* manually trigger the scheduler event */
     PspSchedulerNext();
 
@@ -150,7 +150,16 @@ NTSTATUS KeWaitForMultipleObjects(
 
 NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason, KPROCESSOR_MODE WaitMode, BOOL Alertable, PLONG64 Timeout)
 {
-    return KeWaitForMultipleObjects(1, &Object, WaitAll, WaitReason, WaitMode, Alertable, Timeout, NULL);
+    return KeWaitForMultipleObjects(
+        1, 
+        &Object,
+        WaitAll,
+        WaitReason,
+        WaitMode,
+        Alertable, 
+        Timeout,
+        NULL
+    );
 }
 
 VOID
@@ -160,6 +169,9 @@ KeUnwaitThread(
     LONG PriorityIncrement
 )
 {
+    if (pThread->ThreadLock == 0)
+        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
+
     pThread->Timeout = 0;
     pThread->TimeoutIsAbsolute = 0;
     if (pThread->NumberOfCurrentWaitBlocks)

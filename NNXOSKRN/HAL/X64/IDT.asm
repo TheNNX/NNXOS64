@@ -139,6 +139,7 @@ func Exception14
 	xor r8, r8
 	mov r9, [rsp+128]
 	call PageFaultHandler
+	jmp $
 	popstate
 	add rsp, 8
 	iretq

@@ -292,7 +292,7 @@ NTSTATUS ObCreateObject(
 
     root = INVALID_HANDLE_VALUE;
     status = STATUS_SUCCESS;
-
+    
     if (Attributes->ObjectName != NULL)
     {
         root = Attributes->Root;

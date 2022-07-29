@@ -427,7 +427,9 @@ ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT
     virt = PagingFindFreePages(min, max, n);
     for (i = 0; i < n; i++)
     {
-        PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, (ULONG_PTR)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED), flags);
+        ULONG_PTR p;
+        p = (ULONG_PTR)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED);
+        PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, p, flags);
     }
     KeReleaseSpinLock(&PagingSpinlock, irql);
 

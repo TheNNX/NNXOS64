@@ -4,6 +4,7 @@
 #include <nnxtype.h>
 #include <ntlist.h>
 #include <HAL/cpu.h>
+#include <scheduler.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,20 +35,37 @@ extern "C" {
         CCHAR ApcStateIndex;
         KPROCESSOR_MODE ApcMode;
         BOOLEAN Inserted;
-    }KAPC, *PKAPC;
+    } KAPC, *PKAPC;
 
-    typedef struct _KAPC_STATE
+    typedef enum _KAPC_ENVIRONMENT
     {
-        LIST_ENTRY ApcListHeads[2];
-        BOOL KernelApcsDisabled;
-        BOOL UserApcsDisabled;
-        BOOL UserApcPending;
-        BOOL KernelApcPending;
-        BOOL KernelApcInProgress;
-    }KAPC_STATE, *PKAPC_STATE;
+        OriginalApcEnvironment,
+        AttachedApcEnvironment,
+        CurrentApcEnvironment
+    } KAPC_ENVIRONMENT, *PKAPC_ENVIRONMENT;
 
     VOID
         KeInitializeApcState(PKAPC_STATE pApcState);
+
+    BOOL
+        KiInsertQueueAPC(
+            PKAPC Apc,
+            LONG Increment
+        );
+
+    VOID
+        KiExecuteUserApcNormalRoutine(
+            PKTHREAD pThread,
+            NORMAL_ROUTINE NormalRoutine,
+            PVOID NormalContext,
+            PVOID SystemArguemnt1,
+            PVOID SystemArgument2
+        );
+
+    VOID
+        KeDeliverApcs(
+            KPROCESSOR_MODE PreviousMode
+        );
 
 #ifdef __cplusplus
 }

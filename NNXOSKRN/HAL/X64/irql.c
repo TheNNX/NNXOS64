@@ -49,3 +49,17 @@ KIRQL NTAPI KeGetCurrentIrql()
 {
 	return __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 }
+
+KIRQL
+KiSetIrql(
+	KIRQL NewIrql
+)
+{
+	KIRQL oldIrql;
+
+	oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
+	HalX64SetTpr(NewIrql);
+
+	return oldIrql;
+}

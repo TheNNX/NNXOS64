@@ -28,25 +28,59 @@ func HalpGetThreadKernelStack
 
 
 [extern ApicSendEoi]
+[extern KiSetIrql]
+[extern KiGetCurrentThreadLocked]
+[extern KiUnlockThread]
 func HalpTaskSwitchHandler
-    ; TODO: nested interrupts?
-    ; interupts during sheduling and context switching are not desired
-    ; other interupts should be nestable, though
-    ; RFLAGS are already pushed onto the stack, no need to (re)store   
     cli
-    
     cmp QWORD [rsp+8], 0x08
     je .noswap
     swapgs
 .noswap:
-
+    sti
+    ; save the thread register state to the kernel stack
     call PspStoreContextFrom64
+    
+    ; allocate the shadowspace
+    sub rsp, 32
+    
+    ; set the IRQL to DISPATCH_LEVEL
+    ; and store the old IRQL in a non-volatile register
+    mov rcx, 2
+    call KiSetIrql
+    mov rbx, rax
 
-    mov rcx, rsp
-    call PspScheduleThread
-    push QWORD rax
+    call KiGetCurrentThreadLocked
+    mov r13, rax
+
+    ; send an EOI to the APIC
+    ; as such, the only thing that prohibits low-priority interrupts from firing
+    ; is the IRQL
     call ApicSendEoi
-    pop QWORD rcx
+
+    ; free the shadowspace
+    add rsp, 32
+
+    ; select the next thread
+    mov rcx, rsp
+    ; skip the shadowspace 
+    call PspScheduleThread
+    mov r12, rax
+
+    ; allocate the shadowspace
+    sub rsp, 32
+
+    mov rcx, r13
+    call KiUnlockThread
+
+    mov rcx, rbx
+    call KiSetIrql
+
+    ; free the shadowspace
+    add rsp, 32
+
+    ; restore the selected thread state from the saved stack pointer
+    mov rcx, r12
     jmp PspSwitchContextTo64
 
 func PspStoreContextFrom64
@@ -106,7 +140,6 @@ func PspSwitchContextTo64
     ; mov gs, rax
     mov QWORD rax, [rsp]
     mov QWORD rbx, [rsp+8]
-
     mov QWORD rcx, [rsp+16]
     mov QWORD rdx, [rsp+24]
     mov QWORD rbp, [rsp+32]
@@ -122,11 +155,14 @@ func PspSwitchContextTo64
     mov QWORD r15, [rsp+112]
     add rsp, 152
 .return:
+    cli
     cmp QWORD [rsp+8], 0x08
     je .noswap
     swapgs
 .noswap:
+    sti
     iretq
+
 
 func PspTestAsmUser
     jmp $
@@ -166,11 +202,11 @@ func PspSchedulerNext
     mov QWORD [rsp], rax
 
     cli
-    
     cmp QWORD [rsp+8], 0x08
     je .noswap
     swapgs
 .noswap:
+    sti
 
     call PspStoreContextFrom64
     mov rcx, rsp

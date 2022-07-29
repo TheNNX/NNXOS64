@@ -450,6 +450,7 @@ NTSTATUS ObpTestNamespace()
         &globalNamespaceObject,
         NULL
     );
+
     if (status != STATUS_SUCCESS)
         return status;
 
@@ -465,6 +466,7 @@ NTSTATUS ObpTestNamespace()
 
     if (status != STATUS_SUCCESS)
         return status;
+    
 
     /* try opening an invalid object */
     status = ObDirectoryObjectType->ObjectOpen(
@@ -478,6 +480,7 @@ NTSTATUS ObpTestNamespace()
 
     if (status != STATUS_OBJECT_PATH_INVALID)
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, STATUS_OBJECT_PATH_INVALID, 0);
+    
 
     /* try opening a non-existent object */
     status = ObDirectoryObjectType->ObjectOpen(
@@ -508,8 +511,8 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR EntryPoint
 );
 
-#define WORKER_PROCESSES_NUMBER 4
-#define WORKER_THREADS_PER_PROCESS 8
+#define WORKER_PROCESSES_NUMBER 5
+#define WORKER_THREADS_PER_PROCESS 17
 
 UINT NextTesterId = 0;
 KSPIN_LOCK NextTesterIdLock;
@@ -519,7 +522,10 @@ PETHREAD WorkerThreads[WORKER_THREADS_PER_PROCESS * WORKER_PROCESSES_NUMBER];
 KWAIT_BLOCK WaitBlocks[WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS];
 PEPROCESS WorkerProcesses[WORKER_PROCESSES_NUMBER];
 
-static NTSTATUS Test1()
+#include <HAL/X64/IDT.h>
+#include <HAL/pcr.h>
+
+static NTSTATUS Test1(UINT ownId)
 {
     INT i;
     NTSTATUS status;
@@ -528,7 +534,9 @@ static NTSTATUS Test1()
     {
         status = ObpTestNamespace();
         if (status != STATUS_SUCCESS)
+        {
             return status;
+        }
     }
 
     return STATUS_SUCCESS;
@@ -571,20 +579,21 @@ static VOID ObpWorkerThreadFunction()
     UINT ownId;
     KIRQL irql;
     NTSTATUS status;
-    
+
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
     ownId = NextTesterId++;
+    PrintT("Starting worker %i (%X)\n", ownId, KeGetCurrentThread());
     KeReleaseSpinLock(&NextTesterIdLock, irql);
 
-    status = Test1();
+    status = Test1(ownId);
     if (status)
         PsExitThread((DWORD)status);
-
+    
     status = Test2();
     if (status)
         PsExitThread((DWORD)status);
-
+        
     PsExitThread(0);
 }
 
@@ -593,10 +602,11 @@ VOID DiagnosticThread();
 /* @brief this function should be run in a thread */
 NTSTATUS ObpMpTestNamespaceThread()
 {
-    INT i;
+    INT i, j;
     NTSTATUS waitStatus;
     UINT64 __lastMemory, __currentMemory;
     char* __caller;
+    KIRQL irql;
 
     KeInitializeSpinLock(&NextTesterIdLock);
     
@@ -608,12 +618,14 @@ NTSTATUS ObpMpTestNamespaceThread()
 
     for (i = 0; i < WORKER_PROCESSES_NUMBER; i++)
     {
-        INT j;
-
+        KeAcquireSpinLock(&NextTesterIdLock, &irql);
+        
         PspCreateProcessInternal(&WorkerProcesses[i]);
 
         for (j = 0; j < WORKER_THREADS_PER_PROCESS; j++)
         {
+            PrintT("[%i/%i]\n", j + i * WORKER_THREADS_PER_PROCESS + 1, WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS);
+            
             PspCreateThreadInternal(
                 WorkerThreads + j + i * WORKER_THREADS_PER_PROCESS,
                 WorkerProcesses[i],
@@ -626,6 +638,7 @@ NTSTATUS ObpMpTestNamespaceThread()
 
             PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
+        KeReleaseSpinLock(&NextTesterIdLock, irql);
     }
 
     /* wait for all the threads */
@@ -640,13 +653,15 @@ NTSTATUS ObpMpTestNamespaceThread()
         WaitBlocks
     );
 
+
     if (waitStatus != STATUS_SUCCESS)
-        return waitStatus;
+        PsExitThread(waitStatus);
+
 
     for (i = 0; i < WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS; i++)
     {
         if (WorkerThreads[i]->Tcb.ThreadExitCode != STATUS_SUCCESS)
-            return WorkerThreads[i]->Tcb.ThreadExitCode;
+            PsExitThread(WorkerThreads[i]->Tcb.ThreadExitCode);
 
         ObDereferenceObject(WorkerThreads[i]);
     }
@@ -680,7 +695,6 @@ NTSTATUS ObpMpTestNamespace()
         PrintT("NTSTATUS: %X\n", status);
         return status;
     }
-    PrintT("Stuck?\n");
 
     status = PspCreateThreadInternal(&testThread, process, TRUE, (ULONG_PTR)ObpMpTestNamespaceThread);
     if (status != STATUS_SUCCESS)
@@ -688,9 +702,11 @@ NTSTATUS ObpMpTestNamespace()
         PrintT("NTSTATUS: %X\n", status);
         return status;
     }
+    PrintT("Created namespace test thread %X\n", testThread);
 
     testThread->Process->Pcb.BasePriority = 10;
+    testThread->Tcb.ThreadPriority = 5;
     PspInsertIntoSharedQueue(&testThread->Tcb);
-    /* no returning yet */
+
     return STATUS_SUCCESS;
 }
