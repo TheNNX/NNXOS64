@@ -194,6 +194,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
     <ClCompile Include="HAL\X64\IDT.c" />
+    <ClCompile Include="HAL\X64\IOAPIC.CPP" />
     <ClCompile Include="HAL\X64\irql.c" />
     <ClCompile Include="HAL\X64\MP.cpp" />
     <ClCompile Include="HAL\PCI\PCI.c" />

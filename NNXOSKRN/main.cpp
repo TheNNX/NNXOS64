@@ -15,6 +15,7 @@
 #include <nnxver.h>
 #include <ob/object.h>
 #include <pool.h>
+#include <device/Keyboard.h>
 
 int basicallyATest = 0;
 
@@ -123,6 +124,7 @@ extern "C"
 		ACPI_MADT* madt = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
 
 		ApicInit(madt);
+		KeyboardInitialize();
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 
 		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);

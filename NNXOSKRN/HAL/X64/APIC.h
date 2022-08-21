@@ -6,6 +6,41 @@
 
 #ifdef __cplusplus
 #include "../ACPI/AMLCPP.h"
+#include <HAL/spinlock.h>
+#include <nnxlog.h>
+
+class IoApic
+{
+	/* public functions */
+public:
+	IoApic(volatile UINT32* base, UINT32 interruptBase);
+	BYTE GetID();
+	BOOL MaskIrq(UINT32 irqn);
+	BOOL UnmaskIrq(UINT32 irqn);
+	BOOL InterruptRangeCheck(UINT32 irqn);
+	UINT64 ReadRedirectionEntry(const UINT32 irqNumber);
+	VOID WriteRedirectionEntry(const UINT32 irqNumber, UINT64 entry);
+
+	/* public variables */
+public:
+	NNXLogger* logger = NULL;
+
+	/* private functions */
+private:
+	VOID WriteRegister(const UINT8 offset, const UINT32 value);
+	UINT32 ReadRegister(const UINT8 offset);
+
+	/* private variables */
+private:
+	UINT32 InterruptBase;
+	UINT32 RedirectionEntriesCount;
+	volatile UINT32* IoApicBasePhys;
+	volatile UINT32* IoApicBase;
+	BYTE Id;
+	KSPIN_LOCK Lock = { 0 };
+	KIRQL Irql = 0;
+};
+
 extern "C" {
 #endif
 	/* Functions accessible from both C and C++ */
@@ -34,6 +69,8 @@ extern "C" {
 #define LAPIC_ID_REGISTER_OFFSET					0x20
 #define LAPIC_TASK_PRIORITY_REGISTER_OFFSET			0x80
 #define LAPIC_EOI_REGISTER_OFFSET                   0xB0
+#define LAPIC_LOGICAL_DESTINATION_REGISTER			0xD0
+#define LAPIC_DESTINATION_FORMAT_REGISTER			0xE0
 #define LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET	0xF0
 #define LAPIC_ERROR_REGISTER_OFFSET					0x280
 #define	LAPIC_ICR1_REGISTER_OFFSET					0x300

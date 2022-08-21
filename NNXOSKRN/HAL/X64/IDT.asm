@@ -69,6 +69,8 @@ Exception%1:
 %macro irq 1
 [GLOBAL IRQ%1]
 IRQ%1:
+	cli
+	hlt
 	pushstate
 	xchg bx, bx
 	mov rcx, %1
