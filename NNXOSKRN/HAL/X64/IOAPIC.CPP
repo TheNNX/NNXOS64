@@ -39,6 +39,7 @@ BOOL IoApic::MaskIrq(UINT32 irqn)
 
 	UINT64 entry = ReadRedirectionEntry(irqn);
 	entry |= ((1ULL << 16ULL));
+	WriteRedirectionEntry(irqn, entry);
 
 	return TRUE;
 }
@@ -52,6 +53,7 @@ BOOL IoApic::UnmaskIrq(UINT32 irqn)
 
 	UINT64 entry = ReadRedirectionEntry(irqn);
 	entry &= ~((1ULL << 16ULL));
+	WriteRedirectionEntry(irqn, entry);
 
 	return TRUE;
 }
@@ -92,6 +94,7 @@ UINT32 IoApic::ReadRegister(const UINT8 offset)
 UINT64 IoApic::ReadRedirectionEntry(const UINT32 irqNumber)
 {
 	DWORD lowDword, highDword;
+
 	lowDword = ReadRegister(0x10 + irqNumber * 2);
 	highDword = ReadRegister(0x10 + irqNumber * 2 + 1);
 

@@ -124,6 +124,7 @@ extern "C"
 		ACPI_MADT* madt = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
 
 		ApicInit(madt);
+
 		KeyboardInitialize();
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 

@@ -44,7 +44,7 @@ extern "C"
 			IoApic* ioApic = IoApics[i];
 			if (ioApic->InterruptRangeCheck(IsaIrqGsiMapping[Irqn]))
 			{
-				ioApic->WriteRedirectionEntry(IsaIrqGsiMapping[Irqn], ((UINT64)TargetVector) | 0xFF00000000000900ULL);
+				ioApic->WriteRedirectionEntry(IsaIrqGsiMapping[Irqn], ((UINT64)TargetVector) | 0x0100000000000900ULL);
 				return TRUE;
 			}
 		}
@@ -253,7 +253,7 @@ extern "C"
 	VOID ApicLocalApicInitializeCore()
 	{
 		ApicLocalApicWriteRegister(LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET, 0x1FF);
-		
+
 		if (!ApicBspLapicInitialized)
 		{
 			HalpTimerTicksPerSecond = ApicTestTimer();

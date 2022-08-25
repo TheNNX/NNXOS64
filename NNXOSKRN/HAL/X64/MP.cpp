@@ -101,6 +101,8 @@ extern "C" {
 			}
 		}
 
+		HalpSetupPcrForCurrentCpu(currentLapicId);
+
 		status = PspInitializeCore(currentLapicId);
 		PrintT("PspInitializeCore NTSTATUS: %X\n", status);
 		if (status)
@@ -112,7 +114,6 @@ extern "C" {
 	VOID ApProcessorInit(UINT8 lapicId)
 	{
 		NTSTATUS status;
-
 
 		/* same story as the BP */
 		KPCR dummyPcr = { 0 };
@@ -128,9 +129,9 @@ extern "C" {
 		if (status)
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 
-		/*
-			shouldn't get here anyway 
-		*/
+		/**
+		 * shouldn't get here anyway 
+		 */
 		KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, 0, 0, 0, 0);
 	}
 }

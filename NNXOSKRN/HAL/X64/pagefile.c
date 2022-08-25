@@ -15,7 +15,7 @@ VFS_FILE* PageFile;
 PBYTE PageFileMap;
 
 static
-VOID
+BOOL
 PagingSetPageFileMapBit(
     ULONG_PTR pageFilePageIndex,
     BOOL value
@@ -55,11 +55,11 @@ PagingInitializePageFile(
 
     PageFileMap = ExAllocatePoolWithTag(
         NonPagedPool,
-        sizeof(*PageFileMap) * PageFileSize, 
+        sizeof(*PageFileMap) * pageFileNumberOfPages / 8,
         'MMGR'
     );
 
-    RtlZeroMemory(PageFileMap, sizeof(*PageFileMap) * PageFileSize);
+    RtlZeroMemory(PageFileMap, sizeof(*PageFileMap) * pageFileNumberOfPages / 8);
     return STATUS_SUCCESS;
 }
 
@@ -73,11 +73,12 @@ PagingSelectPageFilePageIndex()
     if (PageFileLock == 0)
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
-    for (currentCheckedIndex = 0; currentCheckedIndex < PageFileSize / PAGE_SIZE; currentCheckedIndex++)
+    for (currentCheckedIndex = 1; currentCheckedIndex < PageFileSize / PAGE_SIZE; currentCheckedIndex++)
     {
         if (PagingGetPageFileMapBit(currentCheckedIndex) == 0)
         {
-            PagingSetPageFileMapBit(currentCheckedIndex, TRUE);
+            if (PagingSetPageFileMapBit(currentCheckedIndex, TRUE) == FALSE)
+                return -1;
             return currentCheckedIndex;
         }
     }
@@ -86,7 +87,7 @@ PagingSelectPageFilePageIndex()
 }
 
 static
-VOID
+BOOL
 PagingSetPageFileMapBit(
     ULONG_PTR pageFilePageIndex,
     BOOL value
@@ -99,12 +100,18 @@ PagingSetPageFileMapBit(
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     containingCellOffset = pageFilePageIndex / (sizeof(*PageFileMap) * 8);
+    if (containingCellOffset > PageFileSize / PAGE_SIZE / 8)
+    {
+        return FALSE;
+    }
     bitNumber = pageFilePageIndex % (sizeof(*PageFileMap) * 8);
 
     if (value == FALSE)
         PageFileMap[containingCellOffset] &= ~(1 << bitNumber);
     else
         PageFileMap[containingCellOffset] |= (1 << bitNumber);
+
+    return TRUE;
 }
 
 static
@@ -120,6 +127,10 @@ PagingGetPageFileMapBit(
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     containingCellOffset = pageFilePageIndex / (sizeof(*PageFileMap) * 8);
+    if (containingCellOffset > PageFileSize / PAGE_SIZE / 8)
+    {
+        return FALSE;
+    }
     bitNumber = pageFilePageIndex % (sizeof(*PageFileMap) * 8);
 
     return (PageFileMap[containingCellOffset] & (1 << bitNumber));
@@ -216,11 +227,11 @@ PagingPageInPage(
     USHORT originalFlags;
     NTSTATUS status;
     KIRQL irql;
-
+ 
     KeAcquireSpinLock(&PageFileLock, &irql);
 
     /* get the temp page-file page mapping */
-    tempMapping = PagingGetCurrentMapping(virtualAddress);
+    tempMapping = PagingGetCurrentMapping(virtualAddress & PAGE_ADDRESS_MASK);
     /* get the old flags (but clear the present flag) */
     originalFlags = (tempMapping & 0xFFF) & (~PAGE_PRESENT);
     tempMapping &= (~0xFFF);
@@ -269,7 +280,7 @@ PageFaultHandler(
             (ULONG_PTR)errcode,
             (ULONG_PTR)rip,
             (ULONG_PTR)n,
-            (ULONG_PTR)0
+            (ULONG_PTR)KeGetCurrentIrql()
         );
     }
 

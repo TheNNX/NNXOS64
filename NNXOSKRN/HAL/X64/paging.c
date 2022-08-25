@@ -225,17 +225,17 @@ PagingGetCurrentMapping(
 
     if (!(cRecursivePagingPML4Base[pml4Index]))
     {
-        return -1;
+        return 0;
     }
 
     if (!(cRecursivePagingPDPsBase[pdpIndex]))
     {
-        return -1;
+        return 0;
     }
 
     if (!(cRecursivePagingPDsBase[pdIndex]))
     {
-        return -1;
+        return 0;
     }
 
     return (ULONG_PTR)cRecursivePagingPTsBase[ptIndex];

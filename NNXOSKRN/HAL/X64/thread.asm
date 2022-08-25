@@ -160,7 +160,6 @@ func PspSwitchContextTo64
     je .noswap
     swapgs
 .noswap:
-    sti
     iretq
 
 

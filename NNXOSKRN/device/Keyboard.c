@@ -1,7 +1,7 @@
 #include "device/Keyboard.h"
 #include <SimpleTextIo.h>
 #include <HAL/Port.h>
-
+#include <HAL/X64/APIC.h>
 
 
 KEY_STATE state;
@@ -140,7 +140,7 @@ UINT8 SpecialKey()
 	return NULL;
 }
 
-UINT8 KeyboardInterrupt()
+UINT8 GetKeyOnInterrupt()
 {
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
@@ -167,6 +167,14 @@ UINT8 KeyboardInterrupt()
 		return 0;
 	key = ScancodeSet2Keys[scancode];
 	return key(0);
+}
+
+UINT8 KeyboardInterrupt()
+{
+	char k = GetKeyOnInterrupt();
+	if (k)
+		PrintT("%c", k);
+	return  k;
 }
 
 UINT8 GetScancodeSet()

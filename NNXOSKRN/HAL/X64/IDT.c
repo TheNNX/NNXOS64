@@ -91,6 +91,8 @@ KIDTENTRY64* HalpAllocateAndInitializeIdt()
 
 VOID IrqHandler(UINT64 a)
 {
+	if (a == 1)
+		KeyboardInterrupt();
 }
 
 /* TODO: move code below to GDT.c */

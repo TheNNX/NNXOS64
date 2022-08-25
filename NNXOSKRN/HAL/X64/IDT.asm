@@ -39,6 +39,22 @@
 	pop rdx
 %endmacro
 
+%macro pushvol 0
+	push rax
+	push r10
+	push r11
+	; push xmm4
+	; push xmm5
+%endmacro
+
+%macro popvol 0
+	; pop xmm5
+	; pop xmm4
+	pop r11
+	pop r10
+	pop rax
+%endmacro
+
 %macro exception_error 1
 [GLOBAL Exception%1]
 Exception%1:
@@ -66,16 +82,34 @@ Exception%1:
 	iretq
 %endmacro
 
+[extern ApicSendEoi]
 %macro irq 1
 [GLOBAL IRQ%1]
 IRQ%1:
-	cli
-	hlt
+    cli
+    cmp QWORD [rsp+8], 0x08
+    je .noswap
+    swapgs
+.noswap:
+    sti
+
 	pushstate
-	xchg bx, bx
+
 	mov rcx, %1
+
+	sub rsp, 32
 	call IrqHandlerInternal
+	call ApicSendEoi
+	add rsp, 32
+
 	popstate
+
+	cli
+    cmp QWORD [rsp+8], 0x08
+    je .noswap2
+    swapgs
+.noswap2:
+    sti
 	iretq
 %endmacro
 
@@ -135,14 +169,30 @@ exception_error 30
 
 [extern PageFaultHandler]
 func Exception14
+	cli
+    cmp QWORD [rsp+8], 0x08
+    je .noswap
+    swapgs
+.noswap:
+    sti
+
 	pushstate
+	sub rsp, 32
 	mov rcx, 14
-	mov rdx, [rsp+120]
+	mov rdx, [rsp+56]
 	xor r8, r8
-	mov r9, [rsp+128]
+	mov r9, [rsp+64]
 	call PageFaultHandler
-	jmp $
+	add rsp, 32
 	popstate
+
+	cli
+    cmp QWORD [rsp+8], 0x08
+    je .noswap2
+    swapgs
+.noswap2:
+    sti
+
 	add rsp, 8
 	iretq
 
@@ -152,7 +202,9 @@ exception_error 0xffffffffffffffff
 
 [EXTERN IrqHandler]
 func IrqHandlerInternal
+	sub rsp, 32
 	call IrqHandler
+	add rsp, 32
 	ret
 
 irq 1
