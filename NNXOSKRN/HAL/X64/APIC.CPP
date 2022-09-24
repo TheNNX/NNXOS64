@@ -9,6 +9,7 @@
 #include "PIT.h"
 #include "../spinlock.h"
 #include <HAL/cpu.h>
+#include <rtl/rtl.h>
 
 extern "C" 
 {
@@ -29,130 +30,6 @@ extern "C"
 	VOID KiEnableInterrupts();
 }
 
-class IoApic
-{
-
-/* public functions */
-public:
-	IoApic(volatile UINT32* base, UINT32 interruptBase)
-	{
-		KeInitializeSpinLock(&Lock);
-		this->IoApicBasePhys = base;
-		this->InterruptBase = interruptBase;
-		
-		this->IoApicBase = (volatile UINT32*)PagingAllocatePageBlockWithPhysicalAddresses(
-			2,
-			PAGING_KERNEL_SPACE,
-			PAGING_KERNEL_SPACE_END,
-			PAGE_WRITE | PAGE_PRESENT | PAGE_NO_CACHE,
-			((ULONG_PTR) IoApicBasePhys) & PAGE_SIZE
-		);
-		
-		this->IoApicBase = (volatile UINT32*) (((UINT64)this->IoApicBase) + (((UINT64)IoApicBasePhys) & PAGE_SIZE));
-		this->Id = (ReadRegister(0x00) >> 24) & 0xF0;
-		this->RedirectionEntriesCount = (ReadRegister(0x01) >> 16) + 1;
-
-		/* mask all external interrupts */
-		for (UINT32 i = 0; i < this->RedirectionEntriesCount; i++)
-		{
-			MaskIrq(this->InterruptBase + i);
-		}
-	}
-
-	BYTE GetID()
-	{
-		return this->Id;
-	}
-
-	BOOL MaskIrq(UINT32 irqn)
-	{
-		if (!this->InterruptRangeCheck(irqn))
-			return FALSE;
-
-		irqn -= this->InterruptBase;
-
-		UINT64 entry = ReadRedirectionEntry(irqn);
-		entry |= ((1ULL << 16ULL));
-
-		return TRUE;
-	}
-
-	BOOL UnmaskIrq(UINT32 irqn)
-	{
-		if (!this->InterruptRangeCheck(irqn))
-			return FALSE;
-
-		irqn -= this->InterruptBase;
-
-		UINT64 entry = ReadRedirectionEntry(irqn);
-		entry &= ~((1ULL << 16ULL));
-
-		return TRUE;
-	}
-
-	BOOL InterruptRangeCheck(UINT32 irqn)
-	{
-		if (irqn < this->InterruptBase)
-			return FALSE;
-
-		irqn -= this->InterruptBase;
-
-		if (irqn >= this->RedirectionEntriesCount)
-			return FALSE;
-
-		return TRUE;
-	}
-/* public variables */
-public:
-	NNXLogger* logger = NULL;
-/* private functions */
-private:
-	VOID WriteRegister(const UINT8 offset, const UINT32 value)
-	{
-		KeAcquireSpinLock(&this->Lock, &this->Irql);
-		*((volatile UINT32*) (IoApicBase)) = offset;
-		*((volatile UINT32*) (IoApicBase + 0x10)) = value;
-		KeReleaseSpinLock(&this->Lock, this->Irql);
-	}
-
-	UINT32 ReadRegister(const UINT8 offset)
-	{
-		UINT32 result;
-
-		KeAcquireSpinLock(&this->Lock, &this->Irql);
-		*((volatile UINT32*) (IoApicBase)) = offset;
-		result = *((volatile UINT32*) (IoApicBase + 0x10));
-		KeReleaseSpinLock(&this->Lock, this->Irql);
-
-		return result;
-	}
-
-	UINT64 ReadRedirectionEntry(const UINT32 irqNumber)
-	{
-		DWORD lowDword, highDword;
-		lowDword = ReadRegister(0x10 + irqNumber * 2);
-		highDword = ReadRegister(0x10 + irqNumber * 2 + 1);
-
-		return (((UINT64)lowDword) | (((UINT64)highDword) << 32ULL));
-	}
-
-	VOID WriteRedirectionEntry(const UINT32 irqNumber, UINT64 entry)
-	{
-		WriteRegister(0x10 + irqNumber * 2, entry & 0xFFFFFFFFUL);
-		WriteRegister(0x10 + irqNumber * 2 + 1, (entry >> 32ULL) & 0xFFFFFFFFUL);
-	}
-
-/* private variables */
-private:
-	UINT32 InterruptBase;
-	UINT32 RedirectionEntriesCount;
-	volatile UINT32* IoApicBasePhys;
-	volatile UINT32* IoApicBase;
-	BYTE Id;
-	KSPIN_LOCK Lock = { 0 };
-	KIRQL Irql = 0;
-};
-
 IoApic** IoApics;
 UINT64 IoApicCount;
 
@@ -162,14 +39,35 @@ extern "C"
 	ULONG_PTR KiCyclesPerClockQuantum;
 	ULONG_PTR KiCyclesPerQuantum;
 
+	BOOLEAN ApicInitIsaIrq(DWORD* IsaIrqGsiMapping, BYTE Irqn, BYTE TargetVector)
+	{
+		for (int i = 0; i < IoApicCount; i++)
+		{
+			IoApic* ioApic = IoApics[i];
+			if (ioApic->InterruptRangeCheck(IsaIrqGsiMapping[Irqn]))
+			{
+				ioApic->WriteRedirectionEntry(IsaIrqGsiMapping[Irqn], ((UINT64)TargetVector) | 0x0100000000000900ULL);
+				return TRUE;
+			}
+		}
+
+		return FALSE;
+	}
+
 	VOID ApicInit(ACPI_MADT* madt)
 	{
 		UINT64 i = 0, currentLocalApicIdIndex = 0, currentIoApicIndex = 0;
 		UINT8* currentPointer = (UINT8*)&(madt->InteruptControlerStruct);
 		NNXLogger* logger = new NNXLogger(VfsGetSystemVfs()->Functions.OpenOrCreateFile(VfsGetSystemVfs(), (char*)"APICLOG.TXT"), false);
         
+		DWORD irqSourceToGsiMapping[256];
+		
+		for (i = 0; i < 256; i++)
+		{
+			irqSourceToGsiMapping[i] = (DWORD)i;
+		}
 
-		logger->Log("LAPIC initialization started\n");
+		logger->Log("APIC initialization started\n");
 
 		ApicLocalApicBase = madt->LapicBase32;
 
@@ -195,6 +93,8 @@ extern "C"
 				ACPI_MADT_SOURCE_OVERRIDE* sourceOverride = (ACPI_MADT_SOURCE_OVERRIDE*) madtEntry;
 				logger->Log("Interrupt mapping: %x.%x -> %x, flags %x\n",
 					(UINT64) sourceOverride->Bus, (UINT64) sourceOverride->Source, (UINT64) sourceOverride->GlobalSystemInterrupt, (UINT64) sourceOverride->Flags);
+				
+				irqSourceToGsiMapping[sourceOverride->Source] = sourceOverride->GlobalSystemInterrupt;
 			}
 			else if (type == ACPI_MADT_TYPE_IOAPIC_NMI_SOURCE)
 			{
@@ -250,6 +150,8 @@ extern "C"
 
 			i += madtEntry->Length;
 		}
+
+		ApicInitIsaIrq(irqSourceToGsiMapping, 1, 33);
 
 		PicDisableForApic();
 
@@ -353,7 +255,7 @@ extern "C"
 	VOID ApicLocalApicInitializeCore()
 	{
 		ApicLocalApicWriteRegister(LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET, 0x1FF);
-		
+
 		if (!ApicBspLapicInitialized)
 		{
 			HalpTimerTicksPerSecond = ApicTestTimer();
@@ -368,5 +270,8 @@ extern "C"
 
 		ApicNumberOfCoresInitialized++;
 		KeNumberOfProcessors = ApicNumberOfCoresInitialized;
+
+		ApicLocalApicWriteRegister(LAPIC_DESTINATION_FORMAT_REGISTER, 0xFFFFFFFFUL);
+		ApicLocalApicWriteRegister(LAPIC_LOGICAL_DESTINATION_REGISTER, 0xFF000000UL);
 	}
 }

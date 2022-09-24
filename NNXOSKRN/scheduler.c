@@ -431,6 +431,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     PspInitializeCoreSchedulerData(CoreNumber);
 
     pPcr = KeGetPcr();
+    PrintT("PCR core %i : %X\n", CoreNumber, pPcr);
     pPrcb = pPcr->Prcb;
     KeAcquireSpinLockAtDpcLevel(&pPrcb->Lock);
 #pragma warning(disable: 6011)
@@ -450,25 +451,26 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
-      //  PETHREAD userThread;
+        PETHREAD userThread;
 
         NTSTATUS ObpMpTest();
         VOID TestUserThread();
 
         status = ObpMpTest();
 
-        /*PspCreateThreadInternal(
+        PspCreateThreadInternal(
             &userThread,
             (PEPROCESS)pPrcb->IdleThread->Process,
             FALSE,
             (ULONG_PTR)TestUserThread
         );
 
-        userThread->Tcb.ThreadPriority = 10;
+        userThread->Tcb.ThreadPriority = 1;
         PspInsertIntoSharedQueue((PKTHREAD)userThread);
-    */
     }
-    
+
+    PKTASK_STATE pTaskState = pPrcb->IdleThread->KernelStackPointer;
+    PagingSetAddressSpace(pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
     DisableInterrupts();
     KeLowerIrql(0);
     PspSwitchContextTo64(pPrcb->IdleThread->KernelStackPointer);
@@ -797,7 +799,7 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     else
         userstack = (ULONG_PTR)PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END);
 
-    userstack += (ULONG_PTR)PAGE_SIZE;;
+    userstack += PAGE_SIZE;
 
     PagingSetAddressSpace(originalAddressSpace);
 

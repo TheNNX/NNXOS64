@@ -2,6 +2,10 @@
 #define NNX_KEYBOARD_HEADER
 #include <nnxtype.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define KEYBOARD_PORT 0x60
 #define KEYBOARD_COMMAND_PORT 0x64
 #define KB_ACK 0xFA
@@ -143,8 +147,8 @@
 #define K_BACKSLASH 0xdc
 #define K_QUOTE 0xde
 
-struct KEY_STATE;
-extern struct KEY_STATE state;
+	struct KEY_STATE;
+	extern struct KEY_STATE state;
 
 #define keyname(x) Key ## x
 #define KEY(name,numval,baseChar,shiftChar,capsChar,shiftCapsChar) UINT8 keyname(name)(UINT8 released){\
@@ -183,330 +187,335 @@ extern struct KEY_STATE state;
 }
 
 
-extern UINT8(*ScancodeSet2Keys[])();
+	extern UINT8(*ScancodeSet2Keys[])();
 
-extern UINT8 ScancodeSet;
+	extern UINT8 ScancodeSet;
 
-VOID KeyboardInitialize();
-UINT8 KeyboardInterrupt();
-UINT8 GetScancodeSet();
-UINT8 SetScancodeSet(UINT8);
+	VOID KeyboardInitialize();
+	UINT8 KeyboardInterrupt();
+	UINT8 GetScancodeSet();
+	UINT8 SetScancodeSet(UINT8);
 
 #pragma pack(push, 1)
-//designed to be compatible with MS virtual key mappings
-typedef struct KEY_STATE
-{
-	union
+	//designed to be compatible with MS virtual key mappings
+	typedef struct KEY_STATE
 	{
-		UINT8 KeyState[256];
-		struct
+		union
 		{
-			UINT8 KEY00;
-			UINT8 LBUTTON;
-			UINT8 RBUTTON;
-			UINT8 CANCEL;
-			UINT8 MBUTTON;
-			UINT8 KEY05;
-			UINT8 KEY06;
-			UINT8 KEY07;
-			UINT8 BACK;
-			UINT8 TAB;
-			UINT8 KEY0A;
-			UINT8 KEY0B;
-			UINT8 CLEAR;
-			union
+			UINT8 KeyState[256];
+			struct
 			{
-				UINT8 RETURN;
-				UINT8 ENTER;
-			};
-			UINT8 KEY0E;
-			UINT8 KEY0F;
-			UINT8 SHIFT;
-			UINT8 CONTROL;
-			union
-			{
-				UINT8 ALT;
-				UINT8 MENU;
-			};
-			UINT8 PAUSE;
-			union
-			{
-				UINT8 CAPSLOCK;
-				UINT8 CAPITAL;
-			};
-			UINT8 KEY15;
-			UINT8 KEY16;
-			UINT8 KEY17;
-			UINT8 KEY18;
-			UINT8 KEY19;
-			UINT8 KEY1A;
-			UINT8 ESCAPE;
-			UINT8 CONVERT;
-			UINT8 NONCONVERT;
-			UINT8 ACCEPT;
-			UINT8 MODECHANGE;
-			UINT8 SPACE;
-			UINT8 PRIOR;
-			UINT8 NEXT;
-			UINT8 END;
-			UINT8 HOME;
-			UINT8 LEFT;
-			UINT8 UP;
-			UINT8 RIGHT;
-			UINT8 DOWN;
-			UINT8 SELECT;
-			UINT8 PRINT;
-			UINT8 EXECUTE;
-			UINT8 SNAPSHOT;
-			UINT8 INSERT;
-			UINT8 DELETE;
-			UINT8 HELP;
-			union
-			{
-				UINT8 NUMBERS[10];
-				struct
+				UINT8 KEY00;
+				UINT8 LBUTTON;
+				UINT8 RBUTTON;
+				UINT8 CANCEL;
+				UINT8 MBUTTON;
+				UINT8 KEY05;
+				UINT8 KEY06;
+				UINT8 KEY07;
+				UINT8 BACK;
+				UINT8 TAB;
+				UINT8 KEY0A;
+				UINT8 KEY0B;
+				UINT8 CLEAR;
+				union
 				{
-					UINT8 NUMBER0;
-					UINT8 NUMBER1;
-					UINT8 NUMBER2;
-					UINT8 NUMBER3;
-					UINT8 NUMBER4;
-					UINT8 NUMBER5;
-					UINT8 NUMBER6;
-					UINT8 NUMBER7;
-					UINT8 NUMBER8;
-					UINT8 NUMBER9;
+					UINT8 RETURN;
+					UINT8 ENTER;
+				};
+				UINT8 KEY0E;
+				UINT8 KEY0F;
+				UINT8 SHIFT;
+				UINT8 CONTROL;
+				union
+				{
+					UINT8 ALT;
+					UINT8 MENU;
+				};
+				UINT8 PAUSE;
+				union
+				{
+					UINT8 CAPSLOCK;
+					UINT8 CAPITAL;
+				};
+				UINT8 KEY15;
+				UINT8 KEY16;
+				UINT8 KEY17;
+				UINT8 KEY18;
+				UINT8 KEY19;
+				UINT8 KEY1A;
+				UINT8 ESCAPE;
+				UINT8 CONVERT;
+				UINT8 NONCONVERT;
+				UINT8 ACCEPT;
+				UINT8 MODECHANGE;
+				UINT8 SPACE;
+				UINT8 PRIOR;
+				UINT8 NEXT;
+				UINT8 END;
+				UINT8 HOME;
+				UINT8 LEFT;
+				UINT8 UP;
+				UINT8 RIGHT;
+				UINT8 DOWN;
+				UINT8 SELECT;
+				UINT8 PRINT;
+				UINT8 EXECUTE;
+				UINT8 SNAPSHOT;
+				UINT8 INSERT;
+				UINT8 DELETE;
+				UINT8 HELP;
+				union
+				{
+					UINT8 NUMBERS[10];
+					struct
+					{
+						UINT8 NUMBER0;
+						UINT8 NUMBER1;
+						UINT8 NUMBER2;
+						UINT8 NUMBER3;
+						UINT8 NUMBER4;
+						UINT8 NUMBER5;
+						UINT8 NUMBER6;
+						UINT8 NUMBER7;
+						UINT8 NUMBER8;
+						UINT8 NUMBER9;
 
+					};
 				};
-			};
-			UINT8 KEY3A;
-			UINT8 KEY3B;
-			UINT8 KEY3C;
-			UINT8 KEY3D;
-			UINT8 KEY3E;
-			UINT8 KEY3F;
-			UINT8 KEY40;
-			union
-			{
-				UINT8 LETTERS[26];
-				struct
+				UINT8 KEY3A;
+				UINT8 KEY3B;
+				UINT8 KEY3C;
+				UINT8 KEY3D;
+				UINT8 KEY3E;
+				UINT8 KEY3F;
+				UINT8 KEY40;
+				union
 				{
-					UINT8 LETTER_A;
-					UINT8 LETTER_B;
-					UINT8 LETTER_C;
-					UINT8 LETTER_D;
-					UINT8 LETTER_E;
-					UINT8 LETTER_F;
-					UINT8 LETTER_G;
-					UINT8 LETTER_H;
-					UINT8 LETTER_I;
-					UINT8 LETTER_J;
-					UINT8 LETTER_K;
-					UINT8 LETTER_L;
-					UINT8 LETTER_M;
-					UINT8 LETTER_N;
-					UINT8 LETTER_O;
-					UINT8 LETTER_P;
-					UINT8 LETTER_Q;
-					UINT8 LETTER_R;
-					UINT8 LETTER_S;
-					UINT8 LETTER_T;
-					UINT8 LETTER_U;
-					UINT8 LETTER_V;
-					UINT8 LETTER_W;
-					UINT8 LETTER_X;
-					UINT8 LETTER_Y;
-					UINT8 LETTER_Z;
+					UINT8 LETTERS[26];
+					struct
+					{
+						UINT8 LETTER_A;
+						UINT8 LETTER_B;
+						UINT8 LETTER_C;
+						UINT8 LETTER_D;
+						UINT8 LETTER_E;
+						UINT8 LETTER_F;
+						UINT8 LETTER_G;
+						UINT8 LETTER_H;
+						UINT8 LETTER_I;
+						UINT8 LETTER_J;
+						UINT8 LETTER_K;
+						UINT8 LETTER_L;
+						UINT8 LETTER_M;
+						UINT8 LETTER_N;
+						UINT8 LETTER_O;
+						UINT8 LETTER_P;
+						UINT8 LETTER_Q;
+						UINT8 LETTER_R;
+						UINT8 LETTER_S;
+						UINT8 LETTER_T;
+						UINT8 LETTER_U;
+						UINT8 LETTER_V;
+						UINT8 LETTER_W;
+						UINT8 LETTER_X;
+						UINT8 LETTER_Y;
+						UINT8 LETTER_Z;
+					};
 				};
-			};
-			UINT8 LWIN;
-			UINT8 RWIN;
-			UINT8 APPS;
-			UINT8 KEY5E;
-			UINT8 SLEEP;
-			union
-			{
-				UINT8 NUMPAD[10];
-				struct
+				UINT8 LWIN;
+				UINT8 RWIN;
+				UINT8 APPS;
+				UINT8 KEY5E;
+				UINT8 SLEEP;
+				union
 				{
-					UINT8 NUMPAD0;
-					UINT8 NUMPAD1;
-					UINT8 NUMPAD2;
-					UINT8 NUMPAD3;
-					UINT8 NUMPAD4;
-					UINT8 NUMPAD5;
-					UINT8 NUMPAD6;
-					UINT8 NUMPAD7;
-					UINT8 NUMPAD8;
-					UINT8 NUMPAD9;
+					UINT8 NUMPAD[10];
+					struct
+					{
+						UINT8 NUMPAD0;
+						UINT8 NUMPAD1;
+						UINT8 NUMPAD2;
+						UINT8 NUMPAD3;
+						UINT8 NUMPAD4;
+						UINT8 NUMPAD5;
+						UINT8 NUMPAD6;
+						UINT8 NUMPAD7;
+						UINT8 NUMPAD8;
+						UINT8 NUMPAD9;
+					};
 				};
-			};
-			UINT8 MULTIPLY;
-			UINT8 ADD;
-			UINT8 SEPARATOR;
-			UINT8 SUBTRACT;
-			UINT8 DECIMAL;
-			UINT8 DIVIDE;
-			union
-			{
-				UINT8 FUNCTION[24];
-				struct
+				UINT8 MULTIPLY;
+				UINT8 ADD;
+				UINT8 SEPARATOR;
+				UINT8 SUBTRACT;
+				UINT8 DECIMAL;
+				UINT8 DIVIDE;
+				union
 				{
-					UINT8 F1;
-					UINT8 F2;
-					UINT8 F3;
-					UINT8 F4;
-					UINT8 F5;
-					UINT8 F6;
-					UINT8 F7;
-					UINT8 F8;
-					UINT8 F9;
-					UINT8 F10;
-					UINT8 F11;
-					UINT8 F12;
-					UINT8 F13;
-					UINT8 F14;
-					UINT8 F15;
-					UINT8 F16;
-					UINT8 F17;
-					UINT8 F18;
-					UINT8 F19;
-					UINT8 F20;
-					UINT8 F21;
-					UINT8 F22;
-					UINT8 F23;
-					UINT8 F24;
+					UINT8 FUNCTION[24];
+					struct
+					{
+						UINT8 F1;
+						UINT8 F2;
+						UINT8 F3;
+						UINT8 F4;
+						UINT8 F5;
+						UINT8 F6;
+						UINT8 F7;
+						UINT8 F8;
+						UINT8 F9;
+						UINT8 F10;
+						UINT8 F11;
+						UINT8 F12;
+						UINT8 F13;
+						UINT8 F14;
+						UINT8 F15;
+						UINT8 F16;
+						UINT8 F17;
+						UINT8 F18;
+						UINT8 F19;
+						UINT8 F20;
+						UINT8 F21;
+						UINT8 F22;
+						UINT8 F23;
+						UINT8 F24;
+					};
 				};
+				UINT8 KEY88;
+				UINT8 KEY89;
+				UINT8 KEY8A;
+				UINT8 KEY8B;
+				UINT8 KEY8C;
+				UINT8 KEY8D;
+				UINT8 KEY8E;
+				UINT8 KEY8F;
+				UINT8 NUMLOCK;
+				UINT8 SCROLL;
+				UINT8 NEC_EQUALS;
+				UINT8 KEY93;
+				UINT8 KEY94;
+				UINT8 KEY95;
+				UINT8 KEY96;
+				UINT8 KEY97;
+				UINT8 KEY98;
+				UINT8 KEY99;
+				UINT8 KEY9A;
+				UINT8 KEY9B;
+				UINT8 KEY9C;
+				UINT8 KEY9D;
+				UINT8 KEY9E;
+				UINT8 KEY9F;
+				UINT8 LSHIFT;
+				UINT8 RSHIFT;
+				UINT8 LCONTROL;
+				UINT8 RCONTROL;
+				UINT8 LMENU;
+				UINT8 RMENU;
+				UINT8 KEYA6;
+				UINT8 KEYA7;
+				UINT8 KEYA8;
+				UINT8 KEYA9;
+				UINT8 KEYAA;
+				UINT8 KEYAB;
+				UINT8 KEYAC;
+				UINT8 KEYAD;
+				UINT8 KEYAE;
+				UINT8 KEYAF;
+				UINT8 KEYB0;
+				UINT8 KEYB1;
+				UINT8 KEYB2;
+				UINT8 KEYB3;
+				UINT8 KEYB4;
+				UINT8 KEYB5;
+				UINT8 KEYB6;
+				UINT8 KEYB7;
+				UINT8 KEYB8;
+				UINT8 KEYB9;
+				UINT8 SEMICOLON;
+				UINT8 PLUS;
+				UINT8 COMMA;
+				UINT8 MINUS;
+				UINT8 PERIOD;
+				UINT8 SLASH;
+				UINT8 BACKTICK;
+				UINT8 KEYC1;
+				UINT8 KEYC2;
+				UINT8 KEYC3;
+				UINT8 KEYC4;
+				UINT8 KEYC5;
+				UINT8 KEYC6;
+				UINT8 KEYC7;
+				UINT8 KEYC8;
+				UINT8 KEYC9;
+				UINT8 KEYCA;
+				UINT8 KEYCB;
+				UINT8 KEYCC;
+				UINT8 KEYCD;
+				UINT8 KEYCE;
+				UINT8 KEYCF;
+				UINT8 KEYD0;
+				UINT8 KEYD1;
+				UINT8 KEYD2;
+				UINT8 KEYD3;
+				UINT8 KEYD4;
+				UINT8 KEYD5;
+				UINT8 KEYD6;
+				UINT8 KEYD7;
+				UINT8 KEYD8;
+				UINT8 KEYD9;
+				UINT8 KEYDA;
+				UINT8 SQBRACKETOPEN;
+				UINT8 BACKSLASH;
+				UINT8 SQBRACKERCLOSE;
+				union
+				{
+					UINT8 QUOTE;
+					UINT8 SINGLEQUOTE;
+					UINT8 DOUBLEQUOTE;
+					UINT8 APOSTROPHE;
+				};
+				UINT8 KEYDF;
+				UINT8 KEYE0;
+				UINT8 KEYE1;
+				UINT8 KEYE2;
+				UINT8 KEYE3;
+				UINT8 KEYE4;
+				UINT8 KEYE5;
+				UINT8 KEYE6;
+				UINT8 KEYE7;
+				UINT8 KEYE8;
+				UINT8 KEYE9;
+				UINT8 KEYEA;
+				UINT8 KEYEB;
+				UINT8 KEYEC;
+				UINT8 KEYED;
+				UINT8 KEYEE;
+				UINT8 KEYEF;
+				UINT8 KEYF0;
+				UINT8 KEYF1;
+				UINT8 KEYF2;
+				UINT8 KEYF3;
+				UINT8 KEYF4;
+				UINT8 KEYF5;
+				UINT8 KEYF6;
+				UINT8 KEYF7;
+				UINT8 KEYF8;
+				UINT8 KEYF9;
+				UINT8 KEYFA;
+				UINT8 KEYFB;
+				UINT8 KEYFC;
+				UINT8 KEYFD;
+				UINT8 KEYFE;
+				UINT8 KEYFF;
 			};
-			UINT8 KEY88;
-			UINT8 KEY89;
-			UINT8 KEY8A;
-			UINT8 KEY8B;
-			UINT8 KEY8C;
-			UINT8 KEY8D;
-			UINT8 KEY8E;
-			UINT8 KEY8F;
-			UINT8 NUMLOCK;
-			UINT8 SCROLL;
-			UINT8 NEC_EQUALS;
-			UINT8 KEY93;
-			UINT8 KEY94;
-			UINT8 KEY95;
-			UINT8 KEY96;
-			UINT8 KEY97;
-			UINT8 KEY98;
-			UINT8 KEY99;
-			UINT8 KEY9A;
-			UINT8 KEY9B;
-			UINT8 KEY9C;
-			UINT8 KEY9D;
-			UINT8 KEY9E;
-			UINT8 KEY9F;
-			UINT8 LSHIFT;
-			UINT8 RSHIFT;
-			UINT8 LCONTROL;
-			UINT8 RCONTROL;
-			UINT8 LMENU;
-			UINT8 RMENU;
-			UINT8 KEYA6;
-			UINT8 KEYA7;
-			UINT8 KEYA8;
-			UINT8 KEYA9;
-			UINT8 KEYAA;
-			UINT8 KEYAB;
-			UINT8 KEYAC;
-			UINT8 KEYAD;
-			UINT8 KEYAE;
-			UINT8 KEYAF;
-			UINT8 KEYB0;
-			UINT8 KEYB1;
-			UINT8 KEYB2;
-			UINT8 KEYB3;
-			UINT8 KEYB4;
-			UINT8 KEYB5;
-			UINT8 KEYB6;
-			UINT8 KEYB7;
-			UINT8 KEYB8;
-			UINT8 KEYB9;
-			UINT8 SEMICOLON;
-			UINT8 PLUS;
-			UINT8 COMMA;
-			UINT8 MINUS;
-			UINT8 PERIOD;
-			UINT8 SLASH;
-			UINT8 BACKTICK;
-			UINT8 KEYC1;
-			UINT8 KEYC2;
-			UINT8 KEYC3;
-			UINT8 KEYC4;
-			UINT8 KEYC5;
-			UINT8 KEYC6;
-			UINT8 KEYC7;
-			UINT8 KEYC8;
-			UINT8 KEYC9;
-			UINT8 KEYCA;
-			UINT8 KEYCB;
-			UINT8 KEYCC;
-			UINT8 KEYCD;
-			UINT8 KEYCE;
-			UINT8 KEYCF;
-			UINT8 KEYD0;
-			UINT8 KEYD1;
-			UINT8 KEYD2;
-			UINT8 KEYD3;
-			UINT8 KEYD4;
-			UINT8 KEYD5;
-			UINT8 KEYD6;
-			UINT8 KEYD7;
-			UINT8 KEYD8;
-			UINT8 KEYD9;
-			UINT8 KEYDA;
-			UINT8 SQBRACKETOPEN;
-			UINT8 BACKSLASH;
-			UINT8 SQBRACKERCLOSE;
-			union
-			{
-				UINT8 QUOTE;
-				UINT8 SINGLEQUOTE;
-				UINT8 DOUBLEQUOTE;
-				UINT8 APOSTROPHE;
-			};
-			UINT8 KEYDF;
-			UINT8 KEYE0;
-			UINT8 KEYE1;
-			UINT8 KEYE2;
-			UINT8 KEYE3;
-			UINT8 KEYE4;
-			UINT8 KEYE5;
-			UINT8 KEYE6;
-			UINT8 KEYE7;
-			UINT8 KEYE8;
-			UINT8 KEYE9;
-			UINT8 KEYEA;
-			UINT8 KEYEB;
-			UINT8 KEYEC;
-			UINT8 KEYED;
-			UINT8 KEYEE;
-			UINT8 KEYEF;
-			UINT8 KEYF0;
-			UINT8 KEYF1;
-			UINT8 KEYF2;
-			UINT8 KEYF3;
-			UINT8 KEYF4;
-			UINT8 KEYF5;
-			UINT8 KEYF6;
-			UINT8 KEYF7;
-			UINT8 KEYF8;
-			UINT8 KEYF9;
-			UINT8 KEYFA;
-			UINT8 KEYFB;
-			UINT8 KEYFC;
-			UINT8 KEYFD;
-			UINT8 KEYFE;
-			UINT8 KEYFF;
 		};
-	};
-}KEY_STATE;
+	}KEY_STATE;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #pragma pack(pop)
 #endif
