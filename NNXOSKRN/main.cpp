@@ -88,8 +88,8 @@ extern "C"
 		status = ExInitializePool(
 			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
 			PAGE_SIZE * 32,
-			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
-			PAGE_SIZE * 32
+			(PVOID)PagingAllocatePageBlockFromRange(64, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
+			PAGE_SIZE * 64
 		);
 
 		if (status)

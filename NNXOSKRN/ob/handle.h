@@ -14,8 +14,8 @@ extern "C" {
     typedef struct _HANDLE_DATABASE_ENTRY
     {
         /* for enumeration, list head in the object header */
-        LIST_ENTRY ObjectHandleEntry;
         PVOID Object;
+        ULONG_PTR Attributes;
     }HANDLE_DATABASE_ENTRY, *PHANDLE_DATABASE_ENTRY;
 
 #define ENTRIES_PER_HANDLE_DATABASE ((PAGE_SIZE - sizeof(LIST_ENTRY)) / sizeof(HANDLE_DATABASE_ENTRY))

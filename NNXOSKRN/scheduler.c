@@ -653,7 +653,7 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
     InitializeObjectAttributes(
         &processObjAttributes,
         NULL,
-        0,
+        OBJ_KERNEL_HANDLE,
         INVALID_HANDLE_VALUE,
         NULL
     );
@@ -743,7 +743,7 @@ NTSTATUS PspCreateThreadInternal(
     InitializeObjectAttributes(
         &threadObjAttributes,
         NULL,
-        0,
+        OBJ_KERNEL_HANDLE,
         INVALID_HANDLE_VALUE,
         NULL
     );
@@ -1057,10 +1057,11 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
         waitingThread->NumberOfActiveWaitBlocks--;
         KeReleaseSpinLockFromDpcLevel(&waitingThread->ThreadLock);
 
-        /* check if the waiting thread has become ready */
-        PsCheckThreadIsReady(waitingThread);
         RemoveEntryList(waitEntry);
         MemSet(waitBlock, 0, sizeof(*waitBlock));
+
+        /* check if the waiting thread has become ready */
+        PsCheckThreadIsReady(waitingThread);
     }
 
     currentThread->Header.SignalState = INT32_MAX;

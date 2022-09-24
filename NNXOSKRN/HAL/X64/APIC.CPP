@@ -24,6 +24,8 @@ extern "C"
 	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
 
+
+
 	VOID KiEnableInterrupts();
 }
 

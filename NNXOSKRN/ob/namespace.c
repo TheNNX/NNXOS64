@@ -348,7 +348,7 @@ NTSTATUS ObpInitNamespace()
     InitializeObjectAttributes(
         &objAttributes,
         &GlobalNamespaceEmptyName,
-        OBJ_PERMANENT,
+        OBJ_PERMANENT | OBJ_KERNEL_HANDLE,
         NULL,
         NULL
     );
@@ -379,7 +379,7 @@ NTSTATUS ObpInitNamespace()
     InitializeObjectAttributes(
         &typeDirAttrbiutes,
         &TypesDirName,
-        OBJ_PERMANENT,
+        OBJ_PERMANENT | OBJ_KERNEL_HANDLE,
         GlobalNamespace,
         NULL
     );
@@ -511,8 +511,8 @@ NTSTATUS PspCreateThreadInternal(
     ULONG_PTR EntryPoint
 );
 
-#define WORKER_PROCESSES_NUMBER 5
-#define WORKER_THREADS_PER_PROCESS 17
+#define WORKER_PROCESSES_NUMBER 15
+#define WORKER_THREADS_PER_PROCESS 15
 
 UINT NextTesterId = 0;
 KSPIN_LOCK NextTesterIdLock;
@@ -551,7 +551,7 @@ static NTSTATUS Test2()
     {
         PVOID object;
         OBJECT_ATTRIBUTES objAttribs;
-        InitializeObjectAttributes(&objAttribs, NULL, 0, INVALID_HANDLE_VALUE, 0);
+        InitializeObjectAttributes(&objAttribs, NULL, OBJ_KERNEL_HANDLE, INVALID_HANDLE_VALUE, 0);
 
         status = ObCreateObject(
             &object, 
@@ -583,7 +583,6 @@ static VOID ObpWorkerThreadFunction()
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
     ownId = NextTesterId++;
-    PrintT("Starting worker %i (%X)\n", ownId, KeGetCurrentThread());
     KeReleaseSpinLock(&NextTesterIdLock, irql);
 
     status = Test1(ownId);
@@ -624,7 +623,7 @@ NTSTATUS ObpMpTestNamespaceThread()
 
         for (j = 0; j < WORKER_THREADS_PER_PROCESS; j++)
         {
-            PrintT("[%i/%i]\n", j + i * WORKER_THREADS_PER_PROCESS + 1, WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS);
+            PrintT("[%i/%i] started\n", j + i * WORKER_THREADS_PER_PROCESS + 1, WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS);
             
             PspCreateThreadInternal(
                 WorkerThreads + j + i * WORKER_THREADS_PER_PROCESS,

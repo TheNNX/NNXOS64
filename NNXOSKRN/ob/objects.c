@@ -216,7 +216,6 @@ NTSTATUS ObDereferenceObject(PVOID object)
 
 NTSTATUS ObpDeleteObject(PVOID object)
 {
-    PHANDLE_DATABASE_ENTRY currentHandleEntry;
     POBJECT_HEADER header, rootHeader;
     PVOID rootObject;
     NTSTATUS status;
@@ -225,19 +224,8 @@ NTSTATUS ObpDeleteObject(PVOID object)
     status = STATUS_SUCCESS;
     header = ObGetHeaderFromObject(object);
 
-    /* destroy all handles */
-    currentHandleEntry = (PHANDLE_DATABASE_ENTRY)header->HandlesHead.First;
-
-    while (currentHandleEntry != (PHANDLE_DATABASE_ENTRY)&header->HandlesHead)
-    {
-        PHANDLE_DATABASE_ENTRY next;
-
-        /* the entry has to be stored at this point, as ObCloseHandleByEntry invalidates the entry */
-        next = (PHANDLE_DATABASE_ENTRY)currentHandleEntry->ObjectHandleEntry.Next;
-        
-        ObCloseHandleByEntry(currentHandleEntry);
-        currentHandleEntry = next;
-    }
+    if (header->HandleCount > 0)
+        return STATUS_ACCESS_DENIED;
 
     /* if has a root, remove own entry from root's children */
     if (header->Root && header->Root != INVALID_HANDLE_VALUE)
@@ -439,7 +427,7 @@ NTSTATUS ObCreateSchedulerTypes(
     InitializeObjectAttributes(
         &procAttrib,
         &ProcObjName,
-        0,
+        OBJ_KERNEL_HANDLE,
         typeDirHandle,
         NULL
     );
@@ -447,7 +435,7 @@ NTSTATUS ObCreateSchedulerTypes(
     InitializeObjectAttributes(
         &threadAttrib,
         &ThreadObjName,
-        0,
+        OBJ_KERNEL_HANDLE,
         typeDirHandle,
         NULL
     );
