@@ -46,11 +46,8 @@ extern "C"
 {
 #endif
 
-    VOID
-        PagingInit(
-            PBYTE PhysMemoryMap, 
-            SIZE_T PhysMemMapSize
-        );
+    NTSTATUS
+        PagingInit();
 
     VOID 
         PagingKernelInit();
@@ -67,8 +64,7 @@ extern "C"
         PagingAllocatePageEx(
             ULONG_PTR min, 
             ULONG_PTR max,
-            UINT16 flags,
-            UINT8 physMemType
+            UINT16 flags
         );
 
     ULONG_PTR
@@ -80,7 +76,7 @@ extern "C"
             ULONG_PTR max
         );
 
-    VOID
+    NTSTATUS
         PagingMapPage(
             ULONG_PTR v, 
             ULONG_PTR p, 

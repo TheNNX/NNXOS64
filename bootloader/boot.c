@@ -4,15 +4,15 @@
 #include <efi.h>
 #include <efilib.h>
 #include <nnxtype.h>
-#include <NNXOSKRN/nnxcfg.h>
+#include <nnxcfg.h>
 #include <nnxpe.h>
 #include <bootdata.h>
-#include <NNXOSKRN/HAL/physical_allocator.h>
 
 #define ALLOC(x) AllocateZeroPool(x)
 #define DEALLOC(x) FreePool(x)
 
-#include <NNXOSKRN/klist.h>
+#include <klist.h>
+#include <HAL/physical_allocator.h>
 
 /* kinda ugly, but gets the job done (and is far prettier than the mess that it was before) */
 #define return_if_error_a(status, d) if (EFI_ERROR(status)) { if(d) Print(L"Line: %d Status: %r\n", __LINE__, status); return status; }
@@ -250,7 +250,7 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
     EFI_MEMORY_DESCRIPTOR* currentDescriptor;
     UINTN pages = 0;
 
-    UINT8* memoryBitmap;
+    PMMPFN_ENTRY pageFrameEntries;
 
     do
     {
@@ -275,25 +275,24 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
         currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR)currentDescriptor + descriptorSize);
     }
 
-    memoryBitmap = AllocateZeroPool(pages);
+    pageFrameEntries = AllocateZeroPool(pages * sizeof(MMPFN_ENTRY));
+
+    for (int i = 0; i < pages; i++)
+        pageFrameEntries[i].Flags = 1;
 
     currentDescriptor = memoryMap;
     while (currentDescriptor <= (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) memoryMap + memoryMapSize))
     {
         UINTN relativePageIndex;
+        ULONG_PTR flags = 1;
         
-        UINT8 memoryType = MEM_TYPE_USED;
-
         switch (currentDescriptor->Type)
         {
             case EfiConventionalMemory:
-                memoryType = MEM_TYPE_FREE;
+                flags = 0;
                 break;
-            case EfiLoaderCode:
-            case EfiLoaderData:
-            case EfiBootServicesCode:
-            case EfiBootServicesData:
-                memoryType = MEM_TYPE_UTIL;
+            default:
+                flags = 1;
                 break;
         }
 
@@ -301,18 +300,20 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
         {
             UINTN pageIndex = currentDescriptor->PhysicalStart / PAGE_SIZE + relativePageIndex;
 
-            memoryBitmap[pageIndex] = memoryType;
+            pageFrameEntries[pageIndex].Flags = flags;
             
-            if ((ULONG_PTR)pageIndex * PAGE_SIZE >= (ULONG_PTR)memoryBitmap &&
-                (ULONG_PTR)pageIndex * PAGE_SIZE <= ((ULONG_PTR) memoryBitmap + pages))
+            if ((ULONG_PTR)pageIndex * PAGE_SIZE >= (ULONG_PTR)pageFrameEntries &&
+                (ULONG_PTR)pageIndex * PAGE_SIZE <= ((ULONG_PTR) pageFrameEntries + pages))
             {
-                memoryBitmap[pageIndex] = MEM_TYPE_USED;
+                pageFrameEntries[pageIndex].Flags = 1;
                 continue;
             }
         }
 
         currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) currentDescriptor + descriptorSize);
     }
+
+    pageFrameEntries[0].Flags = 1;
 
     do
     {
@@ -331,8 +332,8 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
     return_if_error(status);
 
     bootdata->mapKey = memoryMapKey;
-    bootdata->qwPhysicalMemoryMapSize = pages;
-    bootdata->pPhysicalMemoryMap = memoryBitmap;
+    bootdata->NumberOfPageFrames = pages;
+    bootdata->PageFrameDescriptorEntries = pageFrameEntries;
 
     return EFI_SUCCESS;
 }
@@ -383,6 +384,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
     status = QueryMemoryMap(&bootdata);
     return_if_error_debug(status);
 
+    Print(L"Launching kernel\n");
     kernelEntrypoint(&bootdata);
 
     ClearListAndDestroyValues(&LoadedModules, DestroyLoadedModule);

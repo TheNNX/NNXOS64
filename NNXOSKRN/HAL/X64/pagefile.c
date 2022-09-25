@@ -206,7 +206,12 @@ PagingPageOutPage(
     /* get the old flags (but clear the present flag) */
     oldFlags = (oldMapping & 0xFFF) & (~PAGE_PRESENT);
     oldMapping &= (~0xFFF);
-    InternalFreePhysicalPage(oldMapping);
+    status = MmFreePhysicalAddress(oldMapping);
+    if (!NT_SUCCESS(status))
+    {
+        KeReleaseSpinLock(&PageFileLock, irql);
+        return status;
+    }
 
     /* Change the mapping to pageFilePageIndex * PAGE_SIZE and preserve the flags, but clear the PRESENT flag
      * This way, the page file index is easily derived from the paging structures, 
@@ -225,6 +230,8 @@ PagingPageInPage(
     ULONG_PTR pageFilePageIndex;
     ULONG_PTR tempMapping;
     USHORT originalFlags;
+    PFN_NUMBER pfnNumber;
+    ULONG_PTR physAddr;
     NTSTATUS status;
     KIRQL irql;
  
@@ -245,13 +252,21 @@ PagingPageInPage(
         KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 0, 0, 0);
     }
 
+    status = MmAllocatePfn(&pfnNumber);
+    if (!NT_SUCCESS(status))
+    {
+        KeReleaseSpinLock(&PageFileLock, irql);
+        return status;
+    }
+    physAddr = PA_FROM_PFN(pfnNumber);
+
     /* map the page */
-    PagingMapPage(virtualAddress, (ULONG_PTR)InternalAllocatePhysicalPageWithType(MEM_TYPE_USED), originalFlags | PAGE_PRESENT);
+    PagingMapPage(virtualAddress, physAddr, originalFlags | PAGE_PRESENT);
 
     /* read the page from the page file */
     status = PagingLoadPageFromPageFile(virtualAddress, pageFilePageIndex);
 
-    if (status != STATUS_SUCCESS)
+    if (!NT_SUCCESS(status))
     {
         KeReleaseSpinLock(&PageFileLock, irql);
         return status;

@@ -1,3 +1,8 @@
+/* GNU EFI has definitions for LIST_ENTRY, apparently */
+#ifdef _EFI_INCLUDE_
+#define NNX_NT_LIST_HEADER
+#endif
+
 #ifndef NNX_NT_LIST_HEADER
 #define NNX_NT_LIST_HEADER
 
@@ -21,18 +26,20 @@ typedef struct _LIST_ENTRY
 	};
 }LIST_ENTRY, * PLIST_ENTRY;
 
-
 typedef struct _LIST_ENTRY_POINTER
 {
     struct _LIST_ENTRY;
     PVOID Pointer;
 } LIST_ENTRY_POINTER, * PLIST_ENTRY_POINTER;
 
+typedef struct _SINGLE_LIST_ENTRY
+{
+    struct _SINGLE_LIST_ENTRY* Next;
+}SINGLE_LIST_ENTRY, *PSINGLE_LIST_ENTRY;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
     inline VOID InitializeListHead(PLIST_ENTRY ListHead)
     {
         ListHead->Next = ListHead;
@@ -79,7 +86,7 @@ extern "C" {
         return result;
     }
 
-    inline BOOL RemoveEntryList(PLIST_ENTRY Entry)
+    inline BOOLEAN RemoveEntryList(PLIST_ENTRY Entry)
     {
         PLIST_ENTRY Prev = Entry->Prev;
         PLIST_ENTRY Next = Entry->Next;
@@ -90,7 +97,7 @@ extern "C" {
         return (Prev == Next);
     }
 
-    inline BOOL IsListEmpty(PLIST_ENTRY Head)
+    inline BOOLEAN IsListEmpty(PLIST_ENTRY Head)
     {
         return (Head->First == Head);
     }
@@ -128,6 +135,28 @@ extern "C" {
         PVOID Pointer
     );
 
+    inline void PushEntryList(
+        PSINGLE_LIST_ENTRY Head,
+        PSINGLE_LIST_ENTRY Entry
+    )
+    {
+        PSINGLE_LIST_ENTRY oldHeadNext;
+
+        oldHeadNext = Head->Next;
+        Head->Next = Entry;
+        Entry->Next = oldHeadNext;
+    }
+
+    inline PSINGLE_LIST_ENTRY PopEntryList(
+        PSINGLE_LIST_ENTRY Head
+    )
+    {
+        PSINGLE_LIST_ENTRY result;
+        result = Head->Next;
+        if (result != NULL)
+            Head->Next = result->Next;
+        return result;
+    }
 
 #ifdef __cplusplus
 }

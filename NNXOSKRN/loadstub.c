@@ -14,8 +14,6 @@ DWORD gdwWidth; DWORD gdwHeight; DWORD gdwPixelsPerScanline;
 
 UINT64 KeEntry();
 
-extern PBYTE GlobalPhysicalMemoryMap;
-extern UINT64 GlobalPhysicalMemoryMapSize;
 extern ULONG_PTR gRdspPhysical;
 
 __declspec(noreturn) VOID SetupStack(ULONG_PTR stack, UINT64(*)(PVOID));
@@ -38,8 +36,6 @@ VOID KeLoadStub(
 	ULONG_PTR currentStackPage;
 	UINT64(*mainReloc)(VOID*);
 
-	
-
     gFramebuffer = bootdata->pdwFramebuffer;
     gFramebufferEnd = bootdata->pdwFramebufferEnd;
     gWidth = bootdata->dwWidth;
@@ -49,15 +45,14 @@ VOID KeLoadStub(
 
     bootdata->ExitBootServices(bootdata->pImageHandle, bootdata->mapKey);
 
+	MmReinitPhysAllocator(bootdata->PageFrameDescriptorEntries, bootdata->NumberOfPageFrames);
+
     /* calculate the new address of our kernel entrypoint */
     mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->KernelBase;
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
     
     /* map kernel pages */
-    PagingInit(
-		bootdata->pPhysicalMemoryMap, 
-		bootdata->qwPhysicalMemoryMapSize
-	);
+    NTSTATUS status = PagingInit();
 
     PagingMapAndInitFramebuffer();
 
@@ -81,10 +76,12 @@ VOID KeLoadStub(
 	newStack -= (currentStack - currentStackPage);
 
 	PrintT("Sections: %X\n", bootdata->MainKernelModule.SectionHeaders);
+	
 	RemapSections(
 		bootdata->MainKernelModule.SectionHeaders,
 		bootdata->MainKernelModule.NumberOfSectionHeaders
 	);
+	MiFlagPfnsForRemap();
 
 	SetupStack(newStack, mainReloc);
 }
@@ -126,10 +123,12 @@ RemapSections(
 
 		for (j = 0; j < (current->VirtualSize + PAGE_SIZE - 1) / PAGE_SIZE; j++)
 		{
-			/* KERNEL_DESIRED_LOCATION is our current executable base */
+			/* KERNEL_DESIRED_LOCATION is our future executable base */
 			currentPageAddress = current->VirtualAddressRVA + KERNEL_DESIRED_LOCATION + j * PAGE_SIZE;
 			currentMapping = PagingGetCurrentMapping(currentPageAddress);
 			physAddress = currentMapping & PAGE_ADDRESS_MASK;
+	
+			MmMarkPfnAsUsed(PFN_FROM_PA(physAddress));
 
 			/* copy the current flags */
 			newFlags = currentMapping & PAGE_FLAGS_MASK;
@@ -154,7 +153,6 @@ RemapSections(
 				newFlags |= PAGE_WRITE;
 			}
 
-			InternalMarkPhysPage(MEM_TYPE_USED_PERM, physAddress);
 			PagingMapPage(currentPageAddress, physAddress, newFlags);
 		}
 	}

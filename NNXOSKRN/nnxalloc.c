@@ -159,7 +159,7 @@ UINT64 NNXAllocatorGetFreeMemory()
     return CountBlockSize(MEMBLOCK_FREE);
 }
 
-VOID NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
+VOID NNXAllocatorAppend(PVOID memblock, UINT64 memblockSize)
 {
 	KIRQL irql;
 	KeAcquireSpinLock(&AllocatorLock, &irql);
@@ -186,6 +186,7 @@ VOID NNXAllocatorAppend(void* memblock, UINT64 memblockSize)
         current->next->flags = MEMBLOCK_FREE;
     }
     dirty = true;
+    
     UpdateScreen();
 	KeReleaseSpinLock(&AllocatorLock, irql);
 }

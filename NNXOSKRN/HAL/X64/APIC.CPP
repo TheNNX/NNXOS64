@@ -163,7 +163,7 @@ extern "C"
 		ApicVirtualLocalApicBase += (ApicLocalApicBase % PAGE_SIZE);
 
 		/* ensure the physical page is marked as used in the memory map */
-		GlobalPhysicalMemoryMap[ApicLocalApicBase / PAGE_SIZE] = MEM_TYPE_USED_PERM;
+		MmMarkPfnAsUsed(PFN_FROM_PA(ApicLocalApicBase));
 
 		ApicLocalApicInitializeCore();
 	}

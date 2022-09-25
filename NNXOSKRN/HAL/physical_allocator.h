@@ -1,22 +1,62 @@
 #ifndef NNX_PHYSALLOC_HEADER
 #define NNX_PHYSALLOC_HEADER
 #include <nnxtype.h>
+#include <ntlist.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+    typedef ULONG_PTR PFN_NUMBER;
 
-    ULONG_PTR InternalAllocatePhysicalPage();
-    UINT8 InternalFreePhysicalPage(ULONG_PTR);
-    ULONG_PTR InternalAllocatePhysicalPageEx(UINT8 type, ULONG_PTR seekFromAddress, ULONG_PTR seekToAddress);
-    ULONG_PTR InternalAllocatePhysicalPageWithType(UINT8 type);
-    BYTE InternalMarkPhysPage(UINT8 type, ULONG_PTR PhysPage);
-    
-#define MEM_TYPE_USED 0
-#define MEM_TYPE_FREE 1
-#define MEM_TYPE_UTIL 2
-#define MEM_TYPE_USED_PERM 3
+    typedef struct _MMPFN_LIST
+    {
+        LIST_ENTRY PfnListHead;
+        SIZE_T NumberOfPfns;
+    }MMPFN_LIST, *PMMPFN_LIST;
+
+    typedef struct _MMPFN_ENTRY
+    {
+        /** 
+         * this has to start with a ListEntry (it is convienient to not have to use some
+         * CONTAINING_RECORD macro) 
+         */
+        LIST_ENTRY ListEntry;
+        PMMPFN_LIST InList;
+        ULONG_PTR Flags;
+    }MMPFN_ENTRY, *PMMPFN_ENTRY;
+
+#define MMPFN_FLAG_NO_PAGEOUT 1
+#define MMPFN_FLAG_PERMAMENT 2
+
+    typedef struct _MMINIT_USED_REGION
+    {
+        PVOID PhysRegionStart;
+        SIZE_T NumberOfPages;
+    }MMINIT_USED_REGION, *PMMINIT_USED_REGION;
+
+#define PFN_FROM_PA(x) ((PFN_NUMBER)(x / PAGE_SIZE))
+#define PA_FROM_PFN(x) ((ULONG_PTR)(x * PAGE_SIZE))
+
+    VOID MmReinitPhysAllocator(
+        PMMPFN_ENTRY pfnEntries,
+        SIZE_T numberOfPfnEntries
+    );
+
+    NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber);
+
+    NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber);
+
+    NTSTATUS MmAllocatePhysicalAddress(ULONG_PTR* pPhysAddress);
+    NTSTATUS MmFreePhysicalAddress(ULONG_PTR physAddress);
+
+    NTSTATUS MmMarkPfnAsUsed(PFN_NUMBER pfnNumber);
+
+    VOID MiFlagPfnsForRemap();
+    VOID DrawMap();
+
+    extern PMMPFN_ENTRY PfnEntries;
+    extern SIZE_T NumberOfPfnEntries;
 #ifdef __cplusplus
 }
 #endif

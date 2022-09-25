@@ -12,9 +12,6 @@
 
 #define UNKNOWNMARK {0xC7, 0xBB, 0xFB, 0xF7, 0xEF, 0xEF, 0xFF, 0xEF},
 
-extern PBYTE GlobalPhysicalMemoryMap;
-extern UINT64 GlobalPhysicalMemoryMapSize;
-
 UINT64 FrameBufferSize()
 {
 	return (((UINT64) gFramebufferEnd) - ((UINT64) gFramebuffer));
@@ -465,35 +462,5 @@ void TextIoTest(UINT64 mode)
 		TextIoOutputString("Alignment test\n", 20, 100, 0xFFbFbfbF, 0, 1, 0, gWidth, 0, gHeight);
 		PrintT("test %i 0x%X %x %x %c '%s' %i '%s'\n", 185, 0x666666, 0x12345678, 0xabcdef00, '*', "g", 0x69LL, "mn");
 
-	}
-}
-
-void DrawMap()
-{
-	UINT x = 0;
-	UINT y = 0;
-	UINT a;
-
-	TextIoGetCursorPosition(&x, &y);
-
-	x = 0;
-	y += 10;
-
-	for (a = 0; a < GlobalPhysicalMemoryMapSize; a++)
-	{
-		if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_FREE)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
-		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_UTIL)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFFAFAF00;
-		else if (GlobalPhysicalMemoryMap[a] == MEM_TYPE_USED_PERM)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF00FFFF;
-		else
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
-		x++;
-		if (x > gWidth)
-		{
-			y++;
-			x = 0;
-		}
 	}
 }

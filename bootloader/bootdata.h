@@ -27,8 +27,8 @@ typedef struct _BOOTDATA
 	UINT64(*ExitBootServices)(PVOID, UINT64);
 	PVOID pImageHandle;
 	UINT64 mapKey;
-	PBYTE pPhysicalMemoryMap;
-	UINT64 qwPhysicalMemoryMapSize;
+	struct _MMPFN_ENTRY* PageFrameDescriptorEntries;
+	SIZE_T NumberOfPageFrames;
 	PVOID pRdsp;
 	DWORD dwKernelSize;
 	PVOID KernelBase;

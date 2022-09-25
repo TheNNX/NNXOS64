@@ -268,7 +268,10 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="MemoryOperations.h" />
     <ClInclude Include="nnxalloc.h" />
     <ClInclude Include="HAL\paging.h" />
-    <ClInclude Include="HAL\physical_allocator.h" />
+    <ClInclude Include="HAL\physical_allocator.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="nnxcfg.h" />
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxlog.h" />

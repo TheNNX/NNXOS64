@@ -910,7 +910,7 @@ NTSTATUS PspProcessOnDelete(PVOID selfObject)
 
     RemoveEntryList(&pProcess->Pcb.ProcessListEntry);
 
-    InternalFreePhysicalPage(pProcess->Pcb.AddressSpacePhysicalPointer);
+    MmFreePfn(PFN_FROM_PA(pProcess->Pcb.AddressSpacePhysicalPointer));
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KeReleaseSpinLock(&ProcessListLock, irql);

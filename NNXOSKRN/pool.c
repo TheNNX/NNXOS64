@@ -638,6 +638,8 @@ ExInitializePool(
 		return STATUS_NO_MEMORY;
 	}
 
+	PrintT("Allocated pools %X %X\n", PagedPoolMemoryRegion, NonPagedPoolMemoryRegion);
+
 	pPagedPoolDesc = (PPOOL_DESCRIPTOR)PagedPoolMemoryRegion;
 	pNonPagedPoolDesc = (PPOOL_DESCRIPTOR)NonPagedPoolMemoryRegion;
 

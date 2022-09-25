@@ -21,6 +21,7 @@ int basicallyATest = 0;
 
 extern "C"
 {
+	VOID UpdateScreen();
 	VOID DrawMap();
 	UINT32* gFramebuffer;
 	UINT32* gFramebufferEnd;
@@ -33,9 +34,6 @@ extern "C"
 	extern UINT32 gMaxX;
 	extern UINT8 Initialized;
 	extern VOID(*gExceptionHandlerPtr)(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip);
-
-	extern UINT8* GlobalPhysicalMemoryMap;
-	extern UINT64 GlobalPhysicalMemoryMapSize;
 	extern UINT64 MemorySize;
 
 	ULONG_PTR gRdspPhysical;
@@ -61,12 +59,12 @@ extern "C"
         dummyPcr.Prcb = NULL;
         dummyPcr.SelfPcr = &dummyPcr;
 
-        /* 
-            for all the code that for example has to lock after initialization 
-            if not for this dummy PCR, access to the IRQL would page fault 
-
-            the correct one is set before multi processing init
-        */
+        /** 
+         * for all the code that for example has to lock after initialization 
+         * if not for this dummy PCR, access to the IRQL would page fault 
+		 *
+         * the correct one is set before multi processing init
+         */
         HalSetPcr(&dummyPcr);
 
 		DisableInterrupts();
@@ -83,8 +81,7 @@ extern "C"
 		);
 
 		TextIoClear();
-
-		DrawMap();
+		MmReinitPhysAllocator(PfnEntries, NumberOfPfnEntries);
 
 		status = ExInitializePool(
 			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
@@ -100,10 +97,13 @@ extern "C"
 		if (status)
 			KeBugCheck(HAL_INITIALIZATION_FAILED);
 
+		DrawMap();
+
 		NNXAllocatorInitialize();
 		for (int i = 0; i < 32; i++)
 		{
-			NNXAllocatorAppend((PVOID)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END), 4096);
+			PVOID page = (PVOID)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+			NNXAllocatorAppend(page, 4096);
 		}
 
 		VfsInit();
@@ -131,12 +131,10 @@ extern "C"
 		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);
 
         status = ObInit();
+		if (status)
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
 
 		PagingInitializePageFile(16 * PAGE_SIZE, "PAGEFILE.SYS", VfsGetSystemVfs());
-
-        if (status)
-            KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
-
 		MpInitialize();
 
 		KeBugCheck(PHASE1_INITIALIZATION_FAILED);
