@@ -979,12 +979,12 @@ BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
     KeAcquireSpinLock(&PspSharedReadyQueue.Lock, &irql);
     /* ugly 5 level nesting, but it works... or so i hope */
 
-    /* 
-        the XOR between summaries gives us the bits in them that are different
-        if those bits are greater than coreSchedulerData's ready queue, it means 
-        that there was a higher bit in PspSharedReadyQueue's summary, which means
-        it has a thread with a higher priority ready
-    */
+    /** 
+     * the XOR between summaries gives us the bits in them that are different
+     * if those bits are greater than coreSchedulerData's ready queue, it means 
+     * that there was a higher bit in PspSharedReadyQueue's summary, which means
+     * it has a thread with a higher priority ready
+     */
     if (coreSchedulerData->ThreadReadyQueuesSummary <= (PspSharedReadyQueue.ThreadReadyQueuesSummary ^ coreSchedulerData->ThreadReadyQueuesSummary))
     {
         

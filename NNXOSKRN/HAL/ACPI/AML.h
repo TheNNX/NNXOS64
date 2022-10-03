@@ -128,7 +128,7 @@ extern "C" {
 		UINT8 DutyWidth;
 		UINT8 Day;
 		UINT8 Month;
-		UINT8 Century;
+		UINT8 CenturyRegister;
 
 		UINT16 BootArchitectureFlags;
 		UINT8 Reserved2;

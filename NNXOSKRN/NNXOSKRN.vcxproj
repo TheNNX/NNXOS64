@@ -193,6 +193,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
+    <ClCompile Include="HAL\X64\cmos.c" />
     <ClCompile Include="HAL\X64\IDT.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
     <ClCompile Include="HAL\X64\irql.c" />
@@ -200,6 +201,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="HAL\X64\pagefile.c" />
+    <ClCompile Include="HAL\X64\rtc.c" />
     <ClCompile Include="HAL\X64\spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
@@ -240,7 +242,9 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\cpu.h" />
+    <ClInclude Include="HAL\rtc.h" />
     <ClInclude Include="HAL\X64\APIC.h" />
+    <ClInclude Include="HAL\X64\cmos.h" />
     <ClInclude Include="HAL\X64\GDT.h" />
     <ClInclude Include="HAL\X64\IDT.h" />
     <ClInclude Include="HAL\irql.h" />

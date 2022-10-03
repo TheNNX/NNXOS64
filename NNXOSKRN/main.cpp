@@ -16,6 +16,8 @@
 #include <ob/object.h>
 #include <pool.h>
 #include <device/Keyboard.h>
+#include <HAL/X64/cmos.h>
+#include <HAL/rtc.h>
 
 int basicallyATest = 0;
 
@@ -135,6 +137,16 @@ extern "C"
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
 
 		PagingInitializePageFile(16 * PAGE_SIZE, "PAGEFILE.SYS", VfsGetSystemVfs());
+		
+		CmosInitialize();
+		HalRtcInitialize(facp->CenturyRegister);
+		
+		PrintT("Current date and time: ");
+		HalpPrintCurrentDate();
+		PrintT(" ");
+		HalpPrintCurrentTime();
+		PrintT("\n");
+
 		MpInitialize();
 
 		KeBugCheck(PHASE1_INITIALIZATION_FAILED);

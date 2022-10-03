@@ -210,6 +210,12 @@
     <ClCompile Include="HAL\X64\IOAPIC.CPP">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\cmos.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\rtc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -357,6 +363,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="io\apc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\X64\cmos.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\rtc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
