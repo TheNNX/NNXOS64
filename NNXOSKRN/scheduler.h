@@ -86,8 +86,10 @@ extern "C" {
         PKWAIT_BLOCK CurrentWaitBlocks;
         /* Number of wait blocks in the array */
         ULONG NumberOfCurrentWaitBlocks;
-        /* Number of wait blocks without their associated wait satisfied
-         * (that is, how many objects are still waited for) */
+        /**
+         * Number of wait blocks without their associated wait satisfied
+         * (that is, how many objects are still waited for) 
+         */
         ULONG NumberOfActiveWaitBlocks;
 
         /* Thread affinity */

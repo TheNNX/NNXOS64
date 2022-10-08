@@ -162,4 +162,7 @@ extern "C" {
 }
 #endif
 
+#define CONTAINING_RECORD(address, type, field) \
+((type*)((ULONG_PTR)address - (ULONG_PTR)(&((type*)NULL)->field)))
+
 #endif

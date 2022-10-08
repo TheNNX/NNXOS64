@@ -5,6 +5,7 @@
 #include <pool.h>
 #include <bugcheck.h>
 #include <scheduler.h>
+#include <HAL/rtc.h>
 
 /* this is probably wrong somewhere */
 VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable)
@@ -120,7 +121,7 @@ NTSTATUS KeWaitForMultipleObjects(
     currentThread->NumberOfCurrentWaitBlocks = Count;
     currentThread->NumberOfActiveWaitBlocks = Count - ready;
     currentThread->CurrentWaitBlocks = WaitBlockArray;
-
+    
     /* initializa all wait blocks */
     for (i = 0; i < Count; i++)
     {
@@ -172,14 +173,18 @@ KeUnwaitThread(
     if (pThread->ThreadLock == 0)
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
-    pThread->Timeout = 0;
-    pThread->TimeoutIsAbsolute = 0;
-    if (pThread->NumberOfCurrentWaitBlocks)
+    if (pThread->ThreadState == THREAD_STATE_WAITING)
     {
-        pThread->NumberOfCurrentWaitBlocks = 0;
-        pThread->CurrentWaitBlocks = 0;
+        pThread->Timeout = 0;
+        pThread->TimeoutIsAbsolute = 0;
+        if (pThread->NumberOfCurrentWaitBlocks)
+        {
+            pThread->NumberOfCurrentWaitBlocks = 0;
+            pThread->CurrentWaitBlocks = 0;
+        }
+
+        pThread->ThreadState = THREAD_STATE_READY;
+
+        PspInsertIntoSharedQueue(pThread);
     }
-    
-    pThread->ThreadState = THREAD_STATE_READY;
-    PspInsertIntoSharedQueue(pThread);
 }
