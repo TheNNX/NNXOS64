@@ -18,7 +18,6 @@ extern "C"
 #include <HAL/X64/GDT.h>
 #include <HAL/X64/IDT.h>
 
-	/* idea for those from ReactOS */
 	unsigned __int64 __readgsqword(unsigned long);
 	unsigned long	 __readgsdword(unsigned long);
 	unsigned short	 __readgsword(unsigned long);
@@ -38,7 +37,15 @@ extern "C"
 		struct _KPCR	*SelfPcr;
 		struct _KPRCB	*Prcb;
 		KIRQL			Irql;
-		ULONG			Reserved1[5];
+		/**
+		 * @brief These have to be accessed with interrupts disabled.
+		 * Once interrupts are reenabled, the value of these should
+		 * be assumed to be invalid. They're used by the system call
+		 * handler to store thread pointers in order to get the thread
+		 * kernel stack and access other per thread variables. 
+		 */
+		ULONG_PTR		TempHandlerVals[2];
+		ULONG			Reserved1[1];
 		PKIDTENTRY64	Idt;
 		ULONG			Reserved4[3];
 		USHORT			MajorVersion;
@@ -67,7 +74,7 @@ extern "C"
 		UCHAR NestingLevel;
 		UCHAR Pad0[3];
 		ULONG Number;
-		ULONG_PTR CpuCyclesRemaining;
+		ULONG_PTR Reserved;
 		KSPIN_LOCK Lock;
 	}KPRCB, *PKPRCB, *LPKRCB;
 

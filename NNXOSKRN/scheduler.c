@@ -316,6 +316,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 
         status = ObpMpTest();
 
+        PrintT("Created userthread %i %i\n", PspCoresInitialized, KeNumberOfProcessors);
         PspCreateThreadInternal(
             &userThread,
             (PEPROCESS)pPrcb->IdleThread->Process,
@@ -491,14 +492,25 @@ PspSetupThreadState(
     ULONG_PTR Userstack
 )
 {
+    UINT16 code0, code3, data0, data3;
+    LPKGDTENTRY64 gdt;
+
+    gdt = KeGetPcr()->Gdt;
+
+    code0 = HalpGdtFindEntry(gdt, 7, TRUE, FALSE);
+    code3 = HalpGdtFindEntry(gdt, 7, TRUE, TRUE);
+
+    data0 = HalpGdtFindEntry(gdt, 7, FALSE, FALSE);
+    data3 = HalpGdtFindEntry(gdt, 7, FALSE, TRUE);
+
     MemSet(pThreadState, 0, sizeof(*pThreadState));
     pThreadState->Rip = (UINT64)Entrypoint;
-    pThreadState->Cs = IsKernel ? 0x08 : 0x1B;
-    pThreadState->Ds = IsKernel ? 0x10 : 0x23;
-    pThreadState->Es = IsKernel ? 0x10 : 0x23;
-    pThreadState->Fs = IsKernel ? 0x10 : 0x23;
-    pThreadState->Gs = IsKernel ? 0x10 : 0x23;
-    pThreadState->Ss = IsKernel ? 0x10 : 0x23;
+    pThreadState->Cs = IsKernel ? code0 : code3;
+    pThreadState->Ds = IsKernel ? data0 : data3;
+    pThreadState->Es = IsKernel ? data0 : data3;
+    pThreadState->Fs = IsKernel ? data0 : data3;
+    pThreadState->Gs = IsKernel ? data0 : data3;
+    pThreadState->Ss = IsKernel ? data0 : data3;
     pThreadState->Rflags = 0x00000286;
     pThreadState->Rsp = Userstack;
 }
@@ -636,13 +648,22 @@ NTSTATUS PspCreateThreadInternal(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
+/**
+ * @brief This function is called by the object manager when a new thread
+ * is being created. It initializes the dispatcher header of the thread,
+ * the ETHREAD structure, adds the thread to parent process' child
+ * list and adds the thread to the system wide thread list.
+ * @param SelfObject pointer to Object Manager allocated object
+ * @param CreateData pointer to THREAD_CREATE_DATA structure,
+ * which holds the entrypoint and parent process pointer for example. 
+ */
+NTSTATUS PspThreadOnCreate(PVOID SelfObject, PVOID CreateData)
 {
     KIRQL irql;
     NTSTATUS status;
     PETHREAD pThread;
     
-    pThread = (PETHREAD)selfObject;
+    pThread = (PETHREAD)SelfObject;
 
     /* acquire the dispatcher lock */
     KeAcquireSpinLock(&DispatcherLock, &irql);
@@ -651,7 +672,7 @@ NTSTATUS PspThreadOnCreate(PVOID selfObject, PVOID optionalCreateData)
     InitializeDispatcherHeader(&pThread->Tcb.Header, OBJECT_TYPE_KTHREAD);
 
     /* initialize the thread structure */
-    status = PspThreadOnCreateNoDispatcher(selfObject, optionalCreateData);
+    status = PspThreadOnCreateNoDispatcher(SelfObject, CreateData);
 
     /**
      * initialize the parts of the thread structure 

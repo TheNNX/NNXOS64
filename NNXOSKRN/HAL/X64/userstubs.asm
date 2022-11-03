@@ -28,6 +28,7 @@ func KiUserRestoreUserContext
     ret
 
 func TestUserThread
+    syscall
     jmp $
 
 func TestFailUserThread

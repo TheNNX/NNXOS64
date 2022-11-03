@@ -38,6 +38,7 @@ func HalpTaskSwitchHandler
     swapgs
 .noswap:
     sti
+
     ; save the thread register state to the kernel stack
     call PspStoreContextFrom64
     
@@ -199,13 +200,6 @@ func PspSchedulerNext
     mov QWORD rax, [rsp]
     add QWORD rax, .ReturnAddress - .next
     mov QWORD [rsp], rax
-
-    cli
-    cmp QWORD [rsp+8], 0x08
-    je .noswap
-    swapgs
-.noswap:
-    sti
 
     call PspStoreContextFrom64
     mov rcx, rsp

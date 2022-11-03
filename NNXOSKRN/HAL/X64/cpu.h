@@ -14,7 +14,6 @@ extern "C" {
 	}MODE;
 
 	VOID HalSetPcr(struct _KPCR* pcr);
-	struct _KPCR* HalSwapInPcr();
 
 #include "registers.h"
 #include <HAL/Port.h>

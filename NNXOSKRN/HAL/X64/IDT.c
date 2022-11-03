@@ -26,16 +26,6 @@ void ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	KeStop();
 }
 
-ULONG HalpGetGdtBase(KGDTENTRY64 entry)
-{
-	return entry.Base0To15 | (entry.Base16To23 << 16UL) | (entry.Base24To31 << 24UL);
-}
-
-PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
-{
-	return (PKTSS)(HalpGetGdtBase(tssEntryLow) | ((*((UINT64*) &tssEntryHigh)) << 32UL));
-}
-
 VOID HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Usermode, BOOL Trap)
 {
 	Idt[EntryNo].Selector = 0x8;
@@ -93,57 +83,4 @@ VOID IrqHandler(UINT64 a)
 {
 	if (a == 1)
 		KeyboardInterrupt();
-}
-
-/* TODO: move code below to GDT.c */
-
-UINT64 HalpSetGdtEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, UINT32 base, UINT32 limit, UINT8 flags, UINT8 accessByte)
-{
-	gdt[entryIndex].Base0To15 = base & UINT16_MAX;
-	gdt[entryIndex].Base16To23 = (base & 0xFF0000) >> 16;
-	gdt[entryIndex].Base24To31 = (base & 0xFF000000) >> 24;
-	gdt[entryIndex].Limit0To15 = limit & UINT16_MAX;
-	gdt[entryIndex].Limit16To19 = (limit & 0xF0000) >> 16;
-	gdt[entryIndex].Flags = flags & 0xF;
-	gdt[entryIndex].AccessByte = accessByte;
-
-	return sizeof(KGDTENTRY64) * entryIndex;
-}
-
-UINT64 HalpSetGdtTssDescriptorEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, PVOID tss, SIZE_T tssSize)
-{
-	HalpSetGdtEntry(gdt, entryIndex, ((ULONG_PTR)tss) & UINT32_MAX, (UINT32)tssSize, 0x40, 0x89);
-	*((UINT64*) (gdt + entryIndex + 1)) = (((ULONG_PTR) tss) & ~((UINT64)UINT32_MAX)) >> 32;
-
-	return sizeof(KGDTENTRY64) * entryIndex;
-}
-
-VOID HalpInitializeGdt(KGDTR64* gdtr)
-{
-	UINT64 null, code0, data0, code3, data3, tr;
-	PKGDTENTRY64 gdt = (PKGDTENTRY64) gdtr->Base;
-	KTSS* tss = (KTSS*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	tss->IopbBase = sizeof(*tss);
-
-	null = HalpSetGdtEntry(gdt, 0, 0x00000000UL, 0x00000UL, 0x0, 0x00);
-	code0 = HalpSetGdtEntry(gdt, 1, 0x00000000UL, 0xFFFFFUL, 0xA, 0x9A);
-	data0 = HalpSetGdtEntry(gdt, 2, 0x00000000UL, 0xFFFFFUL, 0xC, 0x92);
-	code3 = HalpSetGdtEntry(gdt, 3, 0x00000000UL, 0xFFFFFUL, 0xA, 0xFA);
-	data3 = HalpSetGdtEntry(gdt, 4, 0x00000000UL, 0xFFFFFUL, 0xC, 0xF2);
-	tr = HalpSetGdtTssDescriptorEntry(gdt, 5, tss, sizeof(*tss));
-
-	HalpLoadGdt(gdtr);
-	HalpLoadTss(tr);
-}
-
-PKGDTENTRY64 HalpAllocateAndInitializeGdt()
-{
-	KGDTR64* gdtr = (KGDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	KGDTENTRY64* gdt = (KGDTENTRY64*)((ULONG_PTR)gdtr + sizeof(KGDTR64));
-
-	gdtr->Size = sizeof(KGDTENTRY64) * 7 - 1;
-	gdtr->Base = gdt;
-
-	HalpInitializeGdt(gdtr);
-	return gdt;
 }

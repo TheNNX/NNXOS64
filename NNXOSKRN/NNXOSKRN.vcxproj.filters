@@ -216,6 +216,12 @@
     <ClCompile Include="HAL\X64\rtc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HAL\X64\syscall.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HAL\X64\gdt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HAL\ACPI\AML.h">
@@ -369,6 +375,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HAL\rtc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\syscall.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

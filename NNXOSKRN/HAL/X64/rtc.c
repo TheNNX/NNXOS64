@@ -185,3 +185,67 @@ VOID HalpPrintCurrentDate()
     PrintDigits(2, (ULONG_PTR)HalRtcGetMonth());
     PrintT(".%i", (ULONG_PTR)HalRtcGetYear());
 }
+
+/**
+ * This is black magic.
+ * And to think that I'll have to write a reverse function... yikes...
+ */
+VOID KeQuerySystemTime(
+    PULONG64 outCurrentTime
+)
+{
+    USHORT year;
+    UCHAR month, day;
+    UCHAR hour, minute, second;
+    ULONG64 quadCenturiesSince1600;
+    ULONG64 remainderYears;
+    ULONG64 leapYearsSince1600;
+    BOOLEAN isCurrentYearLeapYear;
+    ULONG64 daysSince1600;
+    ULONG64 secondsSince1600;
+
+    const ULONG64 daysSinceYearStartNonLeap[] = {
+        0, 
+        0,
+        31,
+        31 + 28,
+        31 + 28 + 31,
+        31 + 28 + 31 + 30,
+        31 + 28 + 31 + 30 + 31,
+        31 + 28 + 31 + 30 + 31 + 30,
+        31 + 28 + 31 + 30 + 31 + 30 + 31,
+        31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
+        31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
+        31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
+        31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+    };
+
+    year = HalRtcGetYear();
+    month = HalRtcGetMonth();
+    day = HalRtcGetDay();
+    hour = HalRtcGetHours();
+    minute = HalRtcGetMinutes();
+    second = HalRtcGetSeconds();
+
+    if (year % 100 == 0)
+        isCurrentYearLeapYear = (year % 400 == 0);
+    else
+        isCurrentYearLeapYear = (year % 4 == 0);
+
+    quadCenturiesSince1600 = (year - 1600) / 400;
+    remainderYears = (year - 1600) % 400;
+
+    leapYearsSince1600 = 
+        quadCenturiesSince1600 * (4 * 25 - 3) + 
+        remainderYears / 4 - remainderYears / 100 + remainderYears / 400 + 
+        ((remainderYears > 0) ? 1 : 0);
+
+    daysSince1600 =
+        ((year - 1600) * 365 + leapYearsSince1600) +
+        daysSinceYearStartNonLeap[month] + 
+        ((isCurrentYearLeapYear && month > 2) ? 1 : 0) +
+        day - 1;
+
+    secondsSince1600 = 60 * (60 * (daysSince1600 * 24 + hour) + minute) + second;
+    *outCurrentTime = secondsSince1600 * 10000000ULL;
+}

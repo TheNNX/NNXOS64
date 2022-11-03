@@ -18,6 +18,7 @@
 #include <device/Keyboard.h>
 #include <HAL/X64/cmos.h>
 #include <HAL/rtc.h>
+#include <HAL/syscall.h>
 
 int basicallyATest = 0;
 
@@ -52,6 +53,13 @@ extern "C"
 		KeBugCheckEx(KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
 
+	static VOID SystemCallHandler()
+	{
+		DisableInterrupts();
+		PrintT("syscall----------------------");
+		EnableInterrupts();
+	}
+
 	__declspec(dllexport) UINT64 KeEntry()
 	{
         NTSTATUS status;
@@ -62,10 +70,10 @@ extern "C"
         dummyPcr.SelfPcr = &dummyPcr;
 
         /** 
-         * for all the code that for example has to lock after initialization 
-         * if not for this dummy PCR, access to the IRQL would page fault 
+         * For all the code that for example has to lock after initialization 
+         * if not for this dummy PCR, access to the IRQL would page fault. 
 		 *
-         * the correct one is set before multi processing init
+         * The correct one is set before multi processing init.
          */
         HalSetPcr(&dummyPcr);
 
@@ -86,9 +94,17 @@ extern "C"
 		MmReinitPhysAllocator(PfnEntries, NumberOfPfnEntries);
 
 		status = ExInitializePool(
-			(PVOID)PagingAllocatePageBlockFromRange(32, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
+			(PVOID)PagingAllocatePageBlockFromRange(
+				32, 
+				PAGING_KERNEL_SPACE,
+				PAGING_KERNEL_SPACE_END
+			),
 			PAGE_SIZE * 32,
-			(PVOID)PagingAllocatePageBlockFromRange(64, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END),
+			(PVOID)PagingAllocatePageBlockFromRange(
+				64, 
+				PAGING_KERNEL_SPACE,
+				PAGING_KERNEL_SPACE_END
+			),
 			PAGE_SIZE * 64
 		);
 
@@ -104,14 +120,22 @@ extern "C"
 		NNXAllocatorInitialize();
 		for (int i = 0; i < 32; i++)
 		{
-			PVOID page = (PVOID)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+			PVOID page = (PVOID)PagingAllocatePageFromRange(
+				PAGING_KERNEL_SPACE, 
+				PAGING_KERNEL_SPACE_END
+			);
 			NNXAllocatorAppend(page, 4096);
 		}
 
 		VfsInit();
 		PciScan();
 
-		ACPI_RDSP* pRdsp = (ACPI_RDSP*) PagingMapStrcutureToVirtual(gRdspPhysical, sizeof(ACPI_RDSP), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+		ACPI_RDSP* pRdsp = (ACPI_RDSP*) 
+			PagingMapStrcutureToVirtual(
+				gRdspPhysical, 
+				sizeof(ACPI_RDSP), 
+				PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE
+			);
 
 		UINT8 acpiError;
 		ACPI_FADT* facp = (ACPI_FADT*) AcpiGetTable(pRdsp, "FACP");
@@ -127,10 +151,20 @@ extern "C"
 
 		ApicInit(madt);
 
+		SetupSystemCallHandler(SystemCallHandler);
 		KeyboardInitialize();
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 
-		PrintT("%s %i.%i.%i.%i, compiled %s %s\n", NNX_OSNAME, NNX_MAJOR, NNX_MINOR, NNX_PATCH, NNX_BUILD, __DATE__, __TIME__);
+		PrintT(
+			"%s %i.%i.%i.%i, compiled %s %s\n",
+			NNX_OSNAME, 
+			NNX_MAJOR, 
+			NNX_MINOR, 
+			NNX_PATCH, 
+			NNX_BUILD,
+			__DATE__,
+			__TIME__
+		);
 
         status = ObInit();
 		if (status)
@@ -141,7 +175,10 @@ extern "C"
 		CmosInitialize();
 		HalRtcInitialize(facp->CenturyRegister);
 		
-		PrintT("Current date and time: ");
+		ULONG64 currentTime;
+		KeQuerySystemTime(&currentTime);
+
+		PrintT("Current date and time (%i): ", currentTime);
 		HalpPrintCurrentDate();
 		PrintT(" ");
 		HalpPrintCurrentTime();

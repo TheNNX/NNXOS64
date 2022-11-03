@@ -143,6 +143,7 @@ NTSTATUS KeWaitForMultipleObjects(
     /* set the threads' state */
     currentThread->ThreadState = THREAD_STATE_WAITING;
     KeReleaseSpinLock(&currentThread->ThreadLock, irql);
+    
     /* manually trigger the scheduler event */
     PspSchedulerNext();
 

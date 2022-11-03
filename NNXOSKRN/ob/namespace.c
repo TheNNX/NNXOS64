@@ -208,14 +208,16 @@ POBJECT_TYPE ObDirectoryObjectType = &ObDirectoryTypeImpl.Data;
 static UNICODE_STRING GlobalNamespaceEmptyName = RTL_CONSTANT_STRING(L"");
 static UNICODE_STRING TypesDirName = RTL_CONSTANT_STRING(L"ObjectTypes");
 
-/* @brief This function takes a named object and changes it's root to another one
+/**
+ * @brief This function takes a named object and changes it's root to another one
  * First it checks if the object has any root already. If this is the case, it references
  * the old root handle to retrieve the old root pointer. This old root is then immediately
  * dereferenced (the original reference created for the root-child relation is still
  * in place, though). Then the new root is referenced - if this operation fails, 
  * its status is returned. If the new root accepts the object as its child, the operations
  * is complete. Otherwise, the would-be new root is dereferenced and the original root (if any)
- * is restored. */
+ * is restored. 
+ */
 NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
 {
     POBJECT_HEADER header, rootHeader;

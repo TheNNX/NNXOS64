@@ -41,18 +41,22 @@
 
 %macro pushvol 0
 	push rax
+	push rcx
+	push rdx
+	push r8
+	push r9
 	push r10
 	push r11
-	; push xmm4
-	; push xmm5
 %endmacro
 
 %macro popvol 0
-	; pop xmm5
-	; pop xmm4
 	pop r11
 	pop r10
-	pop rax
+	pop r9
+	pop r8
+	pop rdx
+	pop rcx
+ 	pop rax
 %endmacro
 
 %macro exception_error 1
@@ -169,6 +173,7 @@ exception_error 30
 
 [extern PageFaultHandler]
 func Exception14
+	jmp $
 	cli
     cmp QWORD [rsp+8], 0x08
     je .noswap
@@ -191,7 +196,7 @@ func Exception14
     je .noswap2
     swapgs
 .noswap2:
-    sti
+	sti
 
 	add rsp, 8
 	iretq
@@ -221,3 +226,56 @@ irq 11
 irq 12
 irq 13
 irq 14
+
+[extern HalpSystemCallHandler]
+func HalpSystemCall
+	; interrupts should be disabled here at the start
+	
+	; all syscalls are from usermode, swap the KernelGSBase with the PCR into GS
+	swapgs
+
+	; store the user stack to a PCR temp variable
+	mov [gs:0x28], rsp
+
+	; get the TSS pointer to RSP
+	mov rsp, [gs:0x08]
+
+	; TODO: wow, this builds... suspicious... test
+	; get the RSP0 into RSP
+	mov rsp, QWORD [rsp+0x04]
+
+	; store the user stack on the kernel stack (we can't rely on the temp variables,
+	; once interrupts are reenabled)
+	push QWORD [gs:0x28]
+
+	; reenable interrupts
+	sti
+
+	; store the register state
+	pushvol
+
+	; allocate the shadow space
+	sub rsp, 32
+	
+	; call the syscall handler 
+	mov rax, HalpSystemCallHandler
+	call [rax]
+
+	; deallocate the shadowspace
+	add rsp, 32
+
+	; restore the register state
+	popvol
+	
+	; disable interrupts to prevent race conditions from occuring
+	cli
+
+	; get the user stack
+	pop QWORD [gs:0x28]
+	mov rsp, [gs:0x28]
+
+	; restore the usermode GS
+	swapgs
+
+	; this restores RFLAGS, so it reenables interrupts too
+	o64 sysret

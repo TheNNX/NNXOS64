@@ -66,7 +66,12 @@ extern "C"
 	PKGDTENTRY64 HalpAllocateAndInitializeGdt();
 	ULONG HalpGetGdtBase(KGDTENTRY64 entry);
 	PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh);
-	UINT64 HalpSetGdtEntry(LPKGDTENTRY64 gdt, UINT64 entryIndex, UINT32 base, UINT32 limit, UINT8 flags, UINT8 accessByte);
+	USHORT HalpGdtFindEntry(
+		LPKGDTENTRY64 gdt,
+		USHORT numberOfEntries,
+		BOOL code,
+		BOOL user
+	);
 
 #ifdef __cplusplus
 }

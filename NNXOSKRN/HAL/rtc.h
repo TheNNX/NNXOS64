@@ -18,6 +18,8 @@ extern "C" {
 
     VOID HalpPrintCurrentTime();
     VOID HalpPrintCurrentDate();
+    
+    VOID KeQuerySystemTime(PULONG64 CurrentTime);
 
 #ifdef __cplusplus
 }

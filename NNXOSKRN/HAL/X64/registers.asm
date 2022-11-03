@@ -90,9 +90,13 @@ func HalX64WriteMsr
 	wrmsr
 	ret
 
-func HalX64SwapGs
-	swapgs
-	mov rax, gs
+func HalX64ReadMsr
+	push rdx
+	and rax, 0xFFFFFFFF
+	rdmsr
+	shl rdx, 32
+	or rax, rdx
+	pop rdx
 	ret
 
 ; new stack in rcx

@@ -1,6 +1,7 @@
 #include <nnxalloc.h>
 #include <HAL/pcr.h>
 #include <SimpleTextIo.h>
+#include <HAL/syscall.h>
 
 PKPCR HalGetPcr();
 VOID HalSetPcr(PKPCR);
@@ -28,8 +29,11 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	HalSetPcr(tempPcr);
 
 	pcr = HalCreatePcr(gdt, idt, id);
-	HalReleaseLockRaw(&PcrCreationLock);
+
+	HalInitializeSystemCallForCurrentCore();
+
     KfRaiseIrql(DISPATCH_LEVEL);
+	HalReleaseLockRaw(&PcrCreationLock);
 }
 
 PKIDTENTRY64 HalpGetIdt()
@@ -76,7 +80,6 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 
 	pcr->SelfPcr = pcr;
 	
-
 	pcr->Prcb = HalCreatePrcb(CoreNumber);
 
 	HalSetPcr(pcr);
