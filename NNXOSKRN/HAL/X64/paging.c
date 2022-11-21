@@ -22,19 +22,19 @@
  * PDP  511   : kernel space
  */
 
-#define RecursivePagingPagesSizePreBoundary        ((UINT64*)ToCanonicalAddress(PDP_COVERED_SIZE * PML4EntryForRecursivePaging))
+#define RecursivePagingPagesSizePreBoundary ((UINT64*)ToCanonicalAddress(PDP_COVERED_SIZE * PML4EntryForRecursivePaging))
 
-#define RecursivePagingPTsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPagesSizePreBoundary))
-#define RecursivePagingPTsSizePreBoundary        PD_COVERED_SIZE * PML4EntryForRecursivePaging
+#define RecursivePagingPTsBase              ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPagesSizePreBoundary))
+#define RecursivePagingPTsSizePreBoundary   PD_COVERED_SIZE * PML4EntryForRecursivePaging
 
-#define RecursivePagingPDsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPTsBase + (UINT64)RecursivePagingPTsSizePreBoundary))
-#define RecursivePagingPDsSizePreBoundary        PT_COVERED_SIZE * PML4EntryForRecursivePaging
+#define RecursivePagingPDsBase              ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPTsBase + (UINT64)RecursivePagingPTsSizePreBoundary))
+#define RecursivePagingPDsSizePreBoundary   PT_COVERED_SIZE * PML4EntryForRecursivePaging
 
-#define RecursivePagingPDPsBase                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDsBase + (UINT64)RecursivePagingPDsSizePreBoundary))
-#define RecursivePagingPDPsSizePreBoundary        PAGE_SIZE_SMALL * PML4EntryForRecursivePaging
+#define RecursivePagingPDPsBase             ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDsBase + (UINT64)RecursivePagingPDsSizePreBoundary))
+#define RecursivePagingPDPsSizePreBoundary  PAGE_SIZE_SMALL * PML4EntryForRecursivePaging
 
-#define RecursivePagingPML4Base                    ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDPsBase + (UINT64)RecursivePagingPDPsSizePreBoundary))
-#define RecursivePagingPML4Size                    PAGE_SIZE_SMALL
+#define RecursivePagingPML4Base             ((UINT64*)ToCanonicalAddress((UINT64)RecursivePagingPDPsBase + (UINT64)RecursivePagingPDPsSizePreBoundary))
+#define RecursivePagingPML4Size             PAGE_SIZE_SMALL
 
 KSPIN_LOCK PagingSpinlock;
 

@@ -84,6 +84,7 @@ NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber)
         listEntry->Flags = 4;
         InsertTailList(&WorkingsetList.PfnListHead, &listEntry->ListEntry);
         *pPfnNumber = (PFN_NUMBER)(listEntry - PfnEntries);
+
         result = STATUS_SUCCESS;
     }
     KeReleaseSpinLock(&PfnEntriesLock, irql);
