@@ -27,9 +27,36 @@ func KiUserRestoreUserContext
     mov QWORD rsp, [rsp+176]
     ret
 
-func TestUserThread
+func TestUserThread1
+    xor rax, rax
+.loop:
+    mov rdx, rax
+    mov r9, 1
     syscall
-    jmp $
+    mov rcx, 0x1FFFFFF
+.decr:
+    test rcx, rcx
+    jz .enddecr
+    dec rcx
+    jmp .decr
+.enddecr:
+
+    jmp .loop
+
+func TestUserThread2
+    xor rax, rax
+.loop:
+    mov rdx, rax
+    mov r9, 2
+    syscall
+    mov rcx, 0x1FFFFFF
+.decr:
+    test rcx, rcx
+    jz .enddecr
+    dec rcx
+    jmp .decr
+.enddecr:
+    jmp .loop 
 
 func TestFailUserThread
     ; causes a GPF

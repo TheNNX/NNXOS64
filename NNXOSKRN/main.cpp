@@ -53,13 +53,6 @@ extern "C"
 		KeBugCheckEx(KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
 	}
 
-	static VOID SystemCallHandler()
-	{
-		DisableInterrupts();
-		PrintT("syscall----------------------");
-		EnableInterrupts();
-	}
-
 	__declspec(dllexport) UINT64 KeEntry()
 	{
         NTSTATUS status;

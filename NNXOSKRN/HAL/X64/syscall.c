@@ -2,10 +2,12 @@
 #include <HAL/spinlock.h>
 #include "cpu.h"
 #include "GDT.h"
+#include "IDT.h"
+#include <scheduler.h>
 
 static KSPIN_LOCK SystemCallSpinLock;
 
-VOID (*HalpSystemCallHandler)();
+SYSCALL_HANDLER HalpSystemCallHandler;
 VOID HalpSystemCall();
 
 /**
@@ -29,7 +31,47 @@ VOID HalInitializeSystemCallForCurrentCore()
     HalX64WriteMsr(IA32_LSTAR, (ULONG_PTR)HalpSystemCall);
 }
 
-VOID SetupSystemCallHandler(SYSCALL_HANDLER SystemRoutine)
+/**
+ * @brief Sets the system call handler.
+ * @return Pointer to the previous system call handler.
+ */
+SYSCALL_HANDLER SetupSystemCallHandler(SYSCALL_HANDLER SystemRoutine)
 {
-    HalpSystemCallHandler = SystemRoutine;
+	SYSCALL_HANDLER oldHandler = HalpSystemCallHandler;
+	HalpSystemCallHandler = SystemRoutine;
+	return oldHandler;
+}
+
+/**
+ * @brief The default system call handler - note: it is possible
+ * to use different handlers, and even to chain load them - to 
+ * do so, set a different handler with SetupSystemCallHandler,
+ * preserve the old handler, and call the old handler from within
+ * the new handler. 
+ */
+ULONG_PTR SystemCallHandler(
+	ULONG_PTR p1,
+	ULONG_PTR p2,
+	ULONG_PTR p3,
+	ULONG_PTR p4
+)
+{
+	ULONG_PTR result = 0;
+
+	DisableInterrupts();
+	switch (p1)
+	{
+	case 1:
+	case 2:
+		result = (ULONG_PTR)KeGetCurrentThread();
+		PrintT("%i\n", p1);
+		if (result != p2)
+			PrintT("%X %X %X %X %X\n", result, p1, p2, p3, p4);
+		break;
+	default:
+		PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
+	}
+	EnableInterrupts();
+
+	return result;
 }

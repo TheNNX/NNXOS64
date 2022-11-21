@@ -44,7 +44,7 @@ func HalpTaskSwitchHandler
     
     ; allocate the shadowspace
     sub rsp, 32
-    
+
     ; set the IRQL to DISPATCH_LEVEL
     ; and store the old IRQL in a non-volatile register
     mov rcx, 2
@@ -59,17 +59,12 @@ func HalpTaskSwitchHandler
     ; is the IRQL
     call ApicSendEoi
 
-    ; free the shadowspace
-    add rsp, 32
-
     ; select the next thread
     mov rcx, rsp
     ; skip the shadowspace 
+    add rcx, 32
     call PspScheduleThread
     mov r12, rax
-
-    ; allocate the shadowspace
-    sub rsp, 32
 
     mov rcx, r13
     call KiUnlockThread
@@ -204,8 +199,7 @@ func PspSchedulerNext
     call PspStoreContextFrom64
     mov rcx, rsp
     call PspScheduleThread
-    push QWORD rax
-    pop QWORD rcx
+    mov rcx, rax
     jmp PspSwitchContextTo64
 
 .ReturnAddress:

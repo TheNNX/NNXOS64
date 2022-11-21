@@ -59,6 +59,24 @@
  	pop rax
 %endmacro
 
+%macro popvolnorax 0
+	pop r11
+	pop r10
+	pop r9
+	pop r8
+	pop rdx
+	pop rcx
+%endmacro
+
+%macro pushvolnorax 0
+	push rcx
+	push rdx
+	push r8
+	push r9
+	push r10
+	push r11
+%endmacro
+
 %macro exception_error 1
 [GLOBAL Exception%1]
 Exception%1:
@@ -240,7 +258,6 @@ func HalpSystemCall
 	; get the TSS pointer to RSP
 	mov rsp, [gs:0x08]
 
-	; TODO: wow, this builds... suspicious... test
 	; get the RSP0 into RSP
 	mov rsp, QWORD [rsp+0x04]
 
@@ -252,11 +269,13 @@ func HalpSystemCall
 	sti
 
 	; store the register state
-	pushvol
+	pushvolnorax
 
 	; allocate the shadow space
 	sub rsp, 32
-	
+
+	mov rcx, r9
+
 	; call the syscall handler 
 	mov rax, HalpSystemCallHandler
 	call [rax]
@@ -265,8 +284,8 @@ func HalpSystemCall
 	add rsp, 32
 
 	; restore the register state
-	popvol
-	
+	popvolnorax
+
 	; disable interrupts to prevent race conditions from occuring
 	cli
 

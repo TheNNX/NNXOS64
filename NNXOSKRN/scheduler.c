@@ -279,8 +279,6 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     {
         status = PspInitializeScheduler();
         
-/* don't care about lock releasing, the system is dead anyway if it returns here */
-#pragma warning(disable: 26115)
         PrintT("Scheduler initialization status %X\n", status);
         if (status)
             return status;
@@ -309,23 +307,33 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
-        PETHREAD userThread;
+        PETHREAD userThread1, userThread2;
 
         NTSTATUS ObpMpTest();
-        VOID TestUserThread();
+        VOID TestUserThread1();
+        VOID TestUserThread2();
 
         status = ObpMpTest();
 
         PrintT("Created userthread %i %i\n", PspCoresInitialized, KeNumberOfProcessors);
         PspCreateThreadInternal(
-            &userThread,
+            &userThread1,
             (PEPROCESS)pPrcb->IdleThread->Process,
             FALSE,
-            (ULONG_PTR)TestUserThread
+            (ULONG_PTR)TestUserThread1
         );
 
-        userThread->Tcb.ThreadPriority = 1;
-        PspInsertIntoSharedQueue((PKTHREAD)userThread);
+        PspCreateThreadInternal(
+            &userThread2,
+            (PEPROCESS)pPrcb->IdleThread->Process,
+            FALSE,
+            (ULONG_PTR)TestUserThread2
+        );
+
+        userThread1->Tcb.ThreadPriority = 1;
+        userThread2->Tcb.ThreadPriority = 1;
+        PspInsertIntoSharedQueue((PKTHREAD)userThread1);
+        PspInsertIntoSharedQueue((PKTHREAD)userThread2);
     }
 
     PKTASK_STATE pTaskState = pPrcb->IdleThread->KernelStackPointer;
@@ -832,7 +840,7 @@ VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
     KeAcquireSpinLock(&PspSharedReadyQueue.Lock, &irql);
 
     ThreadPriority = (UCHAR)(Thread->ThreadPriority + (CHAR)Thread->Process->BasePriority);
-    InsertTailList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority].EntryListHead, (PLIST_ENTRY)&Thread->ReadyQueueEntry);
+    InsertHeadList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority].EntryListHead, (PLIST_ENTRY)&Thread->ReadyQueueEntry);
     PspSharedReadyQueue.ThreadReadyQueuesSummary = (ULONG)SetBit(
         PspSharedReadyQueue.ThreadReadyQueuesSummary,
         ThreadPriority
