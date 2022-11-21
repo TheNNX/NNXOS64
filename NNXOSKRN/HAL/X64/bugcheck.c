@@ -27,7 +27,10 @@ KeBugCheckEx(
 {
 	KIRQL irql;
 	DisableInterrupts();
-	KeAcquireSpinLock(&BugcheckLock, &irql);
+	irql = KeGetCurrentIrql();
+	if (irql < DISPATCH_LEVEL)
+		KeRaiseIrql(DISPATCH_LEVEL, &irql);
+	KeAcquireSpinLockAtDpcLevel(&BugcheckLock);
 
 	/* TODO: notify other CPUs */
 	if (FALSE)
