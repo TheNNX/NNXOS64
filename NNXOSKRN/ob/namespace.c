@@ -581,9 +581,9 @@ static VOID ObpWorkerThreadFunction()
     UINT ownId;
     KIRQL irql;
     NTSTATUS status;
-
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
+    PrintT("[%i] started ", NextTesterId);
     ownId = NextTesterId++;
     KeReleaseSpinLock(&NextTesterIdLock, irql);
 
@@ -598,13 +598,14 @@ static VOID ObpWorkerThreadFunction()
     PsExitThread(0);
 }
 
-VOID DiagnosticThread();
+VOID PspPrintQueuesInfo();
 
 /* @brief this function should be run in a thread */
 NTSTATUS ObpMpTestNamespaceThread()
 {
     INT i, j;
     NTSTATUS waitStatus;
+    NTSTATUS creationStatus;
     UINT64 __lastMemory, __currentMemory;
     char* __caller;
     KIRQL irql;
@@ -621,24 +622,39 @@ NTSTATUS ObpMpTestNamespaceThread()
     {
         KeAcquireSpinLock(&NextTesterIdLock, &irql);
         
-        PspCreateProcessInternal(&WorkerProcesses[i]);
+        PrintT("Creating process %i from CPU%i\n", i, KeGetCurrentProcessorId());
+        
+        creationStatus = PspCreateProcessInternal(&WorkerProcesses[i]);
+
+        if (!NT_SUCCESS(creationStatus))
+        {
+            PrintT("[%s:%i] creation failed for process %i\n", __FILE__, __LINE__, i);
+            KeReleaseSpinLock(&NextTesterIdLock, irql);
+            return creationStatus;
+        }
 
         for (j = 0; j < WORKER_THREADS_PER_PROCESS; j++)
         {
-            PrintT("[%i/%i] started\n", j + i * WORKER_THREADS_PER_PROCESS + 1, WORKER_PROCESSES_NUMBER * WORKER_THREADS_PER_PROCESS);
-            
-            PspCreateThreadInternal(
+            creationStatus = PspCreateThreadInternal(
                 WorkerThreads + j + i * WORKER_THREADS_PER_PROCESS,
                 WorkerProcesses[i],
                 TRUE,
                 (ULONG_PTR) ObpWorkerThreadFunction
             );
 
+            if (!NT_SUCCESS(creationStatus))
+            {
+                PrintT("[%s:%i] creation failed for thread %i:%i\n", __FILE__, __LINE__, i, j);
+                KeReleaseSpinLock(&NextTesterIdLock, irql);
+                return creationStatus;
+            }
+
             WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 1;
             ObReferenceObject(WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]);
 
             PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
+
         KeReleaseSpinLock(&NextTesterIdLock, irql);
     }
 

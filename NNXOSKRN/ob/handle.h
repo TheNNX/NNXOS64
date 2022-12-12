@@ -20,7 +20,7 @@ extern "C" {
 
 #define ENTRIES_PER_HANDLE_DATABASE ((PAGE_SIZE - sizeof(LIST_ENTRY)) / sizeof(HANDLE_DATABASE_ENTRY))
 
-    typedef __declspec(align(4096)) struct _HANDLE_DATABASE
+    typedef struct _HANDLE_DATABASE
     {
         /* entry in the process' handle database chain (it has to be the first element of the struct) */
         LIST_ENTRY HandleDatabaseChainEntry;

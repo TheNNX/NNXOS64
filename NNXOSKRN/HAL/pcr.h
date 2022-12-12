@@ -45,7 +45,7 @@ extern "C"
 		 * kernel stack and access other per thread variables. 
 		 */
 		ULONG_PTR		TempHandlerVals[2];
-		ULONG			Reserved1[1];
+		LONG			Reserved0;
 		PKIDTENTRY64	Idt;
 		ULONG			Reserved4[3];
 		USHORT			MajorVersion;
@@ -54,6 +54,8 @@ extern "C"
 	}KPCR, *LPKPCR, *PKPCR;
 
 	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
+	VOID HalpSetDummyPcr();
+	VOID HalpInitDummyPcr();
 	VOID HalSetPcr(PKPCR);
 #else
 #error "Architecture unsupported"

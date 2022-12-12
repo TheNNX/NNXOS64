@@ -16,6 +16,7 @@ KIRQL FASTCALL KfRaiseIrql(KIRQL NewIrql)
 	if (NewIrql < oldIrql)
 		KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfRaiseIrql);
 
+	/* FIXME: this doesn't work */
 	HalX64SetTpr(NewIrql);
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);

@@ -49,7 +49,7 @@ func TestUserThread2
     mov rdx, rax
     mov r9, 2
     syscall
-    mov rcx, 0x1FFFFFF
+    mov rcx, 0x3FFFFFF
 .decr:
     test rcx, rcx
     jz .enddecr

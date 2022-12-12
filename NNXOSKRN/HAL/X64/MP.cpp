@@ -115,12 +115,7 @@ extern "C" {
 	{
 		NTSTATUS status;
 
-		/* same story as the BP */
-		KPCR dummyPcr = { 0 };
-		dummyPcr.Irql = 0;
-		dummyPcr.Prcb = NULL;
-		dummyPcr.SelfPcr = &dummyPcr;
-		HalSetPcr(&dummyPcr);
+		HalpSetDummyPcr();
 
 		HalpSetupPcrForCurrentCpu(lapicId);
 		ApicLocalApicInitializeCore();

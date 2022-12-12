@@ -76,6 +76,7 @@
       </TreatSpecificWarningsAsErrors>
       <DisableSpecificWarnings>4200</DisableSpecificWarnings>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -139,6 +140,7 @@ $(SolutionDir)genverh.bat</Command>
       </TreatSpecificWarningsAsErrors>
       <DisableSpecificWarnings>4200</DisableSpecificWarnings>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>

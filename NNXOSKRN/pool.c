@@ -708,14 +708,14 @@ DebugEnumeratePoolBlocks(
 	while (ExVerifyPoolBlock(current, poolType) && 
 		(PLIST_ENTRY)current != &poolDescriptor->PoolHead)
 	{
-		/*PrintT(
-			"%x: [%X] size=%i pooltype=%i, next: %X\n", 
-			current, 
-			current->AllocationTag,
-			current->Size,
-			(ULONG_PTR)current->PoolType,
-			(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
-		);*/
+		//PrintT(
+		//	"%x: [%X] size=%i pooltype=%i, next: %X\n", 
+		//	current, 
+		//	current->AllocationTag,
+		//	current->Size,
+		//	(ULONG_PTR)current->PoolType,
+		//	(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
+		//);
 
 		if (current->Size > 0xFFFFFF)
 		{

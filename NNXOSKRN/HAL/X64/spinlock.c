@@ -2,9 +2,6 @@
 #include "APIC.h"
 #include <bugcheck.h>
 
-/* kinda hacky, but as long as no locks are acquired after MP initialization but before releasing all initialization locks, it will be fine */
-LONG LockedDuringInitialization = 0;
-
 VOID NTAPI KiAcquireSpinLock(PKSPIN_LOCK Lock)
 {
     HalAcquireLockRaw(Lock);
@@ -42,6 +39,10 @@ KIRQL FASTCALL KfAcquireSpinLock(PKSPIN_LOCK lock)
 
 VOID FASTCALL KfReleaseSpinLock(PKSPIN_LOCK lock, KIRQL newIrql) 
 {
+    if (KeGetCurrentIrql() == PASSIVE_LEVEL)
+    {
+        KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, __LINE__, KeGetCurrentIrql(), 0, 0);
+    }
     KiReleaseSpinLock(lock);
 	KeLowerIrql(newIrql);
 }

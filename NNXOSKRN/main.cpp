@@ -57,18 +57,8 @@ extern "C"
 	{
         NTSTATUS status;
 
-        KPCR dummyPcr = { 0 };
-        dummyPcr.Irql = DISPATCH_LEVEL;
-        dummyPcr.Prcb = NULL;
-        dummyPcr.SelfPcr = &dummyPcr;
-
-        /** 
-         * For all the code that for example has to lock after initialization 
-         * if not for this dummy PCR, access to the IRQL would page fault. 
-		 *
-         * The correct one is set before multi processing init.
-         */
-        HalSetPcr(&dummyPcr);
+		HalpInitDummyPcr();
+		HalpSetDummyPcr();
 
 		DisableInterrupts();
 		PitUniprocessorInitialize();

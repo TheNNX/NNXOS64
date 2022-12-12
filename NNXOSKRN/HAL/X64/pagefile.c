@@ -237,19 +237,21 @@ PagingPageInPage(
  
     KeAcquireSpinLock(&PageFileLock, &irql);
 
-    /* get the temp page-file page mapping */
+    /* Get the temp page-file page mapping */
     tempMapping = PagingGetCurrentMapping(virtualAddress & PAGE_ADDRESS_MASK);
-    /* get the old flags (but clear the present flag) */
+    /* Get the old flags (but clear the present flag) */
     originalFlags = (tempMapping & 0xFFF) & (~PAGE_PRESENT);
-    tempMapping &= (~0xFFF);
+    tempMapping &= PAGE_ADDRESS_MASK;
 
-    /* get the page file page index */
+    /* Get the page file page index */
     pageFilePageIndex = tempMapping / PAGE_SIZE;
 
-    /* no such page file page index allocated */
-    if (PagingGetPageFileMapBit(pageFilePageIndex) == FALSE)
+    /* No such page file page index allocated, or the index is invalid */
+    if (pageFilePageIndex == 0 ||
+        PagingGetPageFileMapBit(pageFilePageIndex) == FALSE)
     {
-        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 0, 0, 0);
+        KeReleaseSpinLock(&PageFileLock, irql);
+        return STATUS_INVALID_PARAMETER;
     }
 
     status = MmAllocatePfn(&pfnNumber);
@@ -260,10 +262,10 @@ PagingPageInPage(
     }
     physAddr = PA_FROM_PFN(pfnNumber);
 
-    /* map the page */
+    /* Map the page */
     PagingMapPage(virtualAddress, physAddr, originalFlags | PAGE_PRESENT);
 
-    /* read the page from the page file */
+    /* Read the page from the page file */
     status = PagingLoadPageFromPageFile(virtualAddress, pageFilePageIndex);
 
     if (!NT_SUCCESS(status))
@@ -288,6 +290,7 @@ PageFaultHandler(
 {
     NTSTATUS status;
 
+    PrintT("Servicing page fault %X %X\n", rip, errcode);
     if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
     {
         KeBugCheckEx(
@@ -304,11 +307,11 @@ PageFaultHandler(
         status = PagingPageInPage(GetCR2());
         if (status)
         {
-            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 0, 0, 0);
+            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 1, 0, 0);
         }
     }
     else
     {
-        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 0, 0, 0);
+        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 2, 0, 0);
     }
 }

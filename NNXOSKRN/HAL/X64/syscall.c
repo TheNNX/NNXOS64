@@ -64,7 +64,7 @@ ULONG_PTR SystemCallHandler(
 	case 1:
 	case 2:
 		result = (ULONG_PTR)KeGetCurrentThread();
-		PrintT("%i\n", p1);
+		PrintT("%X ", result & 0xFFFF);
 		if (result != p2)
 			PrintT("%X %X %X %X %X\n", result, p1, p2, p3, p4);
 		break;

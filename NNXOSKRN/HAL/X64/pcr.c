@@ -2,6 +2,7 @@
 #include <HAL/pcr.h>
 #include <SimpleTextIo.h>
 #include <HAL/syscall.h>
+#include <rtl/rtl.h>
 
 PKPCR HalGetPcr();
 VOID HalSetPcr(PKPCR);
@@ -9,6 +10,31 @@ VOID HalSetPcr(PKPCR);
 KSPIN_LOCK PcrCreationLock = 0;
 
 VOID HalpTaskSwitchHandler();
+
+/**
+* @brief For all the code that for example has to lock after initialization
+* if not for this dummy PCR, access to the IRQL would page fault.
+*
+* The correct one is set before multiprocessing init.
+*/
+static KPCR dummyPcr;
+static KPRCB dummyPrcb;
+
+VOID HalpInitDummyPcr()
+{
+	RtlZeroMemory(&dummyPcr, sizeof(dummyPcr));
+	RtlZeroMemory(&dummyPrcb, sizeof(dummyPrcb));
+	dummyPcr.Irql = DISPATCH_LEVEL;
+	dummyPcr.Prcb = NULL;
+	dummyPcr.SelfPcr = &dummyPcr;
+	dummyPcr.Prcb = &dummyPrcb;
+	dummyPrcb.CurrentThread = NULL;
+}
+
+VOID HalpSetDummyPcr()
+{
+	HalSetPcr(&dummyPcr);
+}
 
 VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 {

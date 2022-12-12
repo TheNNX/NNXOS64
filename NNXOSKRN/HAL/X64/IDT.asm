@@ -191,7 +191,6 @@ exception_error 30
 
 [extern PageFaultHandler]
 func Exception14
-	jmp $
 	cli
     cmp QWORD [rsp+8], 0x08
     je .noswap

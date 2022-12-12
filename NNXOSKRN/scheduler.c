@@ -264,7 +264,6 @@ VOID PspInitializeCoreSchedulerData(UINT8 CoreNumber)
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 }
 
-
 #pragma warning(push)
 NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 {
@@ -307,33 +306,42 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
-        PETHREAD userThread1, userThread2;
-
         NTSTATUS ObpMpTest();
-        VOID TestUserThread1();
-        VOID TestUserThread2();
 
+        PrintT("Running mp test for core %i\n", KeGetCurrentProcessorId());
         status = ObpMpTest();
+        if (!NT_SUCCESS(status))
+        {
+            return status;
+        }
 
-        PrintT("Created userthread %i %i\n", PspCoresInitialized, KeNumberOfProcessors);
-        PspCreateThreadInternal(
-            &userThread1,
-            (PEPROCESS)pPrcb->IdleThread->Process,
-            FALSE,
-            (ULONG_PTR)TestUserThread1
-        );
+        for (int i = 0; i < 10; i++)
+        {
+            PETHREAD userThread1, userThread2;
 
-        PspCreateThreadInternal(
-            &userThread2,
-            (PEPROCESS)pPrcb->IdleThread->Process,
-            FALSE,
-            (ULONG_PTR)TestUserThread2
-        );
+            VOID TestUserThread1();
+            VOID TestUserThread2();
 
-        userThread1->Tcb.ThreadPriority = 1;
-        userThread2->Tcb.ThreadPriority = 1;
-        PspInsertIntoSharedQueue((PKTHREAD)userThread1);
-        PspInsertIntoSharedQueue((PKTHREAD)userThread2);
+            PspCreateThreadInternal(
+                &userThread1,
+                (PEPROCESS)pPrcb->IdleThread->Process,
+                FALSE,
+                (ULONG_PTR)TestUserThread1
+            );
+
+            PspCreateThreadInternal(
+                &userThread2,
+                (PEPROCESS)pPrcb->IdleThread->Process,
+                FALSE,
+                (ULONG_PTR)TestUserThread2
+            );
+
+            userThread1->Tcb.ThreadPriority = 1;
+            userThread2->Tcb.ThreadPriority = 1;
+            PspInsertIntoSharedQueue((PKTHREAD)userThread1);
+            PspInsertIntoSharedQueue((PKTHREAD)userThread2);
+            PrintT("Userthreads: %X %X\n", userThread1, userThread2);
+        }
     }
 
     PKTASK_STATE pTaskState = pPrcb->IdleThread->KernelStackPointer;
@@ -474,11 +482,47 @@ PKTHREAD KeGetCurrentThread()
 
 PVOID PspCreateKernelStack(SIZE_T nPages)
 {
-    return (PVOID)((ULONG_PTR)PagingAllocatePageBlockFromRange(
-        nPages, 
+    ULONG_PTR blockAllocation, currentMappingGuard1, currentMappingGuard2;
+    NTSTATUS status;
+
+    /* Allocate two more pages for the page guard. */
+    blockAllocation = PagingAllocatePageBlockFromRange(
+        nPages + 2, 
         PAGING_KERNEL_SPACE, 
         PAGING_KERNEL_SPACE_END
-    ) + PAGE_SIZE * nPages);
+    );
+
+    /* Get the current mappings. */
+    currentMappingGuard1 = 
+        PagingGetCurrentMapping(blockAllocation)
+        & PAGE_ADDRESS_MASK;
+    currentMappingGuard2 = 
+        PagingGetCurrentMapping(blockAllocation + PAGE_SIZE * (nPages + 1))
+        & PAGE_ADDRESS_MASK;
+
+    /* FIXME:
+     * Currently, this marks as zero address, non present, non-zero flags. 
+     * Page fault handler doesn't recognize pagefile index 0 as valid,
+     * and PagingFindFreePages doesn't consider pages with non-zero flags
+     * as free. */
+    status = PagingMapPage(blockAllocation, 0, PAGE_WRITE);
+    if (!NT_SUCCESS(status))
+    {
+        PrintT("[%s:%i] Not success\n", __FILE__, __LINE__);
+        return (PVOID)NULL;
+    }
+    status = PagingMapPage(blockAllocation + PAGE_SIZE * (nPages + 1), 0, PAGE_WRITE);
+    if (!NT_SUCCESS(status))
+    {
+        PrintT("[%s:%i] Not success\n", __FILE__, __LINE__);
+        return (PVOID)NULL;
+    }
+
+    /* Free the PFNs of the guards. */
+    MmFreePhysicalAddress(currentMappingGuard1);
+    MmFreePhysicalAddress(currentMappingGuard2);
+    
+    return (PVOID)(blockAllocation + (nPages + 1) * PAGE_SIZE);
 }
 
 VOID
@@ -840,7 +884,7 @@ VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
     KeAcquireSpinLock(&PspSharedReadyQueue.Lock, &irql);
 
     ThreadPriority = (UCHAR)(Thread->ThreadPriority + (CHAR)Thread->Process->BasePriority);
-    InsertHeadList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority].EntryListHead, (PLIST_ENTRY)&Thread->ReadyQueueEntry);
+    InsertTailList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority].EntryListHead, (PLIST_ENTRY)&Thread->ReadyQueueEntry);
     PspSharedReadyQueue.ThreadReadyQueuesSummary = (ULONG)SetBit(
         PspSharedReadyQueue.ThreadReadyQueuesSummary,
         ThreadPriority
