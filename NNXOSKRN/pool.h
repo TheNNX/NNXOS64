@@ -101,6 +101,11 @@ extern "C" {
 		ULONG tag
 	);
 
+	BOOL
+	ExVerifyPool(
+		POOL_TYPE type
+	);
+
 #ifdef __cplusplus
 }
 #endif

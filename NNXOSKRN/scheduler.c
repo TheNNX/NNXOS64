@@ -139,7 +139,7 @@ NTSTATUS PspInitializeScheduler()
             PAGING_KERNEL_SPACE,
             PAGING_KERNEL_SPACE_END
         );
-
+            
         if (CoresSchedulerData != NULL)
         {
             for (i = 0; i < 32; i++)
@@ -317,24 +317,40 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
 
         for (int i = 0; i < 10; i++)
         {
+            PEPROCESS userProcess1;
             PETHREAD userThread1, userThread2;
 
             VOID TestUserThread1();
             VOID TestUserThread2();
 
-            PspCreateThreadInternal(
+            status = PspCreateProcessInternal(&userProcess1);
+            userProcess1->Pcb.AffinityMask = 0xFFFFFFFF;
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
+
+            status = PspCreateThreadInternal(
                 &userThread1,
-                (PEPROCESS)pPrcb->IdleThread->Process,
+                userProcess1,
                 FALSE,
                 (ULONG_PTR)TestUserThread1
             );
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
 
-            PspCreateThreadInternal(
+            status = PspCreateThreadInternal(
                 &userThread2,
-                (PEPROCESS)pPrcb->IdleThread->Process,
+                userProcess1,
                 FALSE,
                 (ULONG_PTR)TestUserThread2
             );
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
 
             userThread1->Tcb.ThreadPriority = 1;
             userThread2->Tcb.ThreadPriority = 1;

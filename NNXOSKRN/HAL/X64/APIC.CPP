@@ -269,7 +269,6 @@ extern "C"
 		}
 
 		ApicNumberOfCoresInitialized++;
-		KeNumberOfProcessors = ApicNumberOfCoresInitialized;
 
 		ApicLocalApicWriteRegister(LAPIC_DESTINATION_FORMAT_REGISTER, 0xFFFFFFFFUL);
 		ApicLocalApicWriteRegister(LAPIC_LOGICAL_DESTINATION_REGISTER, 0xFF000000UL);

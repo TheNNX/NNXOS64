@@ -290,7 +290,7 @@ PageFaultHandler(
 {
     NTSTATUS status;
 
-    PrintT("Servicing page fault %X %X\n", rip, errcode);
+    PrintT("Servicing page fault %X %X %X\n", rip, errcode, KeGetCurrentProcessorId());
     if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
     {
         KeBugCheckEx(

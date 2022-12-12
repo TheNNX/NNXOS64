@@ -11,8 +11,10 @@
 #include <HAL/pcr.h>
 #include <HAL/X64/registers.h>
 
+
 extern "C" {
 
+	extern UINT KeNumberOfProcessors;
 	PVOID* ApStackPointerArray;
 
 	PVOID MpPopulateApStartupCode()
@@ -80,6 +82,7 @@ extern "C" {
 		currentLapicId = ApicGetCurrentLapicId();
 
 		ApicClearError();
+		KeNumberOfProcessors = ApicNumberOfCoresDetected;
 		for (i = 0; i < ApicNumberOfCoresDetected; i++)
 		{
 			if (ApicLocalApicIDs[i] == currentLapicId)
@@ -115,6 +118,7 @@ extern "C" {
 	{
 		NTSTATUS status;
 
+		PrintT("Setting PCR for %i\n", lapicId);
 		HalpSetDummyPcr();
 
 		HalpSetupPcrForCurrentCpu(lapicId);

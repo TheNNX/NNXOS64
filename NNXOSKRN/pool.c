@@ -190,8 +190,44 @@ ValidateTag(
 	pTagAsByteArray = (const UBYTE*)&Tag;
 	
 	for (i = 0; i < 4; i++)
+	{
 		if (pTagAsByteArray[i] < ' ' || pTagAsByteArray[i] > 0x7E)
+		{
 			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+BOOL
+ExVerifyPool(
+	POOL_TYPE type
+)
+{
+	PPOOL_DESCRIPTOR poolDescriptor;
+	PPOOL_HEADER currentCheckedBlock;
+	KIRQL irql;
+
+	poolDescriptor = Pools[type];
+	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
+
+	DebugEnumeratePoolBlocks(type);
+
+	/* enumerate the pool blocks */
+	currentCheckedBlock = (PPOOL_HEADER)poolDescriptor->PoolHead.First;
+	while ((PLIST_ENTRY)currentCheckedBlock != &poolDescriptor->PoolHead)
+	{
+		if (!ExVerifyPoolBlock(currentCheckedBlock, type))
+		{
+			PrintT("Corrupted pool block %X\n", currentCheckedBlock);
+			KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
+			return FALSE;
+		}
+
+		currentCheckedBlock = (PPOOL_HEADER)currentCheckedBlock->PoolEntry.Next;
+	}
+	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 
 	return TRUE;
 }
@@ -392,7 +428,7 @@ ExAllocatePoolWithTag(
 						/* link the headers */
 						InsertAfter(currentCheckedBlock, followingHeader);
 						followingHeader->Size = followingBytes - sizeof(POOL_HEADER);
-
+						followingHeader->AllocationTag = 0;
 						followingHeader->PoolType = type;
 					}
 
@@ -618,6 +654,11 @@ ExVerifyPoolBlock(
 		}
 	}
 
+	if (blockHeader->AllocationTag != 0)
+	{
+		result = result && ValidateTag(blockHeader->AllocationTag);
+	}
+
 	return result;
 }
 
@@ -708,14 +749,14 @@ DebugEnumeratePoolBlocks(
 	while (ExVerifyPoolBlock(current, poolType) && 
 		(PLIST_ENTRY)current != &poolDescriptor->PoolHead)
 	{
-		//PrintT(
-		//	"%x: [%X] size=%i pooltype=%i, next: %X\n", 
-		//	current, 
-		//	current->AllocationTag,
-		//	current->Size,
-		//	(ULONG_PTR)current->PoolType,
-		//	(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
-		//);
+		PrintT(
+			"%x: [%X] size=%i pooltype=%i, next: %X\n", 
+			current, 
+			current->AllocationTag,
+			current->Size,
+			(ULONG_PTR)current->PoolType,
+			(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
+		);
 
 		if (current->Size > 0xFFFFFF)
 		{
