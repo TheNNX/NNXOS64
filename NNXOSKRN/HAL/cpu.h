@@ -14,8 +14,13 @@ typedef ULONG_PTR	KAFFINITY;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
     extern UINT KeNumberOfProcessors;
+
     ULONG KeGetCurrentProcessorId();
+
+    ULONG_PTR
+    HalpGetCurrentAddress();
 #ifdef __cplusplus
 }
 #endif

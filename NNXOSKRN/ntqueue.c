@@ -9,10 +9,8 @@ extern UINT KeNumberOfProcessors;
 
 VOID KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads) 
 {
-    KIRQL irql;
-
     InitializeDispatcherHeader(&Queue->Header, OBJECT_TYPE_KQUEUE);
-    KeAcquireSpinLock(&Queue->Header.Lock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&Queue->Header.Lock);
 
     Queue->MaximumWaitingThreads = (MaxmimumWaitingThreads == 0) ? KeNumberOfProcessors : MaxmimumWaitingThreads;
     Queue->CurrentWaitingThreads = 0;
@@ -20,7 +18,7 @@ VOID KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads)
     InitializeListHead(&Queue->EntryListHead);
     InitializeListHead(&Queue->ThreadsHead);
 
-    KeReleaseSpinLock(&Queue->Header.Lock, irql);
+    KeReleaseSpinLockFromDpcLevel(&Queue->Header.Lock);
 }
 
 PLIST_ENTRY KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout)

@@ -4,57 +4,87 @@
 #include <bugcheck.h>
 #include "cpu.h"
 
-VOID HalX64SetTpr(UBYTE Value)
+static
+VOID
+HalX64SetTpr(
+	UBYTE Value)
 {
 	SetCR8(Value);
 }
 
-KIRQL FASTCALL KfRaiseIrql(KIRQL NewIrql)
+KIRQL 
+FASTCALL 
+KfRaiseIrql(
+	KIRQL NewIrql)
 {
 	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
 	if (NewIrql < oldIrql)
-		KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfRaiseIrql);
+	{
+		KeBugCheckEx(
+			IRQL_NOT_GREATER_OR_EQUAL,
+			(ULONG_PTR)NewIrql,
+			(ULONG_PTR)oldIrql,
+			0,
+			(ULONG_PTR)KfRaiseIrql);
+	}
 
-	/* FIXME: this doesn't work */
 	HalX64SetTpr(NewIrql);
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
 	return oldIrql;
 }
 
-VOID FASTCALL KfLowerIrql(KIRQL NewIrql)
+VOID 
+FASTCALL 
+KfLowerIrql(
+	KIRQL NewIrql)
 {
 	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
 	if (NewIrql > oldIrql)
-		KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, (ULONG_PTR)oldIrql, 0, (ULONG_PTR)KfLowerIrql);
+	{
+		KeBugCheckEx(
+			IRQL_NOT_LESS_OR_EQUAL,
+			(ULONG_PTR)NewIrql,
+			(ULONG_PTR)oldIrql,
+			0,
+			(ULONG_PTR)KfLowerIrql);
+	}
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
 	HalX64SetTpr(NewIrql);
 }
 
-VOID NTAPI KeRaiseIrql(KIRQL NewIrql, PKIRQL OldIrql)
+VOID 
+NTAPI 
+KeRaiseIrql(
+	KIRQL NewIrql, 
+	PKIRQL OldIrql)
 {
 	if (OldIrql == (PKIRQL) NULL)
 		return;
 	*OldIrql = KfRaiseIrql(NewIrql);
 }
 
-VOID NTAPI KeLowerIrql(KIRQL NewIrql)
+VOID 
+NTAPI 
+KeLowerIrql(
+	KIRQL OldIrql)
 {
-	KfLowerIrql(NewIrql);
+	KfLowerIrql(OldIrql);
 }
 
-KIRQL NTAPI KeGetCurrentIrql()
+KIRQL 
+NTAPI 
+KeGetCurrentIrql()
 {
 	return __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 }
 
 KIRQL
 KiSetIrql(
-	KIRQL NewIrql
-)
+	KIRQL NewIrql)
 {
 	KIRQL oldIrql;
 

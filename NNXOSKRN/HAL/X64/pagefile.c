@@ -307,11 +307,11 @@ PageFaultHandler(
         status = PagingPageInPage(GetCR2());
         if (status)
         {
-            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 1, 0, 0);
+            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 1, status, rip);
         }
     }
     else
     {
-        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 2, 0, 0);
+        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 2, 0, rip);
     }
 }

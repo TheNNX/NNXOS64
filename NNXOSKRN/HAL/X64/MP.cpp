@@ -123,8 +123,8 @@ extern "C" {
 
 		HalpSetupPcrForCurrentCpu(lapicId);
 		ApicLocalApicInitializeCore();
-
 		status = PspInitializeCore(lapicId);
+
 		if (status)
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 

@@ -186,6 +186,7 @@ $(SolutionDir)genverh.bat</Command>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dispatcher.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
     <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\gpt.c" />
@@ -243,9 +244,11 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="device\fs\vfs.h" />
     <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
+    <ClInclude Include="dispatcher.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\cpu.h" />
+    <ClInclude Include="HAL\interrupt.h" />
     <ClInclude Include="HAL\rtc.h" />
     <ClInclude Include="HAL\syscall.h" />
     <ClInclude Include="HAL\X64\APIC.h" />
@@ -267,6 +270,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="io\irp.h" />
     <ClInclude Include="io\mdl.h" />
     <ClInclude Include="nnxver.h" />
+    <ClInclude Include="ntdebug.h" />
     <ClInclude Include="ob\handle.h" />
     <ClInclude Include="ob\namespace.h" />
     <ClInclude Include="rtl\rtl.h" />

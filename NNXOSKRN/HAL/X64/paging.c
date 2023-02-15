@@ -136,12 +136,11 @@ ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count)
 
 ULONG_PTR PagingAllocatePageWithPhysicalAddress(ULONG_PTR min, ULONG_PTR max, UINT16 flags, ULONG_PTR physPage)
 {
-    KIRQL irql;
     ULONG_PTR result;
-    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PagingSpinlock);
     result = PagingFindFreePages(min, max, 1);
     PagingMapPage(result, physPage, flags);
-    KeReleaseSpinLock(&PagingSpinlock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PagingSpinlock);
     return ToCanonicalAddress(result);
 }
 
@@ -469,16 +468,15 @@ ULONG_PTR PagingAllocatePageBlockWithPhysicalAddresses(SIZE_T n, ULONG_PTR min, 
 {
     UINT64 i;
     ULONG_PTR virt;
-    KIRQL irql;
 
-    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PagingSpinlock);
     virt = PagingFindFreePages(min, max, n);
     for (i = 0; i < n; i++)
     {
 
         PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, (ULONG_PTR)physFirstPage + i * PAGE_SIZE_SMALL, flags);
     }
-    KeReleaseSpinLock(&PagingSpinlock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PagingSpinlock);
 
 	return virt;
 }
@@ -487,9 +485,8 @@ ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT
 {
     UINT64 i;
     ULONG_PTR virt;
-    KIRQL irql;
 
-    KeAcquireSpinLock(&PagingSpinlock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PagingSpinlock);
     virt = PagingFindFreePages(min, max, n);
     for (i = 0; i < n; i++)
     {
@@ -498,12 +495,12 @@ ULONG_PTR PagingAllocatePageBlockEx(SIZE_T n, ULONG_PTR min, ULONG_PTR max, UINT
         status = MmAllocatePhysicalAddress(&p);
         if (!NT_SUCCESS(status))
         {
-            KeReleaseSpinLock(&PagingSpinlock, irql);
+            KeReleaseSpinLockFromDpcLevel(&PagingSpinlock);
             return -1LL;
         }
         PagingMapPage((ULONG_PTR)virt + i * PAGE_SIZE_SMALL, p, flags);
     }
-    KeReleaseSpinLock(&PagingSpinlock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PagingSpinlock);
 
     return virt;
 }

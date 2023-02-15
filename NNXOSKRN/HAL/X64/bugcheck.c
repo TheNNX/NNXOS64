@@ -55,6 +55,14 @@ KeBugCheckEx(
 	{
 		PrintT("HAL_INITIALIZATION_FAILED");
 	}
+	else if (code == IRQL_NOT_GREATER_OR_EQUAL)
+	{
+		PrintT("IRQL_NOT_GREATER_OR_EQUAL");
+	}
+	else if (code == IRQL_NOT_LESS_OR_EQUAL)
+	{
+		PrintT("IRQL_NOT_LESS_OR_EQUAL");
+	}
 	else
 	{
 		PrintT("BUGCHECK_CODE_%X", code);

@@ -1,7 +1,5 @@
 #ifndef NNX_IDT_HEADER
 #define NNX_IDT_HEADER
-#pragma pack(push)
-#pragma pack(1)
 
 #ifdef __cplusplus
 extern "C"
@@ -9,7 +7,10 @@ extern "C"
 #endif
 
 #include <nnxtype.h>
+#include <HAL/interrupt.h>
 
+#pragma pack(push)
+#pragma pack(1)
 	typedef struct _KIDTR64
 	{
 		UINT16 Size;
@@ -26,14 +27,10 @@ extern "C"
 		UINT32 Offset32to63;
 		UINT32 Zero;
 	}KIDTENTRY64, *PKIDTENTRY64, *LPKIDTENTRY64;
+#pragma pack(pop)
 
 	void HalpLoadIdt(KIDTR64*);
 	void HalpStoreIdt(KIDTR64*);
-
-	void EnableInterrupts();
-	void DisableInterrupts();
-	void ForceInterrupt(UINT64);
-	void Ack(UINT64);
 
 	void Exception0();
 	void Exception1();
@@ -57,30 +54,27 @@ extern "C"
 	void Exception30();
 	void ExceptionReserved();
 	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 errorCode2, UINT64 rip);
+	void IrqHandler();
 
-	void IRQ0();
-	void HalpTaskSwitchHandler();
-	void IRQ1();
-	void IRQ2();
-	void IRQ3();
-	void IRQ4();
-	void IRQ5();
-	void IRQ6();
-	void IRQ7();
-	void IRQ8();
-	void IRQ9();
-	void IRQ10();
-	void IRQ11();
-	void IRQ12();
-	void IRQ13();
-	void IRQ14();
-	void IrqHandler(UINT64);
-	PKIDTENTRY64 HalpAllocateAndInitializeIdt();
-	VOID HalpSetIdtEntry(KIDTENTRY64* idt, UINT64 entryNo, PVOID handler, BOOL userCallable, BOOL trap);
-	VOID HalInitializeDescriptorTables();
+	PKIDTENTRY64 
+		HalpAllocateAndInitializeIdt();
+	
+	KIDTENTRY64
+	NTAPI 
+	HalpSetIdtEntry(
+		KIDTENTRY64* idt, 
+		UINT64 entryNo, 
+		PVOID handler, 
+		BOOL userCallable, 
+		BOOL trap);
+
+	VOID
+	NTAPI
+	HalpInitInterruptHandlerStub(
+		PKINTERRUPT pInterrupt,
+		ULONG_PTR ProperHandler);
 #ifdef __cplusplus
 }
 #endif
 
-#pragma pack(pop)
 #endif

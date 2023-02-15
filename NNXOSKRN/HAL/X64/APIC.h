@@ -48,18 +48,19 @@ extern "C" {
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data);
 	UINT32 ApicLocalApicReadRegister(UINT64 offset);
 	VOID ApicClearError();
+	VOID ApicSendEoi();
 	VOID ApicSendIpi(UINT8 destination, UINT8 destinationShorthand, UINT8 deliveryMode, UINT8 vector);
 	VOID ApicInitIpi(UINT8 destination, UINT8 destinationShorthand);
 	VOID ApicStartupIpi(UINT8 destination, UINT8 destinationShorthand, UINT16 startupCode);
 	VOID ApicLocalApicWriteRegister(UINT64 offset, UINT32 data);
 	UINT32 ApicLocalApicReadRegister(UINT64 offset);
 	UINT8 ApicGetCurrentLapicId();
+	VOID ApicLocalApicInitializeCore();
 	extern UINT ApicNumberOfCoresDetected;
 	extern UINT8* ApicLocalApicIDs;
 	extern ULONG_PTR ApicVirtualLocalApicBase;
 	extern ULONG_PTR ApicLocalApicBase;
 	extern UINT ApicNumberOfCoresInitialized;
-	VOID ApicLocalApicInitializeCore();
 #ifdef __cplusplus
 }
 

@@ -59,6 +59,44 @@
  	pop rax
 %endmacro
 
+%macro pushnonvol 0
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
+	push rbp
+	push rdi
+	push rsi
+	mov rbx, fs
+	push rbx
+	sub rsp, 8
+	mov rbx, es
+	push rbx
+	mov rbx, ds
+	push rbx
+%endmacro
+
+%macro popnonvol 0
+	pop rbx
+	mov ds, rbx
+	pop rbx
+	mov es, rbx
+	; Note: GS is skipped, as writing to GS on x64 clears the MSR IA32_GS_BASE,
+	; which makes it impossible to access the PCR
+	add rsp, 8
+	pop rbx
+	mov fs, rbx
+	pop rsi
+	pop rdi
+	pop rbp
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+%endmacro
+
 %macro popvolnorax 0
 	pop r11
 	pop r10
@@ -80,6 +118,7 @@
 %macro exception_error 1
 [GLOBAL Exception%1]
 Exception%1:
+	add rsp, 8
 	pushstate
 	mov rcx, %1
 	mov rdx, [rsp+120]
@@ -94,6 +133,7 @@ Exception%1:
 %macro exception 1
 [GLOBAL Exception%1]
 Exception%1:
+	add rsp, 8
 	pushstate
 	mov rcx, %1
 	xor rdx, rdx
@@ -104,36 +144,71 @@ Exception%1:
 	iretq
 %endmacro
 
-[extern ApicSendEoi]
-%macro irq 1
-[GLOBAL IRQ%1]
-IRQ%1:
+[extern HalFullCtxInterruptHandlerEntry]
+[extern HalGenericInterruptHandlerEntry]
+[GLOBAL IrqHandler]
+IrqHandler:
     cli
-    cmp QWORD [rsp+8], 0x08
+	; RAX is pushed on top of the usual stuff pushed
+	; by the CPU by the handler stub.
+	; Adjust the RSP offset accordingly.
+    cmp QWORD [rsp+16], 0x08
     je .noswap
     swapgs
 .noswap:
-    sti
+	sti
 
-	pushstate
-
-	mov rcx, %1
-
+	; RAX is already pushed.
+	pushvolnorax
+	; Move the pointer to the interrupt object
+	; to the first argument of the function call.
+	mov rcx, rax
+	push rcx
 	sub rsp, 32
-	call IrqHandlerInternal
-	call ApicSendEoi
+	call HalGenericInterruptHandlerEntry
 	add rsp, 32
+	pop rcx
+	test al, al
+	jnz .fullCtxRequired
+	jmp HalpApplyTaskState.EnterThread
+.fullCtxRequired:
 
-	popstate
+	pushnonvol
 
+	; RCX is restored after calling HalGenericInterruptHandlerEntry.
+	mov rdx, rsp
+	sub rsp, 32
+	call HalFullCtxInterruptHandlerEntry
+	test rax, rax
+	jnz .changeStack
+.noStackChange:
+	add rsp, 32
+	jmp .postStackAdjust
+.changeStack:
+	mov rsp, rax
+.postStackAdjust:
+
+	popnonvol
+
+	jmp HalpApplyTaskState.EnterThread
+
+func HalpApplyTaskState
+	mov rsp, rcx
+
+	popnonvol
+
+.EnterThread:
+	popvol
 	cli
     cmp QWORD [rsp+8], 0x08
     je .noswap2
     swapgs
 .noswap2:
-    sti
 	iretq
-%endmacro
+
+int 3
+int 3
+int 3
 
 func HalpLoadIdt
 	lidt [rcx]
@@ -154,15 +229,6 @@ func EnableInterrupts
 func KiDisableInterrupts
 func DisableInterrupts
 	cli
-	ret
-
-func ForceInterrupt
-	push qword rdi
-	mov rdi, intID
-	mov byte [rdi], cl
-	pop qword rdi
-	db 0xcd		;INT
-intID: db 0x0	;immediate8
 	ret
 
 [EXTERN ExceptionHandler]
@@ -192,62 +258,37 @@ exception_error 30
 [extern PageFaultHandler]
 func Exception14
 	cli
-    cmp QWORD [rsp+8], 0x08
-    je .noswap
-    swapgs
-.noswap:
-    sti
+	add rsp, 8
+    ;cmp QWORD [rsp+8], 0x08
+    ;je .noswap
+    ;swapgs
+;.noswap:
 
-	pushstate
-	sub rsp, 32
+	pushvol
 	mov rcx, 14
 	mov rdx, [rsp+56]
 	xor r8, r8
 	mov r9, [rsp+64]
+	sub rsp, 32
 	call PageFaultHandler
 	add rsp, 32
-	popstate
+	popvol
 
-	cli
     cmp QWORD [rsp+8], 0x08
     je .noswap2
     swapgs
 .noswap2:
-	sti
-
-	add rsp, 8
 	iretq
 
 [GLOBAL ExceptionReserved]
 ExceptionReserved:
 exception_error 0xffffffffffffffff
 
-[EXTERN IrqHandler]
-func IrqHandlerInternal
-	sub rsp, 32
-	call IrqHandler
-	add rsp, 32
-	ret
-
-irq 1
-irq 2
-irq 3
-irq 4
-irq 5
-irq 6
-irq 7
-irq 8
-irq 9
-irq 10
-irq 11
-irq 12
-irq 13
-irq 14
-
 [extern HalpSystemCallHandler]
 func HalpSystemCall
 	; interrupts should be disabled here at the start
-	
+	cli
+
 	; all syscalls are from usermode, swap the KernelGSBase with the PCR into GS
 	swapgs
 
@@ -297,3 +338,22 @@ func HalpSystemCall
 
 	; this restores RFLAGS, so it reenables interrupts too
 	o64 sysret
+
+; Handler address in RCX
+func HalpMockupInterruptHandler
+	; store the return address in a volatile register
+	pop r8
+	mov rax, ss
+	mov r9, rsp
+	; push SS
+	push rax
+	; push RSP
+	push r9
+	; push RFLAGS
+	pushf
+	; push CS
+	mov rax, cs
+	push rax
+	; push RIP
+	push r8
+	jmp rcx

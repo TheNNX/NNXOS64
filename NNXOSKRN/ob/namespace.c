@@ -609,7 +609,6 @@ NTSTATUS ObpMpTestNamespaceThread()
     UINT64 __lastMemory, __currentMemory;
     char* __caller;
     KIRQL irql;
-
     KeInitializeSpinLock(&NextTesterIdLock);
     
     /* initialize worker threads with some invalid status values */
@@ -652,7 +651,7 @@ NTSTATUS ObpMpTestNamespaceThread()
             WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 1;
             ObReferenceObject(WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]);
 
-            PspInsertIntoSharedQueue(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
+            PspInsertIntoSharedQueueLocked(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
         }
 
         KeReleaseSpinLock(&NextTesterIdLock, irql);
@@ -704,7 +703,7 @@ NTSTATUS ObpMpTestNamespace()
     if (KeGetCurrentProcessorId() != 0)
         return STATUS_SUCCESS;
 
-    PrintT("%s %i\n", __FUNCTION__, KeGetCurrentProcessorId());
+    PrintT("%s %i %i\n", __FUNCTION__, KeGetCurrentProcessorId(), KeGetCurrentIrql());
 
     status = PspCreateProcessInternal(&process);
     if (status != STATUS_SUCCESS)
@@ -712,7 +711,7 @@ NTSTATUS ObpMpTestNamespace()
         PrintT("NTSTATUS: %X\n", status);
         return status;
     }
-
+    PrintT("Created process\n");
     status = PspCreateThreadInternal(&testThread, process, TRUE, (ULONG_PTR)ObpMpTestNamespaceThread);
     if (status != STATUS_SUCCESS)
     {
@@ -723,7 +722,7 @@ NTSTATUS ObpMpTestNamespace()
 
     testThread->Process->Pcb.BasePriority = 10;
     testThread->Tcb.ThreadPriority = 5;
-    PspInsertIntoSharedQueue(&testThread->Tcb);
+    PspInsertIntoSharedQueueLocked(&testThread->Tcb);
 
     return STATUS_SUCCESS;
 }

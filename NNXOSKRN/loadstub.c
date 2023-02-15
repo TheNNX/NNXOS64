@@ -8,6 +8,7 @@
 #include <../bootloader/bootdata.h>
 #include <nnxcfg.h>
 #include <HAL/physical_allocator.h>
+#include <HAL/pcr.h>
 
 PDWORD gpdwFramebuffer; PDWORD gpdwFramebufferEnd;
 DWORD gdwWidth; DWORD gdwHeight; DWORD gdwPixelsPerScanline;
@@ -46,6 +47,8 @@ VOID KeLoadStub(
     bootdata->ExitBootServices(bootdata->pImageHandle, bootdata->mapKey);
 
 	MmReinitPhysAllocator(bootdata->PageFrameDescriptorEntries, bootdata->NumberOfPageFrames);
+	HalpInitDummyPcr();
+	HalpSetDummyPcr();
 
     /* calculate the new address of our kernel entrypoint */
     mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->KernelBase;

@@ -104,3 +104,7 @@ func HalX64ReadMsr
 func SetupStack
 	mov rsp, rcx
 	jmp rdx
+
+func HalpGetCurrentAddress
+	mov rax, [rsp]
+	ret

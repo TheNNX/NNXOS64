@@ -56,7 +56,6 @@ extern "C"
 	__declspec(dllexport) UINT64 KeEntry()
 	{
         NTSTATUS status;
-
 		HalpInitDummyPcr();
 		HalpSetDummyPcr();
 
@@ -72,6 +71,7 @@ extern "C"
 			gHeight,
 			gPixelsPerScanline
 		);
+
 
 		TextIoClear();
 		MmReinitPhysAllocator(PfnEntries, NumberOfPfnEntries);
@@ -135,7 +135,7 @@ extern "C"
 		ApicInit(madt);
 
 		SetupSystemCallHandler(SystemCallHandler);
-		KeyboardInitialize();
+		// KeyboardInitialize();
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
 
 		PrintT(
@@ -152,9 +152,8 @@ extern "C"
         status = ObInit();
 		if (status)
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, status, 0, 0);
-
 		PagingInitializePageFile(16 * PAGE_SIZE, "PAGEFILE.SYS", VfsGetSystemVfs());
-		
+
 		CmosInitialize();
 		HalRtcInitialize(facp->CenturyRegister);
 		

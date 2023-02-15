@@ -145,7 +145,7 @@ NTSTATUS KeWaitForMultipleObjects(
     KeReleaseSpinLock(&currentThread->ThreadLock, irql);
     
     /* manually trigger the scheduler event */
-    PspSchedulerNext();
+    KeForceClockTick();
 
     return STATUS_SUCCESS;
 }

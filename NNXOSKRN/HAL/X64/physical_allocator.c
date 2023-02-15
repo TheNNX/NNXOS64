@@ -65,11 +65,10 @@ VOID MmReinitPhysAllocator(
  */
 NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber)
 {
-    KIRQL irql;
     PMMPFN_ENTRY listEntry;
     NTSTATUS result;
 
-    KeAcquireSpinLock(&PfnEntriesLock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PfnEntriesLock);
 
     if (IsListEmpty(&FreeList.PfnListHead))
     {
@@ -87,20 +86,19 @@ NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber)
 
         result = STATUS_SUCCESS;
     }
-    KeReleaseSpinLock(&PfnEntriesLock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
     
     return result;
 }
 
 NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber)
 {
-    KIRQL irql;
     PMMPFN_ENTRY entry;
     NTSTATUS result;
 
     entry = PfnEntries + pfnNumber;
 
-    KeAcquireSpinLock(&PfnEntriesLock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PfnEntriesLock);
 
     if (entry->InList == &FreeList ||
         (entry->Flags & MMPFN_FLAG_PERMAMENT) != 0)
@@ -117,7 +115,7 @@ NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber)
         result = STATUS_SUCCESS;
     }
 
-    KeReleaseSpinLock(&PfnEntriesLock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
     return result;
 }
 
@@ -143,12 +141,11 @@ NTSTATUS MmMarkPfnAsUsed(PFN_NUMBER pfnNumber)
 {
     PMMPFN_ENTRY entry;
     NTSTATUS result;
-    KIRQL irql;
 
     if (pfnNumber >= NumberOfPfnEntries)
         return STATUS_INVALID_PARAMETER;
 
-    KeAcquireSpinLock(&PfnEntriesLock, &irql);
+    KeAcquireSpinLockAtDpcLevel(&PfnEntriesLock);
     entry = &PfnEntries[pfnNumber];
     
     if (entry->InList != &FreeList)
@@ -164,7 +161,7 @@ NTSTATUS MmMarkPfnAsUsed(PFN_NUMBER pfnNumber)
         result = STATUS_SUCCESS;
     }
 
-    KeReleaseSpinLock(&PfnEntriesLock, irql);
+    KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
     return result;
 }
 

@@ -3,6 +3,7 @@
 #include <SimpleTextIo.h>
 #include <HAL/syscall.h>
 #include <rtl/rtl.h>
+#include <ntdebug.h>
 
 PKPCR HalGetPcr();
 VOID HalSetPcr(PKPCR);
@@ -53,11 +54,8 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	gdt = HalpAllocateAndInitializeGdt();
 
 	HalSetPcr(tempPcr);
-
 	pcr = HalCreatePcr(gdt, idt, id);
-
 	HalInitializeSystemCallForCurrentCore();
-
     KfRaiseIrql(DISPATCH_LEVEL);
 	HalReleaseLockRaw(&PcrCreationLock);
 }
@@ -94,10 +92,12 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 
 PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 {
+	NTSTATUS status;
 	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);
+	InitializeListHead(&pcr->InterruptListHead);
 
 	pcr->Irql = 0;
 
@@ -107,7 +107,11 @@ PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 	pcr->SelfPcr = pcr;
 	
 	pcr->Prcb = HalCreatePrcb(CoreNumber);
-
 	HalSetPcr(pcr);
+	KIRQL oldIrql = KfRaiseIrql(DISPATCH_LEVEL);
+	status = KiInitializeInterrupts();
+	ASSERT(NT_SUCCESS(status));
+	KeLowerIrql(oldIrql);
+
 	return pcr;
 }

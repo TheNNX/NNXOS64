@@ -64,9 +64,10 @@ ULONG_PTR SystemCallHandler(
 	case 1:
 	case 2:
 		result = (ULONG_PTR)KeGetCurrentThread();
-		PrintT("%X ", result & 0xFFFF);
+		PrintT("SYSCALL %X", result & 0xFFFF);
 		if (result != p2)
-			PrintT("%X %X %X %X %X\n", result, p1, p2, p3, p4);
+			PrintT(": %X %X %X %X %X", result, p1, p2, p3, p4);
+		PrintT("\n");
 		break;
 	default:
 		PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);

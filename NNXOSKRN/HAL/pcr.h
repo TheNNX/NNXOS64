@@ -4,6 +4,7 @@
 #include <nnxtype.h>
 #include <HAL/spinlock.h>
 #include <HAL/irql.h>
+#include <ntlist.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -37,20 +38,21 @@ extern "C"
 		struct _KPCR	*SelfPcr;
 		struct _KPRCB	*Prcb;
 		KIRQL			Irql;
-		/**
-		 * @brief These have to be accessed with interrupts disabled.
+
+		/* These have to be accessed with interrupts disabled.
 		 * Once interrupts are reenabled, the value of these should
 		 * be assumed to be invalid. They're used by the system call
 		 * handler to store thread pointers in order to get the thread
-		 * kernel stack and access other per thread variables. 
-		 */
+		 * kernel stack and access other per thread variables. */
 		ULONG_PTR		TempHandlerVals[2];
+
 		LONG			Reserved0;
 		PKIDTENTRY64	Idt;
 		ULONG			Reserved4[3];
 		USHORT			MajorVersion;
 		USHORT			MinorVersion;
-		ULONG			Reserved3[36];
+		LIST_ENTRY		InterruptListHead;
+		PKINTERRUPT		ClockInterrupt;
 	}KPCR, *LPKPCR, *PKPCR;
 
 	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);

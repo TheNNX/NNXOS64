@@ -5,6 +5,7 @@
 #include <HAL/spinlock.h>
 #include <ob/object.h>
 #include <ob/handle.h>
+#include <HAL/interrupt.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,18 +23,15 @@ extern "C" {
     {
         DISPATCHER_HEADER Header;
         KSPIN_LOCK ProcessLock;
-        /**
-         * @brief Base process priority used to compute thread priority.
-        */
+        /* Base process priority used to compute thread priority. */
         UCHAR BasePriority;
         KAFFINITY AffinityMask;
         ULONG_PTR AddressSpacePhysicalPointer;
         LIST_ENTRY ThreadListHead;
         UINT64 NumberOfThreads;
         LIST_ENTRY ProcessListEntry;
-        /**
-         * @brief Stores quantum units (3rds of timer interval), multiply by KiCyclesPerQuantum to get value for CyclesLeft.
-        */
+        /* Stores quantum units (3rds of timer interval),
+         * multiply by KiCyclesPerQuantum to get value for CyclesLeft. */
         ULONG_PTR QuantumReset;
         NTSTATUS ProcessResult;
         LIST_ENTRY HandleDatabaseHead;
@@ -86,14 +84,13 @@ extern "C" {
         PKWAIT_BLOCK CurrentWaitBlocks;
         /* Number of wait blocks in the array */
         ULONG NumberOfCurrentWaitBlocks;
-        /**
-         * Number of wait blocks without their associated wait satisfied
-         * (that is, how many objects are still waited for) 
-         */
+        /* Number of wait blocks without their associated wait satisfied
+         * (that is, how many objects are still waited for) */
         ULONG NumberOfActiveWaitBlocks;
 
         /* Thread affinity */
         KAFFINITY Affinity;
+        KAFFINITY UserAffinity;
 
         /* Various list entries */
         LIST_ENTRY ReadyQueueEntry;
@@ -144,25 +141,29 @@ extern "C" {
     typedef struct _KTASK_STATE
     {
 #ifdef _M_AMD64
-        UINT64 Rax;
-        UINT64 Rbx;
-        UINT64 Rcx;
-        UINT64 Rdx;
-        UINT64 Rbp;
-        UINT64 Rdi;
-        UINT64 Rsi;
-        UINT64 R8;
-        UINT64 R9;
-        UINT64 R10;
-        UINT64 R11;
-        UINT64 R12;
-        UINT64 R13;
-        UINT64 R14;
-        UINT64 R15;
+
         UINT64 Ds;
         UINT64 Es;
         UINT64 Gs;
         UINT64 Fs;
+
+        UINT64 Rsi;
+        UINT64 Rdi;
+        UINT64 Rbp;
+        UINT64 R15;
+        UINT64 R14;
+        UINT64 R13;
+        UINT64 R12;
+        UINT64 Rbx;
+
+        UINT64 R11;
+        UINT64 R9;
+        UINT64 R10;
+        UINT64 R8;
+        UINT64 Rdx;
+        UINT64 Rcx;
+        UINT64 Rax;
+
         UINT64 Rip;
         UINT64 Cs;
         UINT64 Rflags;
@@ -171,47 +172,37 @@ extern "C" {
 #else
 #error "Architecture unsupported"
 #endif
-    }KTASK_STATE, * PKTASK_STATE;
-
-    __declspec(noreturn) VOID 
-        PspSwitchContextTo64(
-            PVOID StackWithContext
-        );
+    }KTASK_STATE, *PKTASK_STATE;
 
     NTSTATUS 
-        PspDebugTest();
+    PspDebugTest();
 
     PKTHREAD 
-        PspGetCurrentThread();
+    PspGetCurrentThread();
+
     PKTHREAD 
-        KeGetCurrentThread();
+    KeGetCurrentThread();
 
-    /**
-     * @brief Voluntarily ends the calling thread's quantum (that doesn't mean it can't get another one, caller has to ensure it is in wait state)
-    */
-    VOID PspSchedulerNext();
-
-    __declspec(noreturn) VOID
-        PsExitThread(
-            DWORD exitCode
-        );
+    __declspec(noreturn) 
+    VOID
+    PsExitThread(
+        DWORD exitCode);
 
     NTSTATUS 
-        PspInitializeCore(
-            UINT8 CoreNumber
-        );
+    PspInitializeCore(
+        UINT8 CoreNumber);
 
     /**
      * @brief First it checks if there are threads pending in the shared
-     * If thread is no longer waiting for anything, clears all wait-related members inside the thread structure (except the WaitStatus) and marks it as ready.
+     * If thread is no longer waiting for anything, clears all wait-related 
+     * members inside the thread structure (except the WaitStatus) and marks it as ready.
      * Then it tries to insert it into the shared queue.
      * @param Thread
      * @return TRUE if Thread became ready after calling, FALSE otherwise
     */
     BOOL 
-        PsCheckThreadIsReady(
-            PKTHREAD Thread
-        );
+    PsCheckThreadIsReady(
+        PKTHREAD Thread);
 
     /**
      * @brief Checks shared queue for any threads with higher priority than those in processor's queue
@@ -219,45 +210,74 @@ extern "C" {
      * @return TRUE if a potential thread in the shared queue was found.
     */
     BOOL 
-        PspManageSharedReadyQueue(
-            UCHAR CoreNumber
-        );
+    PspManageSharedReadyQueue(
+        UCHAR CoreNumber);
 
     /**
      * @brief Inserts the thread into the shared ready queue for its priority.
+     * Requires the Dispatcher Lock to be held.
     */
     VOID 
-        PspInsertIntoSharedQueue(
-            PKTHREAD Thread
-        );
+    PspInsertIntoSharedQueue(
+        PKTHREAD Thread);
+
+    /**
+     * @brief Same as PspInsertIntoSharedQueue, but manages the 
+     * Dispatcher Lock by itself.
+     */
+    VOID
+    PspInsertIntoSharedQueueLocked(
+        PKTHREAD Thread);
 
     VOID
-        PspSetupThreadState(
-            PKTASK_STATE pThreadState,
-            BOOL IsKernel,
-            ULONG_PTR Entrypoint,
-            ULONG_PTR Userstack
-        );
+    PspSetupThreadState(
+        PKTASK_STATE pThreadState,
+        BOOL IsKernel,
+        ULONG_PTR Entrypoint,
+        ULONG_PTR Userstack);
 
     VOID
-        PspUsercall(
-            PKTHREAD pThread, 
-            PVOID Function, 
-            ULONG_PTR* Parameters,
-            SIZE_T NumberOfParameters,
-            PVOID ReturnAddress
-        );
+    PspUsercall(
+        PKTHREAD pThread, 
+        PVOID Function, 
+        ULONG_PTR* Parameters,
+        SIZE_T NumberOfParameters,
+        PVOID ReturnAddress);
 
     BOOL
-        KiSetUserMemory(
-            PVOID Address,
-            ULONG_PTR Data
-        );
+    KiSetUserMemory(
+        PVOID Address,
+        ULONG_PTR Data);
 
     KPROCESSOR_MODE
-        PsGetProcessorModeFromTrapFrame(
-            PKTASK_STATE TrapFrame
-        );
+    PsGetProcessorModeFromTrapFrame(
+        PKTASK_STATE TrapFrame);
+
+    VOID
+    NTAPI
+    KeSetSystemAffinityThread(
+        KAFFINITY Affinity);
+
+    VOID
+    NTAPI
+    KeRevertToUserAffinityThread(VOID);
+
+    ULONG_PTR
+    NTAPI
+    PspScheduleThread(
+        PKINTERRUPT clockInterrupt, 
+        PKTASK_STATE stack);
+
+    VOID
+    NTAPI
+    KeForceClockTick();
+
+    __declspec(noreturn)
+    VOID
+    NTAPI
+    HalpApplyTaskState(
+        PKTASK_STATE TaskState);
+
 
 #ifdef __cplusplus
 }
