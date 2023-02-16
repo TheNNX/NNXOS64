@@ -57,6 +57,7 @@ ULONG_PTR SystemCallHandler(
 )
 {
 	ULONG_PTR result = 0;
+	KIRQL irql;
 
 	DisableInterrupts();
 	switch (p1)
@@ -64,10 +65,12 @@ ULONG_PTR SystemCallHandler(
 	case 1:
 	case 2:
 		result = (ULONG_PTR)KeGetCurrentThread();
-		PrintT("SYSCALL %X", result & 0xFFFF);
+		KeAcquireSpinLock(&SystemCallSpinLock, &irql);
+		PrintT("%X-%i", result & 0xFFFF, KeGetCurrentProcessorId());
 		if (result != p2)
-			PrintT(": %X %X %X %X %X", result, p1, p2, p3, p4);
-		PrintT("\n");
+			PrintT(":(%X %X %X %X %X)", result, p1, p2, p3, p4);
+		PrintT(" ");
+		KeReleaseSpinLock(&SystemCallSpinLock, irql);
 		break;
 	default:
 		PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);

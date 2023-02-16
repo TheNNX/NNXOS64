@@ -166,10 +166,10 @@ InitializeInterrupt(
     pInterrupt->SendEOI = TRUE;
 }
 
-static
-inline
-PKINTERRUPT
-CreateInterrupt(
+NTSTATUS
+NTAPI
+IoCreateInterrupt(
+    PKINTERRUPT* pOutInterrupt,
     UCHAR Vector,
     PVOID Handler,
     ULONG CpuNumber,
@@ -180,7 +180,10 @@ CreateInterrupt(
     PKINTERRUPT interrupt;
     NTSTATUS status;
     status = KiCreateInterrupt(&interrupt);
-    ASSERT(NT_SUCCESS(status));
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
 
     InitializeInterrupt(
         interrupt,
@@ -191,8 +194,9 @@ CreateInterrupt(
         Routine);
 
     interrupt->Trap = Trap;
+    *pOutInterrupt = interrupt;
 
-    return interrupt;
+    return STATUS_SUCCESS;
 }
 
 static
@@ -231,7 +235,10 @@ KiInitializeInterrupts(VOID)
 
     for (i = 0; i < 16; i++)
     {
-        PKINTERRUPT exception = CreateInterrupt(
+        PKINTERRUPT exception;
+
+        NTSTATUS status = IoCreateInterrupt(
+            &exception,
             i,
             exceptionHandlers[i],
             cpuNumber,
@@ -239,6 +246,11 @@ KiInitializeInterrupts(VOID)
             SYNCH_LEVEL,
             (i == 1) || (i == 3) || (i == 4),
             NULL);
+
+        if (!NT_SUCCESS(status))
+        {
+            return status;
+        }
 
         KeConnectInterrupt(exception);
     }
@@ -375,7 +387,6 @@ HalGenericInterruptHandlerEntry(
         {
             ApicSendEoi();
         }
-
         ASSERT(Interrupt->pfnServiceRoutine != NULL);
         Interrupt->pfnServiceRoutine(Interrupt, Interrupt->ServiceCtx);
         DisableInterrupts();

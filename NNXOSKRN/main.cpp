@@ -135,8 +135,8 @@ extern "C"
 		ApicInit(madt);
 
 		SetupSystemCallHandler(SystemCallHandler);
-		// KeyboardInitialize();
 		HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
+		KeyboardInitialize();
 
 		PrintT(
 			"%s %i.%i.%i.%i, compiled %s %s\n",

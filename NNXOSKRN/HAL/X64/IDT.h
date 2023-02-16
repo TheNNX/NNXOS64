@@ -54,7 +54,6 @@ extern "C"
 	void Exception30();
 	void ExceptionReserved();
 	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 errorCode2, UINT64 rip);
-	void IrqHandler();
 
 	PKIDTENTRY64 
 		HalpAllocateAndInitializeIdt();

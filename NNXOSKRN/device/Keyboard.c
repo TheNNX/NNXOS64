@@ -2,7 +2,8 @@
 #include <SimpleTextIo.h>
 #include <HAL/Port.h>
 #include <HAL/X64/APIC.h>
-
+#include <HAL/interrupt.h>
+#include <HAL/cpu.h>
 
 KEY_STATE state;
 UINT8 ScancodeSet = 0;
@@ -109,28 +110,53 @@ UINT8(*ScancodeSet2Keys[])() = { KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1,
 								KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyUNDEF, KeyBackslash, KeyUNDEF, KeyUNDEF, KeyUNDEF,
 								KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace };
 
-UINT8 keyboardInitialized = 0;
+static BOOLEAN KeyboardInitialized = FALSE;
+
+static
+BOOLEAN
+KeyboardIsr(
+	PKINTERRUPT InterruptObj,
+	PVOID Ctx)
+{
+	KeyboardInterrupt();
+	return TRUE;
+}
 
 VOID KeyboardInitialize()
 {
+	UINT8 selfTest, KCB;
+	PKINTERRUPT interrupt;
+	
 	outb(KEYBOARD_COMMAND_PORT, 0xFF);
-	UINT8 selfTest = inb(KEYBOARD_PORT);
-	PrintT("kb st: %x\n", selfTest);
+	selfTest = inb(KEYBOARD_PORT);
 	ScancodeSet = GetScancodeSet();
 
 	if (ScancodeSet != 2)
+	{
 		SetScancodeSet(2);
+	}
 
 	ScancodeSet = 2;
 	outb(KEYBOARD_COMMAND_PORT, 0x20);
 
 	while (inb(KEYBOARD_COMMAND_PORT) & 2);
 
-	UINT8 KCB = inb(KEYBOARD_PORT);
+	KCB = inb(KEYBOARD_PORT);
 	KCB &= ~(0X40);	
 	outb(KEYBOARD_COMMAND_PORT, 0x60);
 	outb(KEYBOARD_PORT, KCB);
-	keyboardInitialized = 1;
+
+	IoCreateInterrupt(
+		&interrupt, 
+		0x21, 
+		IrqHandler, 
+		KeGetCurrentProcessorId(), 
+		DISPATCH_LEVEL, 
+		FALSE,
+		KeyboardIsr);
+	KeConnectInterrupt(interrupt);
+
+	KeyboardInitialized = TRUE;
 }
 
 /* TODO: no idea what this should return, might investigate later */
@@ -145,7 +171,7 @@ UINT8 GetKeyOnInterrupt()
 	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
 		return 0;
 
-	if (!keyboardInitialized)
+	if (!KeyboardInitialized)
 		return 0;
 	UINT8 scancode = inb(KEYBOARD_PORT);
 

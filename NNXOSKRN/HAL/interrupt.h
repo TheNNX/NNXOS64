@@ -8,7 +8,7 @@
 extern "C" 
 {
 #endif
-    typedef BOOL(NTAPI*KSERVICE_ROUTINE)
+    typedef BOOLEAN(NTAPI*KSERVICE_ROUTINE)
         (struct _KINTERRUPT* Interrupt, PVOID ServiceCtx);
     typedef KSERVICE_ROUTINE *PKSERVICE_ROUTINE;
     typedef ULONG_PTR(NTAPI*KFULLCTX_ROUTINE)
@@ -38,6 +38,19 @@ extern "C"
     NTSTATUS NTAPI KiCreateInterrupt(PKINTERRUPT* ppInterrupt);
     VOID EnableInterrupts();
     VOID DisableInterrupts();
+
+    NTSTATUS
+    NTAPI
+    IoCreateInterrupt(
+        PKINTERRUPT* pOutInterrupt,
+        UCHAR Vector,
+        PVOID Handler,
+        ULONG CpuNumber,
+        KIRQL Irql,
+        BOOL  Trap,
+        KSERVICE_ROUTINE Routine);
+
+    VOID NTAPI IrqHandler();
 #ifdef __cplusplus
 }
 #endif

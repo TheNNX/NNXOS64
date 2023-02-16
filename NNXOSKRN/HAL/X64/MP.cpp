@@ -104,8 +104,6 @@ extern "C" {
 			}
 		}
 
-		HalpSetupPcrForCurrentCpu(currentLapicId);
-
 		status = PspInitializeCore(currentLapicId);
 		PrintT("PspInitializeCore NTSTATUS: %X\n", status);
 		if (status)
