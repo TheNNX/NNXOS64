@@ -1,19 +1,40 @@
 #include "bugcheck.h"
 #include <SimpleTextIO.h>
-#include "IDT.h"
-#include "APIC.h"
 #include "registers.h"
 #include <HAL/spinlock.h>
 #include <scheduler.h>
+#include <dispatcher.h>
+#include <HAL/cpu.h>
+#include <HAL/X64/APIC.h>
+#include <HAL/interrupt.h>
 
-VOID KeBugCheck(ULONG code)
+__declspec(noreturn)
+VOID
+NTAPI
+KeBugCheck(ULONG code)
 {
 	KeBugCheckEx(code, NULL, NULL, NULL, NULL);
 }
 
-__declspec(noreturn) VOID KeStop();
+VOID
+NTAPI
+KeStopOtherCores()
+{
+	KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
+}
 
-static KSPIN_LOCK BugcheckLock = 0;
+#pragma warning(push)
+#pragma warning(disable: 4646)
+__declspec(noreturn)
+BOOLEAN
+NTAPI
+KeStopIsr(
+	PKINTERRUPT StopInterrupt,
+	PVOID ServiceContext)
+{
+	KeStop();
+}
+#pragma warning(pop)
 
 __declspec(noreturn)
 VOID
@@ -25,22 +46,20 @@ KeBugCheckEx(
 	ULONG_PTR param4
 )
 {
-	KIRQL irql;
+	KeStopOtherCores();
 	DisableInterrupts();
-	irql = KeGetCurrentIrql();
-	if (irql < DISPATCH_LEVEL)
-		KeRaiseIrql(DISPATCH_LEVEL, &irql);
-	KeAcquireSpinLockAtDpcLevel(&BugcheckLock);
 
-	/* TODO: notify other CPUs */
-	if (FALSE)
-	{
-		TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
-		TextIoClear();
-		TextIoSetCursorPosition(0, 8);
-	}
+	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
+#ifndef DEBUG
+	TextIoClear();
+	TextIoSetCursorPosition(0, 8);
+#endif
 
-	PrintT("\nCore %i, thread %X\n\nCritical system failure\n", ApicGetCurrentLapicId(), KeGetCurrentThread());
+	PrintT(
+		"\n%s: Core %i, thread %X\n\nCritical system failure\n", 
+		__FUNCTION__,
+		KeGetCurrentProcessorId(), 
+		KeGetCurrentThread());
 
 	/* TODO */
 	if (code == KMODE_EXCEPTION_NOT_HANDLED)
@@ -71,8 +90,6 @@ KeBugCheckEx(
 	PrintT("\n\n");
 	PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
 	PrintT("CR2: %H CR3: %H", GetCR2(), GetCR3());
-
-	KeReleaseSpinLock(&BugcheckLock, irql);
 
 	KeStop();
 }

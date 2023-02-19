@@ -17,10 +17,21 @@ extern "C" {
 
     extern UINT KeNumberOfProcessors;
 
-    ULONG KeGetCurrentProcessorId();
+    ULONG 
+    NTAPI
+    KeGetCurrentProcessorId();
 
     ULONG_PTR
+    NTAPI
     HalpGetCurrentAddress();
+
+    VOID
+    NTAPI
+    KeSendIpi(
+        KAFFINITY TargetCpus, 
+        BYTE Vector);
+
+
 #ifdef __cplusplus
 }
 #endif

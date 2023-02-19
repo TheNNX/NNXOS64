@@ -168,7 +168,7 @@ extern "C"
 			i += madtEntry->Length;
 		}
 
-		ApicInitIsaIrq(irqSourceToGsiMapping, 1, 33);
+		ApicInitIsaIrq(irqSourceToGsiMapping, 1, KEYBOARD_VECTOR);
 
 		PicDisableForApic();
 

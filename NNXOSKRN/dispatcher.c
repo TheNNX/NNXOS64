@@ -2,14 +2,18 @@
 
 KSPIN_LOCK DispatcherLock;
 
-KIRQL KiAcquireDispatcherLock()
+KIRQL 
+NTAPI
+KiAcquireDispatcherLock()
 {
     KIRQL oldIrql = KfRaiseIrql(SYNCH_LEVEL);
     KeAcquireSpinLockAtDpcLevel(&DispatcherLock);
     return oldIrql;
 }
 
-VOID KiReleaseDispatcherLock(KIRQL oldIrql)
+VOID 
+NTAPI
+KiReleaseDispatcherLock(KIRQL oldIrql)
 {
     KeReleaseSpinLockFromDpcLevel(&DispatcherLock);
     KeLowerIrql(oldIrql);

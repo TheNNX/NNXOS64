@@ -76,13 +76,14 @@ KIDTENTRY64*
 HalpAllocateAndInitializeIdt()
 {
     DisableInterrupts();
-    KIDTR64* idtr = (KIDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+    KIDTR64* idtr = (KIDTR64*)
+        PagingAllocatePageBlockFromRange(2, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
     PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
 
-    idtr->Size = sizeof(KIDTENTRY64) * 128 - 1;
+    idtr->Size = sizeof(KIDTENTRY64) * 256 - 1;
     idtr->Base = idt;
 
-    for (int a = 0; a < 128; a++)
+    for (int a = 0; a < 256; a++)
     {
         KIDTENTRY64 result;
         VOID(*handler)();
@@ -212,6 +213,9 @@ KiInitializeInterrupts(VOID)
 {
     ULONG i;
     ULONG cpuNumber = KeGetCurrentProcessorId();
+    PKINTERRUPT clockInterrupt, stopInterrupt;
+    NTSTATUS status;
+
     /* TODO: fix all of these handlers, so they can use the new 
      * handling mode. */
     void (*exceptionHandlers[16])() = {
@@ -237,7 +241,7 @@ KiInitializeInterrupts(VOID)
     {
         PKINTERRUPT exception;
 
-        NTSTATUS status = IoCreateInterrupt(
+        status = IoCreateInterrupt(
             &exception,
             i,
             exceptionHandlers[i],
@@ -255,14 +259,13 @@ KiInitializeInterrupts(VOID)
         KeConnectInterrupt(exception);
     }
 
-    PKINTERRUPT clockInterrupt;
     KiCreateInterrupt(&clockInterrupt);
     clockInterrupt->CpuNumber = KeGetCurrentProcessorId();
     clockInterrupt->InterruptIrql = CLOCK_LEVEL;
     clockInterrupt->Connected = FALSE;
     KeInitializeSpinLock(&clockInterrupt->Lock);
     clockInterrupt->Trap = FALSE;
-    clockInterrupt->Vector = 0x20;
+    clockInterrupt->Vector = CLOCK_VECTOR;
     clockInterrupt->pfnServiceRoutine = NULL;
     clockInterrupt->pfnFullCtxRoutine = PspScheduleThread;
     clockInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
@@ -270,6 +273,26 @@ KiInitializeInterrupts(VOID)
     HalpInitInterruptHandlerStub(clockInterrupt, (ULONG_PTR)IrqHandler);
     KeGetPcr()->ClockInterrupt = clockInterrupt;
     KeConnectInterrupt(clockInterrupt);
+
+    status = IoCreateInterrupt(
+        &stopInterrupt, 
+        STOP_IPI_VECTOR, 
+        IrqHandler, 
+        KeGetCurrentProcessorId(), 
+        IPI_LEVEL, 
+        FALSE, 
+        KeStopIsr);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    if (!KeConnectInterrupt(stopInterrupt))
+    {
+        ASSERT(FALSE);
+    }
+
     return STATUS_SUCCESS;
 }
 
@@ -369,6 +392,26 @@ HalHandleApc(KIRQL returningToIrql)
     KiReleaseDispatcherLock(lockIrql);
 }
 
+static
+KIRQL
+KiApplyInterruptIrql(
+    PKINTERRUPT Interrupt)
+{
+    KIRQL iirql = Interrupt->InterruptIrql;
+    KIRQL currentIrql = KeGetCurrentIrql();
+
+    if (iirql > currentIrql)
+    {
+        KfRaiseIrql(iirql);
+        return currentIrql;
+    }
+    else
+    {
+        KfLowerIrql(iirql);
+        return currentIrql;
+    }
+}
+
 BOOLEAN
 NTAPI
 HalGenericInterruptHandlerEntry(
@@ -382,7 +425,10 @@ HalGenericInterruptHandlerEntry(
     if (Interrupt->pfnGetRequiresFullCtx == NULL ||
         Interrupt->pfnGetRequiresFullCtx(Interrupt) == FALSE)
     {
-        KiReleaseDispatcherLock(Interrupt->InterruptIrql);
+        /* No IRQL change, so IPIs can work. (IPI_LEVEL > SYNCH_LEVEL) */
+        KiReleaseDispatcherLock(KeGetCurrentIrql());
+        KiApplyInterruptIrql(Interrupt);
+
         if (Interrupt->SendEOI != FALSE)
         {
             ApicSendEoi();
@@ -423,4 +469,44 @@ HalFullCtxInterruptHandlerEntry(
     DisableInterrupts();
     KeLowerIrql(irql);
     return result;
+}
+
+KSPIN_LOCK IpiLock = 0;
+
+VOID
+NTAPI
+KiSendIpiToSingleCore(
+    ULONG_PTR ProcessorNumber,
+    BYTE Vector)
+{
+    ASSERT(IpiLock != 0);
+    ASSERT(ProcessorNumber <= 0xFF);
+    ApicSendIpi((BYTE)ProcessorNumber, 0, 0, Vector);
+}
+
+VOID
+NTAPI
+KeSendIpi(
+    KAFFINITY TargetProcessors,
+    BYTE Vector)
+{
+    ULONG currentId = 0;
+    KIRQL irql;
+    ULONG selfId = KeGetCurrentProcessorId();
+
+    KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    KeAcquireSpinLockAtDpcLevel(&IpiLock);
+    KfRaiseIrql(IPI_LEVEL);
+
+    for (currentId = 0; currentId < KeNumberOfProcessors; currentId++)
+    {
+        if (currentId != selfId &&
+            (TargetProcessors & (1ULL << currentId)) != 0)
+        {
+            KiSendIpiToSingleCore(currentId, Vector);
+        }
+    }
+
+    KeReleaseSpinLockFromDpcLevel(&IpiLock);
+    KeLowerIrql(irql);
 }

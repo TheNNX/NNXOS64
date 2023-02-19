@@ -127,7 +127,6 @@ VOID DiskCheck()
 
 			if (gpt.Header.Signature == GPT_SIGNATURE)
 			{
-				//TODO: GPT Disks
                 ULONG_PTR bytesPerEntry;
                 ULONG_PTR numberOfEntries;
                 ULONG_PTR startOfArray;
@@ -138,13 +137,10 @@ VOID DiskCheck()
 
                 ULONG_PTR currentSector, currentEntryPos, entryStartInSector;
 
-
                 bytesPerEntry = gpt.Header.BytesPerEntry;
                 numberOfEntries = gpt.Header.NumberOfPartitionTableEntries;
                 startOfArray = gpt.Header.LbaOfPartitionTable;
                 sectorCountForPartitionArray = ((UINT64)numberOfEntries * (UINT64)bytesPerEntry - 1) / 512 + 1;
-
-				PrintT("GPT disk found. (todo)\n");
 				
                 for (currentSector = 0; currentSector < sectorCountForPartitionArray; currentSector++)
 				{

@@ -8,10 +8,10 @@ extern "C" {
 	typedef UINT8 KIRQL, *PKIRQL;
 
 	KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql);
-	VOID FASTCALL KfLowerIrql(KIRQL newIrql);
+	VOID FASTCALL KfLowerIrql(KIRQL oldIrql);
 
-	VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL oldIrql);
-	VOID NTAPI KeLowerIrql(KIRQL newIrql);
+	VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL pOldIrql);
+	VOID NTAPI KeLowerIrql(KIRQL oldIrql);
 
 	KIRQL NTAPI KeGetCurrentIrql();
 

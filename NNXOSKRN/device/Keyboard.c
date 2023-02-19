@@ -148,7 +148,7 @@ VOID KeyboardInitialize()
 
 	IoCreateInterrupt(
 		&interrupt, 
-		0x21, 
+		KEYBOARD_VECTOR, 
 		IrqHandler, 
 		KeGetCurrentProcessorId(), 
 		DISPATCH_LEVEL, 

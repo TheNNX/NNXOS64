@@ -51,6 +51,11 @@ extern "C"
         KSERVICE_ROUTINE Routine);
 
     VOID NTAPI IrqHandler();
+
+    #define CLOCK_VECTOR 0x20
+    #define KEYBOARD_VECTOR 0x21
+    #define STOP_IPI_VECTOR 0xEF
+
 #ifdef __cplusplus
 }
 #endif
