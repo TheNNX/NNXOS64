@@ -40,7 +40,6 @@ BOOL IoApic::MaskIrq(UINT32 irqn)
 	UINT64 entry = ReadRedirectionEntry(irqn);
 	entry |= ((1ULL << 16ULL));
 	WriteRedirectionEntry(irqn, entry);
-
 	return TRUE;
 }
 
@@ -54,7 +53,6 @@ BOOL IoApic::UnmaskIrq(UINT32 irqn)
 	UINT64 entry = ReadRedirectionEntry(irqn);
 	entry &= ~((1ULL << 16ULL));
 	WriteRedirectionEntry(irqn, entry);
-
 	return TRUE;
 }
 
@@ -73,20 +71,20 @@ BOOL IoApic::InterruptRangeCheck(UINT32 irqn)
 
 VOID IoApic::WriteRegister(const UINT8 offset, const UINT32 value)
 {
-	KeAcquireSpinLock(&this->Lock, &this->Irql);
+	HalAcquireLockRaw(&this->Lock);
 	*((volatile UINT32*)(IoApicBase)) = offset;
 	*((volatile UINT32*)(((ULONG_PTR)IoApicBase) + 0x10)) = value;
-	KeReleaseSpinLock(&this->Lock, this->Irql);
+	HalReleaseLockRaw(&this->Lock);
 }
 
 UINT32 IoApic::ReadRegister(const UINT8 offset)
 {
 	UINT32 result;
 
-	KeAcquireSpinLock(&this->Lock, &this->Irql);
+	HalAcquireLockRaw(&this->Lock);
 	*((volatile UINT32*)(IoApicBase)) = offset;
 	result = *((volatile UINT32*)(((ULONG_PTR)IoApicBase) + 0x10));
-	KeReleaseSpinLock(&this->Lock, this->Irql);
+	HalReleaseLockRaw(&this->Lock);
 
 	return result;
 }

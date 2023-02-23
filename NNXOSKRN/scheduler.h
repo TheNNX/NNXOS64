@@ -6,6 +6,7 @@
 #include <ob/object.h>
 #include <ob/handle.h>
 #include <HAL/interrupt.h>
+#include <dispatcher/dispatcher.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,6 +105,8 @@ extern "C" {
 
         UCHAR ThreadState;
         DWORD ThreadExitCode;
+
+        KIRQL ThreadIrql;
 
         BOOL Alertable;
         ULONG64 WaitStatus;

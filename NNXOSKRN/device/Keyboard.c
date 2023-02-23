@@ -154,6 +154,10 @@ VOID KeyboardInitialize()
 		DISPATCH_LEVEL, 
 		FALSE,
 		KeyboardIsr);
+	/* FIXME */
+	interrupt->IoApicVector = 1;
+	interrupt->pfnSetMask = ApicSetInterruptMask;
+
 	KeConnectInterrupt(interrupt);
 
 	KeyboardInitialized = TRUE;

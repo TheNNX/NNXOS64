@@ -4,7 +4,7 @@
 #include "registers.h"
 #include "GDT.h"
 #include <HAL/paging.h>
-#include <dispatcher.h>
+#include <dispatcher/dispatcher.h>
 #include <scheduler.h>
 #include <pool.h>
 #include <ntdebug.h>
@@ -165,6 +165,9 @@ InitializeInterrupt(
     pInterrupt->pfnServiceRoutine = Routine;
     pInterrupt->pfnGetRequiresFullCtx = NULL;
     pInterrupt->SendEOI = TRUE;
+    pInterrupt->pfnSetMask = NULL;
+    /* FIXME */
+    pInterrupt->IoApicVector = Vector;
 }
 
 NTSTATUS
@@ -270,6 +273,8 @@ KiInitializeInterrupts(VOID)
     clockInterrupt->pfnFullCtxRoutine = PspScheduleThread;
     clockInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
     clockInterrupt->SendEOI = TRUE;
+    clockInterrupt->IoApicVector = -1;
+    clockInterrupt->pfnSetMask = ApicSetClockMask;
     HalpInitInterruptHandlerStub(clockInterrupt, (ULONG_PTR)IrqHandler);
     KeGetPcr()->ClockInterrupt = clockInterrupt;
     KeConnectInterrupt(clockInterrupt);
@@ -277,7 +282,7 @@ KiInitializeInterrupts(VOID)
     status = IoCreateInterrupt(
         &stopInterrupt, 
         STOP_IPI_VECTOR, 
-        IrqHandler, 
+        KeStop, 
         KeGetCurrentProcessorId(), 
         IPI_LEVEL, 
         FALSE, 
@@ -394,22 +399,28 @@ HalHandleApc(KIRQL returningToIrql)
 
 static
 KIRQL
-KiApplyInterruptIrql(
-    PKINTERRUPT Interrupt)
+KiApplyIrql(KIRQL irql)
 {
-    KIRQL iirql = Interrupt->InterruptIrql;
     KIRQL currentIrql = KeGetCurrentIrql();
 
-    if (iirql > currentIrql)
+    if (irql > currentIrql)
     {
-        KfRaiseIrql(iirql);
+        KfRaiseIrql(irql);
         return currentIrql;
     }
     else
     {
-        KfLowerIrql(iirql);
+        KfLowerIrql(irql);
         return currentIrql;
     }
+}
+
+static
+KIRQL
+KiApplyInterruptIrql(
+    PKINTERRUPT Interrupt)
+{
+    return KiApplyIrql(Interrupt->InterruptIrql);
 }
 
 BOOLEAN
@@ -419,7 +430,7 @@ HalGenericInterruptHandlerEntry(
 {
     KIRQL irql;
     irql = KiAcquireDispatcherLock();
-
+    KeGetCurrentThread()->ThreadIrql = irql;
     /* If this interrupt has no function defined for 
      * requesting full thread context, or such function returns FALSE. */
     if (Interrupt->pfnGetRequiresFullCtx == NULL ||
@@ -467,7 +478,7 @@ HalFullCtxInterruptHandlerEntry(
     result = Interrupt->pfnFullCtxRoutine(Interrupt, FullCtx);
 
     DisableInterrupts();
-    KeLowerIrql(irql);
+    KiApplyIrql(KeGetCurrentThread()->ThreadIrql);
     return result;
 }
 
@@ -494,7 +505,10 @@ KeSendIpi(
     KIRQL irql;
     ULONG selfId = KeGetCurrentProcessorId();
 
-    KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    irql = KeGetCurrentIrql();
+    if (irql < DISPATCH_LEVEL)
+        KeRaiseIrql(DISPATCH_LEVEL, &irql);
+
     KeAcquireSpinLockAtDpcLevel(&IpiLock);
     KfRaiseIrql(IPI_LEVEL);
 

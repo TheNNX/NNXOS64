@@ -129,7 +129,7 @@
     <ClCompile Include="ntlist.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ntqueue.c">
+    <ClCompile Include="dispatcher\ntqueue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MemoryOperations.c">
@@ -186,7 +186,7 @@
     <ClCompile Include="ob\objects.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ob\wait.c">
+    <ClCompile Include="dispatcher\wait.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ob\namespace.c">
@@ -222,7 +222,10 @@
     <ClCompile Include="HAL\X64\gdt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dispatcher.c">
+    <ClCompile Include="dispatcher\dispatcher.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ob\obtest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -281,7 +284,7 @@
     <ClInclude Include="device\Keyboard.h">
       <Filter>Header Files\device</Filter>
     </ClInclude>
-    <ClInclude Include="ntqueue.h">
+    <ClInclude Include="dispatcher\ntqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ntlist.h">
@@ -383,7 +386,7 @@
     <ClInclude Include="HAL\syscall.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dispatcher.h">
+    <ClInclude Include="dispatcher\dispatcher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HAL\interrupt.h">

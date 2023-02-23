@@ -1,15 +1,63 @@
 #include <HAL/irql.h>
+#include <HAL/interrupt.h>
 #include "APIC.H"
 #include <HAL/pcr.h>
 #include <bugcheck.h>
 #include "cpu.h"
 
+/* WIP */
 static
 VOID
-HalX64SetTpr(
-	UBYTE Value)
+KiApplyIrql(
+	KIRQL OldValue, 
+	KIRQL NewValue)
 {
-	SetCR8(Value);
+	PKPCR Pcr;
+	PKINTERRUPT Interrupt;
+	PLIST_ENTRY Entry;
+
+	if (OldValue == NewValue)
+		return;
+
+	SetCR8(0xF);
+
+	Pcr = KeGetPcr();
+	Entry = Pcr->InterruptListHead.First;
+
+	while (Entry != &Pcr->InterruptListHead)
+	{
+		KIRQL InterruptIrql;
+		Interrupt = CONTAINING_RECORD(Entry, KINTERRUPT, CpuListEntry);
+		InterruptIrql = Interrupt->InterruptIrql;
+
+		if (Interrupt->pfnSetMask == NULL)
+		{
+			Entry = Entry->Next;
+			continue;
+		}
+
+		if (NewValue > OldValue)
+		{
+			if (InterruptIrql > OldValue &&
+				InterruptIrql <= NewValue)
+			{
+				Interrupt->pfnSetMask(Interrupt, TRUE);
+			}
+		}
+		
+		else if (OldValue > NewValue)
+		{
+			if (InterruptIrql > NewValue &&
+				InterruptIrql <= OldValue)
+			{
+				Interrupt->pfnSetMask(Interrupt, FALSE);
+			}
+		}
+
+		Entry = Entry->Next;
+	}
+
+	SetCR8(NewValue);
 }
 
 KIRQL 
@@ -17,22 +65,22 @@ FASTCALL
 KfRaiseIrql(
 	KIRQL NewIrql)
 {
-	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+	KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
-	if (NewIrql < oldIrql)
+	if (NewIrql < OldIrql)
 	{
 		KeBugCheckEx(
 			IRQL_NOT_GREATER_OR_EQUAL,
 			(ULONG_PTR)NewIrql,
-			(ULONG_PTR)oldIrql,
+			(ULONG_PTR)OldIrql,
 			0,
 			(ULONG_PTR)KfRaiseIrql);
 	}
 
-	HalX64SetTpr(NewIrql);
+	KiApplyIrql(OldIrql, NewIrql);
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
-	return oldIrql;
+	return OldIrql;
 }
 
 VOID 
@@ -40,20 +88,20 @@ FASTCALL
 KfLowerIrql(
 	KIRQL NewIrql)
 {
-	KIRQL oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+	KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
-	if (NewIrql > oldIrql)
+	if (NewIrql > OldIrql)
 	{
 		KeBugCheckEx(
 			IRQL_NOT_LESS_OR_EQUAL,
 			(ULONG_PTR)NewIrql,
-			(ULONG_PTR)oldIrql,
+			(ULONG_PTR)OldIrql,
 			0,
 			(ULONG_PTR)KfLowerIrql);
 	}
 
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
-	HalX64SetTpr(NewIrql);
+	KiApplyIrql(OldIrql, NewIrql);
 }
 
 VOID 
@@ -86,11 +134,11 @@ KIRQL
 KiSetIrql(
 	KIRQL NewIrql)
 {
-	KIRQL oldIrql;
+	KIRQL OldIrql;
 
-	oldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+	OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
-	HalX64SetTpr(NewIrql);
+	KiApplyIrql(OldIrql, NewIrql);
 
-	return oldIrql;
+	return OldIrql;
 }

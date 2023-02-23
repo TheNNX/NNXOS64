@@ -34,8 +34,8 @@ extern "C"
 	VOID KiEnableInterrupts();
 }
 
-IoApic** IoApics;
-UINT64 IoApicCount;
+IoApic** IoApics = NULL;
+UINT64 IoApicCount = 0;
 
 extern "C"
 {
@@ -325,5 +325,56 @@ extern "C"
 
 		ApicLocalApicWriteRegister(LAPIC_DESTINATION_FORMAT_REGISTER, 0xFFFFFFFFUL);
 		ApicLocalApicWriteRegister(LAPIC_LOGICAL_DESTINATION_REGISTER, 0xFF000000UL);
+	}
+}
+
+VOID 
+NTAPI
+ApicSetInterruptMask(
+	PKINTERRUPT Interurpt, 
+	BOOLEAN Mask)
+{
+	/* This is not an APIC interrupt. */
+	if (Interurpt->SendEOI == FALSE)
+	{
+		return;
+	}
+
+	if (Mask)
+	{
+		for (int i = 0; i < IoApicCount; i++)
+		{
+			if (IoApics[i]->MaskIrq(Interurpt->IoApicVector))
+				break;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < IoApicCount; i++)
+		{
+			if (IoApics[i]->UnmaskIrq(Interurpt->IoApicVector))
+				break;
+		}
+	}
+}
+
+VOID
+NTAPI
+ApicSetClockMask(
+	PKINTERRUPT Interurpt,
+	BOOLEAN Mask)
+{
+	if (ApicBspLapicInitialized)
+	{
+		auto result = ApicLocalApicReadRegister(LAPIC_LVT_TIMER_REGISTER_OFFSET);
+		if (Mask)
+		{
+			result |= (1ULL << 16);
+		}
+		else
+		{
+			result &= ~(1ULL << 16);
+		}
+		ApicLocalApicWriteRegister(LAPIC_LVT_TIMER_REGISTER_OFFSET, result);
 	}
 }

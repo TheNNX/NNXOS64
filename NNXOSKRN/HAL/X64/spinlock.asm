@@ -8,10 +8,10 @@ func HalAcquireLockRaw
 	push QWORD rsi
 	mov rsi, rcx
 .SpinWait:
-	bt DWORD [rsi], 31
+	bt DWORD [rsi], 0
 	jc .SpinWait
 .SpinAcquire:
-	lock bts DWORD [rsi], 31
+	lock bts DWORD [rsi], 0
 	jc .SpinWait
 	pop QWORD rsi
 	ret
@@ -20,6 +20,6 @@ func HalAcquireLockRaw
 func HalReleaseLockRaw
 	push QWORD rsi
 	mov rsi, rcx
-	lock btr DWORD [rsi], 31
+	lock btr DWORD [rsi], 0
 	pop QWORD rsi
 	ret

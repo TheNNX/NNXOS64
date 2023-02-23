@@ -3,7 +3,7 @@
 #include "registers.h"
 #include <HAL/spinlock.h>
 #include <scheduler.h>
-#include <dispatcher.h>
+#include <dispatcher/dispatcher.h>
 #include <HAL/cpu.h>
 #include <HAL/X64/APIC.h>
 #include <HAL/interrupt.h>
@@ -24,6 +24,11 @@ KeStopOtherCores()
 }
 
 #pragma warning(push)
+/* Disable MSVC warning C4646: 
+ * A function marked with the noreturn __declspec modifier 
+ * should have a void return type. 
+ *
+ * This function should match the KSERVICE_ROUTINE signature. */
 #pragma warning(disable: 4646)
 __declspec(noreturn)
 BOOLEAN

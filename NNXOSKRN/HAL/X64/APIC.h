@@ -38,7 +38,6 @@ private:
 	volatile UINT32* IoApicBase;
 	BYTE Id;
 	KSPIN_LOCK Lock = { 0 };
-	KIRQL Irql = 0;
 };
 
 extern "C" {
@@ -56,6 +55,9 @@ extern "C" {
 	UINT32 ApicLocalApicReadRegister(UINT64 offset);
 	UINT8 ApicGetCurrentLapicId();
 	VOID ApicLocalApicInitializeCore();
+	VOID NTAPI ApicSetInterruptMask(struct _KINTERRUPT* Self, BOOLEAN Mask);
+	VOID NTAPI ApicSetClockMask(struct _KINTERRUPT* Self, BOOLEAN Mask);
+
 	extern UINT ApicNumberOfCoresDetected;
 	extern UINT8* ApicLocalApicIDs;
 	extern ULONG_PTR ApicVirtualLocalApicBase;

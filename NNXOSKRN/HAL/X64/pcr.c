@@ -30,6 +30,7 @@ VOID HalpInitDummyPcr()
 	dummyPcr.SelfPcr = &dummyPcr;
 	dummyPcr.Prcb = &dummyPrcb;
 	dummyPrcb.CurrentThread = NULL;
+	InitializeListHead(&dummyPcr.InterruptListHead);
 }
 
 VOID HalpSetDummyPcr()

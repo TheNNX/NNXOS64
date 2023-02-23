@@ -104,7 +104,6 @@ extern "C" {
 			}
 		}
 
-		KeBugCheck(MANUALLY_INITIATED_CRASH1);
 		status = PspInitializeCore(currentLapicId);
 		PrintT("PspInitializeCore NTSTATUS: %X\n", status);
 		if (status)

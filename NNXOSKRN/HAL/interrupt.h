@@ -27,9 +27,15 @@ extern "C"
         KSERVICE_ROUTINE    pfnServiceRoutine;
         KFULLCTX_ROUTINE    pfnFullCtxRoutine;
         BOOLEAN             Trap;
-        BOOLEAN             (*pfnGetRequiresFullCtx)
-                            (struct _KINTERRUPT* Interrupt);
+        BOOLEAN             (NTAPI *pfnGetRequiresFullCtx)(
+                                struct _KINTERRUPT* Interrupt);
         BOOLEAN             SendEOI;
+        VOID                (NTAPI *pfnSetMask)(
+                                struct _KINTERRUPT* Self, 
+                                BOOLEAN State);
+        /* FIXME */
+        ULONG               IoApicVector;
+        
     } KINTERRUPT, *PKINTERRUPT;
 
     BOOLEAN  NTAPI KeConnectInterrupt(PKINTERRUPT Interrupt);

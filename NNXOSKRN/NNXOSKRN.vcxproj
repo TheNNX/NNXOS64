@@ -196,7 +196,7 @@ $(SolutionDir)genverh.bat</Command>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dispatcher.c" />
+    <ClCompile Include="dispatcher\dispatcher.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
     <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\gpt.c" />
@@ -225,11 +225,12 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="io\mdl.c" />
     <ClCompile Include="ob\handle.c" />
     <ClCompile Include="ob\namespace.c" />
+    <ClCompile Include="ob\obtest.c" />
     <ClCompile Include="ob\objects.c" />
     <ClCompile Include="rtl\rtl.c" />
     <ClCompile Include="rtl\rtlstring.c" />
     <ClCompile Include="scheduler.c" />
-    <ClCompile Include="ob\wait.c" />
+    <ClCompile Include="dispatcher\wait.c" />
     <ClCompile Include="loadstub.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryOperations.c" />
@@ -239,7 +240,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="ntlist.c" />
-    <ClCompile Include="ntqueue.c" />
+    <ClCompile Include="dispatcher\ntqueue.c" />
     <ClCompile Include="pool.c" />
     <ClCompile Include="text.c" />
     <ClCompile Include="SimpleTextIO.c" />
@@ -254,7 +255,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="device\fs\vfs.h" />
     <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
-    <ClInclude Include="dispatcher.h" />
+    <ClInclude Include="dispatcher\dispatcher.h" />
     <ClInclude Include="HAL\ACPI\AML.h" />
     <ClInclude Include="HAL\ACPI\AMLCPP.h" />
     <ClInclude Include="HAL\cpu.h" />
@@ -299,7 +300,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="nnxllist.hpp" />
     <ClInclude Include="nnxlog.h" />
     <ClInclude Include="ntlist.h" />
-    <ClInclude Include="ntqueue.h" />
+    <ClInclude Include="dispatcher\ntqueue.h" />
     <ClInclude Include="ob\object.h" />
     <ClInclude Include="pool.h" />
     <ClInclude Include="text.h" />
