@@ -38,14 +38,19 @@ KiInsertQueueAPC(
 {
     PKTHREAD pThread;
     BOOL success;
-    KIRQL irql;
+
+    if (DispatcherLock == 0)
+    {
+        KeBugCheckEx(
+            SPIN_LOCK_NOT_OWNED,
+            __LINE__,
+            (ULONG_PTR)&DispatcherLock,
+            0,
+            0);
+    }
 
     pThread = Apc->Thread;
-
-    KeAcquireSpinLock(
-        &pThread->ThreadLock,
-        &irql
-    );
+    KeAcquireSpinLockAtDpcLevel(&pThread->ThreadLock);
 
     success = FALSE;
 
@@ -70,12 +75,10 @@ KiInsertQueueAPC(
             );
         }
 
-        if (Apc->ApcStateIndex == pThread->ApcStateIndex)
+        if (Apc->ApcStateIndex == pThread->ApcStateIndex &&
+            Apc->ApcMode == KernelMode)
         {
-            if (Apc->ApcMode == KernelMode)
-            {
-                pThread->ApcStatePointers[Apc->ApcStateIndex]->KernelApcPending = TRUE;
-            }
+            pThread->ApcStatePointers[Apc->ApcStateIndex]->KernelApcPending = TRUE;
         }
 
         if (pThread->ThreadState == THREAD_STATE_WAITING)
@@ -85,7 +88,7 @@ KiInsertQueueAPC(
                 if (Apc->ApcMode == UserMode)
                 {
                     pThread->ApcStatePointers[Apc->ApcStateIndex]->UserApcPending = TRUE;
-                    KeUnwaitThread(
+                    KeUnwaitThreadNoLock(
                         pThread,
                         STATUS_USER_APC,
                         Increment
@@ -93,7 +96,7 @@ KiInsertQueueAPC(
                 }
                 else
                 {
-                    KeUnwaitThread(
+                    KeUnwaitThreadNoLock(
                         pThread,
                         STATUS_KERNEL_APC,
                         Increment
@@ -113,11 +116,7 @@ KiInsertQueueAPC(
         /* TODO: send IPI to the core executing the thread to notify about the pending */
     }
 
-    KeReleaseSpinLock(
-        &pThread->ThreadLock,
-        irql
-    );
-
+    KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
     return success;
 }
 

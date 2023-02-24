@@ -46,15 +46,27 @@ extern "C" {
     typedef struct _KWAIT_BLOCK
     {
         LIST_ENTRY WaitEntry;
-        KPROCESSOR_MODE WaitMode;
-        UCHAR WaitType;
         struct _KTHREAD* Thread;
         DISPATCHER_HEADER* Object;
+        UCHAR WaitType;
+        KPROCESSOR_MODE WaitMode;
     }KWAIT_BLOCK, *PKWAIT_BLOCK;
+
+    typedef struct _KTIMEOUT_ENTRY
+    {
+        LIST_ENTRY ListEntry;
+        /* In hundreds of nanoseconds;
+         * if absolute, since 1st of January, 1601 */
+        ULONG64 Timeout;
+        BOOLEAN TimeoutIsAbsolute;
+        VOID(NTAPI*OnTimeout)(struct _KTIMEOUT_ENTRY* TimeoutEntry);
+    }KTIMEOUT_ENTRY, *PKTIMEOUT_ENTRY;
 
     inline 
     VOID 
-    InitializeDispatcherHeader(DISPATCHER_HEADER* Header, UCHAR Type)
+    InitializeDispatcherHeader(
+        DISPATCHER_HEADER* Header, 
+        UCHAR Type)
     {
         KeInitializeSpinLock(&Header->Lock);
         Header->Type = Type;
@@ -64,11 +76,15 @@ extern "C" {
 
     NTSTATUS
     NTAPI
+    KeInitializeDispatcher();
+
+    NTSTATUS
+    NTAPI
     KeWaitForSingleObject(
         PVOID Object,
         KWAIT_REASON WaitReason,
         KPROCESSOR_MODE WaitMode,
-        BOOL Alertable,
+        BOOLEAN Alertable,
         PLONG64 Timeout
     );
 
@@ -97,12 +113,13 @@ extern "C" {
     KeUnwaitThreadNoLock(
         struct _KTHREAD* pThread,
         LONG_PTR WaitStatus,
-        LONG PriorityIncrement
-    );
+        LONG PriorityIncrement);
 
     VOID
     NTAPI
-    KiHandleObjectWaitTimeout(struct _KTHREAD* Thread, PLONG64 pTimeout, BOOL Alertable);
+    KiHandleObjectWaitTimeout(
+        struct _KTHREAD* Thread, 
+        PLONG64 pTimeout);
 
     extern KSPIN_LOCK DispatcherLock;
 
@@ -127,6 +144,10 @@ extern "C" {
     KiSignal(
         PDISPATCHER_HEADER Object,
         ULONG SignalIncrememnt);
+
+    VOID
+    NTAPI
+    KiClockTick();
 
 #ifdef __cplusplus
 }

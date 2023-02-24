@@ -26,7 +26,11 @@ VOID CmosWriteRegister(
 {
     KIRQL irql;
 
-    KeAcquireSpinLock(&CmosSpinlock, &irql);
+    irql = KeGetCurrentIrql();
+    if (irql < DISPATCH_LEVEL)
+        KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    KeAcquireSpinLockAtDpcLevel(&CmosSpinlock);
+
     CmosSelectRegister(Register);
     outb(0x71, Value);
     KeReleaseSpinLock(&CmosSpinlock, irql);
@@ -39,9 +43,14 @@ UCHAR CmosReadRegister(
     KIRQL irql;
     UCHAR returnValue;
 
-    KeAcquireSpinLock(&CmosSpinlock, &irql);
+    irql = KeGetCurrentIrql();
+    if (irql < DISPATCH_LEVEL)
+        KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    KeAcquireSpinLockAtDpcLevel(&CmosSpinlock);
+
     CmosSelectRegister(Register);
     returnValue = inb(0x71);
+
     KeReleaseSpinLock(&CmosSpinlock, irql);
 
     return returnValue;

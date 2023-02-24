@@ -9,7 +9,6 @@ func HalpUpdateThreadKernelStack
     push QWORD rdi
     mov QWORD rdi, [gs:0x08]
     ; set RSP0
-    add rcx, 192
     mov QWORD [rdi+0x04], rcx
     pop QWORD rdi
     ret
@@ -19,7 +18,6 @@ func HalpGetThreadKernelStack
     mov QWORD rdi, [gs:0x08]
     ; copy RSP0 into RAX
     mov rax, QWORD [rdi+0x04]
-    sub rax, 192
     pop QWORD rdi
     ret
 

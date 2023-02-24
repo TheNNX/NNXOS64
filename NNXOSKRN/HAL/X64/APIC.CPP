@@ -314,6 +314,7 @@ extern "C"
 			HalpTimerTicksPerSecond = ApicTestTimer();
 		}
 
+		/* If timer interval changed, adjust dispatcher\wait.c accordingly! */
 		ApicSetupTimer(0x20, KeMaximumIncrement);
 
 		if (!ApicBspLapicInitialized)

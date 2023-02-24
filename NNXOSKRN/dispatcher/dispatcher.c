@@ -26,6 +26,8 @@ InitDispatcherType(
 static DISPATCHER_TYPE DispatcherDecodeTable[32] = { 0 };
 
 KSPIN_LOCK DispatcherLock;
+LIST_ENTRY RelativeTimeoutListHead;
+LIST_ENTRY AbsoluteTimeoutListHead;
 
 NTSTATUS
 NTAPI
@@ -56,6 +58,9 @@ KeInitializeDispatcher()
     InitDispatcherType(
         &DispatcherDecodeTable[MutexObject],
         NULL);
+
+    InitializeListHead(&AbsoluteTimeoutListHead);
+    InitializeListHead(&RelativeTimeoutListHead);
 
     return STATUS_SUCCESS;
 }
@@ -90,6 +95,7 @@ KiUnwaitWaitBlock(
     PDISPATCHER_HEADER Object = pWaitBlock->Object;
     PDISPATCHER_TYPE DispatcherType = &DispatcherDecodeTable[Object->Type];
 
+    ASSERT(DispatcherLock != 0);
     ASSERT(pWaitBlock != NULL);
     ASSERT(pWaitBlock->Object != NULL);
     ASSERT(pWaitBlock->Thread != NULL);

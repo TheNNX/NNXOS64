@@ -33,7 +33,10 @@ static UCHAR HalpRtcHandleDataRead(UCHAR Register)
     UCHAR value1, value2;
     KIRQL irql;
 
-    KeAcquireSpinLock(&RtcLock, &irql);
+    irql = KeGetCurrentIrql();
+    if (irql < DISPATCH_LEVEL)
+        KeRaiseIrql(DISPATCH_LEVEL, &irql);
+    KeAcquireSpinLockAtDpcLevel(&RtcLock);
 
     /**
      * read the values two times, until they're the same 
@@ -190,7 +193,9 @@ VOID HalpPrintCurrentDate()
  * This is black magic.
  * And to think that I'll have to write a reverse function... yikes...
  */
-VOID KeQuerySystemTime(
+VOID 
+NTAPI
+KeQuerySystemTime(
     PULONG64 outCurrentTime
 )
 {

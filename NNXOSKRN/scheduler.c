@@ -31,7 +31,6 @@ extern ULONG_PTR KiCyclesPerQuantum;
 extern UINT KeNumberOfProcessors;
 
 VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR EntryPoint, ULONG_PTR Userstack);
-VOID HalpUpdateThreadKernelStack(PVOID kernelStack);
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
 NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, BOOL IsKernel, ULONG_PTR EntryPoint);
 __declspec(noreturn) VOID PspTestAsmUser();
@@ -318,13 +317,13 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
         NTSTATUS ObpMpTest();
 
         PrintT("Running mp test for core %i\n", KeGetCurrentProcessorId());
-        status = ObpMpTest();
+        /*status = ObpMpTest();
         if (!NT_SUCCESS(status))
         {
             return status;
-        }
+        }*/
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 1; i++)
         {
             PEPROCESS userProcess1;
             PETHREAD userThread1, userThread2;
@@ -333,7 +332,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
             VOID TestUserThread2();
 
             status = PspCreateProcessInternal(&userProcess1);
-            userProcess1->Pcb.AffinityMask = 0xFFFFFFFF;
+            userProcess1->Pcb.AffinityMask = KAFFINITY_ALL;
             if (!NT_SUCCESS(status))
             {
                 return status;
@@ -364,7 +363,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
             userThread1->Tcb.ThreadPriority = 1;
             userThread2->Tcb.ThreadPriority = 1;
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread1);
-            PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
+            //PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
         }
     }
@@ -382,16 +381,16 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
         KeGetCurrentProcessorId(), 
         KeGetCurrentIrql());
 
-    HalpUpdateThreadKernelStack(pPrcb->IdleThread->KernelStackPointer);
     HalpApplyTaskState(pTaskState);
 
     return STATUS_SUCCESS;
 }
+
 #pragma warning(pop)
 
 ULONG_PTR 
 NTAPI
-PspScheduleThread(PKINTERRUPT clockInterrupt, PKTASK_STATE stack)
+PspScheduleThread(PKINTERRUPT ClockInterrupt, PKTASK_STATE Stack)
 {
     PKPCR pcr;
     KIRQL irql;
@@ -403,6 +402,7 @@ PspScheduleThread(PKINTERRUPT clockInterrupt, PKTASK_STATE stack)
     UCHAR origRunThrdPriority;
 
     irql = KiAcquireDispatcherLock();
+    KiClockTick();
     pcr = KeGetPcr();
 
     KeAcquireSpinLockAtDpcLevel(&pcr->Prcb->Lock);
@@ -417,11 +417,20 @@ PspScheduleThread(PKINTERRUPT clockInterrupt, PKTASK_STATE stack)
             0, 0, 0);
     }
 
-    originalRunningThread->KernelStackPointer = (PVOID)stack;
+    originalRunningThread->KernelStackPointer = (PVOID)Stack;
 
     if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
     {
         pcr->CyclesLeft = 0;
+    }
+
+    /* The thread has IRQL too high for the scheduler, the clock interrupt
+     * should only update the clock state. */
+    if (originalRunningThread->ThreadIrql >= DISPATCH_LEVEL)
+    {
+        KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
+        KiReleaseDispatcherLock(irql);
+        return (ULONG_PTR)originalRunningThread->KernelStackPointer;
     }
 
     originalRunningProcess = originalRunningThread->Process;
@@ -516,7 +525,6 @@ PspScheduleThread(PKINTERRUPT clockInterrupt, PKTASK_STATE stack)
         }
     }
 
-    HalpUpdateThreadKernelStack(pcr->Prcb->CurrentThread->KernelStackPointer);
     KeReleaseSpinLockFromDpcLevel(originalRunningProcessSpinlock);
     KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
     KiReleaseDispatcherLock(irql);
@@ -801,7 +809,25 @@ NTSTATUS PspThreadOnCreate(PVOID SelfObject, PVOID CreateData)
     return status;
 }
 
-NTSTATUS PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
+VOID
+NTAPI
+PspOnThreadTimeout(
+    PKTIMEOUT_ENTRY pTimeout)
+{
+    PKTHREAD pThread = CONTAINING_RECORD(pTimeout, KTHREAD, TimeoutEntry);
+   
+    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+    KeAcquireSpinLockAtDpcLevel(&pThread->ThreadLock);
+    ASSERT(pThread->ThreadState == THREAD_STATE_WAITING);
+
+    KeUnwaitThreadNoLock(pThread, STATUS_TIMEOUT, 0);
+
+    KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
+}
+
+NTSTATUS 
+NTAPI
+PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
 {
     ULONG_PTR userstack;
     ULONG_PTR originalAddressSpace;
@@ -824,7 +850,7 @@ NTSTATUS PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
 
     /* Create stacks */
     /* Main kernel stack */
-    pThread->Tcb.NumberOfKernelStackPages = 2;
+    pThread->Tcb.NumberOfKernelStackPages = 4;
     pThread->Tcb.OriginalKernelStackPointer = 
         PspCreateKernelStack(pThread->Tcb.NumberOfKernelStackPages);
     pThread->Tcb.KernelStackPointer = 
@@ -850,8 +876,10 @@ NTSTATUS PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
     pThread->Tcb.WaitStatus = 0;
     pThread->Tcb.Alertable = FALSE;
     pThread->Tcb.Process = &pThread->Process->Pcb;
-    pThread->Tcb.Timeout = 0;
-    pThread->Tcb.TimeoutIsAbsolute = FALSE;
+    pThread->Tcb.TimeoutEntry.Timeout = 0;
+    pThread->Tcb.TimeoutEntry.TimeoutIsAbsolute = FALSE;
+    pThread->Tcb.TimeoutEntry.OnTimeout = PspOnThreadTimeout;
+    InitializeListHead(&pThread->Tcb.TimeoutEntry.ListEntry);
     pThread->Tcb.UserAffinity = 0;
     pThread->Tcb.ThreadIrql = PASSIVE_LEVEL;
 
@@ -962,31 +990,6 @@ VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
         PspSharedReadyQueue.ThreadReadyQueuesSummary,
         ThreadPriority
     );
-}
-
-BOOL PsCheckThreadIsReady(PKTHREAD Thread)
-{
-    BOOL ready;
-
-    /* this function requires the DispatcherLock to be held */
-    if (DispatcherLock == 0)
-    {
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
-    }
-
-    if (Thread->NumberOfActiveWaitBlocks == 0 && Thread->ThreadState == THREAD_STATE_WAITING)
-    {
-        KeAcquireSpinLockAtDpcLevel(&Thread->ThreadLock);
-        KeUnwaitThread(Thread, 0, 0);
-        KeReleaseSpinLockFromDpcLevel(&Thread->ThreadLock);
-    }
-
-    /* 
-        don't just set it to FALSE at the init and later change it to TRUE in the if block, 
-        wouldn't work on a thread that's already ready 
-    */
-    ready = (Thread->ThreadState == THREAD_STATE_READY);
-    return ready;
 }
 
 BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)

@@ -6,30 +6,54 @@
 #include <HAL/rtc.h>
 #include <ntdebug.h>
 
-/* this is probably wrong somewhere */
-VOID KiHandleObjectWaitTimeout(PKTHREAD Thread, PLONG64 pTimeout, BOOL Alertable)
-{
-    /* if Timeout != NULL && *Timeout == 0 is handled earlier */
-    if (pTimeout == NULL)
-    {
-        Thread->TimeoutIsAbsolute = TRUE;
-        Thread->Timeout = UINT64_MAX;
-    }
-    else
-    {
-        Thread->TimeoutIsAbsolute = TRUE;
+extern LIST_ENTRY RelativeTimeoutListHead;
+extern LIST_ENTRY AbsoluteTimeoutListHead;
+extern ULONG_PTR KeMaximumIncrement;
 
+VOID 
+NTAPI
+KiHandleObjectWaitTimeout(
+    PKTHREAD Thread, 
+    PLONG64 pTimeout)
+{
+    if (DispatcherLock == 0)
+    {
+        KeBugCheckEx(
+            SPIN_LOCK_NOT_OWNED, 
+            __LINE__, 
+            (ULONG_PTR)&DispatcherLock,
+            0, 
+            0);
+    }
+
+    if (Thread->TimeoutEntry.Timeout != 0)
+    {
+        RemoveEntryList(&Thread->TimeoutEntry.ListEntry);
+    }
+    Thread->TimeoutEntry.Timeout = 0;
+    Thread->TimeoutEntry.TimeoutIsAbsolute = TRUE;
+
+    if (pTimeout != NULL)
+    {
+        /* Relative is negative */
         if (*pTimeout < 0)
         {
-            Thread->TimeoutIsAbsolute = FALSE;
-            *pTimeout = -*pTimeout;
+            Thread->TimeoutEntry.TimeoutIsAbsolute = FALSE;
+            Thread->TimeoutEntry.Timeout = -*pTimeout;
+            InsertTailList(
+                &RelativeTimeoutListHead,
+                &Thread->TimeoutEntry.ListEntry);
         }
-
-        Thread->Timeout = *pTimeout;
+        /* Absolute is positive */
+        else
+        {
+            Thread->TimeoutEntry.TimeoutIsAbsolute = TRUE;
+            Thread->TimeoutEntry.Timeout = *pTimeout;
+            InsertTailList(
+                &AbsoluteTimeoutListHead,
+                &Thread->TimeoutEntry.ListEntry);
+        }
     }
-
-    /* for APCs (not implemented yet) */
-    Thread->Alertable = Alertable;
 }
 
 /* TODO: implement timeouts */
@@ -114,6 +138,19 @@ NTSTATUS KeWaitForMultipleObjects(
         KeReleaseSpinLockFromDpcLevel(&Header->Lock);
     }
 
+    CurrentThread->Alertable = Alertable;
+    KiHandleObjectWaitTimeout(
+        CurrentThread,
+        pTimeout);
+
+    if (CurrentThread->NumberOfActiveWaitBlocks > 0 &&
+        pTimeout != NULL && *pTimeout == 0)
+    {
+        KeUnwaitThreadNoLock(CurrentThread, STATUS_TIMEOUT, 0);
+        KiReleaseDispatcherLock(Irql);
+        return STATUS_TIMEOUT;
+    }
+
     KiReleaseDispatcherLock(Irql);
     /* Force a clock tick - if the thread is waiting, it will have the control 
      * back only when the wait conditions are satisfied. */
@@ -121,7 +158,14 @@ NTSTATUS KeWaitForMultipleObjects(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS KeWaitForSingleObject(PVOID Object, KWAIT_REASON WaitReason, KPROCESSOR_MODE WaitMode, BOOL Alertable, PLONG64 Timeout)
+NTSTATUS 
+NTAPI
+KeWaitForSingleObject(
+    PVOID Object, 
+    KWAIT_REASON WaitReason, 
+    KPROCESSOR_MODE WaitMode, 
+    BOOLEAN Alertable, 
+    PLONG64 Timeout)
 {
     return KeWaitForMultipleObjects(
         1, 
@@ -142,15 +186,27 @@ RundownWaitBlocks(
 {
     ULONG i;
 
+    ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+    ASSERT(pThread->ThreadLock != 0);
+    ASSERT(DispatcherLock != 0);
+
     for (i = 0; i < pThread->NumberOfCurrentWaitBlocks; i++)
     {
-        if (pThread->CurrentWaitBlocks[i].Object != NULL)
+        PDISPATCHER_HEADER Object = pThread->CurrentWaitBlocks[i].Object;
+
+        if (Object != NULL)
         {
+            KeAcquireSpinLockAtDpcLevel(
+                &Object->Lock);
+
             KiUnwaitWaitBlock(
                 &pThread->CurrentWaitBlocks[i],
                 FALSE,
                 0,
                 0);
+
+            KeReleaseSpinLockFromDpcLevel(
+                &Object->Lock);
         }
     }
 
@@ -172,7 +228,9 @@ KeUnwaitThread(
     LONG PriorityIncrement)
 {
     KIRQL irql = KiAcquireDispatcherLock();
+    KeAcquireSpinLockAtDpcLevel(&pThread->ThreadLock);
     KeUnwaitThreadNoLock(pThread, WaitStatus, PriorityIncrement);
+    KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
     KiReleaseDispatcherLock(irql);
 }
 
@@ -195,12 +253,74 @@ KeUnwaitThreadNoLock(
     if (pThread->ThreadLock == 0)
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
-    pThread->Timeout = 0;
-    pThread->TimeoutIsAbsolute = 0;
+    KiHandleObjectWaitTimeout(pThread, 0);
+
     if (pThread->NumberOfCurrentWaitBlocks)
     {
         RundownWaitBlocks(pThread);
     }
 
     pThread->WaitStatus = WaitStatus;
+}
+
+static
+VOID
+KiExpireTimeout(
+    PKTIMEOUT_ENTRY pTimeout)
+{
+    RemoveEntryList(&pTimeout->ListEntry);
+    if (pTimeout->OnTimeout != NULL)
+    {
+        pTimeout->OnTimeout(pTimeout);
+    }
+}
+
+VOID
+NTAPI
+KiClockTick()
+{
+    PLIST_ENTRY Current;
+    PKTIMEOUT_ENTRY TimeoutEntry;
+    ULONG64 Time;
+
+    if (DispatcherLock == 0)
+    {
+        KeBugCheckEx(
+            SPIN_LOCK_NOT_OWNED,
+            __LINE__,
+            (ULONG_PTR)&DispatcherLock,
+            0,
+            0);
+    }
+
+    KeQuerySystemTime(&Time);
+
+    Current = AbsoluteTimeoutListHead.First;
+    while (Current != &AbsoluteTimeoutListHead)
+    {
+        TimeoutEntry = CONTAINING_RECORD(Current, KTIMEOUT_ENTRY, ListEntry);
+        Current = Current->Next;
+        
+        if (TimeoutEntry->Timeout > Time)
+        {
+            KiExpireTimeout(TimeoutEntry);
+        }
+    }
+
+    Current = RelativeTimeoutListHead.First;
+    while (Current != &RelativeTimeoutListHead)
+    {
+        TimeoutEntry = CONTAINING_RECORD(Current, KTIMEOUT_ENTRY, ListEntry);
+        Current = Current->Next;
+
+        /* Temporary solution. */
+        if (KeGetCurrentProcessorId() == 0)
+        {
+            TimeoutEntry->Timeout -= KeMaximumIncrement;
+        }
+        if ((LONG64)TimeoutEntry->Timeout < 0)
+        {
+            KiExpireTimeout(TimeoutEntry);
+        }
+    }
 }

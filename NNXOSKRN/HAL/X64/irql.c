@@ -5,7 +5,6 @@
 #include <bugcheck.h>
 #include "cpu.h"
 
-/* WIP */
 static
 VOID
 KiApplyIrql(
@@ -18,7 +17,8 @@ KiApplyIrql(
 
 	if (OldValue == NewValue)
 		return;
-
+#ifndef THE_OLD_RELIABLE
+	/* This *MAYBE* works. */
 	SetCR8(0xF);
 
 	Pcr = KeGetPcr();
@@ -58,6 +58,9 @@ KiApplyIrql(
 	}
 
 	SetCR8(NewValue);
+#else
+	SetCR8(NewValue);
+#endif
 }
 
 KIRQL 

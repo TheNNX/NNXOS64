@@ -153,6 +153,7 @@ static VOID ObpWorkerThreadFunction()
     UINT ownId;
     KIRQL irql;
     NTSTATUS status;
+
     /* acquire lock for getting the worker id */
     KeAcquireSpinLock(&NextTesterIdLock, &irql);
     PrintT("[%i] started ", NextTesterId);
@@ -215,7 +216,7 @@ NTSTATUS ObpMpTestNamespaceThread()
                 return creationStatus;
             }
 
-            WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 1;
+            WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb.ThreadPriority = 5;
             ObReferenceObject(WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]);
 
             PspInsertIntoSharedQueueLocked(&WorkerThreads[j + i * WORKER_THREADS_PER_PROCESS]->Tcb);
@@ -287,7 +288,7 @@ NTSTATUS ObpMpTestNamespace()
     PrintT("Created namespace test thread %X\n", testThread);
 
     testThread->Process->Pcb.BasePriority = 10;
-    testThread->Tcb.ThreadPriority = 5;
+    testThread->Tcb.ThreadPriority = 6;
     PspInsertIntoSharedQueueLocked(&testThread->Tcb);
 
     return STATUS_SUCCESS;

@@ -132,6 +132,11 @@ extern "C"
 
 		ACPI_MADT* madt = (ACPI_MADT*) AcpiGetTable(pRdsp, "APIC");
 
+		if (!NT_SUCCESS(KeInitializeDispatcher()))
+		{
+			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, __LINE__, 0, 0, 0);
+		}
+
 		ApicInit(madt);
 
 		SetupSystemCallHandler(SystemCallHandler);

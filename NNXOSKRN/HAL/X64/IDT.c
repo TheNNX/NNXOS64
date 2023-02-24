@@ -14,6 +14,14 @@
 
 VOID KeStop();
 VOID HalpMockupInterruptHandler(ULONG_PTR Handler);
+static
+KIRQL
+KiApplyInterruptIrql(
+    PKINTERRUPT Interrupt);
+static
+KIRQL
+KiApplyIrql(
+    KIRQL irqls);
 
 VOID DefExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
@@ -310,7 +318,10 @@ HalMockupInterrupt(PKINTERRUPT Interrupt)
 
     tmpCopy = *Interrupt;
     tmpCopy.SendEOI = FALSE;
+   
+    SetCR8(Interrupt->InterruptIrql);
     HalpMockupInterruptHandler((ULONG_PTR)tmpCopy.Handler);
+    SetCR8(0);
 }
 
 VOID

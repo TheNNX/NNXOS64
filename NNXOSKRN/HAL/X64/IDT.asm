@@ -200,6 +200,10 @@ func HalpApplyTaskState
 .EnterThread:
 	popvol
 	cli
+	push rcx
+	mov rcx, rsp
+	call HalpUpdateThreadKernelStack
+	pop rcx
     cmp QWORD [rsp+8], 0x08
     je .noswap2
     swapgs
@@ -284,6 +288,7 @@ func Exception14
 ExceptionReserved:
 exception_error 0xffffffffffffffff
 
+[extern HalpUpdateThreadKernelStack]
 [extern HalpSystemCallHandler]
 func HalpSystemCall
 	; interrupts should be disabled here at the start
@@ -305,7 +310,6 @@ func HalpSystemCall
 	; once interrupts are reenabled)
 	push QWORD [gs:0x28]
 
-	; reenable interrupts
 	sti
 
 	; store the register state
@@ -326,8 +330,13 @@ func HalpSystemCall
 	; restore the register state
 	popvolnorax
 
-	; disable interrupts to prevent race conditions from occuring
 	cli
+	push rcx
+	mov rcx, rsp
+	; unreserve syscall handler data
+	add rcx, 16
+	call HalpUpdateThreadKernelStack
+	pop rcx
 
 	; get the user stack
 	pop QWORD [gs:0x28]

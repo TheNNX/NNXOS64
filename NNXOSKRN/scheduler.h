@@ -98,10 +98,7 @@ extern "C" {
         LIST_ENTRY ProcessChildListEntry;
         LIST_ENTRY ThreadListEntry;
 
-        /* In hundreds of nanoseconds;
-         * if absolute, since 1st of January, 1601 */
-        ULONG64 Timeout;
-        BOOL TimeoutIsAbsolute;
+        KTIMEOUT_ENTRY TimeoutEntry;
 
         UCHAR ThreadState;
         DWORD ThreadExitCode;

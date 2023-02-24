@@ -4,11 +4,16 @@
 #include "GDT.h"
 #include "IDT.h"
 #include <scheduler.h>
+#include <dispatcher/dispatcher.h>
+#include <dispatcher/ntqueue.h>
 
 static KSPIN_LOCK SystemCallSpinLock;
 
 SYSCALL_HANDLER HalpSystemCallHandler;
 VOID HalpSystemCall();
+
+BOOLEAN QueueInitialized = FALSE;
+KQUEUE Queue;
 
 /**
  * @brief This is an architecture dependent implementation of the function
@@ -17,6 +22,8 @@ VOID HalpSystemCall();
  */
 VOID HalInitializeSystemCallForCurrentCore()
 {
+	KIRQL irql;
+
     /* enable syscall */
     HalX64WriteMsr(IA32_EFER, HalX64ReadMsr(IA32_EFER) | 1);
 
@@ -29,6 +36,16 @@ VOID HalInitializeSystemCallForCurrentCore()
 
     /* set the syscall dispatcher routine */
     HalX64WriteMsr(IA32_LSTAR, (ULONG_PTR)HalpSystemCall);
+
+	KeAcquireSpinLock(&SystemCallSpinLock, &irql);
+
+	if (QueueInitialized == FALSE)
+	{
+		QueueInitialized = TRUE;
+		KeInitializeQueue(&Queue, 0);
+	}
+
+	KeReleaseSpinLock(&SystemCallSpinLock, irql);
 }
 
 /**
@@ -57,25 +74,19 @@ ULONG_PTR SystemCallHandler(
 )
 {
 	ULONG_PTR result = 0;
-	KIRQL irql;
-
-	DisableInterrupts();
+	LONG64 timeout = -10000000;
+	ULONG threadId = (ULONG_PTR)KeGetCurrentThread() & 0xFFFF;
+	
 	switch (p1)
 	{
 	case 1:
 	case 2:
-		result = (ULONG_PTR)KeGetCurrentThread();
-		KeAcquireSpinLock(&SystemCallSpinLock, &irql);
-		PrintT("%X-%i", result & 0xFFFF, KeGetCurrentProcessorId());
-		if (result != p2)
-			PrintT(":(%X %X %X %X %X)", result, p1, p2, p3, p4);
-		PrintT(" ");
-		KeReleaseSpinLock(&SystemCallSpinLock, irql);
+		PrintT("%X", threadId);
+		KeWaitForSingleObject(&Queue, Executive, KernelMode, FALSE, &timeout);
 		break;
 	default:
 		PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
 	}
-	EnableInterrupts();
-
+	
 	return result;
 }
