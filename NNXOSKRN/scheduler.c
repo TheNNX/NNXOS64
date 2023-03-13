@@ -6,7 +6,6 @@
 #include <HAL/physical_allocator.h>
 #include <HAL/pcr.h>
 #include <bugcheck.h>
-#include <nnxlog.h>
 #include <HAL/cpu.h>
 #include <ob/object.h>
 #include <dispatcher/dispatcher.h>
@@ -100,8 +99,7 @@ inline VOID SetSummaryBitIfNeccessary(
     {
         *Summary = (ULONG)SetBit(
             *Summary,
-            Priority
-        );
+            Priority);
     }
 }
 
@@ -270,7 +268,10 @@ VOID PspInitializeCoreSchedulerData(UINT8 CoreNumber)
 }
 
 #pragma warning(push)
-NTSTATUS PspInitializeCore(UINT8 CoreNumber)
+NTSTATUS 
+NTAPI
+PspInitializeCore(
+    UINT8 CoreNumber)
 {
     KIRQL irql;
     PKPCR pPcr;
@@ -314,14 +315,16 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
+#if 0
         NTSTATUS ObpMpTest();
 
         PrintT("Running mp test for core %i\n", KeGetCurrentProcessorId());
-        /*status = ObpMpTest();
+        status = ObpMpTest();
         if (!NT_SUCCESS(status))
         {
             return status;
-        }*/
+        }
+#endif
 
         for (int i = 0; i < 1; i++)
         {
@@ -363,7 +366,7 @@ NTSTATUS PspInitializeCore(UINT8 CoreNumber)
             userThread1->Tcb.ThreadPriority = 1;
             userThread2->Tcb.ThreadPriority = 1;
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread1);
-            //PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
+            PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
         }
     }
@@ -532,13 +535,17 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt, PKTASK_STATE Stack)
     return (ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer;
 }
 
-PKTHREAD PspGetCurrentThread()
+PKTHREAD 
+NTAPI
+PspGetCurrentThread()
 {
     PKPCR pcr = KeGetPcr();
     return pcr->Prcb->CurrentThread;
 }
 
-PKTHREAD KeGetCurrentThread()
+PKTHREAD 
+NTAPI
+KeGetCurrentThread()
 {
     return PspGetCurrentThread();
 }
@@ -609,6 +616,7 @@ PspFreeKernelStack(
 ULONG_PTR GetRSP();
 
 VOID 
+NTAPI
 PspSetupThreadState(
     PKTASK_STATE pThreadState, 
     BOOL IsKernel, 
@@ -968,6 +976,7 @@ NTSTATUS PspProcessOnDelete(PVOID selfObject)
 }
 
 VOID
+NTAPI
 PspInsertIntoSharedQueueLocked(PKTHREAD Thread)
 {
     KIRQL irql = KiAcquireDispatcherLock();
@@ -975,7 +984,9 @@ PspInsertIntoSharedQueueLocked(PKTHREAD Thread)
     KiReleaseDispatcherLock(irql);
 }
 
-VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
+VOID 
+NTAPI
+PspInsertIntoSharedQueue(PKTHREAD Thread)
 {
     UCHAR ThreadPriority;
 
@@ -992,7 +1003,9 @@ VOID PspInsertIntoSharedQueue(PKTHREAD Thread)
     );
 }
 
-BOOL PspManageSharedReadyQueue(UCHAR CoreNumber)
+BOOL 
+NTAPI
+PspManageSharedReadyQueue(UCHAR CoreNumber)
 {
     PKCORE_SCHEDULER_DATA coreSchedulerData;
     INT checkedPriority;
@@ -1078,6 +1091,7 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
 }
 
 BOOL
+NTAPI
 KiSetUserMemory(
     PVOID Address,
     ULONG_PTR Data
@@ -1137,6 +1151,7 @@ PspSetUsercallParameter(
 }
 
 VOID
+NTAPI
 PspUsercall(
     PKTHREAD pThread,
     PVOID Function,
@@ -1175,6 +1190,7 @@ PspUsercall(
 }
 
 KPROCESSOR_MODE
+NTAPI
 PsGetProcessorModeFromTrapFrame(
     PKTASK_STATE TrapFrame
 )

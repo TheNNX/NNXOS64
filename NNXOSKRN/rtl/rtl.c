@@ -1,6 +1,11 @@
 #include "rtl.h"
 
-VOID RtlFillMemory(PVOID Memory, SIZE_T Size, INT Value)
+VOID 
+NTAPI
+RtlFillMemory(
+    PVOID Memory, 
+    SIZE_T Size, 
+    INT Value)
 {
     SIZE_T i;
     PUCHAR pMem = (PUCHAR)Memory;
@@ -11,7 +16,11 @@ VOID RtlFillMemory(PVOID Memory, SIZE_T Size, INT Value)
     }
 }
 
-VOID RtlZeroMemory(PVOID Memory, SIZE_T Size)
+VOID 
+NTAPI
+RtlZeroMemory(
+    PVOID Memory, 
+    SIZE_T Size)
 {
     RtlFillMemory(Memory, Size, 0);
 }

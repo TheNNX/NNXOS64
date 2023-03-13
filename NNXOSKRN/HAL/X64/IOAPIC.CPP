@@ -71,20 +71,20 @@ BOOL IoApic::InterruptRangeCheck(UINT32 irqn)
 
 VOID IoApic::WriteRegister(const UINT8 offset, const UINT32 value)
 {
-	HalAcquireLockRaw(&this->Lock);
+	KiAcquireSpinLock(&this->Lock);
 	*((volatile UINT32*)(IoApicBase)) = offset;
 	*((volatile UINT32*)(((ULONG_PTR)IoApicBase) + 0x10)) = value;
-	HalReleaseLockRaw(&this->Lock);
+	KiReleaseSpinLock(&this->Lock);
 }
 
 UINT32 IoApic::ReadRegister(const UINT8 offset)
 {
 	UINT32 result;
 
-	HalAcquireLockRaw(&this->Lock);
+	KiAcquireSpinLock(&this->Lock);
 	*((volatile UINT32*)(IoApicBase)) = offset;
 	result = *((volatile UINT32*)(((ULONG_PTR)IoApicBase) + 0x10));
-	HalReleaseLockRaw(&this->Lock);
+	KiReleaseSpinLock(&this->Lock);
 
 	return result;
 }

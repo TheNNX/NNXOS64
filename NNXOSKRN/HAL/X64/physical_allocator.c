@@ -1,5 +1,5 @@
 #include <HAL/physical_allocator.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <rtl/rtl.h>
 #include <HAL/paging.h>
 
@@ -17,10 +17,11 @@ SIZE_T NumberOfPfnEntries;
  * the page frame start as an allocated one.
  * @param numberOfPfnEntries - number of entries in the PfnEntires array
  */
-VOID MmReinitPhysAllocator(
+VOID 
+NTAPI
+MmReinitPhysAllocator(
     PMMPFN_ENTRY pfnEntries,
-    SIZE_T numberOfPfnEntries
-)
+    SIZE_T numberOfPfnEntries)
 {
     PFN_NUMBER pfnIndex;
 
@@ -63,7 +64,10 @@ VOID MmReinitPhysAllocator(
 /**
  * @brief This function allocates one page frame number from the free pages list.
  */
-NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber)
+NTSTATUS 
+NTAPI
+MmAllocatePfn(
+    PFN_NUMBER* pPfnNumber)
 {
     PMMPFN_ENTRY listEntry;
     NTSTATUS result;
@@ -91,7 +95,9 @@ NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber)
     return result;
 }
 
-NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber)
+NTSTATUS 
+NTAPI
+MmFreePfn(PFN_NUMBER pfnNumber)
 {
     PMMPFN_ENTRY entry;
     NTSTATUS result;
@@ -119,7 +125,10 @@ NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber)
     return result;
 }
 
-NTSTATUS MmAllocatePhysicalAddress(ULONG_PTR* pPhysAddress)
+NTSTATUS 
+NTAPI
+MmAllocatePhysicalAddress(
+    ULONG_PTR* pPhysAddress)
 {
     PFN_NUMBER pfn;
     NTSTATUS status;
@@ -132,12 +141,18 @@ NTSTATUS MmAllocatePhysicalAddress(ULONG_PTR* pPhysAddress)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS MmFreePhysicalAddress(ULONG_PTR physAddress)
+NTSTATUS 
+NTAPI
+MmFreePhysicalAddress(
+    ULONG_PTR physAddress)
 {
     return MmFreePfn(PFN_FROM_PA(physAddress));
 }
 
-NTSTATUS MmMarkPfnAsUsed(PFN_NUMBER pfnNumber)
+NTSTATUS
+NTAPI
+MmMarkPfnAsUsed(
+    PFN_NUMBER pfnNumber)
 {
     PMMPFN_ENTRY entry;
     NTSTATUS result;
@@ -182,7 +197,8 @@ VOID MiFlagPfnsForRemap()
     }
 }
 
-VOID DrawMap()
+VOID 
+DrawMap()
 {
 	UINT x = 0;
 	UINT y = 0;

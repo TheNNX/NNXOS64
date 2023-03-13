@@ -8,11 +8,22 @@ extern "C"
 {
 #endif
 
-    NTSTATUS ObpInitNamespace();
-    HANDLE ObGetGlobalNamespaceHandle();
-    HANDLE ObpGetTypeDirHandle();
+
+#ifdef NNX_KERNEL
+    NTSTATUS 
+    NTAPI
+    ObpInitNamespace();
+    
+    HANDLE 
+    NTAPI
+    ObGetGlobalNamespaceHandle();
+    
+    HANDLE 
+    NTAPI
+    ObpGetTypeDirHandle();
 
     extern HANDLE GlobalNamespace;
+#endif
 
 #ifdef __cplusplus
 }

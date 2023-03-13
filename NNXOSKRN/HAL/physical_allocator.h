@@ -9,6 +9,7 @@ extern "C"
 #endif
     typedef ULONG_PTR PFN_NUMBER;
 
+
     typedef struct _MMPFN_LIST
     {
         LIST_ENTRY PfnListHead;
@@ -38,25 +39,49 @@ extern "C"
 #define PFN_FROM_PA(x) ((PFN_NUMBER)(x / PAGE_SIZE))
 #define PA_FROM_PFN(x) ((ULONG_PTR)(x * PAGE_SIZE))
 
-    VOID MmReinitPhysAllocator(
+#ifdef NNX_KERNEL
+    VOID 
+    NTAPI
+    MmReinitPhysAllocator(
         PMMPFN_ENTRY pfnEntries,
-        SIZE_T numberOfPfnEntries
-    );
+        SIZE_T numberOfPfnEntries);
 
-    NTSTATUS MmAllocatePfn(PFN_NUMBER* pPfnNumber);
+    NTSTATUS 
+    NTAPI
+    MmAllocatePfn(
+        PFN_NUMBER* pPfnNumber);
 
-    NTSTATUS MmFreePfn(PFN_NUMBER pfnNumber);
+    NTSTATUS 
+    NTAPI
+    MmFreePfn(
+        PFN_NUMBER pfnNumber);
 
-    NTSTATUS MmAllocatePhysicalAddress(ULONG_PTR* pPhysAddress);
-    NTSTATUS MmFreePhysicalAddress(ULONG_PTR physAddress);
+    NTSTATUS
+    NTAPI
+    MmAllocatePhysicalAddress(
+        ULONG_PTR* pPhysAddress);
 
-    NTSTATUS MmMarkPfnAsUsed(PFN_NUMBER pfnNumber);
+    NTSTATUS 
+    NTAPI
+    MmFreePhysicalAddress(
+        ULONG_PTR physAddress);
 
-    VOID MiFlagPfnsForRemap();
-    VOID DrawMap();
+    NTSTATUS 
+    NTAPI
+    MmMarkPfnAsUsed(
+        PFN_NUMBER pfnNumber);
+
+    VOID 
+    NTAPI
+    MiFlagPfnsForRemap();
+
+    VOID 
+    DrawMap();
 
     extern PMMPFN_ENTRY PfnEntries;
     extern SIZE_T NumberOfPfnEntries;
+#endif
+
 #ifdef __cplusplus
 }
 #endif

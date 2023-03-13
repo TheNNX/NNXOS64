@@ -2,8 +2,8 @@
 #define NNX_PCR_HEADER
 
 #include <nnxtype.h>
-#include <HAL/spinlock.h>
-#include <HAL/irql.h>
+#include <spinlock.h>
+#include <irql.h>
 #include <ntlist.h>
 
 #ifdef __cplusplus
@@ -18,15 +18,7 @@ extern "C"
 
 #include <HAL/X64/GDT.h>
 #include <HAL/X64/IDT.h>
-
-	unsigned __int64 __readgsqword(unsigned long);
-	unsigned long	 __readgsdword(unsigned long);
-	unsigned short	 __readgsword(unsigned long);
-	unsigned char    __readgsbyte(unsigned long);
-	void __writegsbyte(unsigned long, unsigned char);
-	void __writegsword(unsigned long, unsigned short);
-	void __writegsdword(unsigned long, unsigned long);
-	void __writegsqword(unsigned long, unsigned __int64);
+#include <intrin.h>
 
 #define FIELD_OFFSET(t,field) ((ULONG_PTR)&(((t*)0)->field))
 

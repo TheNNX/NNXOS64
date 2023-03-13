@@ -2,12 +2,10 @@
 #define NNX_APIC_HEADER
 
 
-#include "../ACPI/AML.h"
+#include <HAL/ACPI/ACPI.h>
 
 #ifdef __cplusplus
-#include "../ACPI/AMLCPP.h"
-#include <HAL/spinlock.h>
-#include <nnxlog.h>
+#include <spinlock.h>
 
 class IoApic
 {
@@ -23,7 +21,6 @@ public:
 
 	/* public variables */
 public:
-	NNXLogger* logger = NULL;
 
 	/* private functions */
 private:

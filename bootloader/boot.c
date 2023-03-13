@@ -1,6 +1,8 @@
 ﻿/* TODO: separate out PE32 loading */
 /* TODO: finish import resolving */
 
+#define EFI_NT_EMUL
+#include <ntlist.h>
 #include <efi.h>
 #include <efilib.h>
 #include <nnxtype.h>
@@ -10,8 +12,6 @@
 
 #define ALLOC(x) AllocateZeroPool(x)
 #define DEALLOC(x) FreePool(x)
-
-#include <klist.h>
 #include <HAL/physical_allocator.h>
 
 /* kinda ugly, but gets the job done (and is far prettier than the mess that it was before) */
@@ -35,22 +35,46 @@ VOID DestroyLoadedModule(PVOID modulePointer)
     FreePool(module);
 }
 
-KLINKED_LIST LoadedModules;
+LIST_ENTRY LoadedModules;
 
-BOOL CompareModuleName(PVOID a, PVOID b)
-{
-    CHAR* name = b;
-    CHAR* moduleName = ((LOADED_BOOT_MODULE*) a)->Name;
-
-    return strcmpa(name, moduleName) == 0;
-}
-
-EFI_STATUS TryToLoadModule(CHAR* name)
+EFI_STATUS 
+TryToLoadModule(
+    CHAR* name,
+    LOADED_BOOT_MODULE** pOutModule)
 {
     return EFI_UNSUPPORTED;
 }
 
-EFI_STATUS HandleImportDirectory(LOADED_BOOT_MODULE* module, IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
+LOADED_BOOT_MODULE*
+TryFindLoadedModule(
+    const CHAR* Name)
+{
+    LOADED_BOOT_MODULE* module = NULL;
+    PLIST_ENTRY curModuleEntr;
+
+    curModuleEntr = LoadedModules.Flink;
+    while (curModuleEntr != &LoadedModules)
+    {
+        module = CONTAINING_RECORD(
+            curModuleEntr,
+            LOADED_BOOT_MODULE,
+            ListEntry);
+
+        if (strcmpa(module->Name, Name) == 0)
+        {
+            return module;
+        }
+
+        curModuleEntr = curModuleEntr->Flink;
+    }
+
+    return NULL;
+}
+
+EFI_STATUS 
+HandleImportDirectory(
+    LOADED_BOOT_MODULE* module,
+    IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
 {
     EFI_STATUS status;
     PVOID imageBase = module->ImageBase;
@@ -59,23 +83,20 @@ EFI_STATUS HandleImportDirectory(LOADED_BOOT_MODULE* module, IMAGE_IMPORT_DIRECT
 
     while (current->NameRVA != 0)
     {
-        CHAR* name = (CHAR*)((ULONG_PTR)current->NameRVA + (ULONG_PTR)imageBase);
-        IMAGE_ILT_ENTRY64* imports = (IMAGE_ILT_ENTRY64*)((ULONG_PTR)current->FirstThunkRVA + (ULONG_PTR)imageBase);
+        CHAR* name = 
+            (CHAR*)((ULONG_PTR)current->NameRVA + (ULONG_PTR)imageBase);
         
-        PKLINKED_LIST moduleEntry = FindInListCustomCompare(&LoadedModules, name, CompareModuleName);
-
+        IMAGE_ILT_ENTRY64* imports = 
+            (IMAGE_ILT_ENTRY64*)((ULONG_PTR)current->FirstThunkRVA + (ULONG_PTR)imageBase);
+        
+        LOADED_BOOT_MODULE* module = TryFindLoadedModule(name);
         Print(L"%a:\n", name);
 
-        if (moduleEntry == NULL)
+        if (module == NULL)
         {
-            status = TryToLoadModule(name);
+            status = TryToLoadModule(name, &module);
             if (status)
                 return EFI_LOAD_ERROR;
-
-            moduleEntry = FindInListCustomCompare(&LoadedModules, name, CompareModuleName);
-
-            if (moduleEntry == NULL)
-                return EFI_ABORTED;
         }
         
         while (imports->AsNumber)
@@ -97,7 +118,11 @@ EFI_STATUS HandleImportDirectory(LOADED_BOOT_MODULE* module, IMAGE_IMPORT_DIRECT
     return EFI_SUCCESS;
 }
 
-EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOOT_MODULE* outModule)
+EFI_STATUS 
+LoadImage(
+    EFI_FILE_HANDLE file, 
+    OPTIONAL PVOID imageBase, 
+    PLOADED_BOOT_MODULE* outModule)
 {
     EFI_STATUS status;
     IMAGE_DOS_HEADER dosHeader;
@@ -111,7 +136,6 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOO
     UINTN numberOfSectionHeaders, sizeOfSectionHeaders;
     SECTION_HEADER* currentSection;
 
-    PKLINKED_LIST moduleLinkedListEntry;
     PLOADED_BOOT_MODULE module;
 
     UINTN dosHeaderSize = sizeof(dosHeader);
@@ -182,11 +206,12 @@ EFI_STATUS LoadImage(EFI_FILE_HANDLE file, OPTIONAL PVOID imageBase, PLOADED_BOO
 
     /* add this module to the loaded module list
      * if for any reason it is not possible to finish loading, remember to remove from the list */
-    moduleLinkedListEntry = AppendList(&LoadedModules, AllocateZeroPool(sizeof(LOADED_BOOT_MODULE)));
-    if (moduleLinkedListEntry == NULL)
+    
+    module = AllocateZeroPool(sizeof(LOADED_BOOT_MODULE));
+    if (module == NULL)
         return EFI_OUT_OF_RESOURCES;
+    InsertTailList(&LoadedModules, &module->ListEntry);
 
-    module = ((LOADED_BOOT_MODULE*) moduleLinkedListEntry->Value);
     module->ImageBase = imageBase;
     module->Entrypoint = (PVOID)(peHeader.OptionalHeader.EntrypointRVA + (ULONG_PTR)imageBase);
     module->ImageSize = peHeader.OptionalHeader.SizeOfImage;
@@ -387,7 +412,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
     Print(L"Launching kernel\n");
     kernelEntrypoint(&bootdata);
 
-    ClearListAndDestroyValues(&LoadedModules, DestroyLoadedModule);
+    /* FIXME */
+    // ClearListAndDestroyValues(&LoadedModules, DestroyLoadedModule);
 
     kernelFile->Close(kernelFile);
     root->Close(root);

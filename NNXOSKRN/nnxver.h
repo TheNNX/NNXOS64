@@ -4,6 +4,6 @@
 #define NNX_OSNAME "NNXOS64" 
 #define NNX_MAJOR 0 
 #define NNX_MINOR 1 
-#define NNX_PATCH 0 
-#define NNX_BUILD 3274 
+#define NNX_PATCH 1 
+#define NNX_BUILD 3538 
 #endif

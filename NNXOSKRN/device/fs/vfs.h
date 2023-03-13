@@ -3,7 +3,7 @@
 
 #include <HAL/PCI/PCI.h>
 #include <nnxalloc.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #define VFS_MAX_NUMBER 64
 
 #ifdef __cplusplus
@@ -82,9 +82,9 @@ extern "C" {
 #define VFS_ERR_NOT_ENOUGH_ROOM_FOR_WRITE	0xFFFF0008
 #define VFS_ERR_READONLY					0xFFFF0009
 #define VFS_ERR_FILE_ALREADY_EXISTS			0xFFFF000A
-#define VFS_ERR_ARGUMENT_INVALID				0xFFFF000B
+#define VFS_ERR_ARGUMENT_INVALID			0xFFFF000B
 
-#define VFS_MAX_PATH (4096 - sizeof(MEMORY_BLOCK) - 1)
+#define VFS_MAX_PATH (2048)
 
 	void VfsInit();
 	SIZE_T VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functionSet);

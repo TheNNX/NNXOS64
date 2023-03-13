@@ -1,7 +1,6 @@
 #include "IDT.h"
 #include <SimpleTextIo.h>
 #include "device/Keyboard.h"
-#include "registers.h"
 #include "GDT.h"
 #include <HAL/paging.h>
 #include <dispatcher/dispatcher.h>
@@ -25,11 +24,11 @@ KiApplyIrql(
 
 VOID DefExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 {
-    PrintT("error: %x %x at RIP 0x%X\n\nRegisters:\nRAX %X  RBX %X  RCX %X  RDX %X\nRDI %X  RSI %X  RSP %X  RBP %X\nCR2 %X", n, errcode, rip,
-           GetRAX(), GetRBX(), GetRCX(), GetRDX(),
-           GetRDI(), GetRSI(), GetRSP(), GetRBP(),
-           GetCR2()
-    );
+    PrintT(
+        "error: %x %x at RIP 0x%X\n\n",
+        n,
+        errcode, 
+        rip);
 }
 
 VOID HalpDefInterruptHandler();
@@ -313,15 +312,19 @@ VOID
 NTAPI
 HalMockupInterrupt(PKINTERRUPT Interrupt)
 {
+    ULONG_PTR tpr = HalGetTpr();
+
     /* Create a copy of the interrupt object, so the EOI is not sent */
     KINTERRUPT tmpCopy;
-
     tmpCopy = *Interrupt;
     tmpCopy.SendEOI = FALSE;
-   
-    SetCR8(Interrupt->InterruptIrql);
+    
+    if (tpr < Interrupt->InterruptIrql)
+    {
+        HalSetTpr(Interrupt->InterruptIrql);
+    }
     HalpMockupInterruptHandler((ULONG_PTR)tmpCopy.Handler);
-    SetCR8(0);
+    HalSetTpr(tpr);
 }
 
 VOID

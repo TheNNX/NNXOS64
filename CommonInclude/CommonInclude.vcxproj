@@ -128,7 +128,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="nnxarg.h" />
     <ClInclude Include="nnxpe.h" />
     <ClInclude Include="nnxtype.h" />
   </ItemGroup>

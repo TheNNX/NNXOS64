@@ -4,10 +4,9 @@
 #include "PIC.h"
 #include <HAL/paging.h>
 #include <HAL/physical_allocator.h>
-#include <nnxlog.h>
 #include <device/fs/fat.h>
 #include "PIT.h"
-#include "../spinlock.h"
+#include <spinlock.h>
 #include <HAL/cpu.h>
 #include <rtl/rtl.h>
 #include <HAL/interrupt.h>
@@ -62,16 +61,13 @@ extern "C"
 	{
 		UINT64 i = 0, currentLocalApicIdIndex = 0, currentIoApicIndex = 0;
 		UINT8* currentPointer = (UINT8*)&(madt->InteruptControlerStruct);
-		NNXLogger* logger = new NNXLogger(VfsGetSystemVfs()->Functions.OpenOrCreateFile(VfsGetSystemVfs(), (char*)"APICLOG.TXT"), false);
-        
+		
 		DWORD irqSourceToGsiMapping[256];
 		
 		for (i = 0; i < 256; i++)
 		{
 			irqSourceToGsiMapping[i] = (DWORD)i;
 		}
-
-		logger->Log("APIC initialization started\n");
 
 		ApicLocalApicBase = madt->LapicBase32;
 
@@ -88,33 +84,25 @@ extern "C"
 			else if (type == ACPI_MADT_TYPE_IOAPIC)
 			{
 				ACPI_MADT_IOAPIC* ioapic = (ACPI_MADT_IOAPIC*) madtEntry;
-				logger->Log("IOAPIC %i[%x] starting at global INT %x\n",
-					(UINT64) ioapic->IoApicId, (UINT64) ioapic->IoApicAddress, (UINT64) ioapic->IoApicInterruptBase);
 				IoApicCount++;
 			}
 			else if (type == ACPI_MADT_TYPE_SOURCE_OVERRIDE)
 			{
 				ACPI_MADT_SOURCE_OVERRIDE* sourceOverride = (ACPI_MADT_SOURCE_OVERRIDE*) madtEntry;
-				logger->Log("Interrupt mapping: %x.%x -> %x, flags %x\n",
-					(UINT64) sourceOverride->Bus, (UINT64) sourceOverride->Source, (UINT64) sourceOverride->GlobalSystemInterrupt, (UINT64) sourceOverride->Flags);
-				
 				irqSourceToGsiMapping[sourceOverride->Source] = sourceOverride->GlobalSystemInterrupt;
 			}
 			else if (type == ACPI_MADT_TYPE_IOAPIC_NMI_SOURCE)
 			{
 				ACPI_MADT_IOAPIC_NMI_SOURCE* ioApicNmi = (ACPI_MADT_IOAPIC_NMI_SOURCE*) madtEntry;
-				logger->Log("Global interrupt %x is NMI\n", (UINT64) ioApicNmi->GlobalSystemInterrupt);
 			}
 			else if (type == ACPI_MADT_TYPE_LAPIC_NMI_SOURCE)
 			{
 				ACPI_MADT_LAPIC_NMI_SOURCE* lApicNmi = (ACPI_MADT_LAPIC_NMI_SOURCE*) madtEntry;
-				logger->Log("Processor %x LINT%i is NMI\n", (UINT64) lApicNmi->ProcessorUid, (UINT64) lApicNmi->LapicLintN);
 			}
 			else if (type == ACPI_MADT_TYPE_LAPIC_ADDRESS_64)
 			{
 				ACPI_MADT_LAPIC_ADDRESS_64* lapicOverride = (ACPI_MADT_LAPIC_ADDRESS_64*) madtEntry;
 				ApicLocalApicBase = lapicOverride->AddressOverride;
-				logger->Log("LAPIC address override present: 0x%X\n", ApicLocalApicBase);
 			}
 			else if (type == ACPI_MADT_TYPE_X2LAPIC)
 			{
@@ -125,9 +113,9 @@ extern "C"
 		}
 
 		ApicLocalApicIDs = 
-			(UINT8*) NNXAllocatorAllocArray(
-				ApicNumberOfCoresDetected, 
-				sizeof(*ApicLocalApicIDs));
+			(UINT8*) ExAllocatePool(
+				NonPagedPool,
+				ApicNumberOfCoresDetected * sizeof(*ApicLocalApicIDs));
 
 		IoApics = new IoApic*[IoApicCount];
 
@@ -140,12 +128,6 @@ extern "C"
 			{
 				ACPI_MADT_LAPIC* lapic = (ACPI_MADT_LAPIC*) madtEntry;
 
-				logger->Log(
-					"LAPIC %i for UID %i%s\n", 
-					lapic->LapicID, 
-					lapic->ProcessorUid, 
-					(lapic->Flags & 1) ? (" [disabled]") : (""));
-
 				if (lapic->Flags & 1)
 				{
 					ApicLocalApicIDs[currentLocalApicIdIndex++] = lapic->LapicID;
@@ -155,7 +137,6 @@ extern "C"
 			{
 #pragma warning(push)
 				ACPI_MADT_IOAPIC* ioapic = (ACPI_MADT_IOAPIC*) madtEntry;
-				logger->Log("Starting IOAPIC initialization\n");
 #pragma warning(disable: 6386)
 				IoApics[currentIoApicIndex] = 
 					new IoApic(
@@ -275,7 +256,7 @@ extern "C"
 			LAPIC_DIVIDE_TIMER_REGISTER_OFFSET,
 			LAPIC_TIMER_DIVISOR_1);
 
-		/* wait for 1/20th of a second using PIT and 
+		/* wait for 1/20th of a second using the PIT and 
 		 * count how many ticks have elapsed on APIC Timer 
 		 * to aproximate the frequency */
 
@@ -315,7 +296,7 @@ extern "C"
 		}
 
 		/* If timer interval changed, adjust dispatcher\wait.c accordingly! */
-		ApicSetupTimer(0x20, KeMaximumIncrement);
+		ApicSetupTimer(CLOCK_VECTOR, KeMaximumIncrement);
 
 		if (!ApicBspLapicInitialized)
 		{

@@ -1,7 +1,6 @@
 #include "bugcheck.h"
 #include <SimpleTextIO.h>
-#include "registers.h"
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <scheduler.h>
 #include <dispatcher/dispatcher.h>
 #include <HAL/cpu.h>
@@ -53,7 +52,6 @@ KeBugCheckEx(
 {
 	KeStopOtherCores();
 	DisableInterrupts();
-
 	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
 #ifndef DEBUG
 	TextIoClear();
@@ -94,7 +92,7 @@ KeBugCheckEx(
 
 	PrintT("\n\n");
 	PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
-	PrintT("CR2: %H CR3: %H", GetCR2(), GetCR3());
+	PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
 
 	KeStop();
 }

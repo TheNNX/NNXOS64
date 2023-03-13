@@ -1,15 +1,19 @@
-#include "cpu.h"
-#include "registers.h"
+#include <HAL/cpu.h>
+#include <HAL/X64/msr.h>
 #include <HAL/pcr.h>
 #include "APIC.h"
 
-VOID HalSetPcr(PKPCR pcr)
+VOID 
+NTAPI
+HalSetPcr(PKPCR pcr)
 {
-	HalX64WriteMsr(IA32_KERNEL_GS_BASE, (UINT64)NULL);
-	HalX64WriteMsr(IA32_GS_BASE, (UINT64)pcr);
+	__writemsr(IA32_KERNEL_GS_BASE, (UINT64)NULL);
+	__writemsr(IA32_GS_BASE, (UINT64)pcr);
 }
 
-ULONG_PTR KeGetCurrentProcessorId()
+ULONG
+NTAPI
+KeGetCurrentProcessorId()
 {
-	return (ULONG_PTR)ApicGetCurrentLapicId();
+	return (ULONG)ApicGetCurrentLapicId();
 }

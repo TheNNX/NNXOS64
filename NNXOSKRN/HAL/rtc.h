@@ -6,22 +6,49 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-    VOID HalRtcInitialize(UCHAR CenturyRegister);
     
-    UCHAR HalRtcGetSeconds();
-    UCHAR HalRtcGetMinutes();
-    UCHAR HalRtcGetHours();
-    UCHAR HalRtcGetDay();
-    UCHAR HalRtcGetMonth();
-    USHORT HalRtcGetYear();
-
-    VOID HalpPrintCurrentTime();
-    VOID HalpPrintCurrentDate();
-    
+    NTSYSAPI
     VOID 
     NTAPI 
     KeQuerySystemTime(PULONG64 CurrentTime);
+
+#ifdef NNX_KERNEL
+    VOID 
+    NTAPI
+    HalRtcInitialize(UCHAR CenturyRegister);
+
+    UCHAR 
+    NTAPI
+    HalRtcGetSeconds();
+
+    UCHAR 
+    NTAPI
+    HalRtcGetMinutes();
+
+    UCHAR 
+    NTAPI
+    HalRtcGetHours();
+    
+    UCHAR 
+    NTAPI
+    HalRtcGetDay();
+    
+    UCHAR 
+    NTAPI
+    HalRtcGetMonth();
+    
+    USHORT 
+    NTAPI
+    HalRtcGetYear();
+
+    VOID 
+    NTAPI
+    HalpPrintCurrentTime();
+    
+    VOID 
+    NTAPI
+    HalpPrintCurrentDate();
+#endif
 
 #ifdef __cplusplus
 }

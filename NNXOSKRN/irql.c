@@ -1,25 +1,30 @@
-#include <HAL/irql.h>
+#include <irql.h>
 #include <HAL/interrupt.h>
-#include "APIC.H"
 #include <HAL/pcr.h>
 #include <bugcheck.h>
-#include "cpu.h"
+#include <HAL/cpu.h>
 
+/* FIXME: It turns out, that masking IOAPIC interurpts isn't a good
+ * idea after all - interrupts get ignored instead of put in IRR, and
+ * in case of the keyboard interrupt for example, no new interrupt is sent
+ * until there is data in the buffer. */
+#define THE_OLD_RELIABLE
 static
 VOID
 KiApplyIrql(
 	KIRQL OldValue, 
 	KIRQL NewValue)
 {
+#ifndef THE_OLD_RELIABLE
 	PKPCR Pcr;
 	PKINTERRUPT Interrupt;
 	PLIST_ENTRY Entry;
 
 	if (OldValue == NewValue)
 		return;
-#ifndef THE_OLD_RELIABLE
+
 	/* This *MAYBE* works. */
-	SetCR8(0xF);
+	HalSetTpr(0xF);
 
 	Pcr = KeGetPcr();
 	Entry = Pcr->InterruptListHead.First;
@@ -57,9 +62,11 @@ KiApplyIrql(
 		Entry = Entry->Next;
 	}
 
-	SetCR8(NewValue);
+	HalSetTpr(0);
 #else
-	SetCR8(NewValue);
+	if (OldValue == NewValue)
+		return;
+	HalSetTpr(NewValue);
 #endif
 }
 

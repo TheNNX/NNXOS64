@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="nnxarg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="nnxpe.h">
       <Filter>Header Files</Filter>
     </ClInclude>

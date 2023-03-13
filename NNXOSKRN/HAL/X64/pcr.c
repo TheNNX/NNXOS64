@@ -1,4 +1,4 @@
-#include <nnxalloc.h>
+#include <pool.h>
 #include <HAL/pcr.h>
 #include <SimpleTextIo.h>
 #include <HAL/syscall.h>
@@ -43,7 +43,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	PKPCR pcr, tempPcr;
 	PKIDTENTRY64 idt;
 	PKGDTENTRY64 gdt;
-	HalAcquireLockRaw(&PcrCreationLock);
+	KiAcquireSpinLock(&PcrCreationLock);
 	
     DisableInterrupts();
 	idt = HalpAllocateAndInitializeIdt();
@@ -58,7 +58,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	pcr = HalCreatePcr(gdt, idt, id);
 	HalInitializeSystemCallForCurrentCore();
     KfRaiseIrql(DISPATCH_LEVEL);
-	HalReleaseLockRaw(&PcrCreationLock);
+	KiReleaseSpinLock(&PcrCreationLock);
 }
 
 PKIDTENTRY64 HalpGetIdt()
@@ -83,7 +83,7 @@ PKPCR KeGetPcr()
 
 PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 {
-	PKPRCB prcb = (PKPRCB) NNXAllocatorAlloc(sizeof(KPRCB));
+	PKPRCB prcb = (PKPRCB) ExAllocatePool(NonPagedPool, sizeof(KPRCB));
 	KeInitializeSpinLock(&prcb->Lock);
 	prcb->CurrentThread = prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
 	prcb->Number = CoreNumber;
@@ -94,7 +94,7 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber)
 {
 	NTSTATUS status;
-	PKPCR pcr = (PKPCR) NNXAllocatorAlloc(sizeof(KPCR));
+	PKPCR pcr = (PKPCR)ExAllocatePool(NonPagedPool, sizeof(KPCR));
 	pcr->Gdt = gdt;
 	pcr->Idt = idt;
 	pcr->Tss = HalpGetTssBase(pcr->Gdt[5], pcr->Gdt[6]);

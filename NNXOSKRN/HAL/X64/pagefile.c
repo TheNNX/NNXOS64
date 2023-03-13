@@ -1,10 +1,9 @@
 #include <HAL/paging.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <device/fs/vfs.h>
 #include <pool.h>
 #include <rtl/rtl.h>
 #include <bugcheck.h>
-#include <HAL/X64/registers.h>
 #include <HAL/X64/IDT.h>
 #include <HAL/physical_allocator.h>
 #include <HAL/cpu.h>
@@ -304,14 +303,14 @@ PageFaultHandler(
 
     if ((errcode & PAGE_PRESENT) == 0)
     {
-        status = PagingPageInPage(GetCR2());
+        status = PagingPageInPage(__readcr2());
         if (status)
         {
-            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 1, status, rip);
+            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, __readcr2(), 1, status, rip);
         }
     }
     else
     {
-        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, GetCR2(), 2, 0, rip);
+        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, __readcr2(), 2, 0, rip);
     }
 }

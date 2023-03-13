@@ -27,11 +27,41 @@ extern "C"
 
     typedef const STRING CSTRING, *PCSTRING;
 
-    BOOL NTAPI RtlEqualUnicodeString(PCUNICODE_STRING, PCUNICODE_STRING, BOOL IgnoreCase);
-    LONG NTAPI RtlCompareUnicodeString(PCUNICODE_STRING, PCUNICODE_STRING, BOOL IgnoreCase);
-    BOOL NTAPI RtlEqualString(PCSTRING, PCSTRING, BOOL IgnoreCase);
-    LONG NTAPI RtlCompareString(PCSTRING, PCSTRING, BOOL IgnoreCase);
+    NTSYSAPI
+    BOOLEAN
+    NTAPI 
+    RtlEqualUnicodeString(
+        PCUNICODE_STRING, 
+        PCUNICODE_STRING, 
+        BOOLEAN IgnoreCase);
+    
+    NTSYSAPI
+    LONG 
+    NTAPI 
+    RtlCompareUnicodeString(
+        PCUNICODE_STRING, 
+        PCUNICODE_STRING, 
+        BOOLEAN IgnoreCase);
+    
+    NTSYSAPI
+    BOOLEAN
+    NTAPI 
+    RtlEqualString(
+        PCSTRING, 
+        PCSTRING, 
+        BOOLEAN IgnoreCase);
+    
+    NTSYSAPI
+    LONG 
+    NTAPI 
+    RtlCompareString(
+        PCSTRING, 
+        PCSTRING, 
+        BOOLEAN IgnoreCase);
 
+#define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), s}
+
+#ifdef NNX_KERNEL
     inline static void DebugWPrint(PUNICODE_STRING unicodeStr)
     {
         VOID PrintTA(const char*, ...);
@@ -41,8 +71,7 @@ extern "C"
         for (i = 0; i < unicodeStr->Length / sizeof(*unicodeStr->Buffer); i++)
             PrintTA("%c", (UCHAR)(unicodeStr->Buffer[i]));
     }
-
-#define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), s}
+#endif
 
 #ifdef __cplusplus
 }

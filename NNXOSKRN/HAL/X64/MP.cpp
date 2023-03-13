@@ -9,8 +9,6 @@
 #include <bugcheck.h>
 #include <scheduler.h>
 #include <HAL/pcr.h>
-#include <HAL/X64/registers.h>
-
 
 extern "C" {
 
@@ -25,7 +23,10 @@ extern "C" {
 		_AP_DATA* data = (_AP_DATA*) (((UINT64) code) + 0x800);
 		systemPartition = VfsGetSystemVfs();
 
-		apCodeFile = systemPartition->Functions.OpenFile(systemPartition, (char*)"EFI\\BOOT\\APSTART.BIN");
+		apCodeFile = systemPartition->Functions.OpenFile(
+			systemPartition, 
+			(char*)"EFI\\BOOT\\APSTART.BIN");
+
 		if (!apCodeFile)
 		{
 			PrintT("Error loading file\n");
@@ -74,7 +75,9 @@ extern "C" {
 		PVOID apData, apCode;
 		NTSTATUS status;
 
-		ApStackPointerArray = (PVOID*) NNXAllocatorAllocArray(ApicNumberOfCoresDetected, sizeof(*ApStackPointerArray));
+		ApStackPointerArray = (PVOID*) ExAllocatePool(
+			NonPagedPool, 
+			ApicNumberOfCoresDetected * sizeof(*ApStackPointerArray));
 
 		apCode = MpPopulateApStartupCode();
 		apData = (VOID*) (((UINT64) apCode) + 0x800);
@@ -88,7 +91,11 @@ extern "C" {
 			if (ApicLocalApicIDs[i] == currentLapicId)
 				continue;
 
-			ApStackPointerArray[i] = (PVOID)((ULONG_PTR)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
+			ApStackPointerArray[i] = 
+				(PVOID)((ULONG_PTR)PagingAllocatePageFromRange(
+					PAGING_KERNEL_SPACE, 
+					PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
+
 			ApicInitIpi(ApicLocalApicIDs[i], 0x00);
 			PitUniprocessorPollSleepMs(10);
 
@@ -116,7 +123,6 @@ extern "C" {
 	{
 		NTSTATUS status;
 
-		PrintT("Setting PCR for %i\n", lapicId);
 		HalpSetDummyPcr();
 
 		HalpSetupPcrForCurrentCpu(lapicId);
@@ -126,9 +132,7 @@ extern "C" {
 		if (status)
 			KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 
-		/**
-		 * shouldn't get here anyway 
-		 */
+		/* The system shouldn't get here anyway. */
 		KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, 0, 0, 0, 0);
 	}
 }

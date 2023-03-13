@@ -12,7 +12,7 @@
 #include <intrin.h>
 #include <pool.h>
 #include <bugcheck.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <rtl/rtl.h>
 
 #define POOL_ALLOCATION_TAG_FREE 0

@@ -2,8 +2,8 @@
 #include <SimpleTextIo.h>
 #include <HAL/physical_allocator.h>
 #include <MemoryOperations.h>
-#include <HAL/spinlock.h>
-#include "registers.h"
+#include <spinlock.h>
+#include <hal/X64/msr.h>
 #include <bugcheck.h>
 
 #define PML4EntryForRecursivePaging 510ULL
@@ -274,23 +274,23 @@ PagingGetCurrentMapping(
 
 VOID SetupCR4()
 {
-    UINT64 CR4 = GetCR4();
+    ULONG64 CR4 = __readcr4();
     CR4 &= (~4096); /* ensure level 5 paging is disabled */
-    SetCR4(CR4);
+    __writecr4(CR4);
 }
 
 VOID EnableWriteProtect()
 {
-    UINT64 CR0 = GetCR0();
+    ULONG64 CR0 = __readcr0();
     CR0 |= 65536;
-    SetCR0(CR0);
+    __writecr0(CR0);
 }
 
 VOID DisableWriteProtect()
 {
-    UINT64 CR0 = GetCR0();
+    ULONG64 CR0 = __readcr0();
     CR0 &= (~65536);
-    SetCR0(CR0);
+    __writecr0(CR0);
 }
 
 VOID SetupCR0()
@@ -387,14 +387,16 @@ const UINT64 loaderTemporaryKernelPTSize = 32;
 
 NTSTATUS PagingInit()
 {
-    UINT64 *pml4, rsp;
+    ULONG_PTR *pml4, rsp;
     ULONG_PTR physAddr;
     NTSTATUS status;
     const UINT64 pageTableKernelReserve = 16;
 
     SetupCR0();
     SetupCR4();
-    rsp = GetRSP();
+
+    /* Get an address for some stack allocated memory */
+    rsp = (ULONG_PTR)_alloca(1);
 
     status = MmAllocatePhysicalAddress(&physAddr);
     if (!NT_SUCCESS(status))
@@ -434,7 +436,7 @@ NTSTATUS PagingInit()
     pml4[PML4EntryForRecursivePaging] = ((UINT64) pml4) | (PAGE_WRITE | PAGE_PRESENT);
     KernelPml4Entry = pml4[KERNEL_DESIRED_PML4_ENTRY];
 
-    SetCR3((UINT64)pml4);
+    __writecr3((UINT64)pml4);
     MmReinitPhysAllocator(PfnEntries, NumberOfPfnEntries);
     return STATUS_SUCCESS;
 }
@@ -531,10 +533,10 @@ ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structur
 
 ULONG_PTR PagingGetAddressSpace()
 {
-    return (ULONG_PTR) GetCR3();
+    return (ULONG_PTR) __readcr3();
 }
 
 VOID PagingSetAddressSpace(ULONG_PTR AddressSpace)
 {
-    SetCR3(AddressSpace);
+    __writecr3(AddressSpace);
 }

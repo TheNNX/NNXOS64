@@ -1,6 +1,6 @@
 #include "cmos.h"
 #include <HAL/Port.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 
 BOOLEAN HalNmiDesiredState = TRUE;
 KSPIN_LOCK CmosSpinlock;

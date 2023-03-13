@@ -1,10 +1,11 @@
 #include "ntlist.h"
 
-PLIST_ENTRY ExInterlockedInsertHeadList(
+PLIST_ENTRY 
+NTAPI
+ExInterlockedInsertHeadList(
     PLIST_ENTRY ListHead,
     PLIST_ENTRY ListEntry,
-    PKSPIN_LOCK Lock
-)
+    PKSPIN_LOCK Lock)
 {
     KIRQL irql;
     PLIST_ENTRY oldFirst;
@@ -22,11 +23,12 @@ PLIST_ENTRY ExInterlockedInsertHeadList(
     return oldFirst;
 }
 
-PLIST_ENTRY ExInterlockedInsertTailList(
+PLIST_ENTRY 
+NTAPI
+ExInterlockedInsertTailList(
     PLIST_ENTRY ListHead,
     PLIST_ENTRY ListEntry,
-    PKSPIN_LOCK Lock
-)
+    PKSPIN_LOCK Lock)
 {
     KIRQL irql;
     PLIST_ENTRY oldLast;
@@ -44,10 +46,11 @@ PLIST_ENTRY ExInterlockedInsertTailList(
     return oldLast;
 }
 
-PLIST_ENTRY ExInterlockedRemoveHeadList(
+PLIST_ENTRY 
+NTAPI
+ExInterlockedRemoveHeadList(
     PLIST_ENTRY ListHead,
-    PKSPIN_LOCK Lock
-)
+    PKSPIN_LOCK Lock)
 {
     PLIST_ENTRY removedEntry;
     KIRQL irql;
@@ -64,10 +67,11 @@ PLIST_ENTRY ExInterlockedRemoveHeadList(
     return removedEntry;
 }
 
-PLIST_ENTRY ExInterlockedRemoveTailList(
+PLIST_ENTRY 
+NTAPI
+ExInterlockedRemoveTailList(
     PLIST_ENTRY ListHead,
-    PKSPIN_LOCK Lock
-)
+    PKSPIN_LOCK Lock)
 {
     PLIST_ENTRY removedEntry;
     KIRQL irql;

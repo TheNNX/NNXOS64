@@ -1,11 +1,21 @@
 #include "rtlstring.h"
 
-BOOL NTAPI RtlEqualUnicodeString(PCUNICODE_STRING A, PCUNICODE_STRING B, BOOL IgnoreCase)
+BOOLEAN
+NTAPI 
+RtlEqualUnicodeString(
+    PCUNICODE_STRING A, 
+    PCUNICODE_STRING B, 
+    BOOLEAN IgnoreCase)
 {
     return RtlCompareUnicodeString(A, B, IgnoreCase) == 0;
 }
 
-LONG NTAPI RtlCompareUnicodeString(PCUNICODE_STRING A, PCUNICODE_STRING B, BOOL IgnoreCase)
+LONG 
+NTAPI 
+RtlCompareUnicodeString(
+    PCUNICODE_STRING A, 
+    PCUNICODE_STRING B, 
+    BOOLEAN IgnoreCase)
 {
     PWSTR a, b;
     USHORT i;
@@ -29,12 +39,22 @@ LONG NTAPI RtlCompareUnicodeString(PCUNICODE_STRING A, PCUNICODE_STRING B, BOOL 
     return 0;
 }
 
-BOOL NTAPI RtlEqualString(PCSTRING A, PCSTRING B, BOOL IgnoreCase)
+BOOLEAN
+NTAPI 
+RtlEqualString(
+    PCSTRING A, 
+    PCSTRING B, 
+    BOOLEAN IgnoreCase)
 {
     return RtlCompareString(A, B, IgnoreCase) == 0;
 }
 
-LONG NTAPI RtlCompareString(PCSTRING A, PCSTRING B, BOOL IgnoreCase)
+LONG
+NTAPI 
+RtlCompareString(
+    PCSTRING A, 
+    PCSTRING B, 
+    BOOLEAN IgnoreCase)
 {
     PCHAR a, b;
     USHORT i;

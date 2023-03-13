@@ -7,13 +7,34 @@ extern "C" {
 #include <nnxtype.h>
 	typedef UINT8 KIRQL, *PKIRQL;
 
-	KIRQL FASTCALL KfRaiseIrql(KIRQL newIrql);
-	VOID FASTCALL KfLowerIrql(KIRQL oldIrql);
+	NTSYSAPI
+	KIRQL
+	FASTCALL 
+	KfRaiseIrql(
+		KIRQL newIrql);
 
-	VOID NTAPI KeRaiseIrql(KIRQL newIrql, PKIRQL pOldIrql);
-	VOID NTAPI KeLowerIrql(KIRQL oldIrql);
+	NTSYSAPI
+	VOID 
+	FASTCALL 
+	KfLowerIrql(
+		KIRQL oldIrql);
 
-	KIRQL NTAPI KeGetCurrentIrql();
+	NTSYSAPI
+	VOID 
+	NTAPI 
+	KeRaiseIrql(
+		KIRQL newIrql, 
+		PKIRQL pOldIrql);
+
+	NTSYSAPI
+	VOID 
+	NTAPI KeLowerIrql(
+		KIRQL oldIrql);
+
+	NTSYSAPI
+	KIRQL 
+	NTAPI 
+	KeGetCurrentIrql();
 
 #define IPI_LEVEL		14
 #define	CLOCK_LEVEL		13

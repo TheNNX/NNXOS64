@@ -1,6 +1,6 @@
 #include <HAL/rtc.h>
 #include <HAL/X64/cmos.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <SimpleTextIO.h>
 
 static UCHAR CenturyRegister;
@@ -8,7 +8,10 @@ static KSPIN_LOCK RtcLock;
 static BOOLEAN RtcBcdMode;
 static BOOLEAN Rtc12HMode;
 
-VOID HalRtcInitialize(UCHAR CenturyRegisterNumber)
+VOID 
+NTAPI
+HalRtcInitialize(
+    UCHAR CenturyRegisterNumber)
 {
     UCHAR registerB;
 
@@ -27,7 +30,10 @@ VOID HalRtcInitialize(UCHAR CenturyRegisterNumber)
     RtcBcdMode = !(registerB & 0x04);
 }
 
-static UCHAR HalpRtcHandleDataRead(UCHAR Register)
+static 
+UCHAR
+HalpRtcHandleDataRead(
+    UCHAR Register)
 {
     UCHAR value;
     UCHAR value1, value2;
@@ -71,17 +77,23 @@ static UCHAR HalpRtcHandleDataRead(UCHAR Register)
     return value;
 }
 
-UCHAR HalRtcGetSeconds()
+UCHAR 
+NTAPI
+HalRtcGetSeconds()
 {
     return HalpRtcHandleDataRead(0x00);
 }
 
-UCHAR HalRtcGetMinutes()
+UCHAR 
+NTAPI
+HalRtcGetMinutes()
 {
     return HalpRtcHandleDataRead(0x02);
 }
 
-UCHAR HalRtcGetHours()
+UCHAR 
+NTAPI
+HalRtcGetHours()
 {
     UCHAR value;
     value = HalpRtcHandleDataRead(0x04);
@@ -136,17 +148,23 @@ UCHAR HalRtcGetHours()
     return value;
 }
 
-UCHAR HalRtcGetDay()
+UCHAR 
+NTAPI
+HalRtcGetDay()
 {
     return HalpRtcHandleDataRead(0x07);
 }
 
-UCHAR HalRtcGetMonth()
+UCHAR 
+NTAPI
+HalRtcGetMonth()
 {
     return HalpRtcHandleDataRead(0x08);
 }
 
-USHORT HalRtcGetYear()
+USHORT 
+NTAPI
+HalRtcGetYear()
 {
     if (CenturyRegister != 0)
         return HalpRtcHandleDataRead(0x09) + 100 * HalpRtcHandleDataRead(CenturyRegister);
@@ -172,7 +190,9 @@ static VOID PrintDigits(UCHAR Digits, ULONG_PTR Value)
     PrintT("%i", Value);
 }
 
-VOID HalpPrintCurrentTime()
+VOID 
+NTAPI
+HalpPrintCurrentTime()
 {
     PrintDigits(2, (ULONG_PTR)HalRtcGetHours());
     PrintT(":");
@@ -181,7 +201,9 @@ VOID HalpPrintCurrentTime()
     PrintDigits(2, (ULONG_PTR)HalRtcGetSeconds());
 }
 
-VOID HalpPrintCurrentDate()
+VOID 
+NTAPI
+HalpPrintCurrentDate()
 {
     PrintDigits(2, (ULONG_PTR)HalRtcGetDay());
     PrintT(".");
@@ -196,8 +218,7 @@ VOID HalpPrintCurrentDate()
 VOID 
 NTAPI
 KeQuerySystemTime(
-    PULONG64 outCurrentTime
-)
+    PULONG64 outCurrentTime)
 {
     USHORT year;
     UCHAR month, day;

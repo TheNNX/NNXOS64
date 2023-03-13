@@ -7,7 +7,7 @@
 #define NNX_NT_LIST_HEADER
 
 #include <nnxtype.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 
 typedef struct _LIST_ENTRY
 {
@@ -102,28 +102,37 @@ extern "C" {
         return (Head->First == Head);
     }
 
-    PLIST_ENTRY ExInterlockedInsertHeadList(
+    NTSYSAPI
+    PLIST_ENTRY 
+    NTAPI
+    ExInterlockedInsertHeadList(
         PLIST_ENTRY ListHead,
         PLIST_ENTRY ListEntry,
-        PKSPIN_LOCK Lock
-    );
+        PKSPIN_LOCK Lock);
 
-    PLIST_ENTRY ExInterlockedInsertTailList(
+    NTSYSAPI
+    PLIST_ENTRY 
+    NTAPI
+    ExInterlockedInsertTailList(
         PLIST_ENTRY ListHead,
         PLIST_ENTRY ListEntry,
-        PKSPIN_LOCK Lock
-    );
+        PKSPIN_LOCK Lock);
 
-	PLIST_ENTRY ExInterlockedRemoveHeadList(
+    NTSYSAPI
+	PLIST_ENTRY 
+    NTAPI
+    ExInterlockedRemoveHeadList(
 		PLIST_ENTRY ListHead,
-		PKSPIN_LOCK Lock
-	);
+		PKSPIN_LOCK Lock);
 
-	PLIST_ENTRY ExInterlockedRemoveTailList(
+    NTSYSAPI
+	PLIST_ENTRY 
+    NTAPI
+    ExInterlockedRemoveTailList(
 		PLIST_ENTRY ListHead,
-		PKSPIN_LOCK Lock
-	);
+		PKSPIN_LOCK Lock);
 
+#ifdef NNX_KERNEL
     /**
      * @brief Finds a PLIST_ENTRY_POINTER with a given Pointer
      * @param Head - pointer to the list head
@@ -157,6 +166,8 @@ extern "C" {
             Head->Next = result->Next;
         return result;
     }
+
+#endif
 
 #ifdef __cplusplus
 }

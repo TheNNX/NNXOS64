@@ -138,7 +138,9 @@ void TextIoSetAlignment(UINT8 alignment)
 	align = alignment;
 }
 
-void TextIoInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p)
+void TextIoInitialize(
+	volatile UINT32* framebufferIn,
+	volatile UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p)
 {
 	if (initialized && w == 0)
 		w = gWidth;
@@ -313,8 +315,6 @@ void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
 
 	for (UINT32 i = 0; i < size; i++)
 	{
-
-
 		if (gCursorX + 8 > gMaxX || input[i] == '\n')
 		{
 			gCursorX = gMinX;
@@ -443,18 +443,18 @@ void PrintTA(const char* input, ...)
 	va_list		args;
 	va_start(args, input);
 
-	KIRQL oldIrql = KeGetCurrentIrql();
+	/*KIRQL oldIrql = KeGetCurrentIrql();
 
 	if (oldIrql < DISPATCH_LEVEL)
 		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-
-	HalAcquireLockRaw(&PrintLock);
+		*/
+	// HalAcquireLockRaw(&PrintLock);
 	TextIoOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
-	HalReleaseLockRaw(&PrintLock);
+	//HalReleaseLockRaw(&PrintLock);
 
-	if (oldIrql < DISPATCH_LEVEL)
+	/*if (oldIrql < DISPATCH_LEVEL)
 		KeLowerIrql(oldIrql);
-
+		*/
 	va_end(args);
 }
 

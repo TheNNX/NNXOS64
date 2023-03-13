@@ -24,22 +24,27 @@ extern "C"
         LIST_ENTRY ThreadsHead;
     }KQUEUE, *PKQUEUE;
 
+    NTSYSAPI
     VOID 
     NTAPI 
     KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads);
 
+    NTSYSAPI
     PLIST_ENTRY 
     NTAPI 
     KeRemoveQueue(PKQUEUE Queue, KPROCESSOR_MODE WaitMode, PLONG64 Timeout);
 
+    NTSYSAPI
     LONG 
     NTAPI 
     KeInsertHeadQueue(PKQUEUE Queue, PLIST_ENTRY Entry);
     
+    NTSYSAPI
     LONG 
     NTAPI 
     KeInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry);
 
+    NTSYSAPI
     VOID
     NTAPI
     KiUnwaitWaitBlockFromQueue(

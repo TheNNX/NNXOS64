@@ -8,7 +8,9 @@ HANDLE_DATABASE InitialSystemHandleDatabase;
 
 KSPIN_LOCK HandleManagerLock;
 
-NTSTATUS ObInitHandleManager()
+NTSTATUS 
+NTAPI
+ObInitHandleManager()
 {
     InitializeListHead(&SystemHandleDatabaseHead);
     /* add one preallocated entry, so we don't have to deal with dynamic memory (leaks and de)allocation here for now */
@@ -66,7 +68,12 @@ NTSTATUS ObGetHandleDatabaseEntryFromHandle(HANDLE handle, PLIST_ENTRY databaseH
     return STATUS_INVALID_HANDLE;
 }
 
-NTSTATUS ObExtractAndReferenceObjectFromHandle(HANDLE handle, PVOID* pObject, KPROCESSOR_MODE accessMode)
+NTSTATUS 
+NTAPI
+ObExtractAndReferenceObjectFromHandle(
+    HANDLE handle, 
+    PVOID* pObject, 
+    KPROCESSOR_MODE accessMode)
 {
     PHANDLE_DATABASE_ENTRY entry;
     PLIST_ENTRY databaseHead;
@@ -133,7 +140,10 @@ NTSTATUS ObExtractAndReferenceObjectFromHandle(HANDLE handle, PVOID* pObject, KP
     return STATUS_SUCCESS;
 }
 
-VOID ObCloseHandleByEntry(PHANDLE_DATABASE_ENTRY entry)
+VOID 
+NTAPI
+ObCloseHandleByEntry(
+    PHANDLE_DATABASE_ENTRY entry)
 {
     KIRQL irql;
 
@@ -143,7 +153,11 @@ VOID ObCloseHandleByEntry(PHANDLE_DATABASE_ENTRY entry)
 }
 
 /* @brief Gets the handle database entry for the handle given and performs ObDestoryHasndleEntry */
-NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode)
+NTSTATUS 
+NTAPI
+ObCloseHandle(
+    HANDLE handle, 
+    KPROCESSOR_MODE accessMode)
 {
     PHANDLE_DATABASE_ENTRY entry;
     POBJECT_HEADER objHeader;
@@ -199,7 +213,12 @@ NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObCreateHandle(PHANDLE pOutHandle, KPROCESSOR_MODE accessMode, PVOID object)
+NTSTATUS 
+NTAPI
+ObCreateHandle(
+    PHANDLE pOutHandle, 
+    KPROCESSOR_MODE accessMode, 
+    PVOID object)
 {
     PLIST_ENTRY databaseHead;
     POBJECT_HEADER objHeader;

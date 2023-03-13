@@ -1,6 +1,6 @@
 #include "MemoryOperations.h"
 
-void MemSet(void* dest, UINT8 value, UINT64 c)
+void* MemSet(void* dest, UINT8 value, SIZE_T c)
 {
     INT b;
     PBYTE destAsBytePtr = (PBYTE)dest;
@@ -9,12 +9,31 @@ void MemSet(void* dest, UINT8 value, UINT64 c)
     {
         *destAsBytePtr++ = value;
     }
+
+    return dest;
 }
 
-void MemCopy(void* dst, void *src, UINT64 size)
+void* MemCopy(void* dst, void *src, SIZE_T size)
 {
     for (int b = 0; b < size; b++)
     {
         ((UINT8*) dst)[b] = ((UINT8*) src)[b];
     }
+
+    return dst;
 }
+
+#ifndef DEBUG
+#pragma function(memset)
+#pragma function(memcpy)
+
+void* memcpy(void *dst, void* src, SIZE_T size)
+{
+    return MemCopy(dst, src, size);
+}
+
+void* memset(void* dst, UINT8 value, SIZE_T size)
+{
+    return MemSet(dst, value, size);
+}
+#endif

@@ -16,7 +16,6 @@ IT DOESN'T) IT'S GOOD ENOUGH TO KEEP.
 
 #include <SimpleTextIo.h>
 #include <nnxtype.h>
-#include "nnxllist.hpp"
 
 #pragma pack(push, 1)
 
@@ -435,7 +434,6 @@ extern "C" {
 
 #ifdef __cplusplus 
 }
-#include "AMLCPP.h"
 #endif
 
 #endif

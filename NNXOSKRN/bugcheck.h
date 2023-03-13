@@ -7,10 +7,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef NNX_KERNEL
 	__declspec(noreturn) BOOLEAN NTAPI KeStopIsr(PKINTERRUPT, PVOID);
 	__declspec(noreturn) VOID NTAPI KeStop();
-	__declspec(noreturn) VOID NTAPI KeBugCheck(ULONG code);
-	__declspec(noreturn) VOID NTAPI KeBugCheckEx(ULONG code, ULONG_PTR param1, ULONG_PTR param2, ULONG_PTR param3, ULONG_PTR param4);
+#endif
+
+	__declspec(noreturn) 
+	NTSYSAPI 
+	VOID 
+	NTAPI 
+	KeBugCheck(
+		ULONG code);
+
+	__declspec(noreturn) 
+	NTSYSAPI 
+	VOID 
+	NTAPI
+	KeBugCheckEx(
+		ULONG code, 
+		ULONG_PTR param1, 
+		ULONG_PTR param2, 
+		ULONG_PTR param3, 
+		ULONG_PTR param4);
+
 #ifdef __cplusplus
 }
 #endif

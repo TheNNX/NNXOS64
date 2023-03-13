@@ -87,9 +87,6 @@
     <ClCompile Include="HAL\ACPI\ACPI.c">
       <Filter>Source Files\HAL\ACPI</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\ACPI\AML.cpp">
-      <Filter>Source Files\HAL\ACPI</Filter>
-    </ClCompile>
     <ClCompile Include="loadstub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -117,12 +114,6 @@
     <ClCompile Include="device\hdd\hdd.c">
       <Filter>Source Files\device\hdd</Filter>
     </ClCompile>
-    <ClCompile Include="nnxalloccpp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="nnxlog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="pool.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -133,9 +124,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MemoryOperations.c">
-      <Filter>Source Files\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="nnxalloc.c">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
     <ClCompile Include="SimpleTextIO.c">
@@ -156,7 +144,7 @@
     <ClCompile Include="HAL\X64\IDT.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\irql.c">
+    <ClCompile Include="irql.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
     <ClCompile Include="HAL\X64\MP.cpp">
@@ -171,7 +159,7 @@
     <ClCompile Include="HAL\X64\physical_allocator.c">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\spinlock.c">
+    <ClCompile Include="spinlock.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
     <ClCompile Include="ob\handle.c">
@@ -228,14 +216,14 @@
     <ClCompile Include="ob\obtest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dispatcher\mutex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nnxalloccpp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HAL\ACPI\AML.h">
-      <Filter>Header Files\HAL\ACPI</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\ACPI\AMLCPP.h">
-      <Filter>Header Files\HAL\ACPI</Filter>
-    </ClInclude>
     <ClInclude Include="bugcheck.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -254,13 +242,7 @@
     <ClInclude Include="text.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxlog.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="nnxcfg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="nnxllist.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="device\fs\vfs.h">
@@ -290,7 +272,7 @@
     <ClInclude Include="ntlist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\irql.h">
+    <ClInclude Include="irql.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
     <ClInclude Include="HAL\paging.h">
@@ -311,7 +293,7 @@
     <ClInclude Include="HAL\Port.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\spinlock.h">
+    <ClInclude Include="spinlock.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
     <ClInclude Include="HAL\cpu.h">
@@ -325,9 +307,6 @@
     </ClInclude>
     <ClInclude Include="HAL\X64\APIC.h">
       <Filter>Header Files\HAL\APIC</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\cpu.h">
-      <Filter>Header Files\HAL\X64</Filter>
     </ClInclude>
     <ClInclude Include="HAL\X64\GDT.h">
       <Filter>Header Files\HAL</Filter>
@@ -344,7 +323,7 @@
     <ClInclude Include="HAL\X64\PIT.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\X64\registers.h">
+    <ClInclude Include="HAL\X64\msr.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
     <ClInclude Include="nnxver.h">
@@ -395,6 +374,12 @@
     <ClInclude Include="ntdebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dispatcher\mutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HAL\ACPI\ACPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\ApEntry.asm">
@@ -423,9 +408,6 @@
     </CustomBuild>
     <CustomBuild Include="HAL\X64\registers.asm">
       <Filter>Source Files\HAL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\spinlock.asm">
-      <Filter>Source Files\HAL\X64</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\thread.asm">
       <Filter>Source Files\HAL\X64</Filter>

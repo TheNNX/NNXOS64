@@ -15,7 +15,9 @@ KiUserApcDispatcher(
 );
 
 VOID
-KeInitializeApcState(PKAPC_STATE pApcState)
+NTAPI
+KeInitializeApcState(
+    PKAPC_STATE pApcState)
 {
     INT i;
 
@@ -30,11 +32,11 @@ KeInitializeApcState(PKAPC_STATE pApcState)
 }
 
 
-BOOL
+BOOLEAN
+NTAPI
 KiInsertQueueAPC(
     PKAPC Apc,
-    LONG Increment
-)
+    LONG Increment)
 {
     PKTHREAD pThread;
     BOOL success;
@@ -147,13 +149,13 @@ KiCopyContextToUserStack(
 }
 
 VOID
+NTAPI
 KiExecuteUserApcNormalRoutine(
     PKTHREAD pThread,
     NORMAL_ROUTINE NormalRoutine,
     PVOID NormalContext,
     PVOID SystemArguemnt1,
-    PVOID SystemArgument2
-)
+    PVOID SystemArgument2)
 {
     PKTASK_STATE currentThreadTaskState;
     ULONG_PTR usercallParameters[5];
@@ -184,9 +186,9 @@ KiExecuteUserApcNormalRoutine(
 }
 
 VOID
+NTAPI
 KeDeliverApcs(
-    KPROCESSOR_MODE PreviousMode
-)
+    KPROCESSOR_MODE PreviousMode)
 {
     PKTHREAD currentThread;
     KIRQL irql;

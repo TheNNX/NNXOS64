@@ -7,8 +7,8 @@ extern "C"
 {
 #endif
 
-    void MemSet(void* dst, UINT8 value, UINT64 size);
-    void MemCopy(void* dst, void* src, UINT64 size);
+    void* MemSet(void* dst, UINT8 value, SIZE_T size);
+    void* MemCopy(void* dst, void* src, SIZE_T size);
 
 #ifdef __cplusplus
 }

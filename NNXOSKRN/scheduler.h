@@ -2,7 +2,7 @@
 #define NNX_SHEDULER_HEADER
 
 #include <HAL/cpu.h>
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <ob/object.h>
 #include <ob/handle.h>
 #include <HAL/interrupt.h>
@@ -126,6 +126,9 @@ extern "C" {
 
         CCHAR ApcStateIndex;
 
+        BOOLEAN WaitIrql;
+        KIRQL   WaitIrqlRestore;
+
     } KTHREAD, * PKTHREAD;
 
     typedef struct _ETHREAD
@@ -174,14 +177,36 @@ extern "C" {
 #endif
     }KTASK_STATE, *PKTASK_STATE;
 
+    NTSYSAPI
+    VOID
+    NTAPI
+    KeSetSystemAffinityThread(
+        KAFFINITY Affinity);
+
+    NTSYSAPI
+    VOID
+    NTAPI
+    KeRevertToUserAffinityThread(VOID);
+
+    NTSYSAPI
+    ULONG_PTR
+    NTAPI
+    PspScheduleThread(
+        PKINTERRUPT clockInterrupt,
+        PKTASK_STATE stack);
+
+    NTSYSAPI
+    PKTHREAD
+    NTAPI
+    KeGetCurrentThread();
+
+#ifdef NNX_KERNEL
     NTSTATUS 
     PspDebugTest();
 
     PKTHREAD 
+    NTAPI
     PspGetCurrentThread();
-
-    PKTHREAD 
-    KeGetCurrentThread();
 
     __declspec(noreturn) 
     VOID
@@ -189,20 +214,9 @@ extern "C" {
         DWORD exitCode);
 
     NTSTATUS 
+    NTAPI
     PspInitializeCore(
         UINT8 CoreNumber);
-
-    /**
-     * @brief First it checks if there are threads pending in the shared
-     * If thread is no longer waiting for anything, clears all wait-related 
-     * members inside the thread structure (except the WaitStatus) and marks it as ready.
-     * Then it tries to insert it into the shared queue.
-     * @param Thread
-     * @return TRUE if Thread became ready after calling, FALSE otherwise
-    */
-    BOOL 
-    PsCheckThreadIsReady(
-        PKTHREAD Thread);
 
     /**
      * @brief Checks shared queue for any threads with higher priority than those in processor's queue
@@ -210,6 +224,7 @@ extern "C" {
      * @return TRUE if a potential thread in the shared queue was found.
     */
     BOOL 
+    NTAPI
     PspManageSharedReadyQueue(
         UCHAR CoreNumber);
 
@@ -218,6 +233,7 @@ extern "C" {
      * Requires the Dispatcher Lock to be held.
     */
     VOID 
+    NTAPI
     PspInsertIntoSharedQueue(
         PKTHREAD Thread);
 
@@ -226,10 +242,12 @@ extern "C" {
      * Dispatcher Lock by itself.
      */
     VOID
+    NTAPI
     PspInsertIntoSharedQueueLocked(
         PKTHREAD Thread);
 
     VOID
+    NTAPI
     PspSetupThreadState(
         PKTASK_STATE pThreadState,
         BOOL IsKernel,
@@ -237,6 +255,7 @@ extern "C" {
         ULONG_PTR Userstack);
 
     VOID
+    NTAPI
     PspUsercall(
         PKTHREAD pThread, 
         PVOID Function, 
@@ -245,28 +264,15 @@ extern "C" {
         PVOID ReturnAddress);
 
     BOOL
+    NTAPI
     KiSetUserMemory(
         PVOID Address,
         ULONG_PTR Data);
 
     KPROCESSOR_MODE
+    NTAPI
     PsGetProcessorModeFromTrapFrame(
         PKTASK_STATE TrapFrame);
-
-    VOID
-    NTAPI
-    KeSetSystemAffinityThread(
-        KAFFINITY Affinity);
-
-    VOID
-    NTAPI
-    KeRevertToUserAffinityThread(VOID);
-
-    ULONG_PTR
-    NTAPI
-    PspScheduleThread(
-        PKINTERRUPT clockInterrupt, 
-        PKTASK_STATE stack);
 
     VOID
     NTAPI
@@ -278,6 +284,7 @@ extern "C" {
     HalpApplyTaskState(
         PKTASK_STATE TaskState);
 
+#endif
 
 #ifdef __cplusplus
 }

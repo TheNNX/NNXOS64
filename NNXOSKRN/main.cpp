@@ -1,4 +1,4 @@
-#include <HAL/ACPI/AML.h>
+#include <HAL/ACPI/ACPI.h>
 #include <SimpleTextIo.h>
 #include <nnxcfg.h>
 #include <HAL/paging.h>
@@ -11,7 +11,6 @@
 #include <HAL/pcr.h>
 #include <scheduler.h>
 #include <HAL/X64/PIT.h>
-#include <nnxlog.h>
 #include <nnxver.h>
 #include <ob/object.h>
 #include <pool.h>
@@ -26,8 +25,8 @@ extern "C"
 {
 	VOID UpdateScreen();
 	VOID DrawMap();
-	UINT32* gFramebuffer;
-	UINT32* gFramebufferEnd;
+	volatile UINT32* gFramebuffer;
+	volatile UINT32* gFramebufferEnd;
 	UINT32 gPixelsPerScanline;
 	UINT32 gWidth;
 	UINT32 gHeight;
@@ -45,9 +44,6 @@ extern "C"
 
 	UINT KeNumberOfProcessors = 1;
 
-	/*
-		Wrapper between ExceptionHandler and KeBugCheck
-	*/
 	VOID KeExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 	{
 		KeBugCheckEx(KMODE_EXCEPTION_NOT_HANDLED, n, rip, errcode, errcode2);
@@ -99,16 +95,6 @@ extern "C"
 			KeBugCheck(HAL_INITIALIZATION_FAILED);
 
 		DrawMap();
-
-		NNXAllocatorInitialize();
-		for (int i = 0; i < 32; i++)
-		{
-			PVOID page = (PVOID)PagingAllocatePageFromRange(
-				PAGING_KERNEL_SPACE, 
-				PAGING_KERNEL_SPACE_END
-			);
-			NNXAllocatorAppend(page, 4096);
-		}
 
 		VfsInit();
 		PciScan();

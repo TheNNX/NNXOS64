@@ -76,45 +76,13 @@ extern "C" {
         PVOID Unused;
     }OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-    NTSTATUS ObCreateObject(
-        PVOID* pObject, 
-        ACCESS_MASK DesiredAccess, 
-        KPROCESSOR_MODE AccessMode, 
-        POBJECT_ATTRIBUTES Attributes,
-        ULONG ObjectSize,
-        POBJECT_TYPE ObjectType,
-        PVOID OptionalData
-    );
-
-    NTSTATUS ObReferenceObjectByHandle(
-        HANDLE handle,
-        ACCESS_MASK desiredAccess,
-        POBJECT_TYPE objectType,
-        KPROCESSOR_MODE accessMode,
-        PVOID* pObject,
-        PVOID unused
-    );
-
-    NTSTATUS ObReferenceObject(PVOID object);
-
-    NTSTATUS ObReferenceObjectByPointer(
-        PVOID object,
-        ACCESS_MASK desiredAccess,
-        POBJECT_TYPE objectType,
-        KPROCESSOR_MODE accessMode
-    );
-
-    NTSTATUS ObDereferenceObject(PVOID object);
-
-    NTSTATUS ObInit();
 
     inline VOID InitializeObjectAttributes(
         POBJECT_ATTRIBUTES pAttributes,
         PUNICODE_STRING name,
         ULONG flags,
         HANDLE root,
-        PVOID security
-    )
+        PVOID security)
     {
         pAttributes->Attributes = flags;
         pAttributes->ObjectName = name;
@@ -136,21 +104,70 @@ extern "C" {
         return (PVOID)((ULONG_PTR)Header + sizeof(OBJECT_HEADER));
     }
 
-    NTSTATUS ObCreateSchedulerTypes(
-        POBJECT_TYPE* poutProcessType,
-        POBJECT_TYPE* poutThreadType
-    );
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    ObReferenceObjectByHandle(
+        HANDLE handle,
+        ACCESS_MASK desiredAccess,
+        POBJECT_TYPE objectType,
+        KPROCESSOR_MODE accessMode,
+        PVOID* pObject,
+        PVOID unused);
 
-    NTSTATUS ObChangeRoot(
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    ObReferenceObject(PVOID object);
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    ObReferenceObjectByPointer(
+        PVOID object,
+        ACCESS_MASK desiredAccess,
+        POBJECT_TYPE objectType,
+        KPROCESSOR_MODE accessMode);
+
+#ifdef NNX_KERNEL
+    NTSTATUS 
+    NTAPI    
+    ObCreateObject(
+        PVOID* pObject, 
+        ACCESS_MASK DesiredAccess, 
+        KPROCESSOR_MODE AccessMode, 
+        POBJECT_ATTRIBUTES Attributes,
+        ULONG ObjectSize,
+        POBJECT_TYPE ObjectType,
+        PVOID OptionalData);
+
+    NTSTATUS 
+    NTAPI    
+    ObDereferenceObject(PVOID object);
+
+    NTSTATUS 
+    NTAPI    
+    ObInit();
+
+    NTSTATUS 
+    NTAPI
+    ObCreateSchedulerTypes(
+        POBJECT_TYPE* poutProcessType,
+        POBJECT_TYPE* poutThreadType);
+
+    NTSTATUS 
+    NTAPI
+    ObChangeRoot(
         PVOID object, 
         HANDLE newRoot, 
-        KPROCESSOR_MODE accessMode
-    );
+        KPROCESSOR_MODE accessMode);
 
     extern POBJECT_TYPE ObTypeObjectType;
     extern POBJECT_TYPE ObDirectoryObjectType;
     extern POBJECT_TYPE PsProcessType;
     extern POBJECT_TYPE PsThreadType;
+
+#endif
 
 #ifdef __cplusplus
 }

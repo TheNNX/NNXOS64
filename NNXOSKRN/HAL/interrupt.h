@@ -1,13 +1,16 @@
 #pragma once
 #include <nnxtype.h>
-#include <HAL/irql.h>
-#include <HAL/spinlock.h>
+#include <irql.h>
+#include <spinlock.h>
 #include <ntlist.h>
 
 #ifdef __cplusplus
 extern "C" 
 {
 #endif
+
+#ifdef NNX_KERNEL
+
     typedef BOOLEAN(NTAPI*KSERVICE_ROUTINE)
         (struct _KINTERRUPT* Interrupt, PVOID ServiceCtx);
     typedef KSERVICE_ROUTINE *PKSERVICE_ROUTINE;
@@ -38,12 +41,30 @@ extern "C"
         
     } KINTERRUPT, *PKINTERRUPT;
 
-    BOOLEAN  NTAPI KeConnectInterrupt(PKINTERRUPT Interrupt);
-    BOOLEAN  NTAPI KeDisconnectInterrupt(PKINTERRUPT Interrupt);
-    NTSTATUS NTAPI KiInitializeInterrupts(VOID);
-    NTSTATUS NTAPI KiCreateInterrupt(PKINTERRUPT* ppInterrupt);
-    VOID EnableInterrupts();
-    VOID DisableInterrupts();
+    BOOLEAN
+    NTAPI 
+    KeConnectInterrupt(
+        PKINTERRUPT Interrupt);
+
+    BOOLEAN  
+    NTAPI 
+    KeDisconnectInterrupt(
+        PKINTERRUPT Interrupt);
+
+    NTSTATUS 
+    NTAPI 
+    KiInitializeInterrupts(VOID);
+
+    NTSTATUS 
+    NTAPI 
+    KiCreateInterrupt(
+        PKINTERRUPT* ppInterrupt);
+    
+    VOID 
+    EnableInterrupts();
+    
+    VOID 
+    DisableInterrupts();
 
     NTSTATUS
     NTAPI
@@ -56,11 +77,15 @@ extern "C"
         BOOL  Trap,
         KSERVICE_ROUTINE Routine);
 
-    VOID NTAPI IrqHandler();
+    VOID 
+    NTAPI 
+    IrqHandler();
 
-    #define CLOCK_VECTOR 0x20
+    #define CLOCK_VECTOR 0xD0
     #define KEYBOARD_VECTOR 0x21
     #define STOP_IPI_VECTOR 0xEF
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include <HAL/spinlock.h>
+#include <spinlock.h>
 #include <HAL/cpu.h>
 #include <ntlist.h>
 
@@ -74,10 +74,7 @@ extern "C" {
         InitializeListHead(&Header->WaitHead);
     }
 
-    NTSTATUS
-    NTAPI
-    KeInitializeDispatcher();
-
+    NTSYSAPI
     NTSTATUS
     NTAPI
     KeWaitForSingleObject(
@@ -88,6 +85,7 @@ extern "C" {
         PLONG64 Timeout
     );
 
+    NTSYSAPI
     NTSTATUS
     NTAPI
     KeWaitForMultipleObjects(
@@ -100,6 +98,24 @@ extern "C" {
         PLONG64 Timeout,
         PKWAIT_BLOCK WaitBlockArray
     );
+
+    NTSYSAPI
+    KIRQL
+    NTAPI
+    KiAcquireDispatcherLock();
+
+    NTSYSAPI
+    VOID
+    NTAPI
+    KiReleaseDispatcherLock(KIRQL oldIrql);
+
+#ifdef NNX_KERNEL
+
+    extern KSPIN_LOCK DispatcherLock;
+
+    NTSTATUS
+    NTAPI
+    KeInitializeDispatcher();
 
     VOID
     NTAPI
@@ -121,16 +137,6 @@ extern "C" {
         struct _KTHREAD* Thread, 
         PLONG64 pTimeout);
 
-    extern KSPIN_LOCK DispatcherLock;
-
-    KIRQL
-    NTAPI
-    KiAcquireDispatcherLock();
-
-    VOID
-    NTAPI 
-    KiReleaseDispatcherLock(KIRQL oldIrql);
-
     VOID
     NTAPI
     KiUnwaitWaitBlock(
@@ -148,6 +154,7 @@ extern "C" {
     VOID
     NTAPI
     KiClockTick();
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,29 +1,29 @@
-#include <nnxalloc.h>
+#include <pool.h>
 
-void* operator new(size_t a)
+void* operator new(size_t Size)
 {
-	void* result = NNXAllocatorAlloc(a);
+	void* result = ExAllocatePool(NonPagedPool, Size);
 	return result;
 }
 
-void operator delete(void* a)
+void operator delete(void* Address)
 {
-	NNXAllocatorFree(a);
+	ExFreePool(Address);
 }
 
-void* operator new[](size_t a)
+void* operator new[](size_t Size)
 {
-	void* result = NNXAllocatorAlloc(a);
+	void* result = ExAllocatePool(NonPagedPool, Size);
 	return result;
 }
 
 void operator delete(void* a, size_t unused_b)
 {
-	NNXAllocatorFree(a);
+	ExFreePool(a);
 }
 
 /* TODO: If some memory managment code doesn't work, check this code */
 void operator delete[](void* a)
 {
-	NNXAllocatorFree(a);
+	ExFreePool(a);
 }

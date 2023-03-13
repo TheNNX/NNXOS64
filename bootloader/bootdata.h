@@ -3,17 +3,19 @@
 
 #include <nnxtype.h>
 #include "../CommonInclude/nnxpe.h"
+#include <ntlist.h>
 
 #pragma pack(push, 1)
 typedef struct _LOADED_BOOT_MODULE
 {
-	PVOID Entrypoint;
-	PVOID ImageBase;
-	ULONG ImageSize;
-	CHAR* Name;
-	USHORT OrdinalBase;
+	PVOID			Entrypoint;
+	PVOID			ImageBase;
+	ULONG			ImageSize;
+	CHAR*			Name;
+	USHORT			OrdinalBase;
 	SECTION_HEADER* SectionHeaders;
-	SIZE_T NumberOfSectionHeaders;
+	SIZE_T			NumberOfSectionHeaders;
+	LIST_ENTRY		ListEntry;
 }LOADED_BOOT_MODULE, * PLOADED_BOOT_MODULE;
 #pragma pack(pop)
 

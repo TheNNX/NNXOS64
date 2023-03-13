@@ -152,6 +152,10 @@ NTSTATUS KeWaitForMultipleObjects(
     }
 
     KiReleaseDispatcherLock(Irql);
+    if (Irql >= DISPATCH_LEVEL)
+    {
+        KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, Irql, 0, 0);
+    }
     /* Force a clock tick - if the thread is waiting, it will have the control 
      * back only when the wait conditions are satisfied. */
     KeForceClockTick();
@@ -281,7 +285,7 @@ KiClockTick()
 {
     PLIST_ENTRY Current;
     PKTIMEOUT_ENTRY TimeoutEntry;
-    ULONG64 Time;
+    ULONG64 Time = 0;
 
     if (DispatcherLock == 0)
     {
@@ -293,6 +297,11 @@ KiClockTick()
             0);
     }
 
+    /* FIXME: It seems KeQuerySystemTime has some weird timing bug. 
+     * Reading CMOS too often maybe?
+     * Maybe trying to read the same value twice fails often 
+     * and it gets itself stuck in the loop there? */
+#if 0
     KeQuerySystemTime(&Time);
 
     Current = AbsoluteTimeoutListHead.First;
@@ -306,6 +315,7 @@ KiClockTick()
             KiExpireTimeout(TimeoutEntry);
         }
     }
+#endif
 
     Current = RelativeTimeoutListHead.First;
     while (Current != &RelativeTimeoutListHead)

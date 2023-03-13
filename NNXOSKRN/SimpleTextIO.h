@@ -6,7 +6,7 @@ extern "C"
 #endif
 
 #include <nnxtype.h>
-#include <nnxarg.h>
+#include <stdarg.h>
 #include <nnxcfg.h>
 
 	void TextIoSetBoundingBox(UINT32 *boundingBox);
@@ -16,7 +16,7 @@ extern "C"
 	void TextIoSetColorInformation(UINT32 color, UINT32 background, UINT8 renderBack);
 	void TextIoGetColorInformation(UINT32 *color, UINT32* background, UINT8 *renderBack);
 	void TextIoSetAlignment(UINT8 alignment);
-	void TextIoInitialize(UINT32* framebufferIn, UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
+	void TextIoInitialize(volatile UINT32* framebufferIn, volatile UINT32* framebufferEndIn, UINT32 w, UINT32 h, UINT32 p);
 	void TextIoOutputCharacter(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop);
 	void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2);
 	void TextIoTest(UINT64 mode);
@@ -48,8 +48,8 @@ extern "C"
 	void TextIoClear();
 	UINT64 FrameBufferSize();
 
-	extern UINT32* gFramebuffer;
-	extern UINT32* gFramebufferEnd;
+	extern volatile UINT32* gFramebuffer;
+	extern volatile UINT32* gFramebufferEnd;
 	extern UINT32 gWidth;
 	extern UINT32 gHeight;
 	extern UINT32 gPixelsPerScanline;

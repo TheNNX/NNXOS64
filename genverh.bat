@@ -7,7 +7,7 @@ set val=%%a
 
 set MAJOR=0
 set MINOR=1
-set PATCH=0
+set PATCH=1
 set OSNAME="NNXOS64"
 
 set val=%val:#DEFINE NNX_BUILD= %

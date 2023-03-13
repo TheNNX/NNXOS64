@@ -2,6 +2,7 @@
 #include <scheduler.h>
 #include "ntqueue.h"
 #include <ntdebug.h>
+#include "mutex.h"
 
 typedef VOID(NTAPI *THREAD_UNWAIT_ROUTINE)(
     PKWAIT_BLOCK pWaitBlock);
@@ -11,7 +12,7 @@ typedef VOID(NTAPI *DESIGNAL_ROUTINE)(
 
 typedef struct _DISPATCHER_TYPE
 {
-    THREAD_UNWAIT_ROUTINE pfnOnThreadUnwait;
+    THREAD_UNWAIT_ROUTINE   pfnOnThreadUnwait;
 }DISPATCHER_TYPE, *PDISPATCHER_TYPE;
 
 inline 
@@ -20,7 +21,7 @@ InitDispatcherType(
     PDISPATCHER_TYPE pDispatcherType,
     THREAD_UNWAIT_ROUTINE ThreadUnwait)
 {
-    pDispatcherType->pfnOnThreadUnwait = ThreadUnwait;
+    pDispatcherType->pfnOnThreadUnwait  = ThreadUnwait;
 }
 
 static DISPATCHER_TYPE DispatcherDecodeTable[32] = { 0 };
@@ -37,7 +38,7 @@ KeInitializeDispatcher()
 
     InitDispatcherType(
         &DispatcherDecodeTable[QueueObject], 
-        (THREAD_UNWAIT_ROUTINE)KiUnwaitWaitBlockFromQueue);
+        KiUnwaitWaitBlockFromQueue);
 
     InitDispatcherType(
         &DispatcherDecodeTable[ThreadObject],
@@ -57,7 +58,7 @@ KeInitializeDispatcher()
 
     InitDispatcherType(
         &DispatcherDecodeTable[MutexObject],
-        NULL);
+        KiUnwaitWaitBlockMutex);
 
     InitializeListHead(&AbsoluteTimeoutListHead);
     InitializeListHead(&RelativeTimeoutListHead);

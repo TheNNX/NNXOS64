@@ -217,7 +217,12 @@ static UNICODE_STRING TypesDirName = RTL_CONSTANT_STRING(L"ObjectTypes");
  * is complete. Otherwise, the would-be new root is dereferenced and the original root (if any)
  * is restored. 
  */
-NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
+NTSTATUS 
+NTAPI
+ObChangeRoot(
+    PVOID object,
+    HANDLE newRoot,
+    KPROCESSOR_MODE accessMode)
 {
     POBJECT_HEADER header, rootHeader;
     NTSTATUS statusToReturn;
@@ -332,12 +337,16 @@ NTSTATUS ObChangeRoot(PVOID object, HANDLE newRoot, KPROCESSOR_MODE accessMode)
 
 static HANDLE ObpTypeDirHandle = INVALID_HANDLE_VALUE;
 
-HANDLE ObpGetTypeDirHandle()
+HANDLE 
+NTAPI
+ObpGetTypeDirHandle()
 {
     return ObpTypeDirHandle;
 }
 
-NTSTATUS ObpInitNamespace()
+NTSTATUS 
+NTAPI
+ObpInitNamespace()
 {
     NTSTATUS status;
     OBJECT_ATTRIBUTES objAttributes, typeDirAttrbiutes;
@@ -426,7 +435,9 @@ NTSTATUS ObpInitNamespace()
     return STATUS_SUCCESS;
 }
 
-HANDLE ObGetGlobalNamespaceHandle()
+HANDLE 
+NTAPI
+ObGetGlobalNamespaceHandle()
 {
     return GlobalNamespace;
 }

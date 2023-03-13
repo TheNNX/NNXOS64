@@ -28,7 +28,9 @@ NTSTATUS ObpMpTest()
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObInit()
+NTSTATUS 
+NTAPI
+ObInit()
 {
     NTSTATUS status;
 
@@ -60,14 +62,15 @@ NTSTATUS ObpDeleteObject(PVOID Object);
 /* @brief This function first tries to reference the object without any checks. 
  * If it succeds, it tries to reference it by pointer. 
  * The function dereferences all its references on failure, and leaves one reference on success. */
-NTSTATUS ObReferenceObjectByHandle(
+NTSTATUS 
+NTAPI
+ObReferenceObjectByHandle(
     HANDLE handle,
     ACCESS_MASK desiredAccess,
     POBJECT_TYPE objectType,
     KPROCESSOR_MODE accessMode,
     PVOID* pObject,
-    PVOID unused
-)
+    PVOID unused)
 {
     PVOID localObjectPtr;
     NTSTATUS status;
@@ -103,7 +106,10 @@ NTSTATUS ObReferenceObjectByHandle(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObReferenceObject(PVOID object)
+NTSTATUS 
+NTAPI
+ObReferenceObject(
+    PVOID object)
 {
     POBJECT_HEADER header;
     KIRQL irql;
@@ -121,12 +127,13 @@ NTSTATUS ObReferenceObject(PVOID object)
 /* @brief does the same thing as ObReferenceObjectByHandle 
  * but only if the access checks succed
  * if objectType == NULL, objectType check is ignored */
-NTSTATUS ObReferenceObjectByPointer(
+NTSTATUS 
+NTAPI
+ObReferenceObjectByPointer(
     PVOID object,
     ACCESS_MASK desiredAccess,
     POBJECT_TYPE objectType,
-    KPROCESSOR_MODE accessMode
-)
+    KPROCESSOR_MODE accessMode)
 {
     POBJECT_HEADER header;
     KIRQL irql;
@@ -183,7 +190,10 @@ NTSTATUS ObReferenceObjectByPointer(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObDereferenceObject(PVOID object)
+NTSTATUS 
+NTAPI
+ObDereferenceObject(
+    PVOID object)
 {
     POBJECT_HEADER header;
     KIRQL irql;
@@ -258,15 +268,16 @@ NTSTATUS ObpDeleteObject(PVOID object)
     return status;
 }
 
-NTSTATUS ObCreateObject(
+NTSTATUS 
+NTAPI
+ObCreateObject(
     PVOID* pObject, 
     ACCESS_MASK DesiredAccess, 
     KPROCESSOR_MODE AccessMode, 
     POBJECT_ATTRIBUTES Attributes,
     ULONG ObjectSize,
     POBJECT_TYPE objectType,
-    PVOID optionalData
-)
+    PVOID optionalData)
 {
     HANDLE root;
     NTSTATUS status;
@@ -411,10 +422,11 @@ static UNICODE_STRING ThreadObjName = RTL_CONSTANT_STRING(L"Thread");
 static UNICODE_STRING ProcObjName = RTL_CONSTANT_STRING(L"Process");
 
 /* creates the object types neccessary for the scheduler */
-NTSTATUS ObCreateSchedulerTypes(
+NTSTATUS 
+NTAPI
+ObCreateSchedulerTypes(
     POBJECT_TYPE* poutProcessType, 
-    POBJECT_TYPE* poutThreadType
-)
+    POBJECT_TYPE* poutThreadType)
 {
     NTSTATUS status;
     HANDLE typeDirHandle;

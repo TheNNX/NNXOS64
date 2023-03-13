@@ -115,6 +115,8 @@ typedef VOID *PVOID, *LPVOID;
 #endif
 #endif
 
+#define NTSYSAPI __declspec(dllexport) 
+
 #ifdef _M_X86
 #define NTAPI __cdecl
 #define FASTCALL __fastcall

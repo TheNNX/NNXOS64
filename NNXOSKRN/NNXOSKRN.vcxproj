@@ -61,7 +61,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
@@ -78,6 +78,9 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
+      <PreprocessorDefinitions>_MBCS;NNX_KERNEL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -138,7 +141,7 @@ $(SolutionDir)genverh.bat</Command>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>_MBCS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;NNX_KERNEL;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <TreatSpecificWarningsAsErrors>
@@ -197,6 +200,7 @@ $(SolutionDir)genverh.bat</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dispatcher\dispatcher.c" />
+    <ClCompile Include="dispatcher\mutex.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
     <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\gpt.c" />
@@ -204,19 +208,19 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="device\hdd\hdd.c" />
     <ClCompile Include="device\Keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
-    <ClCompile Include="HAL\ACPI\AML.cpp" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
     <ClCompile Include="HAL\X64\cmos.c" />
     <ClCompile Include="HAL\X64\gdt.c" />
     <ClCompile Include="HAL\X64\IDT.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
-    <ClCompile Include="HAL\X64\irql.c" />
+    <ClCompile Include="irql.c" />
     <ClCompile Include="HAL\X64\MP.cpp" />
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="HAL\X64\pagefile.c" />
     <ClCompile Include="HAL\X64\rtc.c" />
-    <ClCompile Include="HAL\X64\spinlock.c" />
+    <ClCompile Include="nnxalloccpp.cpp" />
+    <ClCompile Include="spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
     <ClCompile Include="HAL\X64\syscall.c" />
@@ -234,11 +238,8 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="loadstub.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryOperations.c" />
-    <ClCompile Include="nnxalloc.c" />
     <ClCompile Include="HAL\X64\paging.c" />
     <ClCompile Include="HAL\X64\physical_allocator.c" />
-    <ClCompile Include="nnxalloccpp.cpp" />
-    <ClCompile Include="nnxlog.cpp" />
     <ClCompile Include="ntlist.c" />
     <ClCompile Include="dispatcher\ntqueue.c" />
     <ClCompile Include="pool.c" />
@@ -256,8 +257,8 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="device\hdd\hdd.h" />
     <ClInclude Include="device\Keyboard.h" />
     <ClInclude Include="dispatcher\dispatcher.h" />
-    <ClInclude Include="HAL\ACPI\AML.h" />
-    <ClInclude Include="HAL\ACPI\AMLCPP.h" />
+    <ClInclude Include="dispatcher\mutex.h" />
+    <ClInclude Include="HAL\ACPI\ACPI.h" />
     <ClInclude Include="HAL\cpu.h" />
     <ClInclude Include="HAL\interrupt.h" />
     <ClInclude Include="HAL\rtc.h" />
@@ -266,16 +267,15 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="HAL\X64\cmos.h" />
     <ClInclude Include="HAL\X64\GDT.h" />
     <ClInclude Include="HAL\X64\IDT.h" />
-    <ClInclude Include="HAL\irql.h" />
+    <ClInclude Include="irql.h" />
     <ClInclude Include="HAL\X64\MP.h" />
     <ClInclude Include="HAL\PCI\PCI.h" />
     <ClInclude Include="HAL\PCI\PCIIDE.h" />
     <ClInclude Include="HAL\X64\PIC.h" />
     <ClInclude Include="HAL\X64\PIT.h" />
     <ClInclude Include="HAL\Port.h" />
-    <ClInclude Include="HAL\X64\registers.h" />
-    <ClInclude Include="HAL\spinlock.h" />
-    <ClInclude Include="HAL\X64\cpu.h" />
+    <ClInclude Include="HAL\X64\msr.h" />
+    <ClInclude Include="spinlock.h" />
     <ClInclude Include="io\apc.h" />
     <ClInclude Include="io\dpc.h" />
     <ClInclude Include="io\irp.h" />
@@ -297,8 +297,6 @@ $(SolutionDir)genverh.bat</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="nnxcfg.h" />
-    <ClInclude Include="nnxllist.hpp" />
-    <ClInclude Include="nnxlog.h" />
     <ClInclude Include="ntlist.h" />
     <ClInclude Include="dispatcher\ntqueue.h" />
     <ClInclude Include="ob\object.h" />
@@ -323,11 +321,6 @@ $(SolutionDir)genverh.bat</Command>
     <ProjectReference Include="..\CommonInclude\CommonInclude.vcxproj">
       <Project>{480f53f1-25a6-493e-9345-1c87030fc7d5}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="HAL\X64\spinlock.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\pcr.asm">

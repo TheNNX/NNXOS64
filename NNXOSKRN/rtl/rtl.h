@@ -8,8 +8,20 @@ extern "C"
 
 #include <nnxtype.h>
 
-    VOID RtlZeroMemory(PVOID Memory, SIZE_T MemorySize);
-    VOID RtlFillMemory(PVOID Memory, SIZE_T Length, INT Fill);
+    NTSYSAPI
+    VOID 
+    NTAPI
+    RtlZeroMemory(
+        PVOID Memory, 
+        SIZE_T MemorySize);
+    
+    NTSYSAPI
+    VOID 
+    NTAPI
+    RtlFillMemory(
+        PVOID Memory, 
+        SIZE_T Length, 
+        INT Fill);
 
 #include <rtl/rtlstring.h>
 

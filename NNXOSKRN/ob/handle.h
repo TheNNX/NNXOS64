@@ -30,11 +30,38 @@ extern "C" {
 
 #define INVALID_HANDLE_VALUE (HANDLE)((ULONG_PTR)-1)
 
-    VOID ObCloseHandleByEntry(PHANDLE_DATABASE_ENTRY entry);
-    NTSTATUS ObCloseHandle(HANDLE handle, KPROCESSOR_MODE accessMode);
-    NTSTATUS ObInitHandleManager();
-    NTSTATUS ObExtractAndReferenceObjectFromHandle(HANDLE handle, PVOID *pObject, KPROCESSOR_MODE accessMode);
-    NTSTATUS ObCreateHandle(PHANDLE pOutHandle, KPROCESSOR_MODE accessMode, PVOID object);
+    NTSTATUS
+    NTAPI
+    ObCloseHandle(
+        HANDLE handle,
+        KPROCESSOR_MODE accessMode);
+
+#ifdef NNX_KERNEL
+    VOID 
+    NTAPI
+    ObCloseHandleByEntry(
+        PHANDLE_DATABASE_ENTRY entry);
+    
+    NTSTATUS 
+    NTAPI
+    ObInitHandleManager();
+    
+    NTSTATUS 
+    NTAPI
+    ObExtractAndReferenceObjectFromHandle(
+        HANDLE handle, 
+        PVOID *pObject, 
+        KPROCESSOR_MODE accessMode);
+    
+    NTSTATUS 
+    NTAPI
+    ObCreateHandle(
+        PHANDLE pOutHandle, 
+        KPROCESSOR_MODE accessMode, 
+        PVOID object);
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

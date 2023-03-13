@@ -1789,9 +1789,7 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 
 	for (i = 0; i < 2; i++)
 	{
-		UINT64 __lastMemory, __currentMemory;
 		VFS_STATUS status;
-		char* __caller;
 
 		if (!FatVfsInterfaceCheckIfFileExists(filesystem, LogFilepath))
 		{
@@ -1818,7 +1816,6 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 
 		FatVfsInterfaceCloseFile(file);
 
-		SaveStateOfMemory("Open");
 		if (FatVfsInterfaceCheckIfFileExists(filesystem, SecondFilePath))
 		{
 			VFS_FILE* file = FatVfsInterfaceOpenFile(filesystem, SecondFilePath);
@@ -1833,18 +1830,13 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 				return FALSE;
 			}
 		}
-		CheckMemory();
 
-
-		SaveStateOfMemory("Create");
 		if (status = FatVfsInterfaceCreateFile(filesystem, SecondFilePath))
 		{
 			PrintT("Cannot create file %x\n", status);
 			return FALSE;
 		}
-		CheckMemory();
 
-		SaveStateOfMemory("DIRECTOR.Y");
 		if (FatVfsInterfaceCheckIfFileExists(filesystem, "efi\\DIRECTOR.Y"))
 		{
 			VFS_FILE* dir = FatVfsInterfaceOpenFile(filesystem, "efi\\DIRECTOR.Y");
@@ -1856,10 +1848,7 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 			PrintT("Cannot create the directory. 0x%X\n", status);
 			return FALSE;
 		}
-		CheckMemory();
 
-
-		SaveStateOfMemory("rootDirPath");
 		if (FatVfsInterfaceCheckIfFileExists(filesystem, RootDirPath))
 		{
 			char readBuffer[9];
@@ -1894,9 +1883,7 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 		{
 			PrintT("%s does not exist\n", RootDirPath);
 		}
-		CheckMemory();
 
-		SaveStateOfMemory("DELETE.TST");
 		if (FatVfsInterfaceCheckIfFileExists(filesystem, "DELETE.TST"))
 		{
 			if (status = FatVfsInterfaceDeleteFileFromPath(filesystem, "DELETE.TST"))
@@ -1912,9 +1899,7 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 		{
 			PrintT("DELETE.TST does not exist\n");
 		}
-		CheckMemory();
 
-		SaveStateOfMemory("Create file in root");
 		if (!(status = FatVfsInterfaceCreateFile(filesystem, "DELETE.TST")))
 		{
 			VFS_FILE* file;
@@ -1931,13 +1916,10 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 				return FALSE;
 			}
 		}
-		CheckMemory();
 
-		SaveStateOfMemory("Fake files");
 		if (FatVfsInterfaceCheckIfFileExists(filesystem, "DONTHAVE.ME"))
 		{
 			PrintT("File, which the filesystem test relies on not having found.\nTest failed - do you have DONTHAVE.ME in your root directory? If so, delete it, otherwise there's a bug\n");
-			CheckMemory();
 			return FALSE;
 		}
 
@@ -1945,7 +1927,6 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 		{
 			PrintT("Opened an (supposedly) non-existend file - test failed\n");
 			FatVfsInterfaceCloseFile(file);
-			CheckMemory();
 			return FALSE;
 		}
 
@@ -1953,7 +1934,6 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 		{
 			PrintT("Impossible filename opened - test failed\n");
 			FatVfsInterfaceCloseFile(file);
-			CheckMemory();
 			return FALSE;
 		}
 
@@ -1961,10 +1941,8 @@ BOOL NNXFatAutomaticTest(VFS* filesystem)
 		{
 			PrintT("Impossible filename opened - test failed\n");
 			FatVfsInterfaceCloseFile(file);
-			CheckMemory();
 			return FALSE;
 		}
-		CheckMemory();
 	}
 	PrintT("[%s] Test success\n", __FUNCTION__);
 #endif

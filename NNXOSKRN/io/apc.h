@@ -44,28 +44,32 @@ extern "C" {
         CurrentApcEnvironment
     } KAPC_ENVIRONMENT, *PKAPC_ENVIRONMENT;
 
-    VOID
-        KeInitializeApcState(PKAPC_STATE pApcState);
-
-    BOOL
-        KiInsertQueueAPC(
-            PKAPC Apc,
-            LONG Increment
-        );
+#ifdef NNX_KERNEL
 
     VOID
-        KiExecuteUserApcNormalRoutine(
-            PKTHREAD pThread,
-            NORMAL_ROUTINE NormalRoutine,
-            PVOID NormalContext,
-            PVOID SystemArguemnt1,
-            PVOID SystemArgument2
-        );
+    NTAPI
+    KeInitializeApcState(PKAPC_STATE pApcState);
+
+    BOOLEAN
+    NTAPI
+    KiInsertQueueAPC(
+        PKAPC Apc,
+        LONG Increment);
 
     VOID
-        KeDeliverApcs(
-            KPROCESSOR_MODE PreviousMode
-        );
+    NTAPI
+    KiExecuteUserApcNormalRoutine(
+        PKTHREAD pThread,
+        NORMAL_ROUTINE NormalRoutine,
+        PVOID NormalContext,
+        PVOID SystemArguemnt1,
+        PVOID SystemArgument2);
+
+    VOID
+    NTAPI
+    KeDeliverApcs(
+        KPROCESSOR_MODE PreviousMode);
+#endif
 
 #ifdef __cplusplus
 }
