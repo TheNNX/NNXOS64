@@ -20,14 +20,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
@@ -44,7 +44,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
@@ -52,7 +52,7 @@
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />
@@ -86,8 +86,7 @@
       <SubSystem>Native</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)lib\HALX64\HAL.lib</AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
       <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
@@ -107,6 +106,7 @@
       <AssemblyDebug>true</AssemblyDebug>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -150,13 +150,13 @@ $(SolutionDir)genverh.bat</Command>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>false</UseFullPaths>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)lib\HALX64\HAL.lib</AdditionalDependencies>
       <EntryPointSymbol>KeLoadStub</EntryPointSymbol>
       <BaseAddress>0xFFFFFF8000000000</BaseAddress>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
@@ -176,6 +176,7 @@ $(SolutionDir)genverh.bat</Command>
       <AssemblyDebug>true</AssemblyDebug>
       <GenerateMapFile>true</GenerateMapFile>
       <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
     </Link>
     <PreBuildEvent>
       <Command>

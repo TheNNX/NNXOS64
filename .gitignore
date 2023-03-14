@@ -15,6 +15,7 @@ image
 image/*
 temp/*
 x64/*
+lib/*
 NNXOSKRN/x64/*
 gnu-efi/*
 .vs/nnxos64/*

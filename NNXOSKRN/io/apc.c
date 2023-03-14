@@ -162,7 +162,12 @@ KiExecuteUserApcNormalRoutine(
 
     /* TODO: check the order of bugcheck code arguments */
     if (KeGetCurrentIrql() < DISPATCH_LEVEL)
-        KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, DISPATCH_LEVEL, KeGetCurrentIrql(), 0, 0);
+        KeBugCheckEx(
+            IRQL_NOT_GREATER_OR_EQUAL,
+            DISPATCH_LEVEL, 
+            KeGetCurrentIrql(), 
+            0, 
+            0);
 
     /* this is in, a way, the fifth parameter */
     KiCopyContextToUserStack(pThread);

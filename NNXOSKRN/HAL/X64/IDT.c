@@ -11,18 +11,30 @@
 #include <HAL/X64/APIC.h>
 #include <io/apc.h>
 
-VOID KeStop();
-VOID HalpMockupInterruptHandler(ULONG_PTR Handler);
+VOID 
+NTAPI
+KeStop();
+
+VOID 
+HalpMockupInterruptHandler(
+    ULONG_PTR Handler);
+
 static
 KIRQL
 KiApplyInterruptIrql(
     PKINTERRUPT Interrupt);
+
 static
 KIRQL
 KiApplyIrql(
     KIRQL irqls);
 
-VOID DefExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
+VOID
+DefExceptionHandler(
+    UINT64 n, 
+    UINT64 errcode, 
+    UINT64 errcode2, 
+    UINT64 rip)
 {
     PrintT(
         "error: %x %x at RIP 0x%X\n\n",
@@ -31,11 +43,22 @@ VOID DefExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
         rip);
 }
 
-VOID HalpDefInterruptHandler();
-VOID(*gExceptionHandlerPtr) (UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip) = DefExceptionHandler;
+VOID
+HalpDefInterruptHandler();
+
+VOID
+(NTAPI*gExceptionHandlerPtr) (
+    UINT64 n, 
+    UINT64 errcode, 
+    UINT64 errcode2, 
+    UINT64 rip) = DefExceptionHandler;
 
 VOID 
-ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
+ExceptionHandler(
+    UINT64 n, 
+    UINT64 errcode, 
+    UINT64 errcode2, 
+    UINT64 rip)
 {
     gExceptionHandlerPtr(n, errcode, errcode2, rip);
     PrintT("ExHandler\n");
@@ -45,7 +68,8 @@ ExceptionHandler(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip)
 static
 inline
 PVOID
-HalpGetHandlerFromIdtEntry(KIDTENTRY64 *Entry)
+HalpGetHandlerFromIdtEntry(
+    KIDTENTRY64 *Entry)
 {
     ULONG_PTR Handler = 0;
     Handler |= Entry->Offset0to15;
@@ -58,15 +82,23 @@ HalpGetHandlerFromIdtEntry(KIDTENTRY64 *Entry)
 
 KIDTENTRY64
 NTAPI
-HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Usermode, BOOL Trap)
+HalpSetIdtEntry(
+    KIDTENTRY64* Idt, 
+    UINT64 EntryNo, 
+    PVOID Handler, 
+    BOOL Usermode, 
+    BOOL Trap)
 {
     KIDTENTRY64 oldEntry = Idt[EntryNo];
 
     Idt[EntryNo].Selector = 0x8;
     Idt[EntryNo].Zero = 0;
-    Idt[EntryNo].Offset0to15 = (UINT16) (((ULONG_PTR) Handler) & UINT16_MAX);
-    Idt[EntryNo].Offset16to31 = (UINT16) ((((ULONG_PTR) Handler) >> 16) & UINT16_MAX);
-    Idt[EntryNo].Offset32to63 = (UINT32) ((((ULONG_PTR) Handler) >> 32) & UINT32_MAX);
+    Idt[EntryNo].Offset0to15 = 
+        (UINT16) (((ULONG_PTR) Handler) & UINT16_MAX);
+    Idt[EntryNo].Offset16to31 = 
+        (UINT16) ((((ULONG_PTR) Handler) >> 16) & UINT16_MAX);
+    Idt[EntryNo].Offset32to63 = 
+        (UINT32) ((((ULONG_PTR) Handler) >> 32) & UINT32_MAX);
     Idt[EntryNo].Type = 0x8E | (Usermode ? (0x60) : 0x00) | (Trap ? 0 : 1);
     Idt[EntryNo].Ist = 0;
 
@@ -74,7 +106,10 @@ HalpSetIdtEntry(KIDTENTRY64* Idt, UINT64 EntryNo, PVOID Handler, BOOL Usermode, 
 }
 
 VOID 
-HalpSetInterruptIst(KIDTENTRY64* Idt, UINT64 EntryNo, UCHAR Ist)
+HalpSetInterruptIst(
+    KIDTENTRY64* Idt, 
+    UINT64 EntryNo, 
+    UCHAR Ist)
 {
     Idt[EntryNo].Ist = Ist;
 }
@@ -83,8 +118,12 @@ KIDTENTRY64*
 HalpAllocateAndInitializeIdt()
 {
     DisableInterrupts();
-    KIDTR64* idtr = (KIDTR64*)
-        PagingAllocatePageBlockFromRange(2, PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
+    KIDTR64* idtr = (KIDTR64*) 
+        PagingAllocatePageBlockFromRange(
+            2, 
+            PAGING_KERNEL_SPACE, 
+            PAGING_KERNEL_SPACE_END);
+
     PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
 
     idtr->Size = sizeof(KIDTENTRY64) * 256 - 1;
@@ -97,7 +136,9 @@ HalpAllocateAndInitializeIdt()
         
         handler = HalpDefInterruptHandler;
         result = HalpSetIdtEntry(idt, a, handler, FALSE, FALSE);
-        ASSERT(result.Offset0to15 == 0 && result.Offset16to31 == 0 && result.Offset32to63 == 0);
+        ASSERT(result.Offset0to15 == 0 && 
+               result.Offset16to31 == 0 && 
+               result.Offset32to63 == 0);
     }
 
     HalpLoadIdt(idtr);
@@ -108,7 +149,8 @@ HalpAllocateAndInitializeIdt()
 /* TODO: Create some sort of a KiDeleteInterrupt function. */
 NTSTATUS 
 NTAPI
-KiCreateInterrupt(PKINTERRUPT* ppInterrupt)
+KiCreateInterrupt(
+    PKINTERRUPT* ppInterrupt)
 {
     PKINTERRUPT Interrupt = ExAllocatePool(NonPagedPool, sizeof(*Interrupt));
     
@@ -271,7 +313,7 @@ KiInitializeInterrupts(VOID)
 
     KiCreateInterrupt(&clockInterrupt);
     clockInterrupt->CpuNumber = KeGetCurrentProcessorId();
-    clockInterrupt->InterruptIrql = CLOCK_LEVEL;
+    clockInterrupt->InterruptIrql = DISPATCH_LEVEL;
     clockInterrupt->Connected = FALSE;
     KeInitializeSpinLock(&clockInterrupt->Lock);
     clockInterrupt->Trap = FALSE;
@@ -348,7 +390,7 @@ KeConnectInterrupt(
     PKPCR pcr;
 
     ASSERT(KeGetCurrentIrql() <= DISPATCH_LEVEL);
-    if (KeGetCurrentIrql() == PASSIVE_LEVEL)
+    if (KeGetCurrentIrql() < DISPATCH_LEVEL)
     {
         KeSetSystemAffinityThread(1ULL << Interrupt->CpuNumber);
     }
@@ -375,7 +417,7 @@ KeConnectInterrupt(
     }
 
     KiReleaseDispatcherLock(irql);
-    if (irql == PASSIVE_LEVEL)
+    if (irql < DISPATCH_LEVEL)
     {
         KeRevertToUserAffinityThread();
     }
@@ -394,7 +436,8 @@ KeDisconnectInterrupt(
 
 static
 VOID
-HalHandleApc(KIRQL returningToIrql)
+HalHandleApc(
+    KIRQL returningToIrql)
 {
     KIRQL lockIrql = KiAcquireDispatcherLock();
     PKPCR pcr = KeGetPcr();
@@ -404,16 +447,15 @@ HalHandleApc(KIRQL returningToIrql)
     {
         KeDeliverApcs(
             PsGetProcessorModeFromTrapFrame(
-                pcr->Prcb->CurrentThread->KernelStackPointer
-            )
-        );
+                pcr->Prcb->CurrentThread->KernelStackPointer));
     }
     KiReleaseDispatcherLock(lockIrql);
 }
 
 static
 KIRQL
-KiApplyIrql(KIRQL irql)
+KiApplyIrql(
+    KIRQL irql)
 {
     KIRQL currentIrql = KeGetCurrentIrql();
 

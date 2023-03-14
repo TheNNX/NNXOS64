@@ -23,6 +23,7 @@ KiApplyIrql(
 	if (OldValue == NewValue)
 		return;
 
+	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
 	/* This *MAYBE* works. */
 	HalSetTpr(0xF);
 
@@ -66,6 +67,7 @@ KiApplyIrql(
 #else
 	if (OldValue == NewValue)
 		return;
+	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
 	HalSetTpr(NewValue);
 #endif
 }
@@ -84,12 +86,10 @@ KfRaiseIrql(
 			(ULONG_PTR)NewIrql,
 			(ULONG_PTR)OldIrql,
 			0,
-			(ULONG_PTR)KfRaiseIrql);
+			(ULONG_PTR)_ReturnAddress());
 	}
 
 	KiApplyIrql(OldIrql, NewIrql);
-
-	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
 	return OldIrql;
 }
 
@@ -107,10 +107,9 @@ KfLowerIrql(
 			(ULONG_PTR)NewIrql,
 			(ULONG_PTR)OldIrql,
 			0,
-			(ULONG_PTR)KfLowerIrql);
+			(ULONG_PTR)_ReturnAddress());
 	}
 
-	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
 	KiApplyIrql(OldIrql, NewIrql);
 }
 
@@ -122,6 +121,15 @@ KeRaiseIrql(
 {
 	if (OldIrql == (PKIRQL) NULL)
 		return;
+	if (NewIrql < KeGetCurrentIrql())
+	{
+		KeBugCheckEx(
+			IRQL_NOT_GREATER_OR_EQUAL,
+			(ULONG_PTR)NewIrql,
+			(ULONG_PTR)KeGetCurrentIrql(),
+			0,
+			(ULONG_PTR)_ReturnAddress());
+	}
 	*OldIrql = KfRaiseIrql(NewIrql);
 }
 
@@ -130,6 +138,15 @@ NTAPI
 KeLowerIrql(
 	KIRQL OldIrql)
 {
+	if (OldIrql > KeGetCurrentIrql())
+	{
+		KeBugCheckEx(
+			IRQL_NOT_LESS_OR_EQUAL,
+			(ULONG_PTR)OldIrql,
+			(ULONG_PTR)KeGetCurrentIrql(),
+			0,
+			(ULONG_PTR)_ReturnAddress());
+	}
 	KfLowerIrql(OldIrql);
 }
 
@@ -147,7 +164,6 @@ KiSetIrql(
 	KIRQL OldIrql;
 
 	OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
-	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewIrql);
 	KiApplyIrql(OldIrql, NewIrql);
 
 	return OldIrql;

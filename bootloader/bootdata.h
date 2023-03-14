@@ -6,16 +6,27 @@
 #include <ntlist.h>
 
 #pragma pack(push, 1)
+
+typedef struct _BOOT_MODULE_EXPORT
+{
+	ULONG_PTR  ExportAddress;
+	PCHAR	   ExportName;
+	RVA		   ExportAddressRva;
+	RVA		   ExportNameRva;
+}BOOT_MODULE_EXPORT, *PBOOT_MODULE_EXPORT;
+
 typedef struct _LOADED_BOOT_MODULE
 {
-	PVOID			Entrypoint;
-	PVOID			ImageBase;
-	ULONG			ImageSize;
-	CHAR*			Name;
-	USHORT			OrdinalBase;
-	SECTION_HEADER* SectionHeaders;
-	SIZE_T			NumberOfSectionHeaders;
-	LIST_ENTRY		ListEntry;
+	PVOID				Entrypoint;
+	ULONG_PTR			ImageBase;
+	ULONG				ImageSize;
+	CHAR*				Name;
+	USHORT				OrdinalBase;
+	SECTION_HEADER*		SectionHeaders;
+	SIZE_T				NumberOfSectionHeaders;
+	LIST_ENTRY			ListEntry;
+	PBOOT_MODULE_EXPORT Exports;
+	SIZE_T				NumberOfExports;
 }LOADED_BOOT_MODULE, * PLOADED_BOOT_MODULE;
 #pragma pack(pop)
 
@@ -33,7 +44,6 @@ typedef struct _BOOTDATA
 	SIZE_T NumberOfPageFrames;
 	PVOID pRdsp;
 	DWORD dwKernelSize;
-	PVOID KernelBase;
 	LOADED_BOOT_MODULE MainKernelModule;
 }BOOTDATA, *PBOOTDATA;
 

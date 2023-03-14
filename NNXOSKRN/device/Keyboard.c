@@ -151,7 +151,7 @@ VOID KeyboardInitialize()
 		KEYBOARD_VECTOR, 
 		IrqHandler, 
 		KeGetCurrentProcessorId(), 
-		DISPATCH_LEVEL, 
+		3, 
 		FALSE,
 		KeyboardIsr);
 
@@ -160,7 +160,6 @@ VOID KeyboardInitialize()
 	interrupt->pfnSetMask = ApicSetInterruptMask;
 
 	KeConnectInterrupt(interrupt);
-
 	KeyboardInitialized = TRUE;
 }
 

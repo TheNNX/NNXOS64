@@ -37,7 +37,7 @@
 #define RecursivePagingPML4Size             PAGE_SIZE_SMALL
 
 KSPIN_LOCK PagingSpinlock;
-
+ULONG_PTR KeKernelPhysicalAddress;
 ULONG_PTR KernelPml4Entry = NULL;
 
 VOID PagingTLBFlushPage(UINT64 page)
@@ -317,7 +317,7 @@ ULONG_PTR PhysicalAddressFunctionIdentify(ULONG_PTR a, ULONG_PTR b)
 
 ULONG_PTR PhysicalAddressFunctionKernel(ULONG_PTR a, ULONG_PTR b)
 {
-    return KERNEL_INITIAL_ADDRESS + b;
+    return KeKernelPhysicalAddress + b;
 }
 
 UINT64 PhysicalAddressFunctionGlobalMemoryMap(ULONG_PTR address, ULONG_PTR relativeAddrss)
@@ -382,9 +382,6 @@ NTSTATUS InternalPagingAllocatePagingStructures(
     return STATUS_SUCCESS;
 }
 
-const UINT64 loaderTemporaryKernelPTStart = 0;
-const UINT64 loaderTemporaryKernelPTSize = 32;
-
 NTSTATUS PagingInit()
 {
     ULONG_PTR *pml4, rsp;
@@ -406,7 +403,14 @@ NTSTATUS PagingInit()
     MemSet(pml4, 0, PAGE_SIZE_SMALL);
 
     /* for loader-temporary kernel */
-    InternalPagingAllocatePagingStructures(pml4, 0, 0, loaderTemporaryKernelPTStart, loaderTemporaryKernelPTSize, PhysicalAddressFunctionIdentify, 0);
+    InternalPagingAllocatePagingStructures(
+        pml4, 
+        0, 
+        0, 
+        KeKernelPhysicalAddress / PAGE_SIZE_SMALL / 512,
+        pageTableKernelReserve,
+        PhysicalAddressFunctionIdentify, 
+        0);
 
     /* for stack */
     InternalPagingAllocatePagingStructures(pml4, 0, 0, rsp / PAGE_SIZE_SMALL / 512 - 2, 3, PhysicalAddressFunctionIdentify, 0);

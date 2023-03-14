@@ -12,12 +12,11 @@
 #define PAGE_DIRTY 64
 #define PAGE_GLOBAL 256
 
-#define KERNEL_INITIAL_ADDRESS 0x200000ULL
 #define KERNEL_DESIRED_LOCATION 0xFFFFFF8000000000ULL
 #define KERNEL_DESIRED_PML4_ENTRY (KERNEL_DESIRED_LOCATION >> (55ULL))
 
-#define PAGING_KERNEL_SPACE        KERNEL_DESIRED_LOCATION
-#define PAGING_KERNEL_SPACE_END 0xFFFFFFFFFFFFFFFFULL
+#define PAGING_KERNEL_SPACE      KERNEL_DESIRED_LOCATION
+#define PAGING_KERNEL_SPACE_END  0xFFFFFFFFFFFFFFFFULL
 #define PAGING_USER_SPACE        0x0000000000000000ULL
 #define PAGING_USER_SPACE_END    0x00007FFFFFFFFFFFULL
 
@@ -45,6 +44,9 @@ inline ULONG_PTR ToCanonicalAddress(ULONG_PTR address)
 extern "C"
 {
 #endif
+
+#ifdef NNX_KERNEL
+    extern ULONG_PTR KeKernelPhysicalAddress;
 
     NTSTATUS
         PagingInit();
@@ -175,6 +177,9 @@ extern "C"
             const char* filePath,
             struct VIRTUAL_FILE_SYSTEM* filesystem
         );
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -5,6 +5,8 @@ extern "C"
 {
 #endif
 
+#ifdef NNX_KERNEL
+
 #include <nnxtype.h>
 #include <stdarg.h>
 #include <nnxcfg.h>
@@ -57,6 +59,7 @@ extern "C"
 	extern UINT32 TextIoDeltaX;
 	extern UINT32 TextIoDeltaY;
 
+#endif
 
 #ifdef __cplusplus
 }

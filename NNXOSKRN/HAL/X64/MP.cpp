@@ -20,6 +20,7 @@ extern "C" {
 		VFS_FILE* apCodeFile;
 		VFS* systemPartition;
 		PVOID code = (PVOID) 0x0000;
+		PagingMapPage(0x0000, 0x0000, PAGE_WRITE | PAGE_PRESENT);
 		_AP_DATA* data = (_AP_DATA*) (((UINT64) code) + 0x800);
 		systemPartition = VfsGetSystemVfs();
 

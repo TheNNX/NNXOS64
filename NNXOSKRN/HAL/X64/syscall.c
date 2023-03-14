@@ -88,6 +88,7 @@ SystemCallHandler(
 	{
 	case 1:
 	case 2:
+		PrintT("s%X%i ", threadId, KeGetCurrentIrql());
 		KeWaitForSingleObject(&Queue, Executive, KernelMode, FALSE, &timeout);
 		break;
 	default:

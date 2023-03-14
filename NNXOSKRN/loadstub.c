@@ -42,6 +42,7 @@ VOID KeLoadStub(
     gWidth = bootdata->dwWidth;
     gHeight = bootdata->dwHeight;
     gPixelsPerScanline = bootdata->dwPixelsPerScanline;
+	KeKernelPhysicalAddress = bootdata->MainKernelModule.ImageBase;
 	gRdspPhysical = (ULONG_PTR)bootdata->pRdsp;
 
     bootdata->ExitBootServices(bootdata->pImageHandle, bootdata->mapKey);
@@ -51,7 +52,7 @@ VOID KeLoadStub(
 	HalpSetDummyPcr();
 
     /* calculate the new address of our kernel entrypoint */
-    mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->KernelBase;
+    mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule.ImageBase;
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
     
     /* map kernel pages */

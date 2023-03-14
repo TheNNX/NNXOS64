@@ -1,6 +1,7 @@
 ﻿/* TODO: separate out PE32 loading */
 /* TODO: finish import resolving */
 
+#pragma warning(disable: 4142)
 #define EFI_NT_EMUL
 #include <ntlist.h>
 #include <efi.h>
@@ -14,35 +15,61 @@
 #define DEALLOC(x) FreePool(x)
 #include <HAL/physical_allocator.h>
 
-/* kinda ugly, but gets the job done (and is far prettier than the mess that it was before) */
-#define return_if_error_a(status, d) if (EFI_ERROR(status)) { if(d) Print(L"Line: %d Status: %r\n", __LINE__, status); return status; }
-#define return_if_error(status) return_if_error_a(status, 0)
-#define return_if_error_debug(status) return_if_error_a(status, 1)
+#define RETURN_IF_ERROR_A(status, d) \
+    if (EFI_ERROR(status)) \
+    { \
+        if(d) \
+            Print(L"Line: %d Status: %r\n", __LINE__, status); \
+        return status; \
+    }
+#define RETURN_IF_ERROR(status) RETURN_IF_ERROR_A(status, 0)
+#define RETURN_IF_ERROR_DEBUG(status) RETURN_IF_ERROR_A(status, 1)
+
+EFI_STATUS
+LoadImage(
+    EFI_FILE_HANDLE file,
+    PLOADED_BOOT_MODULE * outModule);
 
 const CHAR16 *wszKernelPath = L"efi\\boot\\NNXOSKRN.exe";
-
 EFI_BOOT_SERVICES* gBootServices;
+LIST_ENTRY LoadedModules;
 
-typedef struct _MODULE_EXPORT
-{
-    char *Name;
-    PVOID Address;
-}MODULE_EXPORT, *PMODULE_EXPORT;
-
-VOID DestroyLoadedModule(PVOID modulePointer)
+VOID 
+DestroyLoadedModule(PVOID modulePointer)
 {
     LOADED_BOOT_MODULE* module = (LOADED_BOOT_MODULE*) modulePointer;
     FreePool(module);
 }
 
-LIST_ENTRY LoadedModules;
-
 EFI_STATUS 
 TryToLoadModule(
-    CHAR* name,
-    LOADED_BOOT_MODULE** pOutModule)
+    const CHAR* name,
+    EFI_FILE_HANDLE fs,
+    PLOADED_BOOT_MODULE* pOutModule)
 {
-    return EFI_UNSUPPORTED;
+    EFI_STATUS status;
+    EFI_FILE_HANDLE moduleFile;
+    SIZE_T Idx;
+    WCHAR TempBuffer[256];
+
+    Idx = 0;
+
+    while (name[Idx] != 0 && Idx < 255)
+    {
+        TempBuffer[Idx] = (WCHAR)name[Idx];
+        Idx++;
+    }
+    TempBuffer[Idx++] = 0;
+
+    status = fs->Open(
+        fs,
+        &moduleFile,
+        TempBuffer,
+        EFI_FILE_MODE_READ,
+        0);
+    RETURN_IF_ERROR_DEBUG(status);
+
+    return LoadImage(moduleFile, pOutModule);
 }
 
 LOADED_BOOT_MODULE*
@@ -71,57 +98,141 @@ TryFindLoadedModule(
     return NULL;
 }
 
+EFI_STATUS
+TryFindLoadedExport(
+    PLOADED_BOOT_MODULE Module, 
+    CHAR8* ImportName, 
+    USHORT ImportOrdinal,
+    PBOOT_MODULE_EXPORT* pOutExport)
+{
+    SIZE_T i;
+
+    if (ImportName == NULL &&
+        ImportOrdinal >= Module->NumberOfExports)
+    {
+        Print(L"Import by ordinal failed for #%d.\n", ImportOrdinal);
+        return EFI_NOT_FOUND;
+    }
+
+    if (ImportName == NULL)
+    {
+        Print(L"Import by ordinal done #%d.\n", ImportOrdinal);
+        *pOutExport = &Module->Exports[ImportOrdinal];
+        return EFI_SUCCESS;
+    }
+
+    for (i = 0; i < Module->NumberOfExports; i++)
+    {
+        if (ImportName != NULL &&
+            Module->Exports[i].ExportName != NULL &&
+            Module->Exports[i].ExportNameRva != NULL &&
+            strcmpa(Module->Exports[i].ExportName, ImportName) == 0)
+        {
+            *pOutExport = &Module->Exports[i];
+            return EFI_SUCCESS;
+        }
+    }
+
+    Print(L"Import for %a failed.\n", ImportName);
+    return EFI_NOT_FOUND;
+}
+
 EFI_STATUS 
 HandleImportDirectory(
-    LOADED_BOOT_MODULE* module,
-    IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry)
+    LOADED_BOOT_MODULE* Dependent,
+    EFI_FILE_HANDLE SearchDirectory,
+    IMAGE_IMPORT_DIRECTORY_ENTRY* ImportDirectoryEntry)
 {
-    EFI_STATUS status;
-    PVOID imageBase = module->ImageBase;
+    EFI_STATUS Status;
+    ULONG_PTR ImageBase = Dependent->ImageBase;
+    INT UnresolvedImports = 0;
 
-    IMAGE_IMPORT_DESCRIPTOR* current = importDirectoryEntry->Entries;
+    IMAGE_IMPORT_DESCRIPTOR* Current = ImportDirectoryEntry->Entries;
 
-    while (current->NameRVA != 0)
+    while (Current->NameRVA != 0)
     {
-        CHAR* name = 
-            (CHAR*)((ULONG_PTR)current->NameRVA + (ULONG_PTR)imageBase);
+        CHAR* ModuleName = 
+            (CHAR*)((ULONG_PTR)Current->NameRVA + (ULONG_PTR)ImageBase);
+        Print(L"%a:\n", ModuleName);
         
-        IMAGE_ILT_ENTRY64* imports = 
-            (IMAGE_ILT_ENTRY64*)((ULONG_PTR)current->FirstThunkRVA + (ULONG_PTR)imageBase);
+        IMAGE_ILT_ENTRY64* CurrentImport = 
+            (IMAGE_ILT_ENTRY64*)((ULONG_PTR)Current->OriginalFirstThunk + 
+                                 (ULONG_PTR)ImageBase);
         
-        LOADED_BOOT_MODULE* module = TryFindLoadedModule(name);
-        Print(L"%a:\n", name);
+        LOADED_BOOT_MODULE* Dependency = TryFindLoadedModule(ModuleName);
 
-        if (module == NULL)
+        if (Dependency == NULL)
         {
-            status = TryToLoadModule(name, &module);
-            if (status)
+            Status = TryToLoadModule(ModuleName, SearchDirectory, &Dependency);
+            if (Status)
                 return EFI_LOAD_ERROR;
         }
         
-        while (imports->AsNumber)
+        Print(L"Imports:\n");
+        while (CurrentImport->AsNumber)
         {
-            if (imports->Mode == 0)
+            PBOOT_MODULE_EXPORT Export = NULL;
+
+            if (CurrentImport->Mode == 0)
             {
-                Print(L"   %a\n", imports->NameRVA + (ULONG_PTR)imageBase + 2);
+                /* +2 to skip the Hint */
+                CHAR8* ImportName = (CHAR8*)
+                    (CurrentImport->NameRVA + (ULONG_PTR)ImageBase + 2);
+
+                Status = TryFindLoadedExport(
+                    Dependency, 
+                    ImportName, 
+                    0, 
+                    &Export);
+
+                if (Status != EFI_SUCCESS)
+                {
+                    UnresolvedImports++;
+                    Print(
+                        L"    Unresolved name import %a from %a\n",
+                        ImportName, 
+                        ModuleName);
+                }
             }
             else
             {
-                Print(L"   #%d\n", imports->Ordinal);
+                Status = TryFindLoadedExport(
+                    Dependency,
+                    NULL,
+                    CurrentImport->Ordinal,
+                    &Export);
+                if (Status != EFI_SUCCESS)
+                {
+                    Print(
+                        L"    Unresolved ordinal import #%d from \n",
+                        CurrentImport->Ordinal,
+                        ModuleName);
+
+                    UnresolvedImports++;
+                }
             }
-            imports++;
+            if (Export != NULL)
+            {
+                *((PULONG_PTR)CurrentImport) = Export->ExportAddress;
+            }
+            CurrentImport++;
         }
 
-        current++;
+        Current++;
     }
 
+    if (UnresolvedImports > 0)
+    {
+        Print(L"Unresolved imports: %d.\n", UnresolvedImports);
+        return EFI_NOT_FOUND;
+    }
+    Print(L"No unresolved imports.\n");
     return EFI_SUCCESS;
 }
 
 EFI_STATUS 
 LoadImage(
-    EFI_FILE_HANDLE file, 
-    OPTIONAL PVOID imageBase, 
+    EFI_FILE_HANDLE file,
     PLOADED_BOOT_MODULE* outModule)
 {
     EFI_STATUS status;
@@ -135,23 +246,24 @@ LoadImage(
     SECTION_HEADER* sectionHeaders;
     UINTN numberOfSectionHeaders, sizeOfSectionHeaders;
     SECTION_HEADER* currentSection;
+    ULONG_PTR imageBase;
 
-    PLOADED_BOOT_MODULE module;
+    PLOADED_BOOT_MODULE Module;
 
     UINTN dosHeaderSize = sizeof(dosHeader);
     UINTN peHeaderSize = sizeof(peHeader);
 
     status = file->Read(file, &dosHeaderSize, &dosHeader);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
     
     if (dosHeader.Signature != IMAGE_MZ_MAGIC)
         return EFI_UNSUPPORTED;
 
     status = file->SetPosition(file, dosHeader.e_lfanew);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
 
     status = file->Read(file, &peHeaderSize, &peHeader);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
 
     if (peHeader.Signature != IMAGE_PE_MAGIC)
         return EFI_UNSUPPORTED;
@@ -163,10 +275,15 @@ LoadImage(
         return EFI_UNSUPPORTED;
     }
 
-    if (imageBase == NULL)
-        imageBase = (PVOID) peHeader.OptionalHeader.ImageBase;
+    status = gBootServices->AllocatePages(
+        AllocateAnyPages, 
+        EfiLoaderCode,
+        512, 
+        &imageBase);
+    Print(L"Image base %X\n", imageBase);
+    RETURN_IF_ERROR_DEBUG(status);
 
-    /* read all data directories */
+    /* Read all data directories. */
     numberOfDataDirectories = peHeader.OptionalHeader.NumberOfDataDirectories;
 
     if (numberOfDataDirectories > 16)
@@ -175,19 +292,31 @@ LoadImage(
     sizeOfDataDirectories = numberOfDataDirectories * sizeof(DATA_DIRECTORY);
 
     status = file->Read(file, &sizeOfDataDirectories, dataDirectories);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
 
-    /* read all sections */
+    /* Read all sections. */
     numberOfSectionHeaders = peHeader.FileHeader.NumberOfSections;
     sizeOfSectionHeaders = numberOfSectionHeaders * sizeof(SECTION_HEADER);
     sectionHeaders = AllocateZeroPool(sizeOfSectionHeaders);
     if (sectionHeaders == NULL)
         return EFI_OUT_OF_RESOURCES;
-    status = file->SetPosition(file, dosHeader.e_lfanew + sizeof(peHeader) + peHeader.OptionalHeader.NumberOfDataDirectories * sizeof(DATA_DIRECTORY));
-    return_if_error(status);
-    status = file->Read(file, &sizeOfSectionHeaders, sectionHeaders);
 
-    for (currentSection = sectionHeaders; currentSection < sectionHeaders + numberOfSectionHeaders; currentSection++)
+    status = file->SetPosition(
+        file, 
+        dosHeader.e_lfanew + 
+            sizeof(peHeader) + 
+            peHeader.OptionalHeader.NumberOfDataDirectories * 
+                sizeof(DATA_DIRECTORY));
+
+    RETURN_IF_ERROR(status);
+    status = file->Read(
+        file, 
+        &sizeOfSectionHeaders, 
+        sectionHeaders);
+
+    for (currentSection = sectionHeaders; 
+         currentSection < sectionHeaders + numberOfSectionHeaders;
+         currentSection++)
     {
         UINTN sectionSize;
 
@@ -195,8 +324,13 @@ LoadImage(
         sectionSize = (UINTN)currentSection->SizeOfSection;
         
         if (!EFI_ERROR(status))
-            status = file->Read(file, &sectionSize, (PVOID)((ULONG_PTR) currentSection->VirtualAddressRVA + (ULONG_PTR)imageBase));
-        
+        {
+            status = file->Read(
+                file,
+                &sectionSize,
+                (PVOID)((ULONG_PTR)currentSection->VirtualAddressRVA + imageBase));
+        }
+
         if (EFI_ERROR(status))
         {
             FreePool(sectionHeaders);
@@ -204,56 +338,133 @@ LoadImage(
         }
     }
 
-    /* add this module to the loaded module list
-     * if for any reason it is not possible to finish loading, remember to remove from the list */
-    
-    module = AllocateZeroPool(sizeof(LOADED_BOOT_MODULE));
-    if (module == NULL)
+    /* Add this module to the loaded module list. */
+    Module = AllocateZeroPool(sizeof(LOADED_BOOT_MODULE));
+    if (Module == NULL)
         return EFI_OUT_OF_RESOURCES;
-    InsertTailList(&LoadedModules, &module->ListEntry);
+    InsertTailList(&LoadedModules, &Module->ListEntry);
 
-    module->ImageBase = imageBase;
-    module->Entrypoint = (PVOID)(peHeader.OptionalHeader.EntrypointRVA + (ULONG_PTR)imageBase);
-    module->ImageSize = peHeader.OptionalHeader.SizeOfImage;
-    module->Name = "";
-    module->SectionHeaders = sectionHeaders;
-    module->NumberOfSectionHeaders = numberOfSectionHeaders;
+    Module->ImageBase = imageBase;
+    Module->Entrypoint = 
+        (PVOID)(peHeader.OptionalHeader.EntrypointRVA + imageBase);
+    Module->ImageSize = peHeader.OptionalHeader.SizeOfImage;
+    Module->Name = "";
+    Module->SectionHeaders = sectionHeaders;
+    Module->NumberOfSectionHeaders = numberOfSectionHeaders;
+    Module->Exports = NULL;
+    Module->NumberOfExports = 0;
 
-    for (dataDirectoryIndex = 0; dataDirectoryIndex < numberOfDataDirectories; dataDirectoryIndex++)
+    for (dataDirectoryIndex = 0;
+         dataDirectoryIndex < numberOfDataDirectories;
+         dataDirectoryIndex++)
     {
-        PVOID dataDirectory = (PVOID)((ULONG_PTR) dataDirectories[dataDirectoryIndex].VirtualAddressRVA + (ULONG_PTR) imageBase);
+        PVOID dataDirectory = 
+            (PVOID)(
+                (ULONG_PTR) dataDirectories[dataDirectoryIndex].VirtualAddressRVA + 
+                imageBase);
 
-        if (dataDirectories[dataDirectoryIndex].Size == 0 || dataDirectories[dataDirectoryIndex].VirtualAddressRVA == 0)
+        if (dataDirectories[dataDirectoryIndex].Size == 0 || 
+            dataDirectories[dataDirectoryIndex].VirtualAddressRVA == 0)
             continue;
 
         if (dataDirectoryIndex == IMAGE_DIRECTORY_ENTRY_EXPORT)
         {
-            IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry = (IMAGE_EXPORT_DIRECTORY_ENTRY*) dataDirectory;
+            IMAGE_EXPORT_DIRECTORY_ENTRY* exportDirectoryEntry = 
+                (IMAGE_EXPORT_DIRECTORY_ENTRY*) dataDirectory;
 
-            return_if_error(status);
+            RVA* NamePointerTable = (RVA*)
+                (exportDirectoryEntry->AddressOfNamesRVA + imageBase);
+            USHORT* Ordinals = (USHORT*)
+                (exportDirectoryEntry->AddressOfNameOrdinalsRVA + imageBase);
+            /* TODO: handle forwarder RVAs */
+            RVA* Addresses = (RVA*)
+                (exportDirectoryEntry->AddressOfFunctionsRVA + imageBase);
+            USHORT OrdinalBase = 
+                exportDirectoryEntry->OrdinalBase;
+            SIZE_T NumberOfNames = exportDirectoryEntry->NumberOfNames;
+            SIZE_T NumberOfAddresses = exportDirectoryEntry->NumberOfFunctions;
+            INT i;
+
+            Module->Exports = 
+                AllocatePool(sizeof(BOOT_MODULE_EXPORT) * NumberOfAddresses);
+
+            Module->NumberOfExports = NumberOfAddresses;
+
+            for (i = 0; i < NumberOfAddresses; i++)
+            {
+                PBOOT_MODULE_EXPORT Export = &Module->Exports[i];
+                Export->ExportAddress = Addresses[i] + imageBase;
+                Export->ExportAddressRva = Addresses[i];
+                Export->ExportName = NULL;
+                Export->ExportNameRva = NULL;
+            }
+
+            for (i = 0; i < NumberOfNames; i++)
+            {
+                PBOOT_MODULE_EXPORT Export;
+                USHORT Ordinal = Ordinals[i];
+                
+                Export = &Module->Exports[Ordinal];
+                Export->ExportNameRva = NamePointerTable[Ordinal];
+                Export->ExportName = (PCHAR)(Export->ExportNameRva + imageBase);
+                //Print(
+                //    L"Linking name %a to ordinal %d (debased from %d)\n",
+                //    Export->ExportName, Ordinal, Ordinals[i]);
+            }
+
+            RETURN_IF_ERROR(status);
         }
         else if (dataDirectoryIndex == IMAGE_DIRECTORY_ENTRY_IMPORT)
         {
-            IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry = (IMAGE_IMPORT_DIRECTORY_ENTRY*) dataDirectory;
+            IMAGE_IMPORT_DIRECTORY_ENTRY* importDirectoryEntry = 
+                (IMAGE_IMPORT_DIRECTORY_ENTRY*) dataDirectory;
+            EFI_FILE_INFO* fileInfo;
+            EFI_FILE_HANDLE fs;
+            SIZE_T FileInfoSize = 64;
+            
+            status = file->Open(file, &fs, L"..", EFI_FILE_MODE_READ, 0);
+            RETURN_IF_ERROR(status);
 
-            status = HandleImportDirectory(module, importDirectoryEntry);
-            return_if_error(status);
+            do
+            {
+                FileInfoSize *= 2;
+                status = fs->GetInfo(fs, &gEfiFileInfoGuid, &FileInfoSize, NULL);
+            }
+            while (status == EFI_BUFFER_TOO_SMALL);
+            RETURN_IF_ERROR_DEBUG(status);
+
+            fileInfo = AllocatePool(FileInfoSize);
+            status = fs->GetInfo(fs, &gEfiFileInfoGuid, &FileInfoSize, fileInfo);
+            RETURN_IF_ERROR_DEBUG(status);
+
+            Print(L"file: %s %d\n", fileInfo->FileName, fileInfo->FileSize);
+            FreePool(fileInfo);
+
+            status = HandleImportDirectory(Module, fs, importDirectoryEntry);
+            fs->Close(fs);
+            RETURN_IF_ERROR(status);
         }
     }
 
-    *outModule = module;
+    *outModule = Module;
 
     return status;
 }
 
-EFI_STATUS QueryGraphicsInformation(BOOTDATA* bootdata)
+EFI_STATUS
+QueryGraphicsInformation(
+    BOOTDATA* bootdata)
 {
     EFI_STATUS status;
     EFI_GRAPHICS_OUTPUT_PROTOCOL* graphicsProtocol;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode;
 
-    status = gBootServices->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, &graphicsProtocol);
-    return_if_error(status);
+    status = gBootServices->LocateProtocol(
+        &gEfiGraphicsOutputProtocolGuid, 
+        NULL, 
+        &graphicsProtocol);
+
+    RETURN_IF_ERROR(status);
 
     mode = graphicsProtocol->Mode->Info;
 
@@ -261,7 +472,9 @@ EFI_STATUS QueryGraphicsInformation(BOOTDATA* bootdata)
     bootdata->dwWidth = mode->HorizontalResolution;
     bootdata->dwPixelsPerScanline = mode->PixelsPerScanLine;
     bootdata->pdwFramebuffer = (PDWORD)graphicsProtocol->Mode->FrameBufferBase;
-    bootdata->pdwFramebufferEnd = (PDWORD)((ULONG_PTR)graphicsProtocol->Mode->FrameBufferBase + (ULONG_PTR)graphicsProtocol->Mode->FrameBufferSize);
+    bootdata->pdwFramebufferEnd = 
+        (PDWORD)((ULONG_PTR)graphicsProtocol->Mode->FrameBufferBase + 
+                 (ULONG_PTR)graphicsProtocol->Mode->FrameBufferSize);
 
     return EFI_SUCCESS;
 }
@@ -282,22 +495,33 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
         if (memoryMap != NULL)
             FreePool(memoryMap);
 
-        status = gBootServices->AllocatePool(EfiLoaderData, memoryMapSize, &memoryMap);
+        status = gBootServices->AllocatePool(
+            EfiLoaderData, 
+            memoryMapSize, 
+            &memoryMap);
+
         if (EFI_ERROR(status) || memoryMap == NULL)
             return EFI_ERROR(status) ? status : EFI_OUT_OF_RESOURCES;
 
-        status = gBootServices->GetMemoryMap(&memoryMapSize, memoryMap, &memoryMapKey, &descriptorSize, &descriptorVersion);
+        status = gBootServices->GetMemoryMap(
+            &memoryMapSize,
+            memoryMap, 
+            &memoryMapKey, 
+            &descriptorSize, 
+            &descriptorVersion);
         
         memoryMapSize += descriptorSize;
     }
     while (status == EFI_BUFFER_TOO_SMALL);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
 
     currentDescriptor = memoryMap;
-    while (currentDescriptor <= (EFI_MEMORY_DESCRIPTOR*)((ULONG_PTR)memoryMap + memoryMapSize))
+    while (currentDescriptor <= 
+           (EFI_MEMORY_DESCRIPTOR*)((ULONG_PTR)memoryMap + memoryMapSize))
     {
         pages += currentDescriptor->NumberOfPages;
-        currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR)currentDescriptor + descriptorSize);
+        currentDescriptor = (EFI_MEMORY_DESCRIPTOR*)
+            ((ULONG_PTR)currentDescriptor + descriptorSize);
     }
 
     pageFrameEntries = AllocateZeroPool(pages * sizeof(MMPFN_ENTRY));
@@ -306,7 +530,8 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
         pageFrameEntries[i].Flags = 1;
 
     currentDescriptor = memoryMap;
-    while (currentDescriptor <= (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) memoryMap + memoryMapSize))
+    while (currentDescriptor <= 
+           (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) memoryMap + memoryMapSize))
     {
         UINTN relativePageIndex;
         ULONG_PTR flags = 1;
@@ -321,21 +546,28 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
                 break;
         }
 
-        for (relativePageIndex = 0; relativePageIndex < currentDescriptor->NumberOfPages; relativePageIndex++)
+        for (relativePageIndex = 0; 
+             relativePageIndex < currentDescriptor->NumberOfPages; 
+             relativePageIndex++)
         {
-            UINTN pageIndex = currentDescriptor->PhysicalStart / PAGE_SIZE + relativePageIndex;
+            UINTN pageIndex = 
+                currentDescriptor->PhysicalStart / PAGE_SIZE +
+                relativePageIndex;
 
             pageFrameEntries[pageIndex].Flags = flags;
             
-            if ((ULONG_PTR)pageIndex * PAGE_SIZE >= (ULONG_PTR)pageFrameEntries &&
-                (ULONG_PTR)pageIndex * PAGE_SIZE <= ((ULONG_PTR) pageFrameEntries + pages))
+            if ((ULONG_PTR)pageIndex * PAGE_SIZE >= 
+                    (ULONG_PTR)pageFrameEntries &&
+                (ULONG_PTR)pageIndex * PAGE_SIZE <= 
+                    ((ULONG_PTR) pageFrameEntries + pages))
             {
                 pageFrameEntries[pageIndex].Flags = 1;
                 continue;
             }
         }
 
-        currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) currentDescriptor + descriptorSize);
+        currentDescriptor = (EFI_MEMORY_DESCRIPTOR*) 
+            ((ULONG_PTR) currentDescriptor + descriptorSize);
     }
 
     pageFrameEntries[0].Flags = 1;
@@ -345,16 +577,25 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
         if (memoryMap != NULL)
             FreePool(memoryMap);
 
-        status = gBootServices->AllocatePool(EfiLoaderData, memoryMapSize, &memoryMap);
+        status = gBootServices->AllocatePool(
+            EfiLoaderData, 
+            memoryMapSize, 
+            &memoryMap);
+
         if (EFI_ERROR(status) || memoryMap == NULL)
             return EFI_ERROR(status) ? status : EFI_OUT_OF_RESOURCES;
 
-        status = gBootServices->GetMemoryMap(&memoryMapSize, memoryMap, &memoryMapKey, &descriptorSize, &descriptorVersion);
+        status = gBootServices->GetMemoryMap(
+            &memoryMapSize, 
+            memoryMap, 
+            &memoryMapKey, 
+            &descriptorSize, 
+            &descriptorVersion);
 
         memoryMapSize += descriptorSize;
     }
     while (status == EFI_BUFFER_TOO_SMALL);
-    return_if_error(status);
+    RETURN_IF_ERROR(status);
 
     bootdata->mapKey = memoryMapKey;
     bootdata->NumberOfPageFrames = pages;
@@ -363,7 +604,11 @@ EFI_STATUS QueryMemoryMap(BOOTDATA* bootdata)
     return EFI_SUCCESS;
 }
 
-EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
+EFI_STATUS
+EFIAPI 
+efi_main(
+    EFI_HANDLE imageHandle, 
+    EFI_SYSTEM_TABLE* systemTable)
 {
     EFI_STATUS status;
     EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
@@ -374,28 +619,43 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
     PLOADED_BOOT_MODULE module;
 
     gBootServices = systemTable->BootServices;
-
     InitializeLib(imageHandle, systemTable);
 
-    status = gBootServices->HandleProtocol(imageHandle, &gEfiLoadedImageProtocolGuid, &loadedImage);
-    return_if_error_debug(status);
+    InitializeListHead(&LoadedModules);
 
-    status = gBootServices->HandleProtocol(loadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, &filesystem);
-    return_if_error_debug(status);
+    status = gBootServices->HandleProtocol(
+        imageHandle, 
+        &gEfiLoadedImageProtocolGuid, 
+        &loadedImage);
+    RETURN_IF_ERROR_DEBUG(status);
 
-    status = filesystem->OpenVolume(filesystem, &root);
-    return_if_error_debug(status);
+    status = gBootServices->HandleProtocol(
+        loadedImage->DeviceHandle, 
+        &gEfiSimpleFileSystemProtocolGuid, 
+        &filesystem);
+    RETURN_IF_ERROR_DEBUG(status);
 
-    status = root->Open(root, &kernelFile, (CHAR16*)wszKernelPath, EFI_FILE_MODE_READ, 0);
-    return_if_error_debug(status);
+    status = filesystem->OpenVolume(
+        filesystem, 
+        &root);
+    RETURN_IF_ERROR_DEBUG(status);
 
-    status = LoadImage(kernelFile, (PVOID)KERNEL_INITIAL_ADDRESS, &module);
-    return_if_error_debug(status);
+    status = root->Open(
+        root, 
+        &kernelFile, 
+        (CHAR16*)wszKernelPath, 
+        EFI_FILE_MODE_READ, 
+        0);
+    RETURN_IF_ERROR_DEBUG(status);
+
+    status = LoadImage(
+        kernelFile, 
+        &module);
+    RETURN_IF_ERROR_DEBUG(status);
 
     kernelEntrypoint = module->Entrypoint;
-    Print(L"Kernel entrypoint %X\n", kernelEntrypoint);
+    Print(L"Kernel entrypoint %X, base %X\n", kernelEntrypoint, module->ImageBase);
 
-    bootdata.KernelBase = module->ImageBase;
     bootdata.dwKernelSize = module->ImageSize;
     bootdata.ExitBootServices = gBootServices->ExitBootServices;
     bootdata.pImageHandle = imageHandle;
@@ -404,10 +664,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable
     LibGetSystemConfigurationTable(&AcpiTableGuid, &bootdata.pRdsp);
 
     status = QueryGraphicsInformation(&bootdata);
-    return_if_error_debug(status);
+    RETURN_IF_ERROR_DEBUG(status);
 
     status = QueryMemoryMap(&bootdata);
-    return_if_error_debug(status);
+    RETURN_IF_ERROR_DEBUG(status);
 
     Print(L"Launching kernel\n");
     kernelEntrypoint(&bootdata);

@@ -18,6 +18,7 @@
 #include <HAL/X64/cmos.h>
 #include <HAL/rtc.h>
 #include <HAL/syscall.h>
+#include <haltest.h>
 
 int basicallyATest = 0;
 
@@ -97,6 +98,11 @@ extern "C"
 		DrawMap();
 
 		VfsInit();
+
+		/*status = HalInit();
+		if (status)
+			KeBugCheck(HAL_INITIALIZATION_FAILED);*/
+		// PrintT("HalInit: %X\n", HalInit);
 		PciScan();
 
 		ACPI_RDSP* pRdsp = (ACPI_RDSP*) 

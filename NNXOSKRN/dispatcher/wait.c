@@ -301,7 +301,7 @@ KiClockTick()
      * Reading CMOS too often maybe?
      * Maybe trying to read the same value twice fails often 
      * and it gets itself stuck in the loop there? */
-#if 0
+#if 1
     KeQuerySystemTime(&Time);
 
     Current = AbsoluteTimeoutListHead.First;

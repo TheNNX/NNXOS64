@@ -127,7 +127,7 @@ typedef struct _EXPORT_TABLE
 	UINT16 MajorVersion;
 	UINT16 MinorVersion;
 	RVA NameRVA;
-	UINT32 Base;
+	UINT32 OrdinalBase;
 	UINT32 NumberOfFunctions;
 	UINT32 NumberOfNames;
 	RVA AddressOfFunctionsRVA;
@@ -209,7 +209,7 @@ typedef struct _IMAGE_ILT_ENTRY64
 		};
 		struct
 		{
-			UINT64 Ordinal : 16;
+			USHORT Ordinal : 16;
 			UINT64 : 37;
 			UINT64 : 1;
 		};

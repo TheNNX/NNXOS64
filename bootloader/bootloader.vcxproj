@@ -65,7 +65,8 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>Default</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Lib>
       <SubSystem>EFI Application</SubSystem>
@@ -111,7 +112,8 @@ rmdir /Q /S $(ProjectName)</Command>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>Default</LanguageStandard>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Lib>
       <SubSystem>EFI Application</SubSystem>

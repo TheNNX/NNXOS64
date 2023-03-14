@@ -9,8 +9,17 @@ extern "C" {
 #endif
 
 #ifdef NNX_KERNEL
-	__declspec(noreturn) BOOLEAN NTAPI KeStopIsr(PKINTERRUPT, PVOID);
-	__declspec(noreturn) VOID NTAPI KeStop();
+	__declspec(noreturn) 
+	BOOLEAN 
+	NTAPI 
+	KeStopIsr(
+		PKINTERRUPT, 
+		PVOID);
+
+	__declspec(noreturn) 
+	VOID 
+	NTAPI 
+	KeStop();
 #endif
 
 	__declspec(noreturn) 
