@@ -35,7 +35,7 @@ extern "C" {
 		}
 		else
 		{
-			systemPartition->Functions.ReadFile(apCodeFile, 0x1000, code);
+			systemPartition->Functions.ReadFile(apCodeFile, PAGE_SIZE, code);
 			systemPartition->Functions.CloseFile(apCodeFile);
 		}
 

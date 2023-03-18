@@ -4,5 +4,5 @@ NTSTATUS
 NTAPI
 HalInit()
 {
-    return STATUS_NOT_SUPPORTED;
+    return STATUS_SUCCESS;
 }

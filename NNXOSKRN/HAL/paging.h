@@ -178,6 +178,14 @@ extern "C"
             struct VIRTUAL_FILE_SYSTEM* filesystem
         );
 
+    VOID
+    NTAPI
+    PagingEnableSystemWriteProtection(VOID);
+
+    VOID
+    NTAPI
+    PagingDisableSystemWriteProtection(VOID);
+
 #endif
 
 #ifdef __cplusplus

@@ -21,10 +21,15 @@ __declspec(noreturn) VOID SetupStack(ULONG_PTR stack, UINT64(*)(PVOID));
 
 static
 VOID
-RemapSections(
-	PSECTION_HEADER SectionHeaders,
-	SIZE_T NumberOfSectionHeaders
-);
+BindRelocatedImports(
+	PLOADED_BOOT_MODULE Module);
+
+static
+VOID
+RemapModule(
+	PLOADED_BOOT_MODULE Module,
+	ULONG_PTR NewBase,
+	PULONG_PTR NextSafeBase);
 
 ULONG_PTR GetStack();
 
@@ -36,36 +41,46 @@ VOID KeLoadStub(
 	ULONG_PTR currentStack;
 	ULONG_PTR currentStackPage;
 	UINT64(*mainReloc)(VOID*);
+	PLIST_ENTRY ModuleEntry;
+	ULONG_PTR CurrentBase;
 
+	/* Used to temporarily identity-map physical pages allocated by UEFI to 
+	 * So exports can be bound to the correct, new virtual addresses. */
+	ULONG_PTR MinKernelPhysAddr;
+	ULONG_PTR MaxKernelPhysAddr;
+	ULONG_PTR CurPhysAddr;
+
+	/* Copy the values from bootloader allocated bootdata, as it will become 
+	 * inaccesible once the initial stage of remapping is done. */
     gFramebuffer = bootdata->pdwFramebuffer;
     gFramebufferEnd = bootdata->pdwFramebufferEnd;
     gWidth = bootdata->dwWidth;
     gHeight = bootdata->dwHeight;
     gPixelsPerScanline = bootdata->dwPixelsPerScanline;
-	KeKernelPhysicalAddress = bootdata->MainKernelModule.ImageBase;
+	KeKernelPhysicalAddress = bootdata->MainKernelModule->ImageBase;
 	gRdspPhysical = (ULONG_PTR)bootdata->pRdsp;
+	MinKernelPhysAddr = bootdata->MinKernelPhysAddress;
+	MaxKernelPhysAddr = bootdata->MaxKernelPhysAddress;
 
-    bootdata->ExitBootServices(bootdata->pImageHandle, bootdata->mapKey);
-
+	/* Initialize the physical page allocator and temporary core PCR. */
 	MmReinitPhysAllocator(bootdata->PageFrameDescriptorEntries, bootdata->NumberOfPageFrames);
 	HalpInitDummyPcr();
 	HalpSetDummyPcr();
 
-    /* calculate the new address of our kernel entrypoint */
-    mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule.ImageBase;
+    /* Calculate the new address of our kernel entrypoint. */
+    mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule->ImageBase;
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
     
-    /* map kernel pages */
+    /* Map kernel pages. */
     NTSTATUS status = PagingInit();
-
     PagingMapAndInitFramebuffer();
-
-	bootdata->MainKernelModule.SectionHeaders = (PSECTION_HEADER)PagingMapStrcutureToVirtual(
-		(ULONG_PTR)bootdata->MainKernelModule.SectionHeaders,
-		bootdata->MainKernelModule.NumberOfSectionHeaders * sizeof(SECTION_HEADER), 
+	bootdata->MainKernelModule->SectionHeaders = (PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
+		(ULONG_PTR)bootdata->MainKernelModule->SectionHeaders,
+		bootdata->MainKernelModule->NumberOfSectionHeaders * sizeof(IMAGE_SECTION_HEADER), 
 		PAGE_WRITE | PAGE_PRESENT
 	);
 
+	/* Remap the stack. */
 	currentStack = GetStack();
 	currentStackPage = PAGE_ALIGN(currentStack);
 
@@ -73,31 +88,113 @@ VOID KeLoadStub(
 		STACK_SIZE / PAGE_SIZE,
 		PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END,
 		PAGE_PRESENT | PAGE_WRITE,
-		currentStackPage - STACK_SIZE
-	);
+		currentStackPage - STACK_SIZE);
 	
 	newStack += STACK_SIZE;
 	newStack -= (currentStack - currentStackPage);
 
-	PrintT("Sections: %X\n", bootdata->MainKernelModule.SectionHeaders);
-	
-	RemapSections(
-		bootdata->MainKernelModule.SectionHeaders,
-		bootdata->MainKernelModule.NumberOfSectionHeaders
-	);
-	MiFlagPfnsForRemap();
+	/* Temporarily identity map addresses corresponding to the original
+	 * identity mappings of the bootloader allocated structures, including
+	 * the boot module export lists, which are needed to bind the import
+	 * entries after the relocation. */
+	for (CurPhysAddr = MinKernelPhysAddr;
+		CurPhysAddr <= MaxKernelPhysAddr;
+		CurPhysAddr += PAGE_SIZE)
+	{
+		PagingMapPage(CurPhysAddr, CurPhysAddr, PAGE_WRITE | PAGE_PRESENT);
+	}
 
+	/* Remap the module sections loaded by the bootloader. */
+	ModuleEntry = bootdata->ModuleHead.First;
+	CurrentBase = KERNEL_DESIRED_LOCATION;
+
+	while (ModuleEntry != &bootdata->ModuleHead)
+	{
+		PLOADED_BOOT_MODULE Module =
+			CONTAINING_RECORD(ModuleEntry, LOADED_BOOT_MODULE, ListEntry);
+
+		RemapModule(Module, CurrentBase, &CurrentBase);
+		ModuleEntry = ModuleEntry->Next;
+	}
+
+	/* Bind the import entries. Temporarily disable supervisor readonly page
+	 * protection, as the sections are alreay remapped - if import directories 
+	 * are in .rdata for example, these pages are marked as readonly. */
+	PagingDisableSystemWriteProtection();
+	ModuleEntry = bootdata->ModuleHead.First;
+
+	while (ModuleEntry != &bootdata->ModuleHead)
+	{
+		PLOADED_BOOT_MODULE Module =
+			CONTAINING_RECORD(ModuleEntry, LOADED_BOOT_MODULE, ListEntry);
+
+		BindRelocatedImports(Module);
+		ModuleEntry = ModuleEntry->Next;
+	}
+	PagingEnableSystemWriteProtection();
+
+	MiFlagPfnsForRemap();
 	SetupStack(newStack, mainReloc);
+}
+
+static
+VOID
+BindRelocatedImports(
+	PLOADED_BOOT_MODULE Module)
+{
+	if (Module->NumberOfDirectoryEntries <= IMAGE_DIRECTORY_ENTRY_IMPORT ||
+		Module->DirectoryEntires[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddressRVA
+		== NULL)
+	{
+		return;
+	}
+
+	PrintT("Remapping module %X\n", Module);
+
+	PIMAGE_IMPORT_DESCRIPTOR importDesc = 
+		(PIMAGE_IMPORT_DESCRIPTOR)
+			(Module->DirectoryEntires[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddressRVA +
+			Module->ImageBase);
+
+	while (importDesc->NameRVA)
+	{
+		PrintT("ImportDesc %X %X %s\n", 
+			importDesc,
+			importDesc->NameRVA + Module->ImageBase, 
+			importDesc->NameRVA + Module->ImageBase);
+
+		IMAGE_ILT_ENTRY64* CurrentImport =
+			(IMAGE_ILT_ENTRY64*)(importDesc->FirstThunkRVA +
+								 Module->ImageBase);
+
+		while (CurrentImport->AsNumber)
+		{
+			PBOOT_MODULE_EXPORT Export = *(PBOOT_MODULE_EXPORT*)CurrentImport;
+			// PrintT("Import current %X\n", );
+			PrintT(
+				"Import current import %X %X %X %X\n", 
+				CurrentImport, 
+				Export->ExportAddressRva,
+				Export->ExportAddress,
+				Export);
+
+			*((PULONG_PTR)CurrentImport) = Export->ExportAddress;
+			CurrentImport++;
+		}
+
+		PrintT("Preincrement %X\n", importDesc);
+		importDesc++;
+	}
 }
 
 static 
 VOID 
-RemapSections(
-	PSECTION_HEADER SectionHeaders,
-	SIZE_T NumberOfSectionHeaders
-)
+RemapModule(
+	PLOADED_BOOT_MODULE Module,
+	ULONG_PTR NewBase,
+	PULONG_PTR NextSafeBase)
 {
-	PSECTION_HEADER current;
+	PIMAGE_SECTION_HEADER current;
 	INT i, k;
 	SIZE_T j;
 	BOOLEAN usersection;
@@ -109,12 +206,27 @@ RemapSections(
 	/* remap all sections with name starting with ".user"
 	 * to be usermode accessible */
 	const char usermodeSectionName[] = ".user";
+	PrintT(
+		"Remapping module %X from %X to %X (exports: %i)\n", 
+		Module->Name,
+		Module->ImageBase,
+		NewBase,
+		Module->NumberOfExports);
 
-	for (i = 0; i < NumberOfSectionHeaders; i++)
+	*NextSafeBase = NewBase;
+
+	for (i = 0; i < Module->NumberOfSectionHeaders; i++)
 	{
-		current = &SectionHeaders[i];
+		current = &Module->SectionHeaders[i];
 		
-		PrintT("%S: Virtual address: base+%X, size: %i, flags: %b\n", current->Name, 8, current->VirtualAddressRVA, current->VirtualSize, current->Characteristics);
+		PrintT(
+			"%S: Virtual address: %X+%X, size: %i, flags: %b\n", 
+			current->Name, 8, 
+			Module->ImageBase,
+			current->VirtualAddressRVA, 
+			current->VirtualSize,
+			current->Characteristics);
+
 		usersection = TRUE;
 
 		for (k = 0; k < sizeof(usermodeSectionName) - 1; k++)
@@ -125,10 +237,20 @@ RemapSections(
 			}
 		}
 
-		for (j = 0; j < (current->VirtualSize + PAGE_SIZE - 1) / PAGE_SIZE; j++)
+		for (j = 0; 
+			 j < (current->VirtualSize + PAGE_SIZE - 1) / PAGE_SIZE; 
+			 j++)
 		{
 			/* KERNEL_DESIRED_LOCATION is our future executable base */
-			currentPageAddress = current->VirtualAddressRVA + KERNEL_DESIRED_LOCATION + j * PAGE_SIZE;
+			currentPageAddress = 
+				current->VirtualAddressRVA + 
+				NewBase +
+				j * PAGE_SIZE;
+
+			if (currentPageAddress + PAGE_SIZE > *NextSafeBase)
+			{
+				*NextSafeBase = currentPageAddress + PAGE_SIZE;
+			}
 			currentMapping = PagingGetCurrentMapping(currentPageAddress);
 			physAddress = currentMapping & PAGE_ADDRESS_MASK;
 	
@@ -159,5 +281,13 @@ RemapSections(
 
 			PagingMapPage(currentPageAddress, physAddress, newFlags);
 		}
+	}
+
+	Module->OriginalBase = Module->ImageBase;
+	Module->ImageBase = NewBase;
+	for (i = 0; i < Module->NumberOfExports; i++)
+	{
+		PBOOT_MODULE_EXPORT Export = &Module->Exports[i];		
+		Export->ExportAddress = Export->ExportAddressRva + Module->ImageBase;
 	}
 }

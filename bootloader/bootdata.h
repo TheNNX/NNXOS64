@@ -17,34 +17,38 @@ typedef struct _BOOT_MODULE_EXPORT
 
 typedef struct _LOADED_BOOT_MODULE
 {
-	PVOID				Entrypoint;
-	ULONG_PTR			ImageBase;
-	ULONG				ImageSize;
-	CHAR*				Name;
-	USHORT				OrdinalBase;
-	SECTION_HEADER*		SectionHeaders;
-	SIZE_T				NumberOfSectionHeaders;
-	LIST_ENTRY			ListEntry;
-	PBOOT_MODULE_EXPORT Exports;
-	SIZE_T				NumberOfExports;
+	UINT64                  Entrypoint;
+	ULONG_PTR               ImageBase;
+	ULONG                   ImageSize;
+	CHAR*                   Name;
+	USHORT                  OrdinalBase;
+	PIMAGE_SECTION_HEADER   SectionHeaders;
+	SIZE_T                  NumberOfSectionHeaders;
+	LIST_ENTRY              ListEntry;
+	PBOOT_MODULE_EXPORT     Exports;
+	SIZE_T                  NumberOfExports;
+	ULONG_PTR				OriginalBase;
+	INT                     NumberOfDirectoryEntries;
+	IMAGE_DATA_DIRECTORY	DirectoryEntires[16];
 }LOADED_BOOT_MODULE, * PLOADED_BOOT_MODULE;
 #pragma pack(pop)
 
 typedef struct _BOOTDATA
 {
-	PDWORD pdwFramebuffer;
-	PDWORD pdwFramebufferEnd;
-	DWORD dwWidth;
-	DWORD dwHeight;
-	DWORD dwPixelsPerScanline;
-	UINT64(*ExitBootServices)(PVOID, UINT64);
-	PVOID pImageHandle;
-	UINT64 mapKey;
-	struct _MMPFN_ENTRY* PageFrameDescriptorEntries;
-	SIZE_T NumberOfPageFrames;
-	PVOID pRdsp;
-	DWORD dwKernelSize;
-	LOADED_BOOT_MODULE MainKernelModule;
+	PDWORD					pdwFramebuffer;
+	PDWORD					pdwFramebufferEnd;
+	DWORD					dwWidth;
+	DWORD					dwHeight;
+	DWORD					dwPixelsPerScanline;
+	PVOID					pImageHandle;
+	struct _MMPFN_ENTRY*	PageFrameDescriptorEntries;
+	SIZE_T					NumberOfPageFrames;
+	PVOID					pRdsp;
+	DWORD					dwKernelSize;
+	LOADED_BOOT_MODULE*		MainKernelModule;
+	LIST_ENTRY				ModuleHead;
+	ULONG_PTR				MinKernelPhysAddress;
+	ULONG_PTR				MaxKernelPhysAddress;
 }BOOTDATA, *PBOOTDATA;
 
 #endif

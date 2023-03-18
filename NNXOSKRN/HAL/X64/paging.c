@@ -193,7 +193,9 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
     {
         status = MmAllocatePfn(&allocatedPfn);
         if (!NT_SUCCESS(status))
+        {
             return status;
+        }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPML4Base[pml4Index] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64)cRecursivePagingPDPsBase + 512 * pml4Index);
@@ -204,7 +206,9 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
     {
         status = MmAllocatePfn(&allocatedPfn);
         if (!NT_SUCCESS(status))
+        {
             return status;
+        }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPDPsBase[pdpIndex] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64) cRecursivePagingPDsBase + 512 * pdpIndex);
@@ -215,7 +219,9 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
     {
         status = MmAllocatePfn(&allocatedPfn);
         if (!NT_SUCCESS(status))
+        {
             return status;
+        }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPDsBase[pdIndex] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64) cRecursivePagingPTsBase + 512 * pdIndex);
@@ -279,14 +285,18 @@ VOID SetupCR4()
     __writecr4(CR4);
 }
 
-VOID EnableWriteProtect()
+VOID 
+NTAPI
+PagingEnableSystemWriteProtection(VOID)
 {
     ULONG64 CR0 = __readcr0();
     CR0 |= 65536;
     __writecr0(CR0);
 }
 
-VOID DisableWriteProtect()
+VOID 
+NTAPI
+PagingDisableSystemWriteProtection(VOID)
 {
     ULONG64 CR0 = __readcr0();
     CR0 &= (~65536);
@@ -295,7 +305,7 @@ VOID DisableWriteProtect()
 
 VOID SetupCR0()
 {
-    EnableWriteProtect();
+    PagingEnableSystemWriteProtection();
 }
 
 ULONG_PTR PhysicalAddressFunctionAllocPages(ULONG_PTR irrelevant, ULONG_PTR relativeIrrelevant)
@@ -382,6 +392,8 @@ NTSTATUS InternalPagingAllocatePagingStructures(
     return STATUS_SUCCESS;
 }
 
+/* FIXME: This way of mapping kernel is ridiculous.
+ * Create some way of mapping pages in pre-paging-enabled enviroment. */
 NTSTATUS PagingInit()
 {
     ULONG_PTR *pml4, rsp;
@@ -402,7 +414,7 @@ NTSTATUS PagingInit()
     pml4 = (UINT64*)physAddr;
     MemSet(pml4, 0, PAGE_SIZE_SMALL);
 
-    /* for loader-temporary kernel */
+    /* For loader-temporary kernel */
     InternalPagingAllocatePagingStructures(
         pml4, 
         0, 
@@ -412,13 +424,27 @@ NTSTATUS PagingInit()
         PhysicalAddressFunctionIdentify, 
         0);
 
-    /* for stack */
-    InternalPagingAllocatePagingStructures(pml4, 0, 0, rsp / PAGE_SIZE_SMALL / 512 - 2, 3, PhysicalAddressFunctionIdentify, 0);
+    /* For stack */
+    InternalPagingAllocatePagingStructures(
+        pml4,
+        0,
+        0,
+        rsp / PAGE_SIZE_SMALL / 512 - 2,
+        3,
+        PhysicalAddressFunctionIdentify, 
+        0);
 
-    /* for main kernel */
-    InternalPagingAllocatePagingStructures(pml4, KERNEL_DESIRED_PML4_ENTRY, 0, 0, pageTableKernelReserve, PhysicalAddressFunctionKernel, PAGE_GLOBAL);
+    /* For main kernel */
+    InternalPagingAllocatePagingStructures(
+        pml4, 
+        KERNEL_DESIRED_PML4_ENTRY,
+        0, 
+        0,
+        pageTableKernelReserve, 
+        PhysicalAddressFunctionKernel, 
+        PAGE_GLOBAL);
 
-    /* for physical memory map */
+    /* For physical memory map */
     InternalPagingAllocatePagingStructures(
         pml4, 
         KERNEL_DESIRED_PML4_ENTRY, 
@@ -426,8 +452,7 @@ NTSTATUS PagingInit()
         pageTableKernelReserve,
         (NumberOfPfnEntries * sizeof(MMPFN_ENTRY)) / (PAGE_SIZE_SMALL * 512) + 2, 
         PhysicalAddressFunctionGlobalMemoryMap,
-        0
-    );
+        0);
 
     MiFlagPfnsForRemap();
 
@@ -436,7 +461,7 @@ NTSTATUS PagingInit()
             (KERNEL_DESIRED_PML4_ENTRY * 512 * 512 + pageTableKernelReserve) * 512 * PAGE_SIZE
         ) | ((ULONG_PTR)PfnEntries) & PAGE_FLAGS_MASK);
 
-    /* for recursive paging */
+    /* For recursive paging */
     pml4[PML4EntryForRecursivePaging] = ((UINT64) pml4) | (PAGE_WRITE | PAGE_PRESENT);
     KernelPml4Entry = pml4[KERNEL_DESIRED_PML4_ENTRY];
 
