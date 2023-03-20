@@ -201,7 +201,6 @@ int AddDrive(IDE_DRIVE* drive)
 	return -1;
 }
 
-//some debug functionality
 void PciIdeEnumerate()
 {
 	for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS * 4; i++)
@@ -226,5 +225,4 @@ void PciIdeEnumerate()
 	}
 
 	DiskCheck();
-
 }

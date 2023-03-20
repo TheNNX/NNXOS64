@@ -116,7 +116,17 @@ typedef VOID *PVOID, *LPVOID;
 #endif
 #endif
 
+#ifdef NNX_KERNEL
 #define NTSYSAPI __declspec(dllexport) 
+#else
+#define NTSYSAPI __declspec(dllimport)
+#endif
+
+#ifdef NNX_HAL
+#define NTHALAPI __declspec(dllexport) 
+#else
+#define NTHALAPI __declspec(dllimport)
+#endif
 
 #ifdef _M_X86
 #define NTAPI __cdecl

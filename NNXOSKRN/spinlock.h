@@ -13,6 +13,21 @@ extern "C" {
 	typedef ULONG_PTR volatile KSPIN_LOCK, * volatile PKSPIN_LOCK;
 #pragma warning(pop)
 
+#if defined(NNX_HAL) || defined(NNX_KERNEL)
+	NTHALAPI
+	VOID
+	NTAPI
+	KiAcquireSpinLock(
+		PKSPIN_LOCK SpinLock);
+
+	NTHALAPI
+	VOID
+	NTAPI
+	KiReleaseSpinLock(
+		PKSPIN_LOCK SpinLock);
+#endif
+
+#ifndef NNX_HAL
 	NTSYSAPI
 	KIRQL 
 	FASTCALL 
@@ -57,17 +72,6 @@ extern "C" {
 	NTAPI 
 	KeReleaseSpinLockFromDpcLevel(
 		PKSPIN_LOCK Lock);
-
-#ifdef NNX_KERNEL
-	VOID
-	NTAPI
-	KiAcquireSpinLock(
-		PKSPIN_LOCK SpinLock);
-
-	VOID
-	NTAPI
-	KiReleaseSpinLock(
-		PKSPIN_LOCK SpinLock);
 #endif
 
 #ifdef __cplusplus

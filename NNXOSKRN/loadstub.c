@@ -70,15 +70,14 @@ VOID KeLoadStub(
     /* Calculate the new address of our kernel entrypoint. */
     mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule->ImageBase;
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
-    
+
     /* Map kernel pages. */
     NTSTATUS status = PagingInit();
     PagingMapAndInitFramebuffer();
 	bootdata->MainKernelModule->SectionHeaders = (PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
 		(ULONG_PTR)bootdata->MainKernelModule->SectionHeaders,
 		bootdata->MainKernelModule->NumberOfSectionHeaders * sizeof(IMAGE_SECTION_HEADER), 
-		PAGE_WRITE | PAGE_PRESENT
-	);
+		PAGE_WRITE | PAGE_PRESENT);
 
 	/* Remap the stack. */
 	currentStack = GetStack();
@@ -167,19 +166,28 @@ BindRelocatedImports(
 			(IMAGE_ILT_ENTRY64*)(importDesc->FirstThunkRVA +
 								 Module->ImageBase);
 
+		/* OriginalFirstThunk is repurposed in NNXOS bootmodule loading.
+		 * See bootloader/boot.c for more details. */
+		IMAGE_ILT_ENTRY64* CurrentExportPreload =
+			(IMAGE_ILT_ENTRY64*)(importDesc->OriginalFirstThunk +
+							     Module->ImageBase);
+
 		while (CurrentImport->AsNumber)
 		{
-			PBOOT_MODULE_EXPORT Export = *(PBOOT_MODULE_EXPORT*)CurrentImport;
-			// PrintT("Import current %X\n", );
+			PBOOT_MODULE_EXPORT Export = 
+				*(PBOOT_MODULE_EXPORT*)CurrentExportPreload;
+
 			PrintT(
-				"Import current import %X %X %X %X\n", 
+				"Import current %X %X %X %X\n", 
 				CurrentImport, 
 				Export->ExportAddressRva,
 				Export->ExportAddress,
 				Export);
 
 			*((PULONG_PTR)CurrentImport) = Export->ExportAddress;
+			
 			CurrentImport++;
+			CurrentExportPreload++;
 		}
 
 		PrintT("Preincrement %X\n", importDesc);
@@ -212,8 +220,6 @@ RemapModule(
 		Module->ImageBase,
 		NewBase,
 		Module->NumberOfExports);
-
-	*NextSafeBase = NewBase;
 
 	for (i = 0; i < Module->NumberOfSectionHeaders; i++)
 	{
@@ -251,8 +257,14 @@ RemapModule(
 			{
 				*NextSafeBase = currentPageAddress + PAGE_SIZE;
 			}
+
+			physAddress = 
+				Module->ImageBase +
+				current->VirtualAddressRVA + 
+				j * PAGE_SIZE;
+
 			currentMapping = PagingGetCurrentMapping(currentPageAddress);
-			physAddress = currentMapping & PAGE_ADDRESS_MASK;
+			physAddress |= currentMapping & PAGE_FLAGS_MASK;
 	
 			MmMarkPfnAsUsed(PFN_FROM_PA(physAddress));
 

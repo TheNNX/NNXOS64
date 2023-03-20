@@ -151,13 +151,22 @@ HandleImportDirectory(
 
     while (Current->NameRVA != 0)
     {
-        CHAR* ModuleName = 
-            (CHAR*)((ULONG_PTR)Current->NameRVA + (ULONG_PTR)ImageBase);
+        CHAR* ModuleName = (CHAR*)(Current->NameRVA + ImageBase);
         Print(L"%a:\n", ModuleName);
         
         IMAGE_ILT_ENTRY64* CurrentImport = 
-            (IMAGE_ILT_ENTRY64*)((ULONG_PTR)Current->FirstThunkRVA + 
-                                 (ULONG_PTR)ImageBase);
+            (IMAGE_ILT_ENTRY64*)(Current->FirstThunkRVA + 
+                                 ImageBase);
+
+        /* OriginalFirstThunk and its thunk chain is repurposed in 
+         * NNXOS bootmodule loading. Is is used to store pointers to
+         * entries in the module export table of the module that exports
+         * symbol referenced by given trunk. It is "pre-bound" in here.
+         * Later, the kernel can use theese pointers to relocate the already
+         * bound import entries. */
+        IMAGE_ILT_ENTRY64* CurrentExportPreload =
+            (IMAGE_ILT_ENTRY64*)(Current->OriginalFirstThunk +
+                                 ImageBase);
 
         LOADED_BOOT_MODULE* Dependency = TryFindLoadedModule(ModuleName);
 
@@ -215,10 +224,17 @@ HandleImportDirectory(
             }
             if (Export != NULL)
             {
-                Print(L"Export bound %X\n", Export->ExportAddress);
-                *((PULONG_PTR)CurrentImport) = (ULONG_PTR)Export;
+                Print(
+                    L"Export bound Address: %X Preload: %X\n", 
+                    Export->ExportAddress,
+                    Export);
+
+                *((PULONG_PTR)CurrentExportPreload) = (ULONG_PTR)Export;
+                *((PULONG_PTR)CurrentImport) = (ULONG_PTR)Export->ExportAddress;
             }
+
             CurrentImport++;
+            CurrentExportPreload++;
         }
 
         Current++;

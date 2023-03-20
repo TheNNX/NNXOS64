@@ -44,7 +44,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
@@ -52,7 +52,7 @@
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSLDR;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />

@@ -97,10 +97,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="haltest.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="hal.c" />
+    <ClCompile Include="spinlock.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -25,14 +25,14 @@ MmReinitPhysAllocator(
 {
     PFN_NUMBER pfnIndex;
 
-    /* initialze the list heads*/
+    /* Initialze the list heads. */
     InitializeListHead(&WorkingsetList.PfnListHead);
     InitializeListHead(&FreeList.PfnListHead);
 
     FreeList.NumberOfPfns = numberOfPfnEntries;
     WorkingsetList.NumberOfPfns = 0;
 
-    /* intialize the PFN entries */
+    /* Intialize the PFN entries. */
     for (pfnIndex = 0; pfnIndex < numberOfPfnEntries; pfnIndex++)
     {   
         PMMPFN_LIST selectedList;

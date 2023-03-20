@@ -18,7 +18,6 @@
 #include <HAL/X64/cmos.h>
 #include <HAL/rtc.h>
 #include <HAL/syscall.h>
-#include <haltest.h>
 
 extern "C"
 {
@@ -106,7 +105,6 @@ extern "C"
 		DrawMap();
 		VfsInit();
 
-		PrintT("HalInit: %X\n", HalInit);
 		PciScan();
 
 		ACPI_RDSP* pRdsp = (ACPI_RDSP*) 
