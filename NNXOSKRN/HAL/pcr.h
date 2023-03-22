@@ -55,9 +55,6 @@ extern "C"
 #error "Architecture unsupported"
 #endif
 
-	PKPCR KeGetPcr();
-	VOID HalpSetupPcrForCurrentCpu(UCHAR id);
-
 	typedef struct _KPRCB
 	{
 		ULONG MxCsr;
@@ -73,6 +70,18 @@ extern "C"
 		ULONG_PTR Reserved;
 		KSPIN_LOCK Lock;
 	}KPRCB, *PKPRCB, *LPKRCB;
+
+	typedef struct _KARCH_CORE_DATA
+	{
+		KGDTENTRY64 GdtEntires[16];
+		KIDTENTRY64 IdtEntries[256];
+		KIDTR64		Idtr;
+		KGDTR64		Gdtr;
+		KTSS		Tss;
+	}KARCH_CORE_DATA, *PKARCH_CORE_DATA;
+
+	PKPCR KeGetPcr();
+	VOID HalpSetupPcrForCurrentCpu(UCHAR id);
 
 #ifdef __cplusplus
 }

@@ -29,6 +29,34 @@ KIRQL
 KiApplyIrql(
     KIRQL irqls);
 
+static
+inline
+VOID
+InitializeInterrupt(
+    PKINTERRUPT pInterrupt,
+    UCHAR Vector,
+    PVOID Handler,
+    ULONG CpuNumber,
+    KIRQL Irql,
+    KSERVICE_ROUTINE Routine)
+{
+    pInterrupt->Vector = Vector;
+
+    HalpInitInterruptHandlerStub(pInterrupt, (ULONG_PTR)Handler);
+
+    pInterrupt->CpuNumber = CpuNumber;
+    pInterrupt->InterruptIrql = Irql;
+    pInterrupt->Trap = FALSE;
+    pInterrupt->pfnFullCtxRoutine = NULL;
+    pInterrupt->pfnServiceRoutine = Routine;
+    pInterrupt->pfnGetRequiresFullCtx = NULL;
+    pInterrupt->SendEOI = TRUE;
+    pInterrupt->pfnSetMask = NULL;
+    /* FIXME */
+    pInterrupt->IoApicVector = Vector;
+}
+
+
 VOID
 DefExceptionHandler(
     UINT64 n, 
@@ -42,9 +70,6 @@ DefExceptionHandler(
         errcode, 
         rip);
 }
-
-VOID
-HalpDefInterruptHandler();
 
 VOID
 (NTAPI*gExceptionHandlerPtr) (
@@ -65,95 +90,14 @@ ExceptionHandler(
     KeStop();
 }
 
-static
-inline
-PVOID
-HalpGetHandlerFromIdtEntry(
-    KIDTENTRY64 *Entry)
-{
-    ULONG_PTR Handler = 0;
-    Handler |= Entry->Offset0to15;
-    Handler |= (ULONG_PTR)Entry->Offset16to31 << 16;
-    Handler |= (ULONG_PTR)Entry->Offset32to63 << 32;
-
-    return (PVOID)Handler;
-}
-
-
-KIDTENTRY64
-NTAPI
-HalpSetIdtEntry(
-    KIDTENTRY64* Idt, 
-    UINT64 EntryNo, 
-    PVOID Handler, 
-    BOOL Usermode, 
-    BOOL Trap)
-{
-    KIDTENTRY64 oldEntry = Idt[EntryNo];
-
-    Idt[EntryNo].Selector = 0x8;
-    Idt[EntryNo].Zero = 0;
-    Idt[EntryNo].Offset0to15 = 
-        (UINT16) (((ULONG_PTR) Handler) & UINT16_MAX);
-    Idt[EntryNo].Offset16to31 = 
-        (UINT16) ((((ULONG_PTR) Handler) >> 16) & UINT16_MAX);
-    Idt[EntryNo].Offset32to63 = 
-        (UINT32) ((((ULONG_PTR) Handler) >> 32) & UINT32_MAX);
-    Idt[EntryNo].Type = 0x8E | (Usermode ? (0x60) : 0x00) | (Trap ? 0 : 1);
-    Idt[EntryNo].Ist = 0;
-
-    return oldEntry;
-}
-
-VOID 
-HalpSetInterruptIst(
-    KIDTENTRY64* Idt, 
-    UINT64 EntryNo, 
-    UCHAR Ist)
-{
-    Idt[EntryNo].Ist = Ist;
-}
-
-KIDTENTRY64* 
-HalpAllocateAndInitializeIdt()
-{
-    DisableInterrupts();
-    KIDTR64* idtr = (KIDTR64*) 
-        PagingAllocatePageBlockFromRange(
-            2, 
-            PAGING_KERNEL_SPACE, 
-            PAGING_KERNEL_SPACE_END);
-
-    PKIDTENTRY64 idt = (PKIDTENTRY64)((ULONG_PTR) idtr + sizeof(KIDTR64));
-
-    idtr->Size = sizeof(KIDTENTRY64) * 256 - 1;
-    idtr->Base = idt;
-
-    for (int a = 0; a < 256; a++)
-    {
-        KIDTENTRY64 result;
-        VOID(*handler)();
-        
-        handler = HalpDefInterruptHandler;
-        result = HalpSetIdtEntry(idt, a, handler, FALSE, FALSE);
-        ASSERT(result.Offset0to15 == 0 && 
-               result.Offset16to31 == 0 && 
-               result.Offset32to63 == 0);
-    }
-
-    HalpLoadIdt(idtr);
-
-    return idt;
-}
-
 /* TODO: Create some sort of a KiDeleteInterrupt function. */
-NTSTATUS 
+NTSTATUS
 NTAPI
 KiCreateInterrupt(
     PKINTERRUPT* ppInterrupt)
 {
     PKINTERRUPT Interrupt = ExAllocatePool(NonPagedPool, sizeof(*Interrupt));
-    
+
     if (Interrupt == NULL)
     {
         return STATUS_NO_MEMORY;
@@ -166,92 +110,6 @@ KiCreateInterrupt(
     return STATUS_SUCCESS;
 }
 
-VOID
-NTAPI
-HalpInitInterruptHandlerStub(
-    PKINTERRUPT pInterrupt,
-    ULONG_PTR ProperHandler)
-{
-    SIZE_T idx = 0;
-
-    /* push rax */
-    pInterrupt->Handler[idx++] = 0x50;
-    /* mov rax, ProperHandler */
-    pInterrupt->Handler[idx++] = 0x48;
-    pInterrupt->Handler[idx++] = 0xB8;
-    *((ULONG_PTR*)&pInterrupt->Handler[idx]) = ProperHandler;
-    idx += sizeof(ULONG_PTR);
-    /* push rax */
-    pInterrupt->Handler[idx++] = 0x50;
-    /* mov rax, pInterrupt */
-    pInterrupt->Handler[idx++] = 0x48;
-    pInterrupt->Handler[idx++] = 0xB8;
-    *((PKINTERRUPT*)&pInterrupt->Handler[idx]) = pInterrupt;
-    idx += sizeof(ULONG_PTR);
-    /* ret */
-    pInterrupt->Handler[idx++] = 0xC3;
-}
-
-static
-inline
-VOID
-InitializeInterrupt(
-    PKINTERRUPT pInterrupt,
-    UCHAR Vector,
-    PVOID Handler,
-    ULONG CpuNumber,
-    KIRQL Irql,
-    KSERVICE_ROUTINE Routine)
-{
-    pInterrupt->Vector = Vector;
-    
-    HalpInitInterruptHandlerStub(pInterrupt, (ULONG_PTR)Handler);
-
-    pInterrupt->CpuNumber = CpuNumber;
-    pInterrupt->InterruptIrql = Irql;
-    pInterrupt->Trap = FALSE;
-    pInterrupt->pfnFullCtxRoutine = NULL;
-    pInterrupt->pfnServiceRoutine = Routine;
-    pInterrupt->pfnGetRequiresFullCtx = NULL;
-    pInterrupt->SendEOI = TRUE;
-    pInterrupt->pfnSetMask = NULL;
-    /* FIXME */
-    pInterrupt->IoApicVector = Vector;
-}
-
-NTSTATUS
-NTAPI
-IoCreateInterrupt(
-    PKINTERRUPT* pOutInterrupt,
-    UCHAR Vector,
-    PVOID Handler,
-    ULONG CpuNumber,
-    KIRQL Irql,
-    BOOL  Trap,
-    KSERVICE_ROUTINE Routine)
-{
-    PKINTERRUPT interrupt;
-    NTSTATUS status;
-    status = KiCreateInterrupt(&interrupt);
-    if (!NT_SUCCESS(status))
-    {
-        return status;
-    }
-
-    InitializeInterrupt(
-        interrupt,
-        Vector,
-        Handler,
-        CpuNumber,
-        Irql,
-        Routine);
-
-    interrupt->Trap = Trap;
-    *pOutInterrupt = interrupt;
-
-    return STATUS_SUCCESS;
-}
-
 static
 BOOLEAN
 GetRequiresFullCtxAlways(KINTERRUPT* interrupt)
@@ -259,8 +117,8 @@ GetRequiresFullCtxAlways(KINTERRUPT* interrupt)
     return TRUE;
 }
 
-NTSTATUS 
-NTAPI 
+NTSTATUS
+NTAPI
 KiInitializeInterrupts(VOID)
 {
     ULONG i;
@@ -268,8 +126,9 @@ KiInitializeInterrupts(VOID)
     PKINTERRUPT clockInterrupt, stopInterrupt;
     NTSTATUS status;
 
-    /* TODO: fix all of these handlers, so they can use the new 
+    /* TODO: fix all of these handlers, so they can use the new
      * handling mode. */
+    /* TODO: This should be moved to HAL maybe. */
     void (*exceptionHandlers[16])() = {
         Exception0,
         Exception1,
@@ -329,12 +188,12 @@ KiInitializeInterrupts(VOID)
     KeConnectInterrupt(clockInterrupt);
 
     status = IoCreateInterrupt(
-        &stopInterrupt, 
-        STOP_IPI_VECTOR, 
-        KeStop, 
-        KeGetCurrentProcessorId(), 
-        IPI_LEVEL, 
-        FALSE, 
+        &stopInterrupt,
+        STOP_IPI_VECTOR,
+        KeStop,
+        KeGetCurrentProcessorId(),
+        IPI_LEVEL,
+        FALSE,
         KeStopIsr);
 
     if (!NT_SUCCESS(status))
@@ -350,30 +209,38 @@ KiInitializeInterrupts(VOID)
     return STATUS_SUCCESS;
 }
 
-VOID
-NTAPI
-HalMockupInterrupt(PKINTERRUPT Interrupt)
-{
-    ULONG_PTR tpr = HalGetTpr();
 
-    /* Create a copy of the interrupt object, so the EOI is not sent */
-    KINTERRUPT tmpCopy;
-    tmpCopy = *Interrupt;
-    tmpCopy.SendEOI = FALSE;
-    
-    if (tpr < Interrupt->InterruptIrql)
+NTSTATUS
+NTAPI
+IoCreateInterrupt(
+    PKINTERRUPT* pOutInterrupt,
+    UCHAR Vector,
+    PVOID Handler,
+    ULONG CpuNumber,
+    KIRQL Irql,
+    BOOL  Trap,
+    KSERVICE_ROUTINE Routine)
+{
+    PKINTERRUPT interrupt;
+    NTSTATUS status;
+    status = KiCreateInterrupt(&interrupt);
+    if (!NT_SUCCESS(status))
     {
-        HalSetTpr(Interrupt->InterruptIrql);
+        return status;
     }
-    HalpMockupInterruptHandler((ULONG_PTR)tmpCopy.Handler);
-    HalSetTpr(tpr);
-}
 
-VOID
-NTAPI
-KeForceClockTick()
-{
-    HalMockupInterrupt(KeGetPcr()->ClockInterrupt);
+    InitializeInterrupt(
+        interrupt,
+        Vector,
+        Handler,
+        CpuNumber,
+        Irql,
+        Routine);
+
+    interrupt->Trap = Trap;
+    *pOutInterrupt = interrupt;
+
+    return STATUS_SUCCESS;
 }
 
 /**
@@ -382,7 +249,7 @@ KeForceClockTick()
  * https://github.com/reactos/reactos/blob/master/ntoskrnl/ke/amd64/interrupt.c
  */
 BOOLEAN
-NTAPI 
+NTAPI
 KeConnectInterrupt(
     PKINTERRUPT Interrupt)
 {
@@ -400,16 +267,13 @@ KeConnectInterrupt(
 
     if (Interrupt->Connected == FALSE)
     {
-        /* TODO: Interrupt->pfnServiceRoutine should be a second stage of interrupt,
-         * handling. It should be called from an universal handler managing
-         * IRQL from the KINTERRUPT structure etc. */
-        HalpSetIdtEntry(
-            pcr->Idt, 
-            Interrupt->Vector, 
-            Interrupt->Handler, 
-            FALSE, 
+        HalBindInterrupt(
+            pcr->Idt,
+            Interrupt->Vector,
+            Interrupt->Handler,
+            FALSE,
             Interrupt->Trap);
-
+            
         /* Add the interrupt to the CPU interrupt list and the interrupt map. */
         InsertTailList(&pcr->InterruptListHead, &Interrupt->CpuListEntry);
 
@@ -424,8 +288,8 @@ KeConnectInterrupt(
     return Interrupt->Connected;
 }
 
-BOOLEAN  
-NTAPI 
+BOOLEAN
+NTAPI
 KeDisconnectInterrupt(
     PKINTERRUPT Interrupt)
 {
@@ -447,7 +311,7 @@ HalHandleApc(
     {
         KeDeliverApcs(
             PsGetProcessorModeFromTrapFrame(
-                pcr->Prcb->CurrentThread->KernelStackPointer));
+            pcr->Prcb->CurrentThread->KernelStackPointer));
     }
     KiReleaseDispatcherLock(lockIrql);
 }
@@ -479,6 +343,25 @@ KiApplyInterruptIrql(
     return KiApplyIrql(Interrupt->InterruptIrql);
 }
 
+VOID
+NTAPI
+HalMockupInterrupt(PKINTERRUPT Interrupt)
+{
+    ULONG_PTR tpr = HalGetTpr();
+
+    /* Create a copy of the interrupt object, so the EOI is not sent */
+    KINTERRUPT tmpCopy;
+    tmpCopy = *Interrupt;
+    tmpCopy.SendEOI = FALSE;
+
+    if (tpr < Interrupt->InterruptIrql)
+    {
+        HalSetTpr(Interrupt->InterruptIrql);
+    }
+    HalpMockupInterruptHandler((ULONG_PTR)tmpCopy.Handler);
+    HalSetTpr(tpr);
+}
+
 BOOLEAN
 NTAPI
 HalGenericInterruptHandlerEntry(
@@ -487,7 +370,7 @@ HalGenericInterruptHandlerEntry(
     KIRQL irql;
     irql = KiAcquireDispatcherLock();
     KeGetCurrentThread()->ThreadIrql = irql;
-    /* If this interrupt has no function defined for 
+    /* If this interrupt has no function defined for
      * requesting full thread context, or such function returns FALSE. */
     if (Interrupt->pfnGetRequiresFullCtx == NULL ||
         Interrupt->pfnGetRequiresFullCtx(Interrupt) == FALSE)
@@ -523,7 +406,7 @@ HalFullCtxInterruptHandlerEntry(
 {
     ULONG_PTR result;
     KIRQL irql;
-    
+
     irql = KfRaiseIrql(Interrupt->InterruptIrql);
     if (Interrupt->SendEOI != 0)
     {
@@ -579,4 +462,25 @@ KeSendIpi(
 
     KeReleaseSpinLockFromDpcLevel(&IpiLock);
     KeLowerIrql(irql);
+}
+
+VOID
+NTAPI
+KeForceClockTick()
+{
+    HalMockupInterrupt(KeGetPcr()->ClockInterrupt);
+}
+
+static
+inline
+PVOID
+HalpGetHandlerFromIdtEntry(
+    KIDTENTRY64 *Entry)
+{
+    ULONG_PTR Handler = 0;
+    Handler |= Entry->Offset0to15;
+    Handler |= (ULONG_PTR)Entry->Offset16to31 << 16;
+    Handler |= (ULONG_PTR)Entry->Offset32to63 << 32;
+
+    return (PVOID)Handler;
 }

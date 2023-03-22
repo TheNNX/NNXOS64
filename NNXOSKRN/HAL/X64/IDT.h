@@ -15,7 +15,7 @@ extern "C"
 	{
 		UINT16 Size;
 		struct _KIDTENTRY64* Base;
-	}KIDTR64;
+	}KIDTR64, *PKIDTR64;
 
 	typedef struct _KIDTENTRY64
 	{
@@ -28,9 +28,6 @@ extern "C"
 		UINT32 Zero;
 	}KIDTENTRY64, *PKIDTENTRY64, *LPKIDTENTRY64;
 #pragma pack(pop)
-
-	void HalpLoadIdt(KIDTR64*);
-	void HalpStoreIdt(KIDTR64*);
 
 	void Exception0();
 	void Exception1();
@@ -55,18 +52,24 @@ extern "C"
 	void ExceptionReserved();
 	void ExceptionHandler(UINT64 number, UINT64 errorCode, UINT64 errorCode2, UINT64 rip);
 
-	PKIDTENTRY64 
-		HalpAllocateAndInitializeIdt();
+	NTHALAPI
+	VOID
+	NTAPI
+	HalpInitializeIdt(
+		PKIDTENTRY64 Idt,
+		PKIDTR64 Idtr);
 	
+	NTHALAPI
 	KIDTENTRY64
 	NTAPI 
-	HalpSetIdtEntry(
+	HalBindInterrupt(
 		KIDTENTRY64* idt, 
 		UINT64 entryNo, 
 		PVOID handler, 
 		BOOL userCallable, 
 		BOOL trap);
 
+	NTHALAPI
 	VOID
 	NTAPI
 	HalpInitInterruptHandlerStub(

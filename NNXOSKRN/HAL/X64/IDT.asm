@@ -214,17 +214,6 @@ int 3
 int 3
 int 3
 
-func HalpLoadIdt
-	lidt [rcx]
-	ret
-
-func HalpDefInterruptHandler
-	iretq
-
-func HalpStoreIdt
-	sidt [rcx]
-	ret
-
 func KiEnableInterrupts
 func EnableInterrupts
 	sti

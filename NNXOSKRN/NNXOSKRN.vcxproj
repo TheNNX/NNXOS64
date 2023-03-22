@@ -211,8 +211,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
     <ClCompile Include="HAL\X64\cmos.c" />
-    <ClCompile Include="HAL\X64\gdt.c" />
-    <ClCompile Include="HAL\X64\IDT.c" />
+    <ClCompile Include="HAL\X64\interrupt.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
     <ClCompile Include="irql.c" />
     <ClCompile Include="HAL\X64\MP.cpp" />
@@ -324,23 +323,12 @@ $(SolutionDir)genverh.bat</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\X64\pcr.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="HAL\X64\thread.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="HAL\X64\GDT.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="HAL\X64\IDT.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\PIC.asm">
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\PIT.asm">

@@ -9,8 +9,6 @@ extern "C"
 {
 #endif
 
-#ifdef NNX_KERNEL
-
     typedef BOOLEAN(NTAPI*KSERVICE_ROUTINE)
         (struct _KINTERRUPT* Interrupt, PVOID ServiceCtx);
     typedef KSERVICE_ROUTINE *PKSERVICE_ROUTINE;
@@ -41,6 +39,11 @@ extern "C"
         
     } KINTERRUPT, *PKINTERRUPT;
 
+    NTHALAPI
+    VOID
+    HalpDefInterruptHandler();
+
+#ifdef NNX_KERNEL
     BOOLEAN
     NTAPI 
     KeConnectInterrupt(

@@ -55,6 +55,8 @@ extern "C"
 			errcode2);
 	}
 
+	__declspec(dllimport) const char* HalTest();
+
 	__declspec(dllexport) 
 	UINT64 
 	KeEntry()

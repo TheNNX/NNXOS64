@@ -1,4 +1,4 @@
-#include "GDT.h"
+#include <HAL/X64/GDT.h>
 #include <HAL/paging.h>
 
 /* Declarations */
@@ -9,60 +9,52 @@ static USHORT HalpSetGdtEntry(
 	UINT32 base,
 	UINT32 limit,
 	UINT8 flags,
-	UINT8 accessByte
-);
+	UINT8 accessByte);
 
 static USHORT HalpSetGdtTssDescriptorEntry(
 	LPKGDTENTRY64 gdt,
 	USHORT entryIndex,
 	PVOID tss,
-	SIZE_T tssSize
-);
-static VOID HalpInitializeGdt(KGDTR64* gdtr);
+	SIZE_T tssSize);
 
 /* Definitions */
 
-PKGDTENTRY64 HalpAllocateAndInitializeGdt()
-{
-	KGDTR64* gdtr = (KGDTR64*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	KGDTENTRY64* gdt = (KGDTENTRY64*)((ULONG_PTR)gdtr + sizeof(KGDTR64));
-
-	gdtr->Size = sizeof(KGDTENTRY64) * 7 - 1;
-	gdtr->Base = gdt;
-
-	HalpInitializeGdt(gdtr);
-	return gdt;
-}
-
-static VOID HalpInitializeGdt(KGDTR64* gdtr)
+VOID
+NTAPI
+HalpInitializeGdt(
+	PKGDTENTRY64 Gdt, 
+	KGDTR64* Gdtr,
+	PKTSS Tss)
 {
 	USHORT null, code0, data0, code3, data3, tr;
-	PKGDTENTRY64 gdt = (PKGDTENTRY64)gdtr->Base;
-	KTSS* tss = (KTSS*)PagingAllocatePageFromRange(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END);
-	tss->IopbBase = sizeof(*tss);
+	Gdtr->Size = sizeof(KGDTENTRY64) * 7 - 1;
+	Gdtr->Base = Gdt;
+
+	Tss->IopbBase = sizeof(*Tss);
 
 	/* For magic numbers meaning, 
 	 * see section 3.4.5 of Intel Software Developer’s Manual Volume 3 
 	 * and https://wiki.osdev.org/Global_Descriptor_Table */
-	null = HalpSetGdtEntry(gdt, 0, 0x00000000UL, 0x00000UL, 0x0, 0x00);
-	code0 = HalpSetGdtEntry(gdt, 1, 0x00000000UL, 0xFFFFFUL, 0xA, 0x9A);
-	data0 = HalpSetGdtEntry(gdt, 2, 0x00000000UL, 0xFFFFFUL, 0xC, 0x92);
-	data3 = HalpSetGdtEntry(gdt, 3, 0x00000000UL, 0xFFFFFUL, 0xC, 0xF2);
-	code3 = HalpSetGdtEntry(gdt, 4, 0x00000000UL, 0xFFFFFUL, 0xA, 0xFA);
-	tr = HalpSetGdtTssDescriptorEntry(gdt, 5, tss, sizeof(*tss));
+	null = HalpSetGdtEntry(Gdt, 0, 0x00000000UL, 0x00000UL, 0x0, 0x00);
+	code0 = HalpSetGdtEntry(Gdt, 1, 0x00000000UL, 0xFFFFFUL, 0xA, 0x9A);
+	data0 = HalpSetGdtEntry(Gdt, 2, 0x00000000UL, 0xFFFFFUL, 0xC, 0x92);
+	data3 = HalpSetGdtEntry(Gdt, 3, 0x00000000UL, 0xFFFFFUL, 0xC, 0xF2);
+	code3 = HalpSetGdtEntry(Gdt, 4, 0x00000000UL, 0xFFFFFUL, 0xA, 0xFA);
+	tr = HalpSetGdtTssDescriptorEntry(Gdt, 5, Tss, sizeof(*Tss));
 
-	HalpLoadGdt(gdtr);
+	HalpLoadGdt(Gdtr);
 	HalpLoadTss(tr);
 }
 
-static USHORT HalpSetGdtEntry(
+static 
+USHORT 
+HalpSetGdtEntry(
 	LPKGDTENTRY64 gdt,
 	USHORT entryIndex,
 	UINT32 base, 
 	UINT32 limit,
 	UINT8 flags, 
-	UINT8 accessByte
-)
+	UINT8 accessByte)
 {
 	gdt[entryIndex].Base0To15 = base & UINT16_MAX;
 	gdt[entryIndex].Base16To23 = (base & 0xFF0000) >> 16;
@@ -75,7 +67,9 @@ static USHORT HalpSetGdtEntry(
 	return sizeof(KGDTENTRY64) * entryIndex;
 }
 
-static USHORT HalpSetGdtTssDescriptorEntry(
+static 
+USHORT 
+HalpSetGdtTssDescriptorEntry(
 	LPKGDTENTRY64 gdt, 
 	USHORT entryIndex, 
 	PVOID tss,
@@ -88,12 +82,21 @@ static USHORT HalpSetGdtTssDescriptorEntry(
 	return sizeof(KGDTENTRY64) * entryIndex;
 }
 
-ULONG HalpGetGdtBase(KGDTENTRY64 entry)
+ULONG 
+NTAPI
+HalpGetGdtBase(
+	KGDTENTRY64 entry)
 {
-	return entry.Base0To15 | (entry.Base16To23 << 16UL) | (entry.Base24To31 << 24UL);
+	return entry.Base0To15 | 
+			(entry.Base16To23 << 16UL) |
+			(entry.Base24To31 << 24UL);
 }
 
-PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
+PKTSS 
+NTAPI
+HalpGetTssBase(
+	KGDTENTRY64 tssEntryLow, 
+	KGDTENTRY64 tssEntryHigh)
 {
 	return (PKTSS)(HalpGetGdtBase(tssEntryLow) | ((*((ULONG_PTR*)&tssEntryHigh)) << 32UL));
 }
@@ -101,12 +104,13 @@ PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh)
 /**
  * @brief Finds a GDT entry matching the conditions and returns its selector.
  */
-USHORT HalpGdtFindEntry(
+USHORT 
+NTAPI
+HalpGdtFindEntry(
 	LPKGDTENTRY64 gdt,
 	USHORT numberOfEntries,
 	BOOL code, 
-	BOOL user
-)
+	BOOL user)
 {
 	USHORT i;
 

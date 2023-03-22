@@ -5,19 +5,12 @@
 #include <rtl/rtl.h>
 #include <ntdebug.h>
 
-PKPCR HalGetPcr();
+#define HalGetPcr() ((PKPCR)__readgsqword(0x18))
 VOID HalSetPcr(PKPCR);
-
-KSPIN_LOCK PcrCreationLock = 0;
-
 VOID HalpTaskSwitchHandler();
+static KSPIN_LOCK PcrCreationLock = 0;
 
-/**
-* @brief For all the code that for example has to lock after initialization
-* if not for this dummy PCR, access to the IRQL would page fault.
-*
-* The correct one is set before multiprocessing init.
-*/
+
 static KPCR dummyPcr;
 static KPRCB dummyPrcb;
 
@@ -40,22 +33,33 @@ VOID HalpSetDummyPcr()
 
 VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 {
+	PKARCH_CORE_DATA pCoreData;
 	PKPCR pcr, tempPcr;
-	PKIDTENTRY64 idt;
-	PKGDTENTRY64 gdt;
-	KiAcquireSpinLock(&PcrCreationLock);
-	
-    DisableInterrupts();
-	idt = HalpAllocateAndInitializeIdt();
 
-	/* loading gdt invalidates GS, it's necessary to restore temp PCR */
-	/* otherwise, all subsequent IRQL changes (and because of that, spinlock uses) would fail */
+	KiAcquireSpinLock(&PcrCreationLock);
+    DisableInterrupts();
+
+	pCoreData = (PKARCH_CORE_DATA)PagingAllocatePageBlockFromRange(
+		(sizeof(*pCoreData) + PAGE_SIZE - 1) / PAGE_SIZE,
+		PAGING_KERNEL_SPACE,
+		PAGING_KERNEL_SPACE_END);
+
+	HalpInitializeIdt(
+		pCoreData->IdtEntries,
+		&pCoreData->Idtr);
+
+	/* Loading gdt invalidates GS, it's necessary to restore temp PCR
+	 * otherwise, all subsequent IRQL changes (and because of that, 
+	 * spinlock uses) would fail. */
 	tempPcr = KeGetPcr();
 
-	gdt = HalpAllocateAndInitializeGdt();
+	HalpInitializeGdt(
+		pCoreData->GdtEntires, 
+		&pCoreData->Gdtr, 
+		&pCoreData->Tss);
 
 	HalSetPcr(tempPcr);
-	pcr = HalCreatePcr(gdt, idt, id);
+	pcr = HalCreatePcr(pCoreData->GdtEntires, pCoreData->IdtEntries, id);
 	HalInitializeSystemCallForCurrentCore();
     KfRaiseIrql(DISPATCH_LEVEL);
 	KiReleaseSpinLock(&PcrCreationLock);

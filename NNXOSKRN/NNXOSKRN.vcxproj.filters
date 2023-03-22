@@ -141,7 +141,7 @@
     <ClCompile Include="HAL\X64\cpu.c">
       <Filter>Source Files\HAL\X64</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\IDT.c">
+    <ClCompile Include="HAL\X64\interrupt.c">
       <Filter>Source Files\HAL</Filter>
     </ClCompile>
     <ClCompile Include="irql.c">
@@ -205,9 +205,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HAL\X64\syscall.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\X64\gdt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dispatcher\dispatcher.c">
@@ -385,20 +382,11 @@
     <CustomBuild Include="HAL\X64\ApEntry.asm">
       <Filter>Source Files\HAL\MP</Filter>
     </CustomBuild>
-    <CustomBuild Include="HAL\X64\GDT.asm">
-      <Filter>Source Files\HAL</Filter>
-    </CustomBuild>
     <CustomBuild Include="HAL\X64\IDT.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\memory.asm">
       <Filter>Source Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\pcr.asm">
-      <Filter>Source Files\HAL\X64</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\PIC.asm">
-      <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\PIT.asm">
       <Filter>Source Files\HAL</Filter>

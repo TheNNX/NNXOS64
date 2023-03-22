@@ -3,5 +3,12 @@
   <ItemGroup>
     <ClCompile Include="hal.c" />
     <ClCompile Include="spinlock.c" />
+    <ClCompile Include="idt.c" />
+    <ClCompile Include="gdt.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="interrupt.asm" />
+    <CustomBuild Include="GDT.asm" />
+    <CustomBuild Include="PIC.asm" />
   </ItemGroup>
 </Project>

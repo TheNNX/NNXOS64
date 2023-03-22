@@ -42,8 +42,8 @@ extern "C" {
 		data->ApCR3 = PagingGetAddressSpace();
 		data->ApStackPointerArray = ApStackPointerArray;
 		data->ApProcessorInit = ApProcessorInit;
-		HalpStoreGdt(&data->ApGdtr);
-		HalpStoreIdt(&data->ApIdtr);
+		_sgdt(&data->ApGdtr);
+		__sidt(&data->ApIdtr);
 
 		return code;
 	}

@@ -60,18 +60,50 @@ extern "C"
 
 	typedef KGDTENTRY64 KTSSENTRY64, *PKTSSENTRY64, *LPKTSSENTRY64;
 
-	VOID HalpLoadGdt(KGDTR64*);
-	VOID HalpStoreGdt(KGDTR64*);
-	VOID HalpLoadTss(UINT64 gdtOffset);
-	PKGDTENTRY64 HalpAllocateAndInitializeGdt();
-	ULONG HalpGetGdtBase(KGDTENTRY64 entry);
-	PKTSS HalpGetTssBase(KGDTENTRY64 tssEntryLow, KGDTENTRY64 tssEntryHigh);
-	USHORT HalpGdtFindEntry(
+#ifdef NNX_HAL
+	VOID
+	NTAPI
+	HalpLoadGdt(
+		KGDTR64*);
+
+	VOID
+	NTAPI
+	HalpLoadTss(
+		UINT64 gdtOffset);
+
+	ULONG
+	NTAPI
+	HalpGetGdtBase(
+		KGDTENTRY64 entry);
+#endif
+
+#if defined(NNX_KERNEL) | defined(NNX_HAL)
+	
+	NTHALAPI
+	VOID
+	NTAPI
+	HalpInitializeGdt(
+		PKGDTENTRY64 Gdt,
+		KGDTR64* Gdtr,
+		PKTSS Tss);
+
+	NTHALAPI
+	PKTSS 
+	NTAPI
+	HalpGetTssBase(
+		KGDTENTRY64 tssEntryLow, 
+		KGDTENTRY64 tssEntryHigh);
+	
+	NTHALAPI
+	USHORT 
+	NTAPI
+	HalpGdtFindEntry(
 		LPKGDTENTRY64 gdt,
 		USHORT numberOfEntries,
 		BOOL code,
-		BOOL user
-	);
+		BOOL user);
+
+#endif
 
 #ifdef __cplusplus
 }

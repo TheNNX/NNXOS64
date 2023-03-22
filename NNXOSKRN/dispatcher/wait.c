@@ -56,8 +56,9 @@ KiHandleObjectWaitTimeout(
     }
 }
 
-/* TODO: implement timeouts */
-NTSTATUS KeWaitForMultipleObjects(
+NTSTATUS 
+NTAPI
+KeWaitForMultipleObjects(
     ULONG Count,
     PVOID *Objects,
     WAIT_TYPE WaitType,
@@ -65,8 +66,7 @@ NTSTATUS KeWaitForMultipleObjects(
     KPROCESSOR_MODE WaitMode,
     BOOLEAN Alertable,
     PLONG64 pTimeout,
-    PKWAIT_BLOCK WaitBlockArray
-)
+    PKWAIT_BLOCK WaitBlockArray)
 {
     ULONG i;
     KIRQL Irql;

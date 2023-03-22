@@ -13,8 +13,18 @@ extern "C"
 {
 #endif
 
-	VOID PicInitialize();
-	VOID PicDisableForApic();
+#if defined(NNX_KERNEL) | defined(NNX_HAL)
+	NTHALAPI
+	VOID 
+	NTAPI	
+	PicInitialize();
+
+	NTHALAPI
+	VOID 
+	NTAPI
+	PicDisableForApic();
+
+#endif
 
 #ifdef __cplusplus
 }

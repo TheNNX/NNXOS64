@@ -59,10 +59,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NNX_HAL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeLibrary />
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -72,33 +76,68 @@
       <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <BaseAddress>0xFFFFFF8000040000</BaseAddress>
     </Link>
+    <CustomBuild>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NNX_HAL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeLibrary />
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>
+      </EnableCOMDATFolding>
+      <OptimizeReferences>
+      </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <AdditionalDependencies />
       <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <BaseAddress>0xFFFFFF8000040000</BaseAddress>
     </Link>
+    <CustomBuild>
+      <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>
+      <Outputs>$(IntDir)%(Filename)_ASM.obj</Outputs>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="gdt.c" />
+    <ClCompile Include="idt.c" />
     <ClCompile Include="hal.c" />
     <ClCompile Include="spinlock.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="interrupt.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="GDT.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="PIC.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
