@@ -104,13 +104,11 @@ TryFindLoadedExport(
     if (ImportName == NULL &&
         ImportOrdinal >= Module->NumberOfExports)
     {
-        Print(L"Import by ordinal failed for #%d.\n", ImportOrdinal);
         return EFI_NOT_FOUND;
     }
 
     if (ImportName == NULL)
     {
-        Print(L"Import by ordinal done #%d.\n", ImportOrdinal);
         *pOutExport = &Module->Exports[ImportOrdinal];
         return EFI_SUCCESS;
     }
@@ -122,17 +120,11 @@ TryFindLoadedExport(
             Module->Exports[i].ExportNameRva != NULL &&
             strcmpa(Module->Exports[i].ExportName, ImportName) == 0)
         {
-            Print(
-                L"Import by name done %a -> %X\n", 
-                ImportName, 
-                Module->Exports[i].ExportAddress);
-
             *pOutExport = &Module->Exports[i];
             return EFI_SUCCESS;
         }
     }
 
-    Print(L"Import for %a failed.\n", ImportName);
     return EFI_NOT_FOUND;
 }
 
@@ -224,11 +216,6 @@ HandleImportDirectory(
             }
             if (Export != NULL)
             {
-                Print(
-                    L"Export bound Address: %X Preload: %X\n", 
-                    Export->ExportAddress,
-                    Export);
-
                 *((PULONG_PTR)CurrentExportPreload) = (ULONG_PTR)Export;
                 *((PULONG_PTR)CurrentImport) = (ULONG_PTR)Export->ExportAddress;
             }
@@ -391,6 +378,11 @@ LoadSectionsWithBase(
         }
 
         SectionStart = Section->VirtualAddressRVA + ImageBase;
+        Print(L"Loading section to %X %X %d %X\n", 
+            SectionStart,
+            SectionStart+Section->VirtualSize, 
+            Section->VirtualSize,
+            ImageBase);
 
         ZeroMem(
             (PVOID)SectionStart,
@@ -400,6 +392,10 @@ LoadSectionsWithBase(
             File,
             &SectionSize,
             (PVOID)(Section->VirtualAddressRVA + ImageBase));
+        if (EFI_ERROR(Status))
+        {
+            return Status;
+        }
     }
 
     return EFI_SUCCESS;
@@ -538,7 +534,7 @@ LoadImage(
                 (PIMAGE_EXPORT_DIRECTORY_ENTRY)(ExportDirRva + PhysAddr);
                 
             NumberOfExports = ExportEntry->NumberOfFunctions;
-            Print(L"Exports %d", NumberOfExports);
+            Print(L"Exports %d\n", NumberOfExports);
         }
     }
 
@@ -571,6 +567,7 @@ LoadImage(
         EfiLoaderData, 
         TotalPagesToBeAllocated, 
         &PhysAddr);
+
     if (EFI_ERROR(Status))
     {
         FreePool(Sections);
@@ -716,7 +713,13 @@ QueryMemoryMap(
     while (currentDescriptor <= 
            (EFI_MEMORY_DESCRIPTOR*)((ULONG_PTR)memoryMap + memoryMapSize))
     {
-        pages += currentDescriptor->NumberOfPages;
+        if (pages < currentDescriptor->NumberOfPages + (
+            currentDescriptor->PhysicalStart + PAGE_SIZE - 1) / PAGE_SIZE)
+        {
+            pages = currentDescriptor->NumberOfPages + (
+                currentDescriptor->PhysicalStart + PAGE_SIZE - 1) / PAGE_SIZE;
+        }
+        
         currentDescriptor = (EFI_MEMORY_DESCRIPTOR*)
             ((ULONG_PTR)currentDescriptor + descriptorSize);
     }
@@ -793,7 +796,8 @@ QueryMemoryMap(
             &descriptorSize, 
             &descriptorVersion);
 
-        memoryMapSize += descriptorSize;
+        memoryMapSize *= 3;
+        memoryMapSize /= 2;
     }
     while (status == EFI_BUFFER_TOO_SMALL);
     RETURN_IF_ERROR(status);
@@ -853,6 +857,7 @@ efi_main(
     status = LoadImage(
         kernelFile, 
         &module);
+
     RETURN_IF_ERROR_DEBUG(status);
 
     kernelEntrypoint = (void(*)(BOOTDATA*))module->Entrypoint;
@@ -869,16 +874,12 @@ efi_main(
     bootdata.ModuleHead.First->Prev = &bootdata.ModuleHead;
     bootdata.MaxKernelPhysAddress = MaxKernelPhysAddress;
     bootdata.MinKernelPhysAddress = MinKernelPhysAddress;
-
     LibGetSystemConfigurationTable(&AcpiTableGuid, &bootdata.pRdsp);
-
     gBootServices->SetWatchdogTimer(0, 0, 0, NULL);
     status = QueryGraphicsInformation(&bootdata);
     RETURN_IF_ERROR_DEBUG(status);
-
     status = QueryMemoryMap(&bootdata, &MapKey);
     RETURN_IF_ERROR_DEBUG(status);
-
     status = gBootServices->ExitBootServices(imageHandle, MapKey);
     if (status != EFI_SUCCESS)
     {
