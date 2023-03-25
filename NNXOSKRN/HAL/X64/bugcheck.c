@@ -53,7 +53,7 @@ KeBugCheckEx(
 	KeStopOtherCores();
 	DisableInterrupts();
 	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
-#ifndef DEBUG
+#ifndef _DEBUG
 	TextIoClear();
 	TextIoSetCursorPosition(0, 8);
 #endif

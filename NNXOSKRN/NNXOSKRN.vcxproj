@@ -141,7 +141,7 @@ $(SolutionDir)genverh.bat</Command>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>_MBCS;NNX_KERNEL;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;NNX_KERNEL;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <TreatSpecificWarningsAsErrors>

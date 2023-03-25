@@ -48,7 +48,11 @@ VFS_STATUS VfsWriteSector(VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* so
 
 VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(SIZE_T n)
 {
-	return virtualFileSystems + n;
+	if (virtualFileSystems[n].Drive == 0)
+	{
+		return NULL;
+	}
+	return &virtualFileSystems[n];
 }
 
 VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs()

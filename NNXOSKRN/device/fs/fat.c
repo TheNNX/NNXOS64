@@ -1782,7 +1782,7 @@ char Log2[] = "ABCDEFGHIJKLMNOPQ";
 
 BOOL NNXFatAutomaticTest(VFS* filesystem)
 {
-#ifdef DEBUG
+#ifdef _DEBUG
 	//TODO: FAT16/FAT12 TESTS AND SUPPORT FOR FILESYSTEM OPERATIONS ON THE ROOT DIRECTORY
 	UINT32 i = 0;
 	PrintT("FAT Test for filesystem 0x%X\n", filesystem);

@@ -23,7 +23,7 @@ void* MemCopy(void* dst, void *src, SIZE_T size)
     return dst;
 }
 
-#ifndef DEBUG
+#ifndef _DEBUG
 #pragma function(memset)
 #pragma function(memcpy)
 

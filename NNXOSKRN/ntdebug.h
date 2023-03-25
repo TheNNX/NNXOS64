@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-#ifdef DEBUG
+#ifdef _DEBUG
 #define ASSERT(expr) (!(expr) ? \
-    (KeBugCheckEx(KMODE_EXCEPTION_NOT_HANDLED, 0x80000003, HalpGetCurrentAddress(), __LINE__, 0)) \
+    __debugbreak() \
     : ((VOID)0))
 #else
 #define ASSERT(expr) ((VOID)0)

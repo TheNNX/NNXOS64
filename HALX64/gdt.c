@@ -1,5 +1,6 @@
 #include <HAL/X64/GDT.h>
 #include <HAL/paging.h>
+#include <ntdebug.h>
 
 /* Declarations */
 
@@ -27,7 +28,7 @@ HalpInitializeGdt(
 	PKTSS Tss)
 {
 	USHORT null, code0, data0, code3, data3, tr;
-	Gdtr->Size = sizeof(KGDTENTRY64) * 7 - 1;
+	Gdtr->Size = sizeof(KGDTENTRY64) * 8 - 1;
 	Gdtr->Base = Gdt;
 
 	Tss->IopbBase = sizeof(*Tss);
@@ -118,13 +119,14 @@ HalpGdtFindEntry(
 	for (i = 1; i < numberOfEntries; i++)
 	{
 		LPKGDTENTRY64 currentEntry = gdt + i;
-		USHORT ab = currentEntry->AccessByte;
+		/* Ignore the accessed bit. */
+		USHORT ab = currentEntry->AccessByte & 0xFE;
 
 		/* if this is a TSS entry, skip the next one (it is the second half of this one) */
 		if ((ab & 0xF) == 0x9 ||
 			(ab & 0xF) == 0xB)
 		{
-			i++;
+			i += 2;
 		}
 		
 		if (code && !user && ab == 0x9A) return i * sizeof(KGDTENTRY64);

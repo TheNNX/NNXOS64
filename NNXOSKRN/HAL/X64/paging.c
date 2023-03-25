@@ -334,10 +334,7 @@ PagingMapPageBeforeInit(
     PULONG_PTR Pdp, Pd, Pt;
     v = PAGE_ALIGN(v);
     p = PAGE_ALIGN(p);
-    v &= 0xFFFFFFFFFFFF; /* ignore bits 63-48, they are just a sign extension */
-
-    UINT64 Zero[2] = { 0 };
-    __lidt(Zero);
+    v &= 0xFFFFFFFFFFFF;
 
     ptIndex = (v >> 12) % 512;
     pdIndex = (v >> 21) % 512;

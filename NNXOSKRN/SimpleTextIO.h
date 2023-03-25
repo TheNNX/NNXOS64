@@ -35,7 +35,7 @@ extern "C"
 #endif
 
 #ifdef PRINT_IN_DEBUG_ONLY
-#ifndef DEBUG
+#ifndef _DEBUG
 	inline void null(const char* input, ...)
 	{
 		return;

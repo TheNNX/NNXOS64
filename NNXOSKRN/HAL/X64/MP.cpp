@@ -76,42 +76,44 @@ extern "C" {
 		PVOID apData, apCode;
 		NTSTATUS status;
 
-		ApStackPointerArray = (PVOID*) ExAllocatePool(
-			NonPagedPool, 
-			ApicNumberOfCoresDetected * sizeof(*ApStackPointerArray));
-
-		apCode = MpPopulateApStartupCode();
-		apData = (VOID*) (((UINT64) apCode) + 0x800);
-
 		currentLapicId = ApicGetCurrentLapicId();
-
-		ApicClearError();
 		KeNumberOfProcessors = ApicNumberOfCoresDetected;
-		for (i = 0; i < ApicNumberOfCoresDetected; i++)
+		
+		if (ApicNumberOfCoresDetected != 1)
 		{
-			if (ApicLocalApicIDs[i] == currentLapicId)
-				continue;
+			ApStackPointerArray = (PVOID*)ExAllocatePool(
+				NonPagedPool,
+				ApicNumberOfCoresDetected * sizeof(*ApStackPointerArray));
 
-			ApStackPointerArray[i] = 
-				(PVOID)((ULONG_PTR)PagingAllocatePageFromRange(
-					PAGING_KERNEL_SPACE, 
-					PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
+			apCode = MpPopulateApStartupCode();
+			apData = (VOID*)(((UINT64)apCode) + 0x800);
 
-			ApicInitIpi(ApicLocalApicIDs[i], 0x00);
-			PitUniprocessorPollSleepMs(10);
-
-			for (j = 0; j < 2; j++)
+			ApicClearError();
+			for (i = 0; i < ApicNumberOfCoresDetected; i++)
 			{
-				ApicClearError();
+				if (ApicLocalApicIDs[i] == currentLapicId)
+					continue;
 
-				if ((UINT64) apCode > UINT16_MAX)
-					KeBugCheck(HAL_INITIALIZATION_FAILED);
+				ApStackPointerArray[i] =
+					(PVOID)((ULONG_PTR)PagingAllocatePageFromRange(
+						PAGING_KERNEL_SPACE,
+						PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
 
-				ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(UINT64)apCode);
-				PitUniprocessorPollSleepUs(200);
+				ApicInitIpi(ApicLocalApicIDs[i], 0x00);
+				PitUniprocessorPollSleepMs(10);
+
+				for (j = 0; j < 2; j++)
+				{
+					ApicClearError();
+
+					if ((UINT64)apCode > UINT16_MAX)
+						KeBugCheck(HAL_INITIALIZATION_FAILED);
+
+					ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(UINT64)apCode);
+					PitUniprocessorPollSleepUs(200);
+				}
 			}
 		}
-
 		status = PspInitializeCore(currentLapicId);
 		PrintT("PspInitializeCore NTSTATUS: %X\n", status);
 		if (status)
