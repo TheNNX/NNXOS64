@@ -1,4 +1,5 @@
 #include "ACPI.h"
+#include <spinlock.h>
 
 UINT8 localLastError = 0;
 
@@ -15,12 +16,16 @@ ACPI_RSDT* GetRsdt(ACPI_RDSP* rdsp)
 	if (!AcpiVerifyRdsp(rdsp))
 	{
 		localLastError = ACPI_ERROR_INVALID_RDSP;
-		return 0;
+		return NULL;
 	}
 
 	if (gRsdt == NULL)
 	{
 		gRsdt = (ACPI_RSDT*)PagingMapStrcutureToVirtual(rdsp->RSDTAddress, sizeof(ACPI_RSDT), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+		if (!AcpiVerifySdt((ACPI_SDT_HEADER*)gRsdt))
+		{
+			return NULL;
+		}
 		PrintT("Allocated RSDT %X\n", gRsdt);
 	}
 	return gRsdt;
@@ -41,10 +46,42 @@ ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp)
 	if (gXsdt == NULL)
 	{
 		gXsdt = (ACPI_XSDT*)PagingMapStrcutureToVirtual((ULONG_PTR)rdsp->v20.XSDTAddress, sizeof(ACPI_XSDT), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+		if (!AcpiVerifySdt((ACPI_SDT_HEADER*)gXsdt))
+		{
+			return NULL;
+		}
 		PrintT("Allocated XSDT %X\n", gXsdt);
 	}
 
 	return gXsdt;
+}
+
+static KSPIN_LOCK PageViewSpinLock = 0;
+static __declspec(align(PAGE_SIZE)) volatile char PageView[PAGE_SIZE];
+
+ACPI_SDT_HEADER*
+AcpiRemapSdt(ACPI_SDT_HEADER* Addr)
+{
+	NTSTATUS Status;
+	ACPI_SDT_HEADER* Virtual;
+	SIZE_T Size;
+
+	/* Create a temporary mapping, to read the SDT size. */
+	KiAcquireSpinLock(&PageViewSpinLock);
+	Status = PagingMapPage((ULONG_PTR)PageView, (ULONG_PTR)Addr, PAGE_PRESENT);
+	if (!NT_SUCCESS(Status))
+	{
+		return NULL;
+	}
+
+	Virtual = (ACPI_SDT_HEADER*)PageView;
+	Size = Virtual->Lenght;
+	KiReleaseSpinLock(&PageViewSpinLock);
+
+	/* Remap to a sensible address. */
+	Virtual = (ACPI_SDT_HEADER*)
+		PagingMapStrcutureToVirtual((ULONG_PTR)Addr, Size, PAGE_PRESENT);
+	return Virtual;
 }
 
 VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
@@ -58,10 +95,10 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 	{
 		rsdt = GetRsdt(rdsp);
 		
-		if (!rsdt || !AcpiVerifySdt((ACPI_SDT_HEADER*)rsdt))
+		if (!rsdt)
 		{
 			localLastError = ACPI_ERROR_INVALID_RSDT;
-			return 0;
+			return NULL;
 		}
 
 		numberOfEntries = (rsdt->Header.Lenght - sizeof(rsdt->Header)) / 4;
@@ -70,10 +107,10 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 	{
 		xsdt = GetXsdt(rdsp);
 
-		if (!xsdt || !AcpiVerifySdt((ACPI_SDT_HEADER*)xsdt))
+		if (!xsdt)
 		{
 			localLastError = ACPI_ERROR_INVALID_XSDT;
-			return 0;
+			return NULL;
 		}
 
 		numberOfEntries = (xsdt->Header.Lenght - sizeof(xsdt->Header)) / 8;
@@ -81,10 +118,29 @@ VOID* AcpiGetTable(ACPI_RDSP* rdsp, const char* name)
 
 	for (a = 0; a < numberOfEntries; a++)
 	{
-		ACPI_SDT_HEADER* tableAddress = (xsdt == 0) ? ((ACPI_SDT_HEADER*) (ULONG_PTR)rsdt->OtherSDTs[a]) : xsdt->OtherSDTs[a];
+		ACPI_SDT_HEADER* tableAddress = (ACPI_SDT_HEADER*)
+			((xsdt == 0) ?
+			(ULONG_PTR)rsdt->OtherSDTs[a] : 
+			(ULONG_PTR)xsdt->OtherSDTs[a]);
 
-		if (*((UINT32*) name) == *((UINT32*) tableAddress->Signature))
-			return (ACPI_FADT*) tableAddress;
+		if ((ULONG_PTR)tableAddress < PAGING_KERNEL_SPACE)
+		{
+			tableAddress = AcpiRemapSdt(tableAddress);
+			if (xsdt != NULL)
+			{
+				xsdt->OtherSDTs[a] = tableAddress;
+			}
+			else
+			{
+				rsdt->OtherSDTs[a] = (UINT32)(ULONG_PTR)tableAddress;
+			}
+		}
+
+		if (*((UINT32*)name) == *((UINT32*)tableAddress->Signature))
+		{
+			return (ACPI_FADT*)tableAddress;
+		}
+
 	}
 
 	localLastError = ACPI_ERROR_SDT_NOT_FOUND;

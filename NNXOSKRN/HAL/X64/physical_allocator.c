@@ -208,9 +208,15 @@ DrawMap()
 
 	x = 0;
 	y += 10;
-
+    PrintT("Physical memory layout:\n");
 	for (a = 0; a < NumberOfPfnEntries; a++)
 	{
+        if (y > gHeight || a > 10000)
+        {
+            PrintT("Too much memory to finish drawing the map.\n");
+            break;
+        }
+
 		if (PfnEntries[a].InList == &FreeList)
 			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
         else

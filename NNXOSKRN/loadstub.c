@@ -72,7 +72,7 @@ VOID KeLoadStub(
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
 
     /* Map kernel pages. */
-    NTSTATUS status = PagingInit();
+    NTSTATUS status = PagingInit(MinKernelPhysAddr, MaxKernelPhysAddr);
     PagingMapAndInitFramebuffer();
 	bootdata->MainKernelModule->SectionHeaders = (PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
 		(ULONG_PTR)bootdata->MainKernelModule->SectionHeaders,
