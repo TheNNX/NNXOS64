@@ -1,7 +1,7 @@
 /* This file defines user mode stubs used by the operating system to interact with usermode applications */
 
 #include <nnxtype.h>
-#include <io/apc.h>
+#include <apc.h>
 #include <scheduler.h>
 
 #pragma code_seg(push, ".userc")

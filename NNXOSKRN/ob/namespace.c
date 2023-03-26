@@ -2,7 +2,7 @@
 #include <bugcheck.h>
 #include <text.h>
 #include <scheduler.h>
-#include <HAL/cpu.h>
+#include <cpu.h>
 
 #pragma pack(push, 1)
 

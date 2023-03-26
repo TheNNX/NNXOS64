@@ -1,5 +1,5 @@
-#include <HAL/X64/GDT.h>
-#include <HAL/paging.h>
+#include <GDT.h>
+#include <paging.h>
 #include <ntdebug.h>
 
 /* Declarations */
@@ -89,8 +89,8 @@ HalpGetGdtBase(
 	KGDTENTRY64 entry)
 {
 	return entry.Base0To15 | 
-			(entry.Base16To23 << 16UL) |
-			(entry.Base24To31 << 24UL);
+	      (entry.Base16To23 << 16UL) |
+	      (entry.Base24To31 << 24UL);
 }
 
 PKTSS 

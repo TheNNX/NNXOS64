@@ -204,9 +204,6 @@
     <ClCompile Include="HAL\X64\rtc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\syscall.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dispatcher\dispatcher.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -219,162 +216,135 @@
     <ClCompile Include="nnxalloccpp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="io\fileio.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="syscall.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bugcheck.h">
+    <ClInclude Include="include\bugcheck.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="pool.h">
+    <ClInclude Include="include\pool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="klist.h">
+    <ClInclude Include="include\klist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\PCI\PCIIDE.h">
-      <Filter>Header Files\HAL\PCI</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\PCI\PCI.h">
-      <Filter>Header Files\HAL\PCI</Filter>
-    </ClInclude>
-    <ClInclude Include="text.h">
+    <ClInclude Include="include\text.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nnxcfg.h">
+    <ClInclude Include="include\nnxcfg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="device\fs\vfs.h">
+    <ClInclude Include="include\vfs.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="device\fs\mbr.h">
+    <ClInclude Include="include\mbr.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="device\fs\gpt.h">
+    <ClInclude Include="include\gpt.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="device\fs\fat32.h">
+    <ClInclude Include="include\fat32.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="device\fs\fat.h">
+    <ClInclude Include="include\fat.h">
       <Filter>Header Files\device\fs</Filter>
     </ClInclude>
-    <ClInclude Include="device\hdd\hdd.h">
+    <ClInclude Include="include\hdd.h">
       <Filter>Header Files\device\hdd</Filter>
     </ClInclude>
-    <ClInclude Include="device\Keyboard.h">
+    <ClInclude Include="include\Keyboard.h">
       <Filter>Header Files\device</Filter>
     </ClInclude>
-    <ClInclude Include="dispatcher\ntqueue.h">
+    <ClInclude Include="include\ntqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ntlist.h">
+    <ClInclude Include="include\ntlist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="irql.h">
+    <ClInclude Include="include\irql.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\paging.h">
+    <ClInclude Include="include\nnxalloc.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
-    <ClInclude Include="nnxalloc.h">
+    <ClInclude Include="include\MemoryOperations.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryOperations.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleTextIO.h">
+    <ClInclude Include="include\SimpleTextIO.h">
       <Filter>Header Files\video</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\physical_allocator.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\Port.h">
+    <ClInclude Include="include\spinlock.h">
       <Filter>Header Files\HAL</Filter>
     </ClInclude>
-    <ClInclude Include="spinlock.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\cpu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="scheduler.h">
+    <ClInclude Include="include\scheduler.h">
       <Filter>Header Files\HAL\X64</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\pcr.h">
-      <Filter>Header Files\HAL\X64</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\APIC.h">
-      <Filter>Header Files\HAL\APIC</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\GDT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\IDT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\MP.h">
-      <Filter>Header Files\HAL\MP</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\PIC.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\PIT.h">
-      <Filter>Header Files\HAL</Filter>
-    </ClInclude>
-    <ClInclude Include="HAL\X64\msr.h">
-      <Filter>Header Files\HAL</Filter>
     </ClInclude>
     <ClInclude Include="nnxver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ob\object.h">
+    <ClInclude Include="include\object.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rtl\rtl.h">
+    <ClInclude Include="include\rtl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rtl\rtlstring.h">
+    <ClInclude Include="include\rtlstring.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ob\handle.h">
+    <ClInclude Include="include\handle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ob\namespace.h">
+    <ClInclude Include="include\namespace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io\irp.h">
+    <ClInclude Include="include\irp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io\mdl.h">
+    <ClInclude Include="include\mdl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io\dpc.h">
+    <ClInclude Include="include\dpc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io\apc.h">
+    <ClInclude Include="include\apc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\X64\cmos.h">
+    <ClInclude Include="include\dispatcher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\rtc.h">
+    <ClInclude Include="include\ntdebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\syscall.h">
+    <ClInclude Include="include\mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dispatcher\dispatcher.h">
+    <ClInclude Include="include\cpu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\interrupt.h">
+    <ClInclude Include="include\interrupt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ntdebug.h">
+    <ClInclude Include="include\paging.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dispatcher\mutex.h">
+    <ClInclude Include="include\pcr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HAL\ACPI\ACPI.h">
+    <ClInclude Include="include\physical_allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Port.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rtc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\syscall.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -383,18 +353,6 @@
       <Filter>Source Files\HAL\MP</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\IDT.asm">
-      <Filter>Source Files\HAL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\memory.asm">
-      <Filter>Source Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\PIT.asm">
-      <Filter>Source Files\HAL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\Port.asm">
-      <Filter>Source Files\HAL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\registers.asm">
       <Filter>Source Files\HAL</Filter>
     </CustomBuild>
     <CustomBuild Include="HAL\X64\thread.asm">

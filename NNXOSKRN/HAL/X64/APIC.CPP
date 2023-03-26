@@ -1,18 +1,18 @@
 #define NNX_ALLOC_DEBUG 1
 #include <nnxalloc.h>
-#include "APIC.h"
-#include "PIC.h"
-#include <HAL/paging.h>
-#include <HAL/physical_allocator.h>
-#include <device/fs/fat.h>
-#include "PIT.h"
+#include <HALX64/include/APIC.h>
+#include <HALX64/include/PIC.h>
+#include <HALX64/include/PIT.h>
+#include <physical_allocator.h>
+#include <paging.h>
+#include <fat.h>
 #include <spinlock.h>
-#include <HAL/cpu.h>
-#include <rtl/rtl.h>
-#include <HAL/interrupt.h>
+#include <cpu.h>
+#include <rtl.h>
+#include <interrupt.h>
 #include <ntdebug.h>
 #include <scheduler.h>
-#include <HAL/X64/IDT.h>
+#include <HALX64/include/IDT.h>
 
 extern "C" 
 {

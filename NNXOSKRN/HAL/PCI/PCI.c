@@ -1,8 +1,9 @@
-#include "PCI.h"
+#include <HALX64/include/PCIIDE.h>
+#include <HALX64/include/PCI.h>
 #include <SimpleTextIo.h>
-#include <HAL/Port.h>
-#include "device/fs/mbr.h"
-#include "device/fs/gpt.h"
+#include <Port.h>
+#include <mbr.h>
+#include <gpt.h>
 
 #pragma warning(disable : 4189)
 
@@ -80,7 +81,6 @@ void PciScanDevice(UINT8 busNumber, UINT8 deviceNumber)
 	}
 }
 
-
 void PciScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber)
 {
 	if (!PciCheckIfPresent(busNumber, deviceNumber, functionNumber))
@@ -113,7 +113,6 @@ void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNum
 	}
 }
 
-#include "HAL/PCI/PCIIDE.h"
 
 PCI_IDE_CONTROLLER Controllers[MAX_PCI_IDE_CONTROLLERS] = { 0 };
 

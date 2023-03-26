@@ -1,7 +1,7 @@
 #include "object.h"
 #include <pool.h>
 #include <bugcheck.h>
-#include <rtl/rtl.h>
+#include <rtl.h>
 
 NTSTATUS ObpTestNamespace();
 NTSTATUS ObpMpTestNamespace();

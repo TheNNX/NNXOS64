@@ -1,9 +1,9 @@
-#include "../paging.h"
+#include <paging.h>
 #include <SimpleTextIo.h>
-#include <HAL/physical_allocator.h>
+#include <physical_allocator.h>
 #include <MemoryOperations.h>
 #include <spinlock.h>
-#include <hal/X64/msr.h>
+#include <HALX64/include/msr.h>
 #include <bugcheck.h>
 
 #define PML4EntryForRecursivePaging 510ULL
@@ -40,7 +40,10 @@ KSPIN_LOCK PagingSpinlock;
 ULONG_PTR KeKernelPhysicalAddress;
 ULONG_PTR KernelPml4Entry = NULL;
 
-VOID PagingTLBFlushPage(UINT64 page)
+VOID 
+NTAPI
+PagingTLBFlushPage(
+    UINT64 page)
 {
     /* TODO: send IPI to other processors if neccessary */
     PagingInvalidatePage(ToCanonicalAddress(page));

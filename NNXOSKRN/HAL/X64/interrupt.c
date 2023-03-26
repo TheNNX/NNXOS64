@@ -1,19 +1,15 @@
-#include "IDT.h"
+#include <HALX64/include/IDT.h>
 #include <SimpleTextIo.h>
-#include "device/Keyboard.h"
-#include "GDT.h"
-#include <HAL/paging.h>
-#include <dispatcher/dispatcher.h>
+#include <Keyboard.h>
+#include <HALX64/include/GDT.h>
+#include <paging.h>
+#include <dispatcher.h>
 #include <scheduler.h>
 #include <pool.h>
 #include <ntdebug.h>
-#include <HAL/pcr.h>
-#include <HAL/X64/APIC.h>
-#include <io/apc.h>
-
-VOID 
-NTAPI
-KeStop();
+#include <pcr.h>
+#include <HALX64/include/APIC.h>
+#include <apc.h>
 
 VOID 
 HalpMockupInterruptHandler(
@@ -54,40 +50,6 @@ InitializeInterrupt(
     pInterrupt->pfnSetMask = NULL;
     /* FIXME */
     pInterrupt->IoApicVector = Vector;
-}
-
-
-VOID
-DefExceptionHandler(
-    UINT64 n, 
-    UINT64 errcode, 
-    UINT64 errcode2, 
-    UINT64 rip)
-{
-    PrintT(
-        "error: %x %x at RIP 0x%X\n\n",
-        n,
-        errcode, 
-        rip);
-}
-
-VOID
-(NTAPI*gExceptionHandlerPtr) (
-    UINT64 n, 
-    UINT64 errcode, 
-    UINT64 errcode2, 
-    UINT64 rip) = DefExceptionHandler;
-
-VOID 
-ExceptionHandler(
-    UINT64 n, 
-    UINT64 errcode, 
-    UINT64 errcode2, 
-    UINT64 rip)
-{
-    gExceptionHandlerPtr(n, errcode, errcode2, rip);
-    PrintT("ExHandler\n");
-    KeStop();
 }
 
 /* TODO: Create some sort of a KiDeleteInterrupt function. */
@@ -385,14 +347,14 @@ HalGenericInterruptHandlerEntry(
         }
         ASSERT(Interrupt->pfnServiceRoutine != NULL);
         Interrupt->pfnServiceRoutine(Interrupt, Interrupt->ServiceCtx);
-        DisableInterrupts();
+        HalDisableInterrupts();
         KeLowerIrql(irql);
         return FALSE;
     }
     /* Full thread context required. */
     else
     {
-        DisableInterrupts();
+        HalDisableInterrupts();
         KiReleaseDispatcherLock(irql);
         return TRUE;
     }
@@ -416,7 +378,7 @@ HalFullCtxInterruptHandlerEntry(
     ASSERT(Interrupt->pfnFullCtxRoutine != NULL);
     result = Interrupt->pfnFullCtxRoutine(Interrupt, FullCtx);
 
-    DisableInterrupts();
+    HalDisableInterrupts();
     KiApplyIrql(KeGetCurrentThread()->ThreadIrql);
     return result;
 }

@@ -16,6 +16,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CommonInclude", "CommonIncl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HALX64", "HALX64\HALX64.vcxproj", "{F8CE72CB-396F-40D0-9C07-1A76CB2698BB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "win32k", "win32k\win32k.vcxproj", "{979F1FD2-AA73-4ACE-B2FC-7C5717B8CFCD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{67E77DD1-D078-48E7-8F75-159C6130C693} = {67E77DD1-D078-48E7-8F75-159C6130C693}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -42,6 +47,10 @@ Global
 		{F8CE72CB-396F-40D0-9C07-1A76CB2698BB}.Debug|x64.Build.0 = Debug|x64
 		{F8CE72CB-396F-40D0-9C07-1A76CB2698BB}.Release|x64.ActiveCfg = Release|x64
 		{F8CE72CB-396F-40D0-9C07-1A76CB2698BB}.Release|x64.Build.0 = Release|x64
+		{979F1FD2-AA73-4ACE-B2FC-7C5717B8CFCD}.Debug|x64.ActiveCfg = Debug|x64
+		{979F1FD2-AA73-4ACE-B2FC-7C5717B8CFCD}.Debug|x64.Build.0 = Debug|x64
+		{979F1FD2-AA73-4ACE-B2FC-7C5717B8CFCD}.Release|x64.ActiveCfg = Release|x64
+		{979F1FD2-AA73-4ACE-B2FC-7C5717B8CFCD}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

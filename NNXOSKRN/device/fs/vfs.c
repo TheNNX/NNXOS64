@@ -1,5 +1,5 @@
-#include "vfs.h"
-#include <HAL/PCI/PCIIDE.h>
+#include <vfs.h>
+#include <HALX64/include/PCIIDE.h>
 #include <nnxalloc.h>
 #include <text.h>
 #include <MemoryOperations.h>

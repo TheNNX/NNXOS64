@@ -1,8 +1,8 @@
 #include <pool.h>
-#include <HAL/pcr.h>
+#include <pcr.h>
 #include <SimpleTextIo.h>
-#include <HAL/syscall.h>
-#include <rtl/rtl.h>
+#include <syscall.h>
+#include <rtl.h>
 #include <ntdebug.h>
 
 #define HalGetPcr() ((PKPCR)__readgsqword(0x18))
@@ -37,7 +37,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 	PKPCR pcr, tempPcr;
 
 	KiAcquireSpinLock(&PcrCreationLock);
-    DisableInterrupts();
+    HalDisableInterrupts();
 
 	pCoreData = (PKARCH_CORE_DATA)PagingAllocatePageBlockFromRange(
 		(sizeof(*pCoreData) + PAGE_SIZE - 1) / PAGE_SIZE,
@@ -60,7 +60,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
 
 	HalSetPcr(tempPcr);
 	pcr = HalCreatePcr(pCoreData->GdtEntires, pCoreData->IdtEntries, id);
-	HalInitializeSystemCallForCurrentCore();
+	HalInitializeSystemCallForCurrentCore((ULONG_PTR)HalpSystemCall);
     KfRaiseIrql(DISPATCH_LEVEL);
 	KiReleaseSpinLock(&PcrCreationLock);
 }

@@ -1,9 +1,9 @@
-#include "device/Keyboard.h"
+#include <Keyboard.h>
 #include <SimpleTextIo.h>
-#include <HAL/Port.h>
-#include <HAL/X64/APIC.h>
-#include <HAL/interrupt.h>
-#include <HAL/cpu.h>
+#include <Port.h>
+#include <HALX64/include/APIC.h>
+#include <interrupt.h>
+#include <cpu.h>
 
 KEY_STATE state;
 UINT8 ScancodeSet = 0;

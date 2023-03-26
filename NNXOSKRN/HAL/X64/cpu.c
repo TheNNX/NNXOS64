@@ -1,7 +1,7 @@
-#include <HAL/cpu.h>
-#include <HAL/X64/msr.h>
-#include <HAL/pcr.h>
-#include "APIC.h"
+#include <HALX64/include/msr.h>
+#include <pcr.h>
+#include <cpu.h>
+#include <HALX64/include/APIC.h>
 
 VOID 
 NTAPI

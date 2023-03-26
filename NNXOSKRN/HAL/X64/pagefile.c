@@ -1,12 +1,12 @@
-#include <HAL/paging.h>
+#include <paging.h>
 #include <spinlock.h>
-#include <device/fs/vfs.h>
+#include <vfs.h>
 #include <pool.h>
-#include <rtl/rtl.h>
+#include <rtl.h>
 #include <bugcheck.h>
-#include <HAL/X64/IDT.h>
-#include <HAL/physical_allocator.h>
-#include <HAL/cpu.h>
+#include <HALX64/include/IDT.h>
+#include <physical_allocator.h>
+#include <cpu.h>
 
 SIZE_T PageFileSize;
 KSPIN_LOCK PageFileLock;
@@ -284,8 +284,7 @@ PageFaultHandler(
     ULONG_PTR n,
     ULONG_PTR errcode,
     ULONG_PTR errcode2,
-    ULONG_PTR rip
-)
+    ULONG_PTR rip)
 {
     NTSTATUS status;
 

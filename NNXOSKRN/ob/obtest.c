@@ -1,5 +1,5 @@
 #include <scheduler.h>
-#include <HAL/pcr.h>
+#include <pcr.h>
 #include <bugcheck.h>
 
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);

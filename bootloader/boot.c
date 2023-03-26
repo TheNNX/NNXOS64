@@ -10,7 +10,7 @@
 
 #define ALLOC(x) AllocateZeroPool(x)
 #define DEALLOC(x) FreePool(x)
-#include <HAL/physical_allocator.h>
+#include <physical_allocator.h>
 
 #define RETURN_IF_ERROR_A(status, d) \
     if (EFI_ERROR(status)) \

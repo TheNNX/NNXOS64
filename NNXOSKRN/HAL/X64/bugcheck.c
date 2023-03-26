@@ -2,10 +2,10 @@
 #include <SimpleTextIO.h>
 #include <spinlock.h>
 #include <scheduler.h>
-#include <dispatcher/dispatcher.h>
-#include <HAL/cpu.h>
-#include <HAL/X64/APIC.h>
-#include <HAL/interrupt.h>
+#include <dispatcher.h>
+#include <cpu.h>
+#include <HALX64/include/APIC.h>
+#include <interrupt.h>
 
 __declspec(noreturn)
 VOID
@@ -51,7 +51,7 @@ KeBugCheckEx(
 )
 {
 	KeStopOtherCores();
-	DisableInterrupts();
+	HalDisableInterrupts();
 	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
 #ifndef _DEBUG
 	TextIoClear();

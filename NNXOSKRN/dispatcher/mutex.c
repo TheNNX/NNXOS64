@@ -1,4 +1,4 @@
-#include <dispatcher/mutex.h>
+#include <mutex.h>
 #include <scheduler.h>
 #include <ntdebug.h>
 

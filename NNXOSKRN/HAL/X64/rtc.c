@@ -1,7 +1,7 @@
-#include <HAL/rtc.h>
-#include <HAL/X64/cmos.h>
+#include <HALX64/include/cmos.h>
 #include <spinlock.h>
 #include <SimpleTextIO.h>
+#include <rtc.h>
 
 static UCHAR CenturyRegister;
 static KSPIN_LOCK RtcLock;

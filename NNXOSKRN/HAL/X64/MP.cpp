@@ -1,14 +1,13 @@
 #define NNX_ALLOC_DEBUG 1
 #include <nnxalloc.h>
-#include "MP.h"
-#include "APIC.h"
-#include "PIT.h"
-#include <HAL/paging.h>
-#include <device/fs/vfs.h>
-#include <HAL/pcr.h>
+#include <HALX64/include/MP.h>
+#include <HALX64/include/APIC.h>
+#include <HALX64/include/PIT.h>
+#include <paging.h>
+#include <vfs.h>
+#include <pcr.h>
 #include <bugcheck.h>
 #include <scheduler.h>
-#include <HAL/pcr.h>
 
 extern "C" {
 

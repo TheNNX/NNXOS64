@@ -214,16 +214,6 @@ int 3
 int 3
 int 3
 
-func KiEnableInterrupts
-func EnableInterrupts
-	sti
-	ret
-
-func KiDisableInterrupts
-func DisableInterrupts
-	cli
-	ret
-
 [EXTERN ExceptionHandler]
 
 ; exception handling

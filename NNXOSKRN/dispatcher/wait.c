@@ -3,7 +3,7 @@
 #include <pool.h>
 #include <bugcheck.h>
 #include <scheduler.h>
-#include <HAL/rtc.h>
+#include <rtc.h>
 #include <ntdebug.h>
 
 extern LIST_ENTRY RelativeTimeoutListHead;

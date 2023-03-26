@@ -1,23 +1,24 @@
-#include <HAL/ACPI/ACPI.h>
+#include <HALX64/include/ACPI.h>
+#include <HALX64/include/MP.h>
+#include <HALX64/include/APIC.h>
+#include <HALX64/include/PIT.h>
+#include <HALX64/include/cmos.h>
+
 #include <SimpleTextIo.h>
 #include <nnxcfg.h>
-#include <HAL/paging.h>
-#include <HAL/physical_allocator.h>
-#include <device/fs/vfs.h>
-#include <HAL/x64/MP.h>
-#include <HAL/X64/APIC.h>
+#include <paging.h>
+#include <physical_allocator.h>
+#include <vfs.h>
 #include <bugcheck.h>
-#include <HAL/cpu.h>
-#include <HAL/pcr.h>
+#include <cpu.h>
+#include <pcr.h>
 #include <scheduler.h>
-#include <HAL/X64/PIT.h>
-#include <nnxver.h>
-#include <ob/object.h>
+#include "nnxver.h"
+#include <object.h>
 #include <pool.h>
-#include <device/Keyboard.h>
-#include <HAL/X64/cmos.h>
-#include <HAL/rtc.h>
-#include <HAL/syscall.h>
+#include <Keyboard.h>
+#include <rtc.h>
+#include <syscall.h>
 
 extern "C"
 {
@@ -33,7 +34,6 @@ extern "C"
 	extern UINT32 gMaxY;
 	extern UINT32 gMaxX;
 	extern UINT8 Initialized;
-	extern VOID(*gExceptionHandlerPtr)(UINT64 n, UINT64 errcode, UINT64 errcode2, UINT64 rip);
 	extern UINT64 MemorySize;
 
 	ULONG_PTR gRdspPhysical;
@@ -67,7 +67,7 @@ extern "C"
 		HalpInitDummyPcr();
 		HalpSetDummyPcr();
 
-		DisableInterrupts();
+		HalDisableInterrupts();
 		PitUniprocessorInitialize();
 
 		gExceptionHandlerPtr = KeExceptionHandler;
@@ -170,10 +170,11 @@ extern "C"
 				0);
 		}
 
-		PagingInitializePageFile(
+		/*PagingInitializePageFile(
 			16 * PAGE_SIZE,
 			"PAGEFILE.SYS", 
 			VfsGetSystemVfs());
+			*/
 
 		CmosInitialize();
 		HalRtcInitialize(pFacp->CenturyRegister);

@@ -5,22 +5,6 @@
 
 [extern PspScheduleThread]
 
-func HalpUpdateThreadKernelStack 
-    push QWORD rdi
-    mov QWORD rdi, [gs:0x08]
-    ; set RSP0
-    mov QWORD [rdi+0x04], rcx
-    pop QWORD rdi
-    ret
-
-func HalpGetThreadKernelStack
-    push QWORD rdi
-    mov QWORD rdi, [gs:0x08]
-    ; copy RSP0 into RAX
-    mov rax, QWORD [rdi+0x04]
-    pop QWORD rdi
-    ret
-
 func PspIdleThreadProcedure
     hlt
     jmp PspIdleThreadProcedure
@@ -52,7 +36,7 @@ func ClearBit
     ret
 
 func SetBit
-    
+ 
     ; bit set
     bts rcx, rdx
 

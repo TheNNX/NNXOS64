@@ -1,4 +1,4 @@
-#include "APIC.h"
+#include <HALX64/include/APIC.h>
 
 IoApic::IoApic(volatile UINT32* base, UINT32 interruptBase)
 {

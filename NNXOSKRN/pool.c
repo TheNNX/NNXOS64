@@ -13,7 +13,7 @@
 #include <pool.h>
 #include <bugcheck.h>
 #include <spinlock.h>
-#include <rtl/rtl.h>
+#include <rtl.h>
 
 #define POOL_ALLOCATION_TAG_FREE 0
 #ifdef _M_AMD64

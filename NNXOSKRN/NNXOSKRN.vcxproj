@@ -44,7 +44,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)CommonInclude;$(SolutionDir);$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets>
@@ -52,7 +52,7 @@
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(SolutionDir)CommonInclude;$(SolutionDir);$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <CustomBuildAfterTargets />
@@ -213,6 +213,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\X64\cmos.c" />
     <ClCompile Include="HAL\X64\interrupt.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
+    <ClCompile Include="io\fileio.c" />
     <ClCompile Include="irql.c" />
     <ClCompile Include="HAL\X64\MP.cpp" />
     <ClCompile Include="HAL\PCI\PCI.c" />
@@ -223,7 +224,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
     <ClCompile Include="HAL\X64\pcr.c" />
-    <ClCompile Include="HAL\X64\syscall.c" />
     <ClCompile Include="io\apc.c" />
     <ClCompile Include="io\dpc.c" />
     <ClCompile Include="io\mdl.c" />
@@ -243,66 +243,53 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="ntlist.c" />
     <ClCompile Include="dispatcher\ntqueue.c" />
     <ClCompile Include="pool.c" />
+    <ClCompile Include="syscall.c" />
     <ClCompile Include="text.c" />
     <ClCompile Include="SimpleTextIO.c" />
     <ClCompile Include="userstubs.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bugcheck.h" />
-    <ClInclude Include="device\fs\fat.h" />
-    <ClInclude Include="device\fs\fat32.h" />
-    <ClInclude Include="device\fs\gpt.h" />
-    <ClInclude Include="device\fs\mbr.h" />
-    <ClInclude Include="device\fs\vfs.h" />
-    <ClInclude Include="device\hdd\hdd.h" />
-    <ClInclude Include="device\Keyboard.h" />
-    <ClInclude Include="dispatcher\dispatcher.h" />
-    <ClInclude Include="dispatcher\mutex.h" />
-    <ClInclude Include="HAL\ACPI\ACPI.h" />
-    <ClInclude Include="HAL\cpu.h" />
-    <ClInclude Include="HAL\interrupt.h" />
-    <ClInclude Include="HAL\rtc.h" />
-    <ClInclude Include="HAL\syscall.h" />
-    <ClInclude Include="HAL\X64\APIC.h" />
-    <ClInclude Include="HAL\X64\cmos.h" />
-    <ClInclude Include="HAL\X64\GDT.h" />
-    <ClInclude Include="HAL\X64\IDT.h" />
-    <ClInclude Include="irql.h" />
-    <ClInclude Include="HAL\X64\MP.h" />
-    <ClInclude Include="HAL\PCI\PCI.h" />
-    <ClInclude Include="HAL\PCI\PCIIDE.h" />
-    <ClInclude Include="HAL\X64\PIC.h" />
-    <ClInclude Include="HAL\X64\PIT.h" />
-    <ClInclude Include="HAL\Port.h" />
-    <ClInclude Include="HAL\X64\msr.h" />
-    <ClInclude Include="spinlock.h" />
-    <ClInclude Include="io\apc.h" />
-    <ClInclude Include="io\dpc.h" />
-    <ClInclude Include="io\irp.h" />
-    <ClInclude Include="io\mdl.h" />
+    <ClInclude Include="include\bugcheck.h" />
+    <ClInclude Include="include\fat.h" />
+    <ClInclude Include="include\fat32.h" />
+    <ClInclude Include="include\gpt.h" />
+    <ClInclude Include="include\mbr.h" />
+    <ClInclude Include="include\vfs.h" />
+    <ClInclude Include="include\hdd.h" />
+    <ClInclude Include="include\Keyboard.h" />
+    <ClInclude Include="include\cpu.h" />
+    <ClInclude Include="include\dispatcher.h" />
+    <ClInclude Include="include\interrupt.h" />
+    <ClInclude Include="include\mutex.h" />
+    <ClInclude Include="include\irql.h" />
+    <ClInclude Include="include\paging.h" />
+    <ClInclude Include="include\pcr.h" />
+    <ClInclude Include="include\physical_allocator.h" />
+    <ClInclude Include="include\Port.h" />
+    <ClInclude Include="include\rtc.h" />
+    <ClInclude Include="include\spinlock.h" />
+    <ClInclude Include="include\apc.h" />
+    <ClInclude Include="include\dpc.h" />
+    <ClInclude Include="include\irp.h" />
+    <ClInclude Include="include\mdl.h" />
+    <ClInclude Include="include\syscall.h" />
     <ClInclude Include="nnxver.h" />
-    <ClInclude Include="ntdebug.h" />
-    <ClInclude Include="ob\handle.h" />
-    <ClInclude Include="ob\namespace.h" />
-    <ClInclude Include="rtl\rtl.h" />
-    <ClInclude Include="rtl\rtlstring.h" />
-    <ClInclude Include="scheduler.h" />
-    <ClInclude Include="HAL\pcr.h" />
-    <ClInclude Include="klist.h" />
-    <ClInclude Include="MemoryOperations.h" />
-    <ClInclude Include="nnxalloc.h" />
-    <ClInclude Include="HAL\paging.h" />
-    <ClInclude Include="HAL\physical_allocator.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="nnxcfg.h" />
-    <ClInclude Include="ntlist.h" />
-    <ClInclude Include="dispatcher\ntqueue.h" />
-    <ClInclude Include="ob\object.h" />
-    <ClInclude Include="pool.h" />
-    <ClInclude Include="text.h" />
-    <ClInclude Include="SimpleTextIO.h" />
+    <ClInclude Include="include\ntdebug.h" />
+    <ClInclude Include="include\handle.h" />
+    <ClInclude Include="include\namespace.h" />
+    <ClInclude Include="include\rtl.h" />
+    <ClInclude Include="include\rtlstring.h" />
+    <ClInclude Include="include\scheduler.h" />
+    <ClInclude Include="include\klist.h" />
+    <ClInclude Include="include\MemoryOperations.h" />
+    <ClInclude Include="include\nnxalloc.h" />
+    <ClInclude Include="include\nnxcfg.h" />
+    <ClInclude Include="include\ntlist.h" />
+    <ClInclude Include="include\ntqueue.h" />
+    <ClInclude Include="include\object.h" />
+    <ClInclude Include="include\pool.h" />
+    <ClInclude Include="include\text.h" />
+    <ClInclude Include="include\SimpleTextIO.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\ApEntry.asm">
@@ -329,20 +316,6 @@ $(SolutionDir)genverh.bat</Command>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="HAL\X64\IDT.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\PIT.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\Port.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="HAL\X64\registers.asm">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="HAL\X64\memory.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

@@ -1,7 +1,7 @@
-#include "HAL/PCI/PCIIDE.h"
+#include <HALX64/include/PCIIDE.h>
 #include <SimpleTextIo.h>
-#include "HAL/Port.h"
-#include "device/hdd/hdd.h"
+#include <Port.h>
+#include <hdd.h>
 
 #define WAIT_MACRO for (int __ = 0; __ < 10000; __++);
 

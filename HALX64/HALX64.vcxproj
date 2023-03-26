@@ -45,13 +45,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSKRN;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)HALX64/include;$(SolutionDir)NNXOSKRN/include;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>HAL</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)HALX64;$(SolutionDir)NNXOSKRN;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)HALX64/include;$(SolutionDir)NNXOSKRN/include;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)image\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>HAL</TargetName>
@@ -136,6 +136,33 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="PIC.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\ACPI.h" />
+    <ClInclude Include="include\APIC.h" />
+    <ClInclude Include="include\cmos.h" />
+    <ClInclude Include="include\GDT.h" />
+    <ClInclude Include="include\IDT.h" />
+    <ClInclude Include="include\MP.h" />
+    <ClInclude Include="include\msr.h" />
+    <ClInclude Include="include\PCI.h" />
+    <ClInclude Include="include\PCIIDE.h" />
+    <ClInclude Include="include\PIC.h" />
+    <ClInclude Include="include\PIT.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="memory.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="PIT.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Port.asm">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="registers.asm">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

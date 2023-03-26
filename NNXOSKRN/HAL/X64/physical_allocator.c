@@ -1,7 +1,7 @@
-#include <HAL/physical_allocator.h>
+#include <physical_allocator.h>
 #include <spinlock.h>
-#include <rtl/rtl.h>
-#include <HAL/paging.h>
+#include <rtl.h>
+#include <paging.h>
 
 static MMPFN_LIST FreeList;
 static MMPFN_LIST WorkingsetList;

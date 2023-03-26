@@ -1,15 +1,15 @@
-#include "scheduler.h"
+#include <scheduler.h>
 #include <pool.h>
-#include <HAL/paging.h>
+#include <paging.h>
 #include <SimpleTextIo.h>
 #include <MemoryOperations.h>
-#include <HAL/physical_allocator.h>
-#include <HAL/pcr.h>
+#include <physical_allocator.h>
+#include <pcr.h>
 #include <bugcheck.h>
-#include <HAL/cpu.h>
-#include <ob/object.h>
-#include <dispatcher/dispatcher.h>
-#include <io/apc.h>
+#include <cpu.h>
+#include <object.h>
+#include <dispatcher.h>
+#include <apc.h>
 #include <ntdebug.h>
 
 LIST_ENTRY ProcessListHead;
@@ -376,7 +376,7 @@ PspInitializeCore(
     PagingSetAddressSpace(
         pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
     
-    DisableInterrupts();
+    HalDisableInterrupts();
     KeLowerIrql(0);
     
     PrintT(
@@ -1084,7 +1084,7 @@ __declspec(noreturn) VOID PsExitThread(DWORD exitCode)
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&DispatcherLock);
 
-    DisableInterrupts();
+    HalDisableInterrupts();
     KeLowerIrql(originalIrql);
     KeForceClockTick();
     ASSERT(FALSE);

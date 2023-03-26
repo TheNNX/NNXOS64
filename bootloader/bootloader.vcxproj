@@ -41,7 +41,7 @@
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>bootx64</TargetName>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
-    <IncludePath>$(SolutionDir)NNXOSKRN;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSKRN/include;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.efi</TargetExt>
@@ -51,7 +51,7 @@
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>bootx64</TargetName>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
-    <IncludePath>$(SolutionDir)NNXOSKRN;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)NNXOSKRN/include;$(ProjectDir);$(SolutionDir)CommonInclude;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

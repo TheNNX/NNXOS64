@@ -1,5 +1,5 @@
-#include "cmos.h"
-#include <HAL/Port.h>
+#include <HALX64/include/cmos.h>
+#include <Port.h>
 #include <spinlock.h>
 
 BOOLEAN HalNmiDesiredState = TRUE;

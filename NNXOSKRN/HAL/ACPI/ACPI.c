@@ -1,4 +1,4 @@
-#include "ACPI.h"
+#include <HALX64/include/ACPI.h>
 #include <spinlock.h>
 
 UINT8 localLastError = 0;

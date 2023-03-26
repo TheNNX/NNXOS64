@@ -1,6 +1,6 @@
-#include "apc.h"
+#include <apc.h>
 #include <scheduler.h>
-#include <HAL/cpu.h>
+#include <cpu.h>
 #include <bugcheck.h>
 
 

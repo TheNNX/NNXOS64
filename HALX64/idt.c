@@ -1,7 +1,8 @@
 #include <nnxtype.h>
 #include <intrin.h>
-#include <HAL/X64/IDT.h>
-#include <HAL/interrupt.h>
+#include <IDT.h>
+#include <interrupt.h>
+#include <bugcheck.h>
 
 VOID
 NTAPI
@@ -73,4 +74,23 @@ HalpInitInterruptHandlerStub(
     idx += sizeof(ULONG_PTR);
     /* ret */
     pInterrupt->Handler[idx++] = 0xC3;
+}
+
+VOID
+(NTAPI*gExceptionHandlerPtr) (
+    ULONG_PTR n,
+    ULONG_PTR errcode,
+    ULONG_PTR errcode2,
+    ULONG_PTR rip) = NULL;
+
+VOID
+NTAPI
+ExceptionHandler(
+    ULONG_PTR n,
+    ULONG_PTR errcode,
+    ULONG_PTR errcode2,
+    ULONG_PTR rip)
+{
+    gExceptionHandlerPtr(n, errcode, errcode2, rip);
+    KeStop();
 }

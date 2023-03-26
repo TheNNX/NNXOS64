@@ -10,5 +10,22 @@
     <CustomBuild Include="interrupt.asm" />
     <CustomBuild Include="GDT.asm" />
     <CustomBuild Include="PIC.asm" />
+    <CustomBuild Include="PIT.asm" />
+    <CustomBuild Include="Port.asm" />
+    <CustomBuild Include="memory.asm" />
+    <CustomBuild Include="registers.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\PCI.h" />
+    <ClInclude Include="include\PCIIDE.h" />
+    <ClInclude Include="include\ACPI.h" />
+    <ClInclude Include="include\APIC.h" />
+    <ClInclude Include="include\cmos.h" />
+    <ClInclude Include="include\GDT.h" />
+    <ClInclude Include="include\IDT.h" />
+    <ClInclude Include="include\MP.h" />
+    <ClInclude Include="include\msr.h" />
+    <ClInclude Include="include\PIC.h" />
+    <ClInclude Include="include\PIT.h" />
   </ItemGroup>
 </Project>

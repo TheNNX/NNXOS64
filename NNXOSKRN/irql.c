@@ -1,8 +1,8 @@
 #include <irql.h>
-#include <HAL/interrupt.h>
-#include <HAL/pcr.h>
+#include <interrupt.h>
+#include <pcr.h>
 #include <bugcheck.h>
-#include <HAL/cpu.h>
+#include <cpu.h>
 
 /* FIXME: It turns out, that masking IOAPIC interurpts isn't a good
  * idea after all - interrupts get ignored instead of put in IRR, and

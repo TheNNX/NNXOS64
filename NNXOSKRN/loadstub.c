@@ -3,12 +3,12 @@
 */
 
 #include <nnxtype.h>
-#include <HAL/paging.h>
+#include <paging.h>
 #include <SimpleTextIO.h>
 #include <../bootloader/bootdata.h>
 #include <nnxcfg.h>
-#include <HAL/physical_allocator.h>
-#include <HAL/pcr.h>
+#include <physical_allocator.h>
+#include <pcr.h>
 
 PDWORD gpdwFramebuffer; PDWORD gpdwFramebufferEnd;
 DWORD gdwWidth; DWORD gdwHeight; DWORD gdwPixelsPerScanline;
