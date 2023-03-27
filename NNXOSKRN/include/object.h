@@ -35,35 +35,7 @@ extern "C" {
 
     typedef DWORD ACCESS_MASK;
 
-    typedef struct _OBJECT_TYPE
-    {
-        NTSTATUS(*ObjectOpen)(
-            PVOID SelfObject, 
-            PVOID* pOutObject, 
-            ACCESS_MASK DesiredAccess, 
-            KPROCESSOR_MODE AcessMode,
-            PUNICODE_STRING Name,
-            BOOL CaseInsensitive
-        );
-
-        NTSTATUS(*AddChildObject)(
-            PVOID SelfObject,
-            PVOID Child
-        );
-
-        NTSTATUS(*OnOpen)(PVOID SelfObject);
-        NTSTATUS(*OnClose)(PVOID SelfObject);
-
-        NTSTATUS(*EnumerateChildren)(
-            PVOID SelfObject, 
-            PLIST_ENTRY CurrentEntry
-        );
-
-        NTSTATUS(*OnCreate)(PVOID SelfObject, PVOID data);
-        NTSTATUS(*OnDelete)(PVOID SelfObject);
-
-        SIZE_T InstanceSize;
-    }OBJECT_TYPE, *POBJECT_TYPE;
+    typedef struct _OBJECT_TYPE OBJECT_TYPE, *POBJECT_TYPE;
 
     typedef struct _OBJECT_HEADER
     {
@@ -142,7 +114,46 @@ extern "C" {
         POBJECT_TYPE objectType,
         KPROCESSOR_MODE accessMode);
 
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    ObDereferenceObject(PVOID object);
+
 #ifdef NNX_KERNEL
+    struct _OBJECT_TYPE
+    {
+        NTSTATUS(*ObjectOpen)(
+            PVOID SelfObject,
+            PVOID* pOutObject,
+            ACCESS_MASK DesiredAccess,
+            KPROCESSOR_MODE AcessMode,
+            PUNICODE_STRING Name,
+            BOOL CaseInsensitive);
+
+        NTSTATUS(*AddChildObject)(
+            PVOID SelfObject,
+            PVOID Child);
+
+        NTSTATUS(*OnOpen)(
+            PVOID SelfObject);
+
+        NTSTATUS(*OnClose)(
+            PVOID SelfObject);
+
+        NTSTATUS(*EnumerateChildren)(
+            PVOID SelfObject,
+            PLIST_ENTRY CurrentEntry);
+
+        NTSTATUS(*OnCreate)(
+            PVOID SelfObject, 
+            PVOID data);
+
+        NTSTATUS(*OnDelete)(
+            PVOID SelfObject);
+
+        SIZE_T InstanceSize;
+    };
+
     NTSTATUS 
     NTAPI    
     ObCreateObject(
@@ -152,10 +163,6 @@ extern "C" {
         POBJECT_ATTRIBUTES Attributes,
         POBJECT_TYPE ObjectType,
         PVOID OptionalData);
-
-    NTSTATUS 
-    NTAPI    
-    ObDereferenceObject(PVOID object);
 
     NTSTATUS 
     NTAPI    

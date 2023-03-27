@@ -1,12 +1,17 @@
-#include "object.h"
+#include <object.h>
 #include <pool.h>
 #include <bugcheck.h>
 #include <rtl.h>
+#include <ntdebug.h>
 
-NTSTATUS ObpTestNamespace();
-NTSTATUS ObpMpTestNamespace();
+NTSTATUS 
+ObpTestNamespace();
 
-NTSTATUS ObpTest()
+NTSTATUS 
+ObpMpTestNamespace();
+
+NTSTATUS 
+ObpTest()
 {
     NTSTATUS status;
 
@@ -17,7 +22,8 @@ NTSTATUS ObpTest()
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ObpMpTest()
+NTSTATUS 
+ObpMpTest()
 {
     NTSTATUS status;
 
@@ -60,8 +66,8 @@ ObInit()
 NTSTATUS ObpDeleteObject(PVOID Object);
 
 /* @brief This function first tries to reference the object without any checks. 
- * If it succeds, it tries to reference it by pointer. 
- * The function dereferences all its references on failure, and leaves one reference on success. */
+ * If it succeds, it tries to reference it by pointer. The function dereferences
+ * all its references on failure, and leaves one reference on success. */
 NTSTATUS 
 NTAPI
 ObReferenceObjectByHandle(
@@ -81,26 +87,37 @@ ObReferenceObjectByHandle(
     if (pObject == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    /* try extracting the object pointer */
-    status = ObExtractAndReferenceObjectFromHandle(handle, &localObjectPtr, accessMode);
-    if (status != STATUS_SUCCESS)
-        return status;
-
-    /* reference once again, but this time with access checks */
-    /* this is done to avoid code duplication, and we open the object first to avoid having it deleted mid-checking */
-    status = ObReferenceObjectByPointer(localObjectPtr, desiredAccess, objectType, accessMode);
+    /* Try extracting the object pointer. */
+    status = ObExtractAndReferenceObjectFromHandle(
+        handle, 
+        &localObjectPtr, 
+        accessMode);
     if (status != STATUS_SUCCESS)
     {
-        /* access checks failed */
+        return status;
+    }
 
-        /* derefence the original refernece */
+    /* Reference once again, but this time with access checks. This is done to 
+     * avoid code duplication, and we open the object first to avoid having it 
+     * deleted mid-checking. */
+    status = ObReferenceObjectByPointer(
+        localObjectPtr, 
+        desiredAccess, 
+        objectType, 
+        accessMode);
+    if (status != STATUS_SUCCESS)
+    {
+        /* Access checks failed. */
+
+        /* Derefence the original refernece. */
         ObDereferenceObject(localObjectPtr);
         return status;
     }
 
-    /* return our pointer */
+    /* Return our pointer. */
     *pObject = localObjectPtr;
-    /* derefence the original refernece */
+
+    /* Derefence the original refernece. */
     ObDereferenceObject(localObjectPtr);
 
     return STATUS_SUCCESS;
@@ -116,7 +133,7 @@ ObReferenceObject(
 
     header = ObGetHeaderFromObject(object);
 
-    /* acquire the objects lock and increment ref count */
+    /* Acquire the objects lock and increment ref count. */
     KeAcquireSpinLock(&header->Lock, &irql);
     header->ReferenceCount++;
     KeReleaseSpinLock(&header->Lock, irql);
@@ -124,9 +141,9 @@ ObReferenceObject(
     return STATUS_SUCCESS;
 }
 
-/* @brief does the same thing as ObReferenceObjectByHandle 
- * but only if the access checks succed
- * if objectType == NULL, objectType check is ignored */
+/* @brief Does the same thing as ObReferenceObjectByHandle,
+ * but only if the access checks succed if objectType == NULL, 
+ * objectType check is ignored. */
 NTSTATUS 
 NTAPI
 ObReferenceObjectByPointer(
@@ -145,38 +162,38 @@ ObReferenceObjectByPointer(
 
     KeAcquireSpinLock(&header->Lock, &irql);
 
-    /* if ReferenceCount is 0, the object was deleted when the code was waiting for it's lock */
-    if (header->ReferenceCount == 0)
-    {
-        KeReleaseSpinLock(&header->Lock, irql);
-        return STATUS_INVALID_PARAMETER;
-    }
+    /* If ReferenceCount is 0, the object was deleted when the code was waiting
+     * for it's lock. */
+    ASSERT(header->ReferenceCount != 0);
 
-    /* check the object attributes */
+    /* Check the object attributes. */
     if (header->Attributes & ~(OBJ_VALID_ATTRIBUTES))
     {
         KeReleaseSpinLock(&header->Lock, irql);
         return STATUS_INVALID_PARAMETER;
     }
 
-    /* check if the object is a kenrel-only object */
+    /* Check if the object is a kenrel-only object. */
     if ((header->Attributes & OBJ_KERNEL_HANDLE) && accessMode != KernelMode)
     {
         KeReleaseSpinLock(&header->Lock, irql);
         return STATUS_INVALID_HANDLE;
     }
 
-    /* if checks should be done */
-    if (header->Attributes & OBJ_FORCE_ACCESS_CHECK || accessMode != KernelMode)
+    /* If checks should be done */
+    if (header->Attributes & OBJ_FORCE_ACCESS_CHECK || 
+        accessMode != KernelMode)
     {
-        /* if there's an object type mismatch (objectType == NULL means that no check is done) */
+        /* If there's an object type mismatch 
+         * (objectType == NULL means that no check is done) */
         if (header->ObjectType != objectType && objectType != NULL)
         {
             KeReleaseSpinLock(&header->Lock, irql);
             return STATUS_OBJECT_TYPE_MISMATCH;
         }
         
-        /* if there are desired access bits that are not set in granted access */
+        /* If there are desired access bits 
+         * that are not set in granted access */
         if (desiredAccess & ~header->Access)
         {
             KeReleaseSpinLock(&header->Lock, irql);
@@ -206,7 +223,8 @@ ObDereferenceObject(
     if (header->ReferenceCount == 0)
     {
         NTSTATUS status;
-        /* clear the name before releasing lock so it's not accessible by name */
+        /* Clear the name before releasing lock,
+         * so it's not accessible by name. */
         header->Name.Buffer = 0;
         header->Name.Length = 0;
         header->Name.MaxLength = 0;
@@ -235,12 +253,20 @@ NTSTATUS ObpDeleteObject(PVOID object)
     header = ObGetHeaderFromObject(object);
 
     if (header->HandleCount > 0)
+    {
         return STATUS_ACCESS_DENIED;
+    }
 
-    /* if has a root, remove own entry from root's children */
+    /* If has a root, remove own entry from root's children. */
     if (header->Root && header->Root != INVALID_HANDLE_VALUE)
     {
-        status = ObReferenceObjectByHandle(header->Root, 0, NULL, KernelMode, &rootObject, NULL);
+        status = ObReferenceObjectByHandle(
+            header->Root, 
+            0, 
+            NULL, 
+            KernelMode,
+            &rootObject, 
+            NULL);
         if (status != STATUS_SUCCESS)
         {
             return status;
@@ -252,9 +278,8 @@ NTSTATUS ObpDeleteObject(PVOID object)
         RemoveEntryList(&header->ParentChildListEntry);
         KeReleaseSpinLock(&rootHeader->Lock, irql);
 
-        /* dereference two times, 
-         * one time for ObReferenceObjectByHandle 
-         * and one for when root was assigned to the object */
+        /* Dereference two times, one time for ObReferenceObjectByHandle, 
+         * and one for when root was assigned to the object. */
         ObDereferenceObject(rootObject);
         ObDereferenceObject(rootObject);
     }
@@ -297,11 +322,11 @@ ObCreateObject(
         if (root == INVALID_HANDLE_VALUE)
             root = ObGetGlobalNamespaceHandle();
 
-        /* if root still INVALID_HANDLE_VALUE after setting to global namespace,
-         * it means object manager is not initialized yet */
+        /* If root still INVALID_HANDLE_VALUE after setting to global namespace,
+         * it means object manager is not initialized yet. */
         if (root != INVALID_HANDLE_VALUE)
         {
-            /* reference the root handle to get access to root's type */
+            /* Reference the root handle to get access to root's type. */
             status = ObReferenceObjectByHandle(
                 root,
                 DesiredAccess,
@@ -317,7 +342,8 @@ ObCreateObject(
             POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
             rootType = rootHeader->ObjectType;
 
-            /* try traversing root to the object - if it succeded, object with this name already exists */
+            /* Try traversing root to the object - if it succeded, 
+             * object with this name already exists. */
             if (rootType->ObjectOpen == NULL)
             {
                 status = STATUS_OBJECT_PATH_INVALID;
@@ -335,14 +361,15 @@ ObCreateObject(
 
             if (status == STATUS_SUCCESS)
             {
-                /* if OBJ_OPENIF was specifed to this function, simply return the existing object */
-                /* TODO: check if NT checks for types in this situation */
+                /* If OBJ_OPENIF was specifed to this function, simply 
+                 * return the existing object. */
+                /* TODO: check if NT checks for types in this situation. */
                 if (Attributes->Attributes & OBJ_OPENIF)
                 {
                     *pObject = potentialCollision;
                     return STATUS_SUCCESS;
                 }
-                /* fail otherwise */
+                /* Fail otherwise. */
                 else
                 {
                     ObDereferenceObject(potentialCollision);
@@ -368,14 +395,15 @@ ObCreateObject(
     header->Root = root;
     header->ObjectType = objectType;
 
-    /* caller has to somehow close/dereference this object */
+    /* Caller has to somehow close/dereference this object. */
     header->ReferenceCount = 1;
 
-    /* initialize the handle list */
+    /* Initialize the handle list. */
     header->HandleCount = 0;
     InitializeListHead(&header->HandlesHead);
     
-    /* copy the struct (it doesn't copy the buffer though, but according to MSDN that is a-okay) */
+    /* Copy the struct (it doesn't copy the buffer though, 
+     * but according to MSDN that is okay). */
     if (Attributes->ObjectName != NULL)
     {
         header->Name = *Attributes->ObjectName;
@@ -389,28 +417,31 @@ ObCreateObject(
 
     *pObject = ObGetObjectFromHeader(header);
     
-    /* add to root's children */
+    /* Add to root's children. */
     if (root != INVALID_HANDLE_VALUE)
     {
         if (rootType->AddChildObject == NULL)
+        {
             status = STATUS_INVALID_HANDLE;
+        }
         else
+        {
             status = rootType->AddChildObject(rootObject, *pObject);
-
+        }
     }
 
-    /* if there was no problem with adding to the root (or no adding was done),
-     * and the object type provides a custom OnCreate method, call it */
+    /* If there was no problem with adding to the root (or no adding was done),
+     * and the object type provides a custom OnCreate method, call it. */
     if (status == STATUS_SUCCESS && header->ObjectType->OnCreate != NULL)
     {
         status = header->ObjectType->OnCreate(*pObject, optionalData);
     }
 
-    /* if there was some problem creating the object, delete it */
+    /* If there was some problem creating the object, delete it. */
     if (status != STATUS_SUCCESS)
     {
         *pObject = NULL;
-        /* derefernce the object to delete it */
+        /* Derefernce the object to delete it. */
         ObDereferenceObject(pObject);
         return status;
     }
