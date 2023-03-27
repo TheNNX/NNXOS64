@@ -8,15 +8,26 @@
 #include <rtlstring.h>
 #include <cpu.h>
 
-#define OBJ_INHERIT            0x00000002L
-#define OBJ_PERMANENT          0x00000010L
-#define OBJ_EXCLUSIVE          0x00000020L
-#define OBJ_CASE_INSENSITIVE   0x00000040L
-#define OBJ_OPENIF             0x00000080L
-#define OBJ_OPENLINK           0x00000100L
-#define OBJ_KERNEL_HANDLE      0x00000200L
-#define OBJ_FORCE_ACCESS_CHECK 0x00000400L
-#define OBJ_VALID_ATTRIBUTES   0x000007F2L
+#define OBJ_INHERIT             0x00000002L
+#define OBJ_PERMANENT           0x00000010L
+#define OBJ_EXCLUSIVE           0x00000020L
+#define OBJ_CASE_INSENSITIVE    0x00000040L
+#define OBJ_OPENIF              0x00000080L
+#define OBJ_OPENLINK            0x00000100L
+#define OBJ_KERNEL_HANDLE       0x00000200L
+#define OBJ_FORCE_ACCESS_CHECK  0x00000400L
+#define OBJ_VALID_ATTRIBUTES    0x000007F2L
+
+#define DELETE                  0x00010000L
+#define READ_CONTROL            0x00020000L
+#define WRITE_DAC               0x00040000L
+#define WRITE_OWNER             0x00080000L
+#define SYNCHRONIZE             0x00100000L
+#define STANDARD_RIGHTS_READ    READ_CONTROL
+#define STANDARD_RIGHTS_WRITE   READ_CONTROL
+#define STANDARD_RIGHTS_EXECUTE READ_CONTROL
+#define STANDARD_RIGHTS_ALL     0x001F0000L
+#define SPECIFIC_RIGHTS_ALL     0x0000FFFFL
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +61,8 @@ extern "C" {
 
         NTSTATUS(*OnCreate)(PVOID SelfObject, PVOID data);
         NTSTATUS(*OnDelete)(PVOID SelfObject);
+
+        SIZE_T InstanceSize;
     }OBJECT_TYPE, *POBJECT_TYPE;
 
     typedef struct _OBJECT_HEADER
@@ -137,7 +150,6 @@ extern "C" {
         ACCESS_MASK DesiredAccess, 
         KPROCESSOR_MODE AccessMode, 
         POBJECT_ATTRIBUTES Attributes,
-        ULONG ObjectSize,
         POBJECT_TYPE ObjectType,
         PVOID OptionalData);
 

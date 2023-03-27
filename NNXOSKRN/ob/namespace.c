@@ -21,6 +21,7 @@ typedef struct _OBJECT_TYPE_IMPL
 #pragma pack(pop)
 
 HANDLE GlobalNamespace = INVALID_HANDLE_VALUE;
+static HANDLE ObpTypeDirHandle = INVALID_HANDLE_VALUE;
 
 static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
 {
@@ -191,14 +192,56 @@ static NTSTATUS DirObjTypeOpenObject(
     return STATUS_OBJECT_NAME_NOT_FOUND;
 }
 
-static OBJECT_TYPE_IMPL ObTypeTypeImpl = {
-    {{NULL, NULL}, RTL_CONSTANT_STRING(L"Type"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0},
-    {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+static OBJECT_TYPE_IMPL ObTypeTypeImpl = 
+{
+    {
+        {NULL, NULL}, 
+        RTL_CONSTANT_STRING(L"Type"), 
+        INVALID_HANDLE_VALUE, 
+        0,
+        0, 
+        1, 
+        0, 
+        {NULL, NULL}, 
+        &ObTypeTypeImpl.Data, 
+        0
+    },
+    {
+        NULL,
+        NULL,
+        NULL,
+        NULL, 
+        NULL, 
+        NULL, 
+        NULL,
+        sizeof(OBJECT_TYPE)
+    }
 };
 
-static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = {
-    {{NULL, NULL}, RTL_CONSTANT_STRING(L"Directory"), INVALID_HANDLE_VALUE, 0, 0, 1, 0, {NULL, NULL}, &ObTypeTypeImpl.Data, 0 },
-    {DirObjTypeOpenObject, DirObjTypeAddChildObject, NULL, NULL, NULL, NULL, NULL}
+static OBJECT_TYPE_IMPL ObDirectoryTypeImpl = 
+{
+    {
+        {NULL, NULL}, 
+        RTL_CONSTANT_STRING(L"Directory"), 
+        INVALID_HANDLE_VALUE, 
+        0, 
+        0, 
+        1, 
+        0, 
+        {NULL, NULL}, 
+        &ObTypeTypeImpl.Data, 
+        0 
+    },
+    {
+        DirObjTypeOpenObject, 
+        DirObjTypeAddChildObject, 
+        NULL, 
+        NULL, 
+        NULL, 
+        NULL, 
+        NULL,
+        sizeof(OBJECT_DIRECTORY)
+    }
 };
 
 POBJECT_TYPE ObTypeObjectType = &ObTypeTypeImpl.Data;
@@ -335,8 +378,6 @@ ObChangeRoot(
     return STATUS_SUCCESS;
 }
 
-static HANDLE ObpTypeDirHandle = INVALID_HANDLE_VALUE;
-
 HANDLE 
 NTAPI
 ObpGetTypeDirHandle()
@@ -354,81 +395,83 @@ ObpInitNamespace()
     POBJECT_DIRECTORY typesDirectory;
     HANDLE objectTypeDirHandle;
 
-    /* initialize root's attributes */
+    /* Initialize root's attributes. */
     InitializeObjectAttributes(
         &objAttributes,
         &GlobalNamespaceEmptyName,
         OBJ_PERMANENT | OBJ_KERNEL_HANDLE,
         NULL,
-        NULL
-    );
+        NULL);
 
-    /* create the namespace object */
+    /* Create the namespace object. */
     status = ObCreateObject(
         &globalNamespaceRoot, 
         0, 
         KernelMode, 
-        &objAttributes, 
-        sizeof(OBJECT_DIRECTORY),
+        &objAttributes,
         ObDirectoryObjectType,
-        NULL
-    );
+        NULL);
 
     if (status != STATUS_SUCCESS)
         return status;
 
-    /* initalize root's children head */
+    /* Initalize root's children head.s */
     InitializeListHead(&globalNamespaceRoot->ChildrenHead);
 
-    /* if handle creation fails, return */
-    status = ObCreateHandle(&GlobalNamespace, KernelMode, (PVOID)globalNamespaceRoot);
+    /* If handle creation fails, return. */
+    status = ObCreateHandle(
+        &GlobalNamespace, 
+        KernelMode, 
+        (PVOID)globalNamespaceRoot);
     if (status != STATUS_SUCCESS)
         return status;
 
-    /* initalize ObjectTypes directory attributes */
+    /* Initalize ObjectTypes directory attributes. */
     InitializeObjectAttributes(
         &typeDirAttrbiutes,
         &TypesDirName,
         OBJ_PERMANENT | OBJ_KERNEL_HANDLE,
         GlobalNamespace,
-        NULL
-    );
+        NULL);
 
-    /* create the ObjectTypes directory object */
+    /* Create the ObjectTypes directory object. */
     status = ObCreateObject(
         &typesDirectory,
         0,
         KernelMode,
         &typeDirAttrbiutes,
-        sizeof(OBJECT_DIRECTORY),
         ObDirectoryObjectType,
-        NULL
-    );
+        NULL);
 
     if (status != STATUS_SUCCESS)
         return status;
 
-    /* initalize ObjectTypes directory's children head */
+    /* Initalize ObjectTypes directory's children head. */
     InitializeListHead(&typesDirectory->ChildrenHead);
 
-    /* create handle for the ObjectTypes directory */
+    /* Create handle for the ObjectTypes directory. */
     status = ObCreateHandle(
         &objectTypeDirHandle,
         KernelMode,
-        (PVOID)typesDirectory
-    );
+        (PVOID)typesDirectory);
 
     if (status != STATUS_SUCCESS)
         return status;
 
     ObpTypeDirHandle = objectTypeDirHandle;
 
-    /* add premade type objects to ObjectTypes directory */
-    status = ObChangeRoot((PVOID)ObDirectoryObjectType, objectTypeDirHandle, KernelMode);
+    /* Add premade type objects to ObjectTypes directory. */
+    status = ObChangeRoot(
+        (PVOID)ObDirectoryObjectType, 
+        objectTypeDirHandle,
+        KernelMode);
     if (status != STATUS_SUCCESS)
         return status;
 
-    status = ObChangeRoot((PVOID)ObTypeObjectType, objectTypeDirHandle, KernelMode);
+    status = ObChangeRoot(
+        (PVOID)ObTypeObjectType, 
+        objectTypeDirHandle, 
+        KernelMode);
     if (status != STATUS_SUCCESS)
         return status;
 

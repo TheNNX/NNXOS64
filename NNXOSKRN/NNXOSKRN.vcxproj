@@ -252,6 +252,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\bugcheck.h" />
     <ClInclude Include="include\fat.h" />
     <ClInclude Include="include\fat32.h" />
+    <ClInclude Include="include\file.h" />
     <ClInclude Include="include\gpt.h" />
     <ClInclude Include="include\mbr.h" />
     <ClInclude Include="include\vfs.h" />

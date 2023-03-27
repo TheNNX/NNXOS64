@@ -263,7 +263,7 @@ extern "C" {
 				UINT8 EXECUTE;
 				UINT8 SNAPSHOT;
 				UINT8 INSERT;
-				UINT8 DELETE;
+				UINT8 DELETEKEY;
 				UINT8 HELP;
 				union
 				{

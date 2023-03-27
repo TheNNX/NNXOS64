@@ -119,6 +119,9 @@ NTSTATUS PspInitializeScheduler()
     PsThreadType->OnCreate = PspThreadOnCreate;
     PsThreadType->OnDelete = PspThreadOnDelete;
 
+    PsProcessType->InstanceSize = sizeof(EPROCESS);
+    PsThreadType->InstanceSize = sizeof(ETHREAD);
+
     irql = KiAcquireDispatcherLock();
 
     if (CoresSchedulerData == NULL)
@@ -668,7 +671,6 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
         0, 
         KernelMode, 
         &processObjAttributes, 
-        sizeof(EPROCESS), 
         PsProcessType,
         NULL
     );
@@ -763,7 +765,6 @@ NTSTATUS PspCreateThreadInternal(
         0,
         KernelMode,
         &threadObjAttributes,
-        sizeof(ETHREAD),
         PsThreadType,
         &data
     );

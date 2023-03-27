@@ -275,7 +275,6 @@ ObCreateObject(
     ACCESS_MASK DesiredAccess, 
     KPROCESSOR_MODE AccessMode, 
     POBJECT_ATTRIBUTES Attributes,
-    ULONG ObjectSize,
     POBJECT_TYPE objectType,
     PVOID optionalData)
 {
@@ -331,8 +330,7 @@ ObCreateObject(
                     DesiredAccess,
                     AccessMode,
                     Attributes->ObjectName,
-                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0
-                );
+                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0);
             }
 
             if (status == STATUS_SUCCESS)
@@ -354,11 +352,13 @@ ObCreateObject(
         }
     }
 
+    /* Allocate header and the object. */
+    header = ExAllocatePoolWithTag(
+        NonPagedPool,
+        sizeof(OBJECT_HEADER) + objectType->InstanceSize, 
+        'OBJ ');
 
-    /* allocate header and the object */
-    header = ExAllocatePoolWithTag(NonPagedPool, sizeof(OBJECT_HEADER) + ObjectSize, 'OBJ ');
-
-    /* if system's out of memory, fail */
+    /* If system's out of memory, fail. */
     if (header == NULL)
         return STATUS_NO_MEMORY;
 
@@ -421,7 +421,7 @@ ObCreateObject(
 static UNICODE_STRING ThreadObjName = RTL_CONSTANT_STRING(L"Thread");
 static UNICODE_STRING ProcObjName = RTL_CONSTANT_STRING(L"Process");
 
-/* creates the object types neccessary for the scheduler */
+/* Creates the object types neccessary for the scheduler. */
 NTSTATUS 
 NTAPI
 ObCreateSchedulerTypes(
@@ -435,60 +435,56 @@ ObCreateSchedulerTypes(
 
     typeDirHandle = ObpGetTypeDirHandle();
 
-    /* initialize attributes */
+    /* Initialize attributes. */
     InitializeObjectAttributes(
         &procAttrib,
         &ProcObjName,
         OBJ_KERNEL_HANDLE,
         typeDirHandle,
-        NULL
-    );
+        NULL);
 
     InitializeObjectAttributes(
         &threadAttrib,
         &ThreadObjName,
         OBJ_KERNEL_HANDLE,
         typeDirHandle,
-        NULL
-    );
+        NULL);
 
-    /* create objects */
+    /* Create objects. */
     status = ObCreateObject(
         &procType,
         0,
         KernelMode,
         &procAttrib,
-        sizeof(OBJECT_TYPE),
         ObTypeObjectType,
-        NULL
-    );
+        NULL);
 
     if (status != STATUS_SUCCESS)
+    {
         return status;
+    }
 
     status = ObCreateObject(
         &threadType,
         0,
         KernelMode,
         &threadAttrib,
-        sizeof(OBJECT_TYPE),
         ObTypeObjectType,
-        NULL
-    );
+        NULL);
 
     if (status != STATUS_SUCCESS)
     {
-        /* dereferencing this isn't really needed, as the OS is dead anyway if we're here
-         * but it doesn't hurt us in any way */
+        /* Dereferencing this isn't really needed, as the OS is dead anyway
+         * if we're here, but it doesn't hurt us in any way. */
         ObDereferenceObject((PVOID)procType);
         return status;
     }
 
-    /* no methods defined yet */
+    /* No methods defined yet */
     RtlZeroMemory(threadType, sizeof(OBJECT_TYPE));
     RtlZeroMemory(procType, sizeof(OBJECT_TYPE));
 
-    /* output through the pointer parameters */
+    /* Output through the pointer parameters. */
     *poutProcessType = procType;
     *poutThreadType = threadType;
 

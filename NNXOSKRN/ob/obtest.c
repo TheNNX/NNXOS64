@@ -132,7 +132,6 @@ Test2()
             0,
             UserMode,
             &objAttribs,
-            sizeof(OBJECT_TYPE),
             ObTypeObjectType,
             NULL
         );

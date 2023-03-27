@@ -59,13 +59,27 @@ typedef ULONG UINT;
 #define STATUS_ACCESS_DENIED            0xC0000022UL
 #define STATUS_NOT_SUPPORTED			0xC00000BBUL
 
-#ifndef _M_AMD64
-typedef ULONG ULONG_PTR;
-typedef LONG LONG_PTR;
-#else
+#ifdef _M_AMD64
 typedef ULONGLONG ULONG_PTR, *PULONG_PTR;
 typedef LONGLONG LONG_PTR, *PLONG_PTR;
+#else
+#error Unknown architecture.
 #endif
+
+typedef union _LARGE_INTEGER
+{
+    struct
+    {
+        DWORD LowPart;
+        LONG  HighPart;
+    } DUMMYSTRUCTNAME;
+    struct
+    {
+        DWORD LowPart;
+        LONG  HighPart;
+    } u;
+    LONGLONG QuadPart;
+} LARGE_INTEGER, *PLARGE_INTEGER;
 
 typedef ULONG_PTR SIZE_T;
 
@@ -138,7 +152,8 @@ typedef VOID *PVOID, *LPVOID;
 #define FASTCALL __fastcall
 #endif
 
-inline bool GetBit(unsigned int num, unsigned int n) {
+inline bool GetBit(unsigned int num, unsigned int n) 
+{
 	return ((num >> n) & 1);
 }
 
