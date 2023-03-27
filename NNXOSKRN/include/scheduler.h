@@ -223,7 +223,7 @@ extern "C" {
      * @param CoreNumber - Core with the destination queue
      * @return TRUE if a potential thread in the shared queue was found.
     */
-    BOOL 
+    BOOLEAN 
     NTAPI
     PspManageSharedReadyQueue(
         UCHAR CoreNumber);

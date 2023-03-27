@@ -31,26 +31,87 @@ extern ULONG_PTR KiCyclesPerClockQuantum;
 extern ULONG_PTR KiCyclesPerQuantum;
 extern UINT KeNumberOfProcessors;
 
-VOID PspSetupThreadState(PKTASK_STATE pThreadState, BOOL IsKernel, ULONG_PTR EntryPoint, ULONG_PTR Userstack);
-NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
-NTSTATUS PspCreateThreadInternal(PETHREAD* ppThread, PEPROCESS pParentProcess, BOOL IsKernel, ULONG_PTR EntryPoint);
-__declspec(noreturn) VOID PspTestAsmUser();
-__declspec(noreturn) VOID PspTestAsmUserEnd();
-__declspec(noreturn) VOID PspTestAsmUser2();
-__declspec(noreturn) VOID PspIdleThreadProcedure();
-BOOL TestBit(ULONG_PTR Number, ULONG_PTR BitIndex);
-ULONG_PTR ClearBit(ULONG_PTR Number, ULONG_PTR BitIndex);
-ULONG_PTR SetBit(ULONG_PTR Number, ULONG_PTR BitIndex);
-NTSTATUS PspProcessOnCreate(PVOID SelfObject, PVOID CreateData);
-NTSTATUS PspProcessOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData);
-NTSTATUS PspProcessOnDelete(PVOID SelfObject);
-NTSTATUS PspThreadOnCreate(PVOID SelfObject, PVOID CreateData);
-NTSTATUS PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData);
-NTSTATUS PspThreadOnDelete(PVOID SelfObject);
+VOID
+NTAPI
+PspSetupThreadState(
+    PKTASK_STATE pThreadState, 
+    BOOL IsKernel, 
+    ULONG_PTR EntryPoint,
+    ULONG_PTR Userstack);
+
+NTSTATUS 
+NTAPI
+PspCreateProcessInternal(
+    PEPROCESS* ppProcess);
+
+NTSTATUS 
+NTAPI
+PspCreateThreadInternal(
+    PETHREAD* ppThread, 
+    PEPROCESS pParentProcess,
+    BOOL IsKernel, 
+    ULONG_PTR EntryPoint);
+
+BOOL 
+NTAPI
+TestBit(
+    ULONG_PTR Number,
+    ULONG_PTR BitIndex);
+
+ULONG_PTR 
+NTAPI
+ClearBit(
+    ULONG_PTR Number, 
+    ULONG_PTR BitIndex);
+
+ULONG_PTR 
+NTAPI
+SetBit(
+    ULONG_PTR Number, 
+    ULONG_PTR BitIndex);
+
+NTSTATUS 
+NTAPI 
+PspProcessOnCreate(
+    PVOID SelfObject, 
+    PVOID CreateData);
+
+NTSTATUS 
+NTAPI 
+PspProcessOnCreateNoDispatcher(
+    PVOID SelfObject, 
+    PVOID CreateData);
+
+NTSTATUS 
+NTAPI 
+PspProcessOnDelete(
+    PVOID SelfObject);
+
+NTSTATUS 
+NTAPI 
+PspThreadOnCreate(
+    PVOID SelfObject,
+    PVOID CreateData);
+
+NTSTATUS 
+NTAPI 
+PspThreadOnCreateNoDispatcher(
+    PVOID SelfObject, 
+    PVOID CreateData);
+
+NTSTATUS 
+NTAPI 
+PspThreadOnDelete(
+    PVOID SelfObject);
+
+__declspec(noreturn) VOID NTAPI PspTestAsmUser();
+__declspec(noreturn) VOID NTAPI PspTestAsmUserEnd();
+__declspec(noreturn) VOID NTAPI PspTestAsmUser2();
+__declspec(noreturn) VOID NTAPI PspIdleThreadProcedure();
 
 struct _READY_QUEUES
 {
-    /* a ready queue for each thread priority */
+    /* A ready queue for each thread priority */
     LIST_ENTRY ThreadReadyQueues[32];
     ULONG ThreadReadyQueuesSummary;
 };
@@ -77,7 +138,7 @@ typedef struct _KSHARED_READY_QUEUE
 PKCORE_SCHEDULER_DATA   CoresSchedulerData = (PKCORE_SCHEDULER_DATA)NULL;
 KSHARED_READY_QUEUE     PspSharedReadyQueue = { 0 };
 
-/* clear the summary bit for this priority if there are none entries left */
+/* Clear the summary bit for this priority if there are none entries left */
 inline VOID ClearSummaryBitIfNeccessary(
     LIST_ENTRY* ThreadReadyQueues, 
     PULONG Summary,
@@ -105,7 +166,9 @@ inline VOID SetSummaryBitIfNeccessary(
     }
 }
 
-NTSTATUS PspInitializeScheduler()
+NTSTATUS 
+NTAPI
+PspInitializeScheduler()
 {
     INT i;
     KIRQL irql;
@@ -142,11 +205,12 @@ NTSTATUS PspInitializeScheduler()
         InitializeListHead(&ThreadListHead);
         InitializeListHead(&ProcessListHead);
 
-        CoresSchedulerData = (PKCORE_SCHEDULER_DATA)PagingAllocatePageBlockFromRange(
-            (KeNumberOfProcessors * sizeof(KCORE_SCHEDULER_DATA) + PAGE_SIZE - 1) / PAGE_SIZE,
-            PAGING_KERNEL_SPACE,
-            PAGING_KERNEL_SPACE_END
-        );
+        CoresSchedulerData = (PKCORE_SCHEDULER_DATA)
+            PagingAllocatePageBlockFromRange(
+                (KeNumberOfProcessors * sizeof(KCORE_SCHEDULER_DATA) 
+                    + PAGE_SIZE - 1) / PAGE_SIZE,
+                PAGING_KERNEL_SPACE,
+                PAGING_KERNEL_SPACE_END);
             
         if (CoresSchedulerData != NULL)
         {
@@ -157,10 +221,15 @@ NTSTATUS PspInitializeScheduler()
         }
     }
     KiReleaseDispatcherLock(irql);
-    return (CoresSchedulerData == (PKCORE_SCHEDULER_DATA)NULL) ? (STATUS_NO_MEMORY) : (STATUS_SUCCESS);
+    return (CoresSchedulerData == (PKCORE_SCHEDULER_DATA)NULL) ? 
+        STATUS_NO_MEMORY : 
+        STATUS_SUCCESS;
 }
 
-PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
+PKTHREAD 
+NTAPI
+PspSelectNextReadyThread(
+    UCHAR CoreNumber)
 {
     INT priority;
     PKTHREAD result;
@@ -174,10 +243,17 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
     {
         if (TestBit(coreOwnData->ThreadReadyQueuesSummary, priority))
         {
-            PLIST_ENTRY dequeuedEntry = (PLIST_ENTRY)RemoveHeadList(&coreOwnData->ThreadReadyQueues[priority]);
-            result = (PKTHREAD)((ULONG_PTR)dequeuedEntry - FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
+            PLIST_ENTRY dequeuedEntry = 
+                (PLIST_ENTRY)RemoveHeadList(&coreOwnData->
+                    ThreadReadyQueues[priority]);
+            result = (PKTHREAD)
+                ((ULONG_PTR)dequeuedEntry - 
+                    FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
 
-            ClearSummaryBitIfNeccessary(coreOwnData->ThreadReadyQueues, &coreOwnData->ThreadReadyQueuesSummary, priority);
+            ClearSummaryBitIfNeccessary(
+                coreOwnData->ThreadReadyQueues, 
+                &coreOwnData->ThreadReadyQueuesSummary, 
+                priority);
             break;
         }
     }
@@ -186,7 +262,9 @@ PKTHREAD PspSelectNextReadyThread(UCHAR CoreNumber)
     return result;
 }
 
-NTSTATUS PspCreateIdleProcessForCore(
+NTSTATUS 
+NTAPI
+PspCreateIdleProcessForCore(
     PEPROCESS* outIdleProcess, 
     PETHREAD* outIdleThread, 
     UINT8 coreNumber) 
@@ -258,7 +336,10 @@ NTSTATUS PspCreateIdleProcessForCore(
     return STATUS_SUCCESS;
 }
 
-VOID PspInitializeCoreSchedulerData(UINT8 CoreNumber)
+VOID 
+NTAPI
+PspInitializeCoreSchedulerData(
+    UINT8 CoreNumber)
 {
     INT i;
     PKCORE_SCHEDULER_DATA thiscoreSchedulerData =
@@ -409,7 +490,9 @@ PspInitializeCore(
 
 ULONG_PTR 
 NTAPI
-PspScheduleThread(PKINTERRUPT ClockInterrupt, PKTASK_STATE Stack)
+PspScheduleThread(
+    PKINTERRUPT ClockInterrupt, 
+    PKTASK_STATE Stack)
 {
     PKPCR pcr;
     KIRQL irql;
@@ -508,7 +591,8 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt, PKTASK_STATE Stack)
                     pcr->Prcb->NextThread->Process)
                 {
                     PagingSetAddressSpace(
-                        (ULONG_PTR)nextThread->Process->AddressSpacePhysicalPointer);
+                        (ULONG_PTR)nextThread->Process->
+                            AddressSpacePhysicalPointer);
                 }
             }
 
@@ -525,7 +609,8 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt, PKTASK_STATE Stack)
                 PspInsertIntoSharedQueue(originalRunningThread);
                 originalRunningThread->ThreadState = THREAD_STATE_READY;
             }
-            else if (originalRunningThread->ThreadState == THREAD_STATE_TERMINATED)
+            else if (originalRunningThread->ThreadState == 
+                     THREAD_STATE_TERMINATED)
             {
                 /* TODO */
                 /* FIXME: Terminated threads cause a significant memory leak,
@@ -566,7 +651,10 @@ KeGetCurrentThread()
     return PspGetCurrentThread();
 }
 
-PVOID PspCreateKernelStack(SIZE_T nPages)
+PVOID 
+NTAPI
+PspCreateKernelStack(
+    SIZE_T nPages)
 {
     ULONG_PTR blockAllocation, currentMappingGuard1, currentMappingGuard2;
     NTSTATUS status;
@@ -621,6 +709,7 @@ PVOID PspCreateKernelStack(SIZE_T nPages)
 }
 
 VOID
+NTAPI
 PspFreeKernelStack(
     PVOID OriginalStackLocation,
     SIZE_T nPages
@@ -628,8 +717,6 @@ PspFreeKernelStack(
 {
     /* TODO */
 }
-
-ULONG_PTR GetRSP();
 
 VOID 
 NTAPI
@@ -664,7 +751,10 @@ PspSetupThreadState(
     pThreadState->R14 = 0xABCDEF;
 }
 
-NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
+NTSTATUS 
+NTAPI
+PspCreateProcessInternal(
+    PEPROCESS* ppProcess)
 {
     NTSTATUS status;
     PEPROCESS pProcess;
@@ -697,7 +787,11 @@ NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess)
 }
 
 
-NTSTATUS PspProcessOnCreate(PVOID selfObject, PVOID createData)
+NTSTATUS 
+NTAPI
+PspProcessOnCreate(
+    PVOID selfObject, 
+    PVOID createData)
 {
     PEPROCESS pProcess;
     NTSTATUS status;
@@ -705,28 +799,32 @@ NTSTATUS PspProcessOnCreate(PVOID selfObject, PVOID createData)
 
     pProcess = (PEPROCESS)selfObject;
 
-    /* acquire the dispatcher lock */
+    /* Acquire the dispatcher lock. */
     irql = KiAcquireDispatcherLock();
 
-    /* initialize the dispatcher header */
+    /* Initialize the dispatcher header. */
     InitializeDispatcherHeader(&pProcess->Pcb.Header, ProcessObject);
 
-    /* initialize the process structure */
+    /* Initialize the process structure. */
     status = PspProcessOnCreateNoDispatcher(selfObject, createData);
-    /* add the process to the process list */
+    /* Add the process to the process list. */
     InsertTailList(&ProcessListHead, &pProcess->Pcb.ProcessListEntry);
 
-    /* release the dispatcher lock */
+    /* Release the dispatcher lock. */
     KiReleaseDispatcherLock(irql);
 
     return status;
 }
 
-NTSTATUS PspProcessOnCreateNoDispatcher(PVOID selfObject, PVOID createData)
+NTSTATUS
+NTAPI
+PspProcessOnCreateNoDispatcher(
+    PVOID selfObject,
+    PVOID createData)
 {
     PEPROCESS pProcess = (PEPROCESS)selfObject;
 
-    /* make sure it is not prematurely used */
+    /* make sure it is not prematurely used, */
     pProcess->Initialized = FALSE;
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
@@ -742,19 +840,24 @@ NTSTATUS PspProcessOnCreateNoDispatcher(PVOID selfObject, PVOID createData)
 }
 
 /**
- * @brief Allocates memory for a new thread, adds it to the scheduler's thread list and parent process' child thread list
- * @param ppThread pointer to a pointer to PETHREAD, value it's pointing to will be set to result of allocation after this function
- * @param pParentProcess pointer to EPROCESS structure of the parent process for this thread
- * @param IsKernel if true, thread is created in kernel mode
- * @param EntryPoint entrypoint function for the thread, caller is responsible for making any neccessary changes in the parent process' address space 
- * @return STATUS_SUCCESS, STATUS_NO_MEMORY
+ * @brief Allocates memory for a new thread, adds it to the scheduler's thread 
+ * list and parent process' child thread list.
+ * @param ppThread pointer to a pointer to PETHREAD, value it's pointing to will
+ * be set to result of allocation after this function.
+ * @param pParentProcess pointer to EPROCESS structure of the parent process for
+ * this thread.
+ * @param IsKernel if true, thread is created in kernel mode.
+ * @param EntryPoint entrypoint function for the thread, caller is responsible
+ * for making any neccessary changes in the parent process' address space.
+ * @return STATUS_SUCCESS on success
 */
-NTSTATUS PspCreateThreadInternal(
+NTSTATUS 
+NTAPI
+PspCreateThreadInternal(
     PETHREAD* ppThread, 
     PEPROCESS pParentProcess, 
     BOOL IsKernel, 
-    ULONG_PTR EntryPoint
-)
+    ULONG_PTR EntryPoint)
 {
     NTSTATUS status;
     PETHREAD pThread;
@@ -766,8 +869,7 @@ NTSTATUS PspCreateThreadInternal(
         NULL,
         OBJ_KERNEL_HANDLE,
         INVALID_HANDLE_VALUE,
-        NULL
-    );
+        NULL);
 
     data.Entrypoint = EntryPoint;
     data.ParentProcess = pParentProcess;
@@ -799,7 +901,11 @@ NTSTATUS PspCreateThreadInternal(
  * @param CreateData pointer to THREAD_CREATE_DATA structure,
  * which holds the entrypoint and parent process pointer for example. 
  */
-NTSTATUS PspThreadOnCreate(PVOID SelfObject, PVOID CreateData)
+NTSTATUS 
+NTAPI
+PspThreadOnCreate(
+    PVOID SelfObject,
+    PVOID CreateData)
 {
     KIRQL irql;
     NTSTATUS status;
@@ -807,25 +913,23 @@ NTSTATUS PspThreadOnCreate(PVOID SelfObject, PVOID CreateData)
     
     pThread = (PETHREAD)SelfObject;
 
-    /* acquire the dispatcher lock */
+    /* Acquire the dispatcher lock. */
     irql = KiAcquireDispatcherLock();
 
-    /* initialize the dispatcher header */
+    /* Initialize the dispatcher header. */
     InitializeDispatcherHeader(&pThread->Tcb.Header, ThreadObject);
 
-    /* initialize the thread structure */
+    /* Initialize the thread structure. */
     status = PspThreadOnCreateNoDispatcher(SelfObject, CreateData);
 
-    /**
-     * initialize the parts of the thread structure 
-     * that are "protected" by the dispatcher lock 
-     */
+    /* Initialize the parts of the thread structure 
+     * that are "protected" by the dispatcher lock. */
     InsertTailList(&ThreadListHead, &pThread->Tcb.ThreadListEntry);
     KeInitializeApcState(&pThread->Tcb.ApcState);
     KeInitializeApcState(&pThread->Tcb.SavedApcState);
     pThread->Tcb.ThreadState = THREAD_STATE_READY;
 
-    /* release the lock and return */
+    /* Release the lock and return. */
     KiReleaseDispatcherLock(irql);
     ObReferenceObject(pThread->Process);
     return status;
@@ -849,7 +953,9 @@ PspOnThreadTimeout(
 
 NTSTATUS 
 NTAPI
-PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
+PspThreadOnCreateNoDispatcher(
+    PVOID SelfObject,
+    PVOID CreateData)
 {
     ULONG_PTR userstack;
     ULONG_PTR originalAddressSpace;
@@ -860,7 +966,8 @@ PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
     if (threadCreationData == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    KeAcquireSpinLockAtDpcLevel(&threadCreationData->ParentProcess->Pcb.ProcessLock);
+    KeAcquireSpinLockAtDpcLevel(
+        &threadCreationData->ParentProcess->Pcb.ProcessLock);
 
     pThread->Tcb.ThreadState = THREAD_STATE_INITIALIZATION;
     pThread->Process = threadCreationData->ParentProcess;
@@ -873,24 +980,34 @@ PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
     /* Create stacks */
     /* Main kernel stack */
     pThread->Tcb.NumberOfKernelStackPages = 4;
-    pThread->Tcb.OriginalKernelStackPointer = 
+    pThread->Tcb.OriginalKernelStackPointer =
         PspCreateKernelStack(pThread->Tcb.NumberOfKernelStackPages);
-    pThread->Tcb.KernelStackPointer = 
-        (PVOID)((ULONG_PTR)pThread->Tcb.OriginalKernelStackPointer - sizeof(KTASK_STATE));
+    pThread->Tcb.KernelStackPointer = (PVOID)(
+        (ULONG_PTR)pThread->Tcb.OriginalKernelStackPointer
+        - sizeof(KTASK_STATE));
 
     /* Stack for saving the thread context when executing APCs */
     pThread->Tcb.ApcBackupKernelStackPointer = PspCreateKernelStack(1);
 
     /* allocate stack even if in kernel mode */
     if (threadCreationData->IsKernel)
+    {
         userstack = (ULONG_PTR)pThread->Tcb.KernelStackPointer;
+    }
     else
+    {
         userstack = (ULONG_PTR)
-            PagingAllocatePageFromRange(PAGING_USER_SPACE, PAGING_USER_SPACE_END) + PAGE_SIZE;
+        PagingAllocatePageFromRange(
+            PAGING_USER_SPACE,
+            PAGING_USER_SPACE_END) + PAGE_SIZE;
+    }
 
     PagingSetAddressSpace(originalAddressSpace);
 
-    MemSet(pThread->Tcb.ThreadWaitBlocks, 0, sizeof(pThread->Tcb.ThreadWaitBlocks));
+    MemSet(
+        pThread->Tcb.ThreadWaitBlocks, 
+        0, 
+        sizeof(pThread->Tcb.ThreadWaitBlocks));
     pThread->Tcb.ThreadPriority = 0;
     pThread->Tcb.NumberOfCurrentWaitBlocks = 0;
     pThread->Tcb.NumberOfActiveWaitBlocks = 0;
@@ -907,13 +1024,26 @@ PspThreadOnCreateNoDispatcher(PVOID SelfObject, PVOID CreateData)
 
     /* Inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
-    PspSetupThreadState((PKTASK_STATE)pThread->Tcb.KernelStackPointer, threadCreationData->IsKernel, threadCreationData->Entrypoint, userstack);
-    InsertTailList(&pThread->Process->Pcb.ThreadListHead, &pThread->Tcb.ProcessChildListEntry);
-    KeReleaseSpinLockFromDpcLevel(&threadCreationData->ParentProcess->Pcb.ProcessLock);
+
+    PspSetupThreadState(
+        (PKTASK_STATE)pThread->Tcb.KernelStackPointer, 
+        threadCreationData->IsKernel,
+        threadCreationData->Entrypoint, 
+        userstack);
+
+    InsertTailList(
+        &pThread->Process->Pcb.ThreadListHead, 
+        &pThread->Tcb.ProcessChildListEntry);
+
+    KeReleaseSpinLockFromDpcLevel(
+        &threadCreationData->ParentProcess->Pcb.ProcessLock);
     return STATUS_SUCCESS;
 }
 
-NTSTATUS PspThreadOnDelete(PVOID selfObject)
+NTSTATUS 
+NTAPI
+PspThreadOnDelete(
+    PVOID selfObject)
 {
     KIRQL irql;
     PETHREAD pThread = (PETHREAD)selfObject;
@@ -929,13 +1059,11 @@ NTSTATUS PspThreadOnDelete(PVOID selfObject)
 
     PspFreeKernelStack(
         pThread->Tcb.OriginalKernelStackPointer, 
-        pThread->Tcb.NumberOfKernelStackPages
-    );
+        pThread->Tcb.NumberOfKernelStackPages);
 
     PspFreeKernelStack(
         pThread->Tcb.ApcBackupKernelStackPointer,
-        1
-    );
+        1);
 
     KeReleaseSpinLockFromDpcLevel(&pThread->Tcb.ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&pThread->Process->Pcb.ProcessLock);
@@ -944,7 +1072,10 @@ NTSTATUS PspThreadOnDelete(PVOID selfObject)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS PspProcessOnDelete(PVOID selfObject)
+NTSTATUS 
+NTAPI
+PspProcessOnDelete(
+    PVOID selfObject)
 {
     KIRQL irql;
     PLIST_ENTRY current;
@@ -959,12 +1090,20 @@ NTSTATUS PspProcessOnDelete(PVOID selfObject)
     current = pProcess->Pcb.ThreadListHead.First;
     while (current != &pProcess->Pcb.ThreadListHead)
     {
-        /* the list of threads is not empty and somehow the process was dereferenced */
-        KeBugCheckEx(CRITICAL_STRUCTURE_CORRUPTION, (ULONG_PTR)current, __LINE__, 0, 0);
+        /* The list of threads is not empty and somehow the process was 
+         * dereferenced and is deleted. */
+        KeBugCheckEx(
+            CRITICAL_STRUCTURE_CORRUPTION,
+            (ULONG_PTR)current, 
+            __LINE__, 
+            0, 
+            0);
     }
 
-    currentHandleDatabase = (PHANDLE_DATABASE)pProcess->Pcb.HandleDatabaseHead.First;
-    while (currentHandleDatabase != (PHANDLE_DATABASE)&pProcess->Pcb.HandleDatabaseHead)
+    currentHandleDatabase = 
+        (PHANDLE_DATABASE)pProcess->Pcb.HandleDatabaseHead.First;
+    while (currentHandleDatabase != 
+        (PHANDLE_DATABASE)&pProcess->Pcb.HandleDatabaseHead)
     {
         PHANDLE_DATABASE next;
         INT i;
@@ -991,7 +1130,8 @@ NTSTATUS PspProcessOnDelete(PVOID selfObject)
 
 VOID
 NTAPI
-PspInsertIntoSharedQueueLocked(PKTHREAD Thread)
+PspInsertIntoSharedQueueLocked(
+    PKTHREAD Thread)
 {
     KIRQL irql = KiAcquireDispatcherLock();
     PspInsertIntoSharedQueue(Thread);
@@ -1000,7 +1140,8 @@ PspInsertIntoSharedQueueLocked(PKTHREAD Thread)
 
 VOID 
 NTAPI
-PspInsertIntoSharedQueue(PKTHREAD Thread)
+PspInsertIntoSharedQueue(
+    PKTHREAD Thread)
 {
     UCHAR ThreadPriority;
 
@@ -1009,21 +1150,26 @@ PspInsertIntoSharedQueue(PKTHREAD Thread)
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
     }
 
-    ThreadPriority = (UCHAR)(Thread->ThreadPriority + (CHAR)Thread->Process->BasePriority);
-    InsertTailList(&PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority], (PLIST_ENTRY)&Thread->ReadyQueueEntry);
+    ThreadPriority = (UCHAR)(
+        Thread->ThreadPriority 
+            + (CHAR)Thread->Process->BasePriority);
+    InsertTailList(
+        &PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority], 
+        (PLIST_ENTRY)&Thread->ReadyQueueEntry);
+
     PspSharedReadyQueue.ThreadReadyQueuesSummary = (ULONG)SetBit(
         PspSharedReadyQueue.ThreadReadyQueuesSummary,
-        ThreadPriority
-    );
+        ThreadPriority);
 }
 
-BOOL 
+BOOLEAN
 NTAPI
-PspManageSharedReadyQueue(UCHAR CoreNumber)
+PspManageSharedReadyQueue(
+    UCHAR CoreNumber)
 {
     PKCORE_SCHEDULER_DATA coreSchedulerData;
     INT checkedPriority;
-    BOOL result;
+    BOOLEAN result;
     PKTHREAD thread;
     PLIST_ENTRY sharedReadyQueues, coreReadyQueues;
 
@@ -1033,53 +1179,79 @@ PspManageSharedReadyQueue(UCHAR CoreNumber)
     sharedReadyQueues = PspSharedReadyQueue.ThreadReadyQueues;
     coreReadyQueues = coreSchedulerData->ThreadReadyQueues;
 
-    /* if there are no threads in the shared queue, don't bother with locking it and just return */
+    /* If there are no threads in the shared queue, 
+     * don't bother with locking it and just return. */
     if (PspSharedReadyQueue.ThreadReadyQueuesSummary == 0)
+    {
         return FALSE;
+    }
 
+    /* If the local ready queue has a thread with a higher priority than the
+     * shared queue, do not try to get threads from the shared queue. */
     if (coreSchedulerData->ThreadReadyQueuesSummary >
-        (PspSharedReadyQueue.ThreadReadyQueuesSummary ^ 
-         coreSchedulerData->ThreadReadyQueuesSummary))
+        (PspSharedReadyQueue.ThreadReadyQueuesSummary ^
+        coreSchedulerData->ThreadReadyQueuesSummary))
+    {
         return result;
+    }
 
-    for (checkedPriority = 31; checkedPriority >= 0; checkedPriority--)
+    for (checkedPriority = 31; 
+        checkedPriority >= 0 && !result;
+        checkedPriority--)
     {
         PLIST_ENTRY current;
-            
-        if (!TestBit(PspSharedReadyQueue.ThreadReadyQueuesSummary, checkedPriority))
+         
+        /* If this priority doesn't have any threads in the shared queue. */
+        if (!TestBit(
+                PspSharedReadyQueue.ThreadReadyQueuesSummary,
+                checkedPriority))
+        {
             continue;
-
+        }
         current = sharedReadyQueues[checkedPriority].First;
                 
         while (current != &sharedReadyQueues[checkedPriority])
         {
-            thread = (PKTHREAD)((ULONG_PTR)current - FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
-                    
-            /* check if this processor can even run this thread */
+            thread = CONTAINING_RECORD(current, KTHREAD, ReadyQueueEntry);
+
+            /* Check if this processor can even run this thread. */
             if (thread->Affinity & (1LL << CoreNumber))
             {
                 RemoveEntryList((PLIST_ENTRY)current);
-                InsertTailList(&coreReadyQueues[checkedPriority], (PLIST_ENTRY)current);
+                InsertTailList(
+                    &coreReadyQueues[checkedPriority], 
+                    (PLIST_ENTRY)current);
                 result = TRUE;
 
-                SetSummaryBitIfNeccessary(coreReadyQueues, &coreSchedulerData->ThreadReadyQueuesSummary, checkedPriority);
-                ClearSummaryBitIfNeccessary(sharedReadyQueues, &PspSharedReadyQueue.ThreadReadyQueuesSummary, checkedPriority);
+                /* If this was the first thread with this priority in the thread
+                 * queue, adjust the summary accordingly. */
+                SetSummaryBitIfNeccessary(
+                    coreReadyQueues, 
+                    &coreSchedulerData->ThreadReadyQueuesSummary,
+                    checkedPriority);
+
+                /* If this was the last thread with this priority in the shared
+                 * queue, adjust its summary accordingly. */
+                ClearSummaryBitIfNeccessary(
+                    sharedReadyQueues, 
+                    &PspSharedReadyQueue.ThreadReadyQueuesSummary, 
+                    checkedPriority);
 
                 break;
             }
 
             current = current->Next;
         }
-            
-
-        if (result)
-            break;
     }
 
     return result;
 }
 
-__declspec(noreturn) VOID PsExitThread(DWORD exitCode)
+__declspec(noreturn) 
+VOID 
+NTAPI
+PsExitThread(
+    DWORD exitCode)
 {
     PKTHREAD currentThread;
     KIRQL originalIrql;
@@ -1108,8 +1280,7 @@ BOOL
 NTAPI
 KiSetUserMemory(
     PVOID Address,
-    ULONG_PTR Data
-)
+    ULONG_PTR Data)
 {
     /* TODO: do checks before setting the data */
     *((ULONG_PTR*)Address) = Data;
@@ -1118,11 +1289,11 @@ KiSetUserMemory(
 
 /* TODO: implement a PspGetUsercallParameter maybe? */
 VOID
+NTAPI
 PspSetUsercallParameter(
     PKTHREAD pThread,
     ULONG ParameterIndex,
-    ULONG_PTR Value
-)
+    ULONG_PTR Value)
 {
 #ifdef _M_AMD64
     PKTASK_STATE pTaskState;
@@ -1171,8 +1342,7 @@ PspUsercall(
     PVOID Function,
     ULONG_PTR* Parameters,
     SIZE_T NumberOfParameters,
-    PVOID ReturnAddress
-)
+    PVOID ReturnAddress)
 {
 #ifdef _M_AMD64
     PKTASK_STATE pTaskState;
@@ -1180,16 +1350,16 @@ PspUsercall(
 
     pTaskState = (PKTASK_STATE)pThread->KernelStackPointer;
 
-    /* allocate stack space for the registers that don't fit onto the stack */
+    /* Allocate stack space for the registers that don't fit onto the stack. */
     if (NumberOfParameters > 4)
     {
         pTaskState->Rsp -= (NumberOfParameters - 4) * sizeof(ULONG_PTR);
     }
 
-    /* allocate the shadow space */
+    /* Allocate the shadow space. */
     pTaskState->Rsp -= 4 * sizeof(ULONG_PTR);
 
-    /* allocate the return address */
+    /* Allocate the return address. */
     pTaskState->Rsp -= sizeof(PVOID);
     KiSetUserMemory((PVOID)pTaskState->Rsp, (ULONG_PTR)ReturnAddress);
 
@@ -1206,8 +1376,7 @@ PspUsercall(
 KPROCESSOR_MODE
 NTAPI
 PsGetProcessorModeFromTrapFrame(
-    PKTASK_STATE TrapFrame
-)
+    PKTASK_STATE TrapFrame)
 {
     if ((TrapFrame->Cs & 0x3) == 0x00)
         return KernelMode;

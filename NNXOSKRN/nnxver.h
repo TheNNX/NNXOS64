@@ -5,5 +5,5 @@
 #define NNX_MAJOR 0 
 #define NNX_MINOR 1 
 #define NNX_PATCH 1 
-#define NNX_BUILD 4435 
+#define NNX_BUILD 4442 
 #endif

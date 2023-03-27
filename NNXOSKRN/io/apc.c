@@ -115,7 +115,8 @@ KiInsertQueueAPC(
         pThread->ApcState.KernelApcPending &&
         pThread->ThreadState == THREAD_STATE_RUNNING)
     {
-        /* TODO: send IPI to the core executing the thread to notify about the pending */
+        /* TODO: send IPI to the core executing the thread to notify about the 
+         * pending kernel APC. */
     }
 
     KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
