@@ -418,75 +418,43 @@ ObCreateObject(
     return STATUS_SUCCESS;
 }
 
-static UNICODE_STRING ThreadObjName = RTL_CONSTANT_STRING(L"Thread");
-static UNICODE_STRING ProcObjName = RTL_CONSTANT_STRING(L"Process");
-
-/* Creates the object types neccessary for the scheduler. */
-NTSTATUS 
+NTSTATUS
 NTAPI
-ObCreateSchedulerTypes(
-    POBJECT_TYPE* poutProcessType, 
-    POBJECT_TYPE* poutThreadType)
+ObCreateType(
+    POBJECT_TYPE* pOutObjectType,
+    PUNICODE_STRING TypeName,
+    SIZE_T InstanceSize)
 {
-    NTSTATUS status;
-    HANDLE typeDirHandle;
-    POBJECT_TYPE procType, threadType;
-    OBJECT_ATTRIBUTES procAttrib, threadAttrib;
+    NTSTATUS Status;
+    HANDLE TypeDirHandle;
+    POBJECT_TYPE Result;
+    OBJECT_ATTRIBUTES TypeObjectAttributes;
 
-    typeDirHandle = ObpGetTypeDirHandle();
-
+    TypeDirHandle = ObpGetTypeDirHandle();
+    
     /* Initialize attributes. */
     InitializeObjectAttributes(
-        &procAttrib,
-        &ProcObjName,
+        &TypeObjectAttributes,
+        TypeName,
         OBJ_KERNEL_HANDLE,
-        typeDirHandle,
+        TypeDirHandle,
         NULL);
-
-    InitializeObjectAttributes(
-        &threadAttrib,
-        &ThreadObjName,
-        OBJ_KERNEL_HANDLE,
-        typeDirHandle,
-        NULL);
-
-    /* Create objects. */
-    status = ObCreateObject(
-        &procType,
+    
+    Status = ObCreateObject(
+        &Result,
         0,
         KernelMode,
-        &procAttrib,
+        &TypeObjectAttributes,
         ObTypeObjectType,
         NULL);
-
-    if (status != STATUS_SUCCESS)
+    if (!NT_SUCCESS(Status))
     {
-        return status;
+        return Status;
     }
 
-    status = ObCreateObject(
-        &threadType,
-        0,
-        KernelMode,
-        &threadAttrib,
-        ObTypeObjectType,
-        NULL);
-
-    if (status != STATUS_SUCCESS)
-    {
-        /* Dereferencing this isn't really needed, as the OS is dead anyway
-         * if we're here, but it doesn't hurt us in any way. */
-        ObDereferenceObject((PVOID)procType);
-        return status;
-    }
-
-    /* No methods defined yet */
-    RtlZeroMemory(threadType, sizeof(OBJECT_TYPE));
-    RtlZeroMemory(procType, sizeof(OBJECT_TYPE));
-
-    /* Output through the pointer parameters. */
-    *poutProcessType = procType;
-    *poutThreadType = threadType;
+    RtlZeroMemory(Result, sizeof(OBJECT_TYPE));
+    Result->InstanceSize = InstanceSize;
+    *pOutObjectType = Result;
 
     return STATUS_SUCCESS;
 }

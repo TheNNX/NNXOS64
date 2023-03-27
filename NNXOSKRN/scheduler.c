@@ -21,6 +21,8 @@ UINT PspCoresInitialized = 0;
 
 const CHAR PspThrePoolTag[4] = "Thre";
 const CHAR PspProcPoolTag[4] = "Proc";
+static UNICODE_STRING PsProcessTypeName = RTL_CONSTANT_STRING(L"Process");
+static UNICODE_STRING PsThreadTypeName = RTL_CONSTANT_STRING(L"Thread");
 POBJECT_TYPE PsProcessType = NULL;
 POBJECT_TYPE PsThreadType = NULL;
 
@@ -109,18 +111,29 @@ NTSTATUS PspInitializeScheduler()
     KIRQL irql;
     NTSTATUS status;
 
-    status = ObCreateSchedulerTypes(
-        &PsProcessType, 
-        &PsThreadType
-    );
+    status = ObCreateType(
+        &PsProcessType,
+        &PsProcessTypeName,
+        sizeof(EPROCESS));
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    status = ObCreateType(
+        &PsThreadType,
+        &PsThreadTypeName,
+        sizeof(ETHREAD));
+    if (!NT_SUCCESS(status))
+    {
+        ObDereferenceObject(PsProcessType);
+        return status;
+    }
 
     PsProcessType->OnCreate = PspProcessOnCreate;
     PsProcessType->OnDelete = PspProcessOnDelete;
     PsThreadType->OnCreate = PspThreadOnCreate;
     PsThreadType->OnDelete = PspThreadOnDelete;
-
-    PsProcessType->InstanceSize = sizeof(EPROCESS);
-    PsThreadType->InstanceSize = sizeof(ETHREAD);
 
     irql = KiAcquireDispatcherLock();
 

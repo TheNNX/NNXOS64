@@ -161,11 +161,12 @@ extern "C" {
     NTAPI    
     ObInit();
 
-    NTSTATUS 
+    NTSTATUS
     NTAPI
-    ObCreateSchedulerTypes(
-        POBJECT_TYPE* poutProcessType,
-        POBJECT_TYPE* poutThreadType);
+    ObCreateType(
+        POBJECT_TYPE* pOutObjectType,
+        PUNICODE_STRING TypeName,
+        SIZE_T InstanceSize);
 
     NTSTATUS 
     NTAPI
