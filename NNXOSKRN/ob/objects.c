@@ -17,7 +17,9 @@ ObpTest()
 
     status = ObpTestNamespace();
     if (status != STATUS_SUCCESS)
+    {
         return status;
+    }
 
     return STATUS_SUCCESS;
 }
@@ -29,7 +31,9 @@ ObpMpTest()
 
     status = ObpMpTestNamespace();
     if (status != STATUS_SUCCESS)
+    {
         return status;
+    }
 
     return STATUS_SUCCESS;
 }
@@ -156,7 +160,9 @@ ObReferenceObjectByPointer(
     KIRQL irql;
     
     if (object == NULL)
+    {
         return STATUS_INVALID_PARAMETER;
+    }
 
     header = ObGetHeaderFromObject(object);
 
@@ -311,7 +317,9 @@ ObCreateObject(
     PVOID potentialCollision;
 
     if (pObject == NULL)
+    {
         return STATUS_INVALID_PARAMETER;
+    }
 
     root = INVALID_HANDLE_VALUE;
     status = STATUS_SUCCESS;
@@ -320,7 +328,9 @@ ObCreateObject(
     {
         root = Attributes->Root;
         if (root == INVALID_HANDLE_VALUE)
+        {
             root = ObGetGlobalNamespaceHandle();
+        }
 
         /* If root still INVALID_HANDLE_VALUE after setting to global namespace,
          * it means object manager is not initialized yet. */
@@ -337,7 +347,9 @@ ObCreateObject(
             );
 
             if (status != STATUS_SUCCESS)
+            {
                 return status;
+            }
 
             POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
             rootType = rootHeader->ObjectType;
@@ -387,7 +399,9 @@ ObCreateObject(
 
     /* If system's out of memory, fail. */
     if (header == NULL)
+    {
         return STATUS_NO_MEMORY;
+    }
 
     KeInitializeSpinLock(&header->Lock);
     header->Access = DesiredAccess;

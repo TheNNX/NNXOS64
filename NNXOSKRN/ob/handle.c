@@ -13,26 +13,39 @@ NTAPI
 ObInitHandleManager()
 {
     InitializeListHead(&SystemHandleDatabaseHead);
-    /* add one preallocated entry, so we don't have to deal with dynamic memory (leaks and de)allocation here for now */
-    /* (though we don't really care about memory leaks here, this has to be allocated until the system shutdown anyway) */
-    InsertHeadList(&SystemHandleDatabaseHead, &InitialSystemHandleDatabase.HandleDatabaseChainEntry);
+    /* Add one preallocated entry, so we don't have to deal with dynamic memory 
+     * (leaks and de)allocation here for now (though we don't really care about
+     * memory leaks here, this has to be allocated until the system shutdown 
+     * anyway) */
+    InsertHeadList(
+        &SystemHandleDatabaseHead, 
+        &InitialSystemHandleDatabase.HandleDatabaseChainEntry);
 
     KeInitializeSpinLock(&HandleManagerLock);
 
     return STATUS_SUCCESS;
 }
 
-/* process->Pcb.ProcessLock has to acquired if process != NULL*/
-/* @return process's handle database head or system database head, if process is NULL */
-PLIST_ENTRY ObpGetHandleDatabaseHead(PEPROCESS process)
+/* Process->Pcb.ProcessLock has to acquired if process != NULL 
+ * @return Process's handle database head or system database head, 
+ * if process is NULL. */
+PLIST_ENTRY 
+NTAPI
+ObpGetHandleDatabaseHead(PEPROCESS process)
 {
     if (process == NULL)
-        return (PLIST_ENTRY) &SystemHandleDatabaseHead;
-
+    {
+        return (PLIST_ENTRY)&SystemHandleDatabaseHead;
+    }
     return &process->Pcb.HandleDatabaseHead;
 }
 
-NTSTATUS ObGetHandleDatabaseEntryFromHandle(HANDLE handle, PLIST_ENTRY databaseHead, PHANDLE_DATABASE_ENTRY* outpEntry)
+NTSTATUS 
+NTAPI
+ObGetHandleDatabaseEntryFromHandle(
+    HANDLE handle, 
+    PLIST_ENTRY databaseHead,
+    PHANDLE_DATABASE_ENTRY* outpEntry)
 {
     PLIST_ENTRY current;
     ULONG_PTR currentIndex, handleAsIndex;
@@ -43,21 +56,24 @@ NTSTATUS ObGetHandleDatabaseEntryFromHandle(HANDLE handle, PLIST_ENTRY databaseH
     if (outpEntry == NULL)
         return STATUS_INVALID_PARAMETER;
 
-    /* convert handle to a arithmetic type */
+    /* Convert handle to a arithmetic type */
     handleAsIndex = (ULONG_PTR)handle;
     handleAsIndex /= 2;
 
     currentIndex = 0;
 
-    /* enumerate the database until we find the database part with the handle */
+    /* Enumerate the database until we find the database part with the handle */
     current = databaseHead->First;
 
     while (current)
     {
         /* if the handle is in range of current database part */
-        if (currentIndex <= handleAsIndex && currentIndex + ENTRIES_PER_HANDLE_DATABASE > handleAsIndex)
+        if (currentIndex <= handleAsIndex && 
+            currentIndex + ENTRIES_PER_HANDLE_DATABASE > handleAsIndex)
         {
-            *outpEntry = &((PHANDLE_DATABASE)current)->Entries[handleAsIndex % ENTRIES_PER_HANDLE_DATABASE];
+            *outpEntry = 
+                &((PHANDLE_DATABASE)current)->
+                    Entries[handleAsIndex % ENTRIES_PER_HANDLE_DATABASE];
             return STATUS_SUCCESS;
         }
 
@@ -88,42 +104,47 @@ ObExtractAndReferenceObjectFromHandle(
     if (handle == INVALID_HANDLE_VALUE)
         return STATUS_INVALID_HANDLE;
 
-    /* if the LS bit is set, this is a kernel handle (and not a handle in current process handle table) */
+    /* If the LS bit is set, this is a kernel handle 
+     * (and not a handle in current process handle table). */
     isKernelHandle = (((ULONG_PTR)handle) & 0x1) != 0;
     if (isKernelHandle && accessMode == UserMode)
+    {
         return STATUS_ACCESS_DENIED;
+    }
 
-    /* lock the database spinlock */
+    /* Lock the database spinlock. */
     if (!isKernelHandle)
+    {
         lock = &KeGetCurrentThread()->Process->ProcessLock;
+    }
     else
+    {
         lock = &HandleManagerLock;
-
+    }
     KeAcquireSpinLock(lock, &irql);
 
     databaseHead = ObpGetHandleDatabaseHead(
         (isKernelHandle) ?
         NULL :
-        /* EPROCESS starts with KPROCESS, and KPROCESS never exists alone */
-        (PEPROCESS)KeGetCurrentThread()->Process
-    );
+        CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb));
 
     status = ObGetHandleDatabaseEntryFromHandle(handle, databaseHead, &entry);
 
     if (status != STATUS_SUCCESS)
     {
-        /* unlock the database spinlock */
+        /* Unlock the database spinlock. */
         KeReleaseSpinLock(lock, irql);
         return status;
     }
 
-    /* This is still valid. In theory, it is still referenced, so no clearing i guess? */
+    /* This is still valid. In theory, it is still referenced, so no clearing,
+     * I guess? */
     localObject = entry->Object;
 
-    /* if localObject is still NULL, the object isn't in the entry */
+    /* If localObject is still NULL, the object isn't in the entry. */
     if (localObject == NULL)
     {
-        /* unlock the database spinlock */
+        /* Unlock the database spinlock. */
         KeReleaseSpinLock(lock, irql);
         return STATUS_INVALID_HANDLE;
     }
@@ -134,9 +155,8 @@ ObExtractAndReferenceObjectFromHandle(
 
     *pObject = localObject;
 
-    /* unlock the database spinlock */
+    /* Unlock the database spinlock. */
     KeReleaseSpinLock(lock, irql);
-
     return STATUS_SUCCESS;
 }
 
@@ -152,7 +172,8 @@ ObCloseHandleByEntry(
     KeReleaseSpinLock(&HandleManagerLock, irql);
 }
 
-/* @brief Gets the handle database entry for the handle given and performs ObDestoryHasndleEntry */
+/* @brief Gets the handle database entry for the handle given and performs 
+ * ObDestoryHasndleEntry. */
 NTSTATUS 
 NTAPI
 ObCloseHandle(
@@ -172,26 +193,27 @@ ObCloseHandle(
     if (isKernelHandle && accessMode == UserMode)
         return STATUS_ACCESS_DENIED;
 
-    /* lock the database spinlock */
+    /* Lock the database spinlock. */
     if (!isKernelHandle)
+    {
         lock = &KeGetCurrentThread()->Process->ProcessLock;
+    }
     else
+    {
         lock = &HandleManagerLock;
-
+    }
     KeAcquireSpinLock(lock, &irql);
 
-    /* get the appropriate handle database */
+    /* Get the appropriate handle database. */
     databaseHead = ObpGetHandleDatabaseHead(
         (isKernelHandle) ?
         NULL :
-        /* EPROCESS starts with KPROCESS, and KPROCESS never exists alone */
-        (PEPROCESS)KeGetCurrentThread()->Process
-    );
+        CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb));
 
     status = ObGetHandleDatabaseEntryFromHandle(handle, databaseHead, &entry);
     if (status != STATUS_SUCCESS)
     {
-        /* unlock the database spinlock */
+        /* Unlock the database spinlock. */
         KeReleaseSpinLock(lock, irql);
         return status;
     }
@@ -208,7 +230,7 @@ ObCloseHandle(
 
     ObCloseHandleByEntry(entry);
 
-    /* unlock the database spinlock */
+    /* Unlock the database spinlock. */
     KeReleaseSpinLock(lock, irql);
     return STATUS_SUCCESS;
 }
@@ -231,15 +253,15 @@ ObCreateHandle(
     isKernelHandle = (objHeader->Attributes & OBJ_KERNEL_HANDLE) != 0;
 
     if (isKernelHandle && accessMode == UserMode)
+    {
         return STATUS_ACCESS_DENIED;
+    }
 
-    /* get the appropriate handle database */
+    /* Get the appropriate handle database. */
     databaseHead = ObpGetHandleDatabaseHead(
-        isKernelHandle ?
+        (isKernelHandle) ?
         NULL :
-        /* EPROCESS starts with KPROCESS, and KPROCESS never exists alone */
-        (PEPROCESS)KeGetCurrentThread()->Process
-    );
+        CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb));
 
     KeAcquireSpinLock(&HandleManagerLock, &irql);
 
