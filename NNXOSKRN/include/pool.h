@@ -33,78 +33,79 @@ extern "C" {
 	}POOL_DESCRIPTOR, * PPOOL_DESCRIPTOR;
 
 	BOOL
+	NTAPI
 	ExVerifyPoolBlock(
 		PPOOL_HEADER blockHeader,
-		POOL_TYPE poolType
-	);
+		POOL_TYPE poolType);
 
 	VOID
+	NTAPI
 	ExInitEmptyPoolBlock(
 		PPOOL_HEADER pPoolBlock,
 		SIZE_T Size,
-		POOL_TYPE PoolType
-	);
+		POOL_TYPE PoolType);
 
 	BOOL
+	NTAPI
 	ExExpandPool(
 		POOL_TYPE poolType,
 		PVOID pMemory,
-		SIZE_T memoryBlockSize
-	);
+		SIZE_T memoryBlockSize);
 
 	PVOID
+	NTAPI
 	ExAllocatePool(
 		POOL_TYPE type,
-		SIZE_T size
-	);
+		SIZE_T size);
 
 	PVOID
+	NTAPI
 	ExAllocatePoolZero(
 		POOL_TYPE type,
 		SIZE_T size,
-		ULONG tag
-	);
+		ULONG tag);
 
 	PVOID
+	NTAPI
 	ExAllocatePoolUninitialized(
 		POOL_TYPE type,
 		SIZE_T size,
-		ULONG tag
-	);
+		ULONG tag);
 
 	NTSTATUS
+	NTAPI
 	ExInitializePool(
 		PVOID PagedPoolMemoryRegion,
 		SIZE_T PagedPoolMemoryRegionSize,
 		PVOID NonPagedPoolMemoryRegion,
-		SIZE_T NonPagedPoolMemoryRegionSize
-	);
+		SIZE_T NonPagedPoolMemoryRegionSize);
 
 	NTSTATUS
+	NTAPI
 	ExPoolSelfCheck();
 
 	VOID
+	NTAPI
 	ExFreePool(
-		PVOID data
-	);
+		PVOID data);
 
 	PVOID
+	NTAPI
 	ExAllocatePoolWithTag(
 		POOL_TYPE type,
 		SIZE_T size,
-		ULONG tag
-	);
+		ULONG tag);
 
 	VOID
+	NTAPI
 	ExFreePoolWithTag(
 		PVOID data,
-		ULONG tag
-	);
+		ULONG tag);
 
 	BOOL
+	NTAPI
 	ExVerifyPool(
-		POOL_TYPE type
-	);
+		POOL_TYPE type);
 
 #ifdef __cplusplus
 }

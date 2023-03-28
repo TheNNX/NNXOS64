@@ -31,27 +31,25 @@ static
 VOID
 InsertAfter(
 	PPOOL_HEADER oldHeader,
-	PPOOL_HEADER newHeader
-);
+	PPOOL_HEADER newHeader);
 
 static
 BOOL
 ValidateTag(
-	const DWORD Tag
-);
+	const DWORD Tag);
 
 static
 VOID
 DebugEnumeratePoolBlocks(
-	POOL_TYPE poolType
-);
+	POOL_TYPE poolType);
 
 VOID
+NTAPI
 ExMergePool(
-	POOL_TYPE poolType
-);
+	POOL_TYPE poolType);
 
 VOID 
+NTAPI
 ExInitEmptyPoolBlock(
 	PPOOL_HEADER pPoolBlock,
 	SIZE_T Size,
@@ -63,10 +61,11 @@ ExInitEmptyPoolBlock(
 	pPoolBlock->PoolType = PoolType;
 }
 
-BOOL
 /* @brief ExExpandPool - adds a memory block to the tail of block list
- * and initializes it as an empty block. 
+ * and initializes it as an empty block.
  * @return FALSE on failure, TRUE otherwise */
+BOOL
+NTAPI
 ExExpandPool(
 	POOL_TYPE poolType,
 	PVOID pMemory,
@@ -90,76 +89,70 @@ ExExpandPool(
 	ExInitEmptyPoolBlock(
 		pBlock,
 		memoryBlockSize - sizeof(POOL_HEADER),
-		poolType
-	);
+		poolType);
 
 	/* and add it to the pool's linked list */
 	ExInterlockedInsertTailList(
 		&poolDecsriptor->PoolHead,
 		&pBlock->PoolEntry, 
-		&poolDecsriptor->PoolLock
-	);
+		&poolDecsriptor->PoolLock);
 
 	return TRUE;
 }
 
 PVOID 
+NTAPI
 ExAllocatePool(
 	POOL_TYPE type, 
-	SIZE_T size
-)
+	SIZE_T size)
 {
 	return ExAllocatePoolWithTag(
 		type,
 		size, 
-		'LOOP' /* POOL backwards */
-	);
+		'POOL');
 }
 
 PVOID
+NTAPI
 ExAllocatePoolZero(
 	POOL_TYPE type, 
 	SIZE_T size, 
-	ULONG tag
-)
+	ULONG tag)
 {
 	PVOID result;
 	
 	result = ExAllocatePoolWithTag(
 		type, 
 		size, 
-		tag
-	);
+		tag);
 
 	if (result == NULL)
 		return NULL;
 
 	RtlZeroMemory(
 		result, 
-		size
-	);
+		size);
 
 	return result;
 }
 
 PVOID 
+NTAPI
 ExAllocatePoolUninitialized(
 	POOL_TYPE type, 
 	SIZE_T size, 
-	ULONG tag
-)
+	ULONG tag)
 {
 	return ExAllocatePoolWithTag(
 		type, 
 		size, 
-		tag
-	);
+		tag);
 }
 
 VOID
+NTAPI
 ExFreePool(
-	PVOID data
-)
+	PVOID data)
 {
 	ExFreePoolWithTag(data, 0);
 }
@@ -168,8 +161,7 @@ static
 VOID
 InsertAfter(
 	PPOOL_HEADER oldHeader,
-	PPOOL_HEADER newHeader
-)
+	PPOOL_HEADER newHeader)
 {
 	newHeader->PoolEntry.Prev = &oldHeader->PoolEntry;
 	newHeader->PoolEntry.Next = oldHeader->PoolEntry.Next;
@@ -181,8 +173,7 @@ InsertAfter(
 static
 BOOL
 ValidateTag(
-	const DWORD Tag
-)
+	const DWORD Tag)
 {
 	const UBYTE* pTagAsByteArray;
 	INT i;
@@ -201,9 +192,9 @@ ValidateTag(
 }
 
 BOOL
+NTAPI
 ExVerifyPool(
-	POOL_TYPE type
-)
+	POOL_TYPE type)
 {
 	PPOOL_DESCRIPTOR poolDescriptor;
 	PPOOL_HEADER currentCheckedBlock;
@@ -214,7 +205,7 @@ ExVerifyPool(
 
 	DebugEnumeratePoolBlocks(type);
 
-	/* enumerate the pool blocks */
+	/* Enumerate the pool blocks. */
 	currentCheckedBlock = (PPOOL_HEADER)poolDescriptor->PoolHead.First;
 	while ((PLIST_ENTRY)currentCheckedBlock != &poolDescriptor->PoolHead)
 	{
@@ -225,7 +216,8 @@ ExVerifyPool(
 			return FALSE;
 		}
 
-		currentCheckedBlock = (PPOOL_HEADER)currentCheckedBlock->PoolEntry.Next;
+		currentCheckedBlock = 
+			(PPOOL_HEADER)currentCheckedBlock->PoolEntry.Next;
 	}
 	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 
@@ -233,11 +225,11 @@ ExVerifyPool(
 }
 
 PVOID
+NTAPI
 ExAllocatePoolWithTag(
 	POOL_TYPE type,
 	SIZE_T size,
-	ULONG tag
-)
+	ULONG tag)
 {
 	PPOOL_DESCRIPTOR poolDescriptor;
 	PPOOL_HEADER currentCheckedBlock;
@@ -247,10 +239,12 @@ ExAllocatePoolWithTag(
 
 	/* caluclate the desired alignment */
 	if (size < PAGE_SIZE)
+	{
 		alignment = SYSTEM_ALIGNMENT;
-	else
+	}
+	else {
 		alignment = PAGE_SIZE;
-
+	}
 	
 	if (tag == 0)
 	{
@@ -259,8 +253,7 @@ ExAllocatePoolWithTag(
 			(ULONG_PTR)0x9B,
 			(ULONG_PTR)type,
 			(ULONG_PTR)size,
-			(ULONG_PTR)_ReturnAddress()
-		);
+			(ULONG_PTR)_ReturnAddress());
 	}
 
 	if (!ValidateTag(tag))
@@ -270,11 +263,10 @@ ExAllocatePoolWithTag(
 			(ULONG_PTR)0x9D,
 			(ULONG_PTR)tag,
 			(ULONG_PTR)type,
-			(ULONG_PTR)_ReturnAddress()
-		);
+			(ULONG_PTR)_ReturnAddress());
 	}
 
-	/* get the pool descriptor */
+	/* Get the pool descriptor. */
 	poolDescriptor = Pools[type];
 
 	irql = KeGetCurrentIrql();
@@ -287,21 +279,22 @@ ExAllocatePoolWithTag(
 			0x08,
 			irql,
 			type,
-			size
-		);
+			size);
 	}
 
-	/* no such pool, return */
+	/* No such pool, return. */
 	if (poolDescriptor == NULL)
+	{
 		return NULL;
+	}
 
-	/* lock the pool */
+	/* Lock the pool. */
 	KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
 
-	/* calculate the total size of the allocation */
+	/* Calculate the total size of the allocation. */
 	sizeWithBlockHeader = size + sizeof(POOL_HEADER);
 
-	/* enumerate the pool blocks */
+	/* Enumerate the pool blocks. */
 	currentCheckedBlock = (PPOOL_HEADER)poolDescriptor->PoolHead.First;
 	while ((PLIST_ENTRY)currentCheckedBlock != &poolDescriptor->PoolHead)
 	{
@@ -313,33 +306,37 @@ ExAllocatePoolWithTag(
 				0x01,
 				(ULONG_PTR)currentCheckedBlock,
 				(ULONG_PTR)currentCheckedBlock->PoolEntry.Next,
-				0
-			);
+				0);
 		}
 
-		/* if the current block is free */
-		if (currentCheckedBlock->AllocationTag == POOL_ALLOCATION_TAG_FREE && size < currentCheckedBlock->Size)
+		/* If the current block is free. */
+		if (currentCheckedBlock->AllocationTag == POOL_ALLOCATION_TAG_FREE && 
+			size < currentCheckedBlock->Size)
 		{
 			BOOL isAllocationPossible;
-			/* pointer to the first byte of memory of the block */
+			/* Pointer to the first byte of memory of the block */
 			ULONG_PTR blockMemoryPtr;
-			/* pointer to the first byte after the memory of the block */
+			/* Pointer to the first byte after the memory of the block */
 			ULONG_PTR blockMemoryEndPtr;
-			/* first possible location for the data region of the block to start
+			/* First possible location for the data region of the block to start
 			 * with the given alignment in mind */
 			ULONG_PTR potentialDataPtr;
-			/* number of bytes preceding the data if the block was to be used */
+			/* Number of bytes preceding the data if the block was to be used */
 			LONG_PTR precedingBytes;
-			/* number of bytes following the data if the block was to be used */
+			/* Number of bytes following the data if the block was to be used */
 			LONG_PTR followingBytes;
-			/* pointer to the first byte after the data, if the block was to be allocated */
+			/* Pointer to the first byte after the data, if the block was to be 
+			 * allocated */
 			ULONG_PTR potentialDataEndPtr;
 
-			blockMemoryPtr = sizeof(POOL_HEADER) + (ULONG_PTR)currentCheckedBlock;
+			blockMemoryPtr = sizeof(POOL_HEADER) + 
+				(ULONG_PTR)currentCheckedBlock;
 			blockMemoryEndPtr = blockMemoryPtr + currentCheckedBlock->Size;
 
-			/* align: round up to next possible starting address for the data region of the block */
-			potentialDataPtr = ((blockMemoryPtr + alignment - 1) / alignment) * alignment;
+			/* Align: round up to next possible starting address for the data 
+			 * region of the block */
+			potentialDataPtr = 
+				((blockMemoryPtr + alignment - 1) / alignment) * alignment;
 			
 			isAllocationPossible = FALSE;
 
@@ -351,15 +348,17 @@ ExAllocatePoolWithTag(
 				precedingBytes = potentialDataPtr - blockMemoryPtr;
 				followingBytes = blockMemoryEndPtr - potentialDataEndPtr;
 
-				/* if a new block has to be created out of the data preceeding, check if there's enough room
-				 * to store a new block header */
-				if (precedingBytes != 0 && precedingBytes < (LONG_PTR)sizeof(POOL_HEADER))
+				/* If a new block has to be created out of the data preceeding, check if there's enough room
+				 * to store a new block header. */
+				if (precedingBytes != 0 
+					&& precedingBytes < (LONG_PTR)sizeof(POOL_HEADER))
 				{
 					isAllocationPossible = FALSE;
 				}
 
-				/* the same as above, but for following bytes */
-				if (followingBytes != 0 && followingBytes < (LONG_PTR)sizeof(POOL_HEADER))
+				/* The same as above, but for following bytes. */
+				if (followingBytes != 0 
+					&& followingBytes < (LONG_PTR)sizeof(POOL_HEADER))
 				{
 					isAllocationPossible = FALSE;
 				}
@@ -382,7 +381,8 @@ ExAllocatePoolWithTag(
 				 * else curHdr = newHdr.
 				 *
 				 *
-				 * It is also possible that (n - m) > size of the desired allocation
+				 * It is also possible that (n - m) > size of the desired 
+				 * allocation:
 				 * [curHdr][     (n - m) bytes of data       ]
 				 * [curHdr][size bytes][       f bytes       ]
 				 * Where f is followingBytes
@@ -391,12 +391,10 @@ ExAllocatePoolWithTag(
 				 * [curHdr][size bytes][folHdr][ f - h bytes ]
 				 * Where h is sizeof(POOL_HEADER)
 				 *
-				 * curHdr and folHdr pool entries are linked.
-				 *
-				 */
+				 * curHdr and folHdr pool entries are linked. */
 				if (isAllocationPossible)
 				{
-					/* create new headers if neccessary */
+					/* Create new headers if neccessary. */
 					if (precedingBytes != 0)
 					{
 						/* newHdr */
@@ -405,12 +403,15 @@ ExAllocatePoolWithTag(
 						PPOOL_HEADER oldHeader;
 
 						oldHeader = (PPOOL_HEADER)currentCheckedBlock;
-						newHeader = (PPOOL_HEADER)(potentialDataPtr - sizeof(POOL_HEADER));
+						newHeader = (PPOOL_HEADER)(
+							potentialDataPtr 
+							- sizeof(POOL_HEADER));
 
-						/* link the headers */
+						/* Link the headers. */
 						InsertAfter(oldHeader, newHeader);
 
-						oldHeader->Size = precedingBytes - sizeof(POOL_HEADER);
+						oldHeader->Size = 
+							precedingBytes - sizeof(POOL_HEADER);
 
 						newHeader->PoolType = type;
 
@@ -425,16 +426,19 @@ ExAllocatePoolWithTag(
 
 						followingHeader = (PPOOL_HEADER)potentialDataEndPtr;
 
-						/* link the headers */
+						/* Link the headers. */
 						InsertAfter(currentCheckedBlock, followingHeader);
-						followingHeader->Size = followingBytes - sizeof(POOL_HEADER);
+						followingHeader->Size = 
+							followingBytes - sizeof(POOL_HEADER);
 						followingHeader->AllocationTag = 0;
 						followingHeader->PoolType = type;
 					}
 
-					/* the excess memory (if any) was allocated to new blocks created above */
+					/* The excess memory (if any) was allocated to new blocks
+					 * created above */
 					currentCheckedBlock->Size = size;
-					/* set the desired tag (this also marks the block non-free) */
+					/* Set the desired tag 
+					 * (this also marks the block non-free). */
 					currentCheckedBlock->AllocationTag = tag;
 
 					KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
@@ -444,24 +448,29 @@ ExAllocatePoolWithTag(
 				/* try the next aligned location */
 				potentialDataPtr += alignment;
 			}
-			while (isAllocationPossible == FALSE && potentialDataEndPtr < blockMemoryEndPtr);
+			while (isAllocationPossible == FALSE &&
+				   potentialDataEndPtr < blockMemoryEndPtr);
 		}
 
 		/* go to the next pool block */
 		currentCheckedBlock = (PPOOL_HEADER)currentCheckedBlock->PoolEntry.Next;
 	}
 
-	PrintT("ExAllocatePool failed, size=%x pooltype=%i\n", size, (ULONG_PTR)(type));
+	PrintT(
+		"ExAllocatePool failed, size=%x pooltype=%i\n",
+		size, 
+		(ULONG_PTR)(type));
+
 	DebugEnumeratePoolBlocks(type);
 	KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
 	return NULL;
 }
 
 VOID
+NTAPI
 ExFreePoolWithTag(
 	PVOID data,
-	ULONG tag
-)
+	ULONG tag)
 {
 	PPOOL_DESCRIPTOR pPoolDescriptor;
 	PPOOL_HEADER pPoolHeader;
@@ -482,16 +491,14 @@ ExFreePoolWithTag(
 				0x48,
 				(ULONG_PTR)data,
 				0,
-				0
-			);
+				0);
 		case NonPagedPool:
 			KeBugCheckEx(
 				BAD_POOL_CALLER,
 				0x44,
 				(ULONG_PTR)data,
 				0, 
-				0
-			);
+				0);
 		}
 	}
 
@@ -502,8 +509,7 @@ ExFreePoolWithTag(
 			0x0A,
 			(ULONG_PTR)Pools[type],
 			(ULONG_PTR)pPoolHeader->AllocationTag,
-			(ULONG_PTR)tag
-		);
+			(ULONG_PTR)tag);
 	}
 
 	irql = KeGetCurrentIrql();
@@ -515,8 +521,7 @@ ExFreePoolWithTag(
 			0x09,
 			(ULONG_PTR)irql,
 			(ULONG_PTR)type,
-			(ULONG_PTR)pPoolDescriptor
-		);
+			(ULONG_PTR)pPoolDescriptor);
 	}
 
 	KeAcquireSpinLock(&pPoolDescriptor->PoolLock, &irql);
@@ -529,8 +534,7 @@ ExFreePoolWithTag(
 static
 VOID
 MergeWithNextBlock(
-	PPOOL_HEADER block
-)
+	PPOOL_HEADER block)
 {
 	PPOOL_HEADER next;
 	PPOOL_DESCRIPTOR desciptor;
@@ -544,20 +548,19 @@ MergeWithNextBlock(
 			__LINE__,
 			0,
 			0,
-			0
-		);
+			0);
 	}
 
 	if (ExVerifyPoolBlock(block, block->PoolType) == FALSE ||
-		ExVerifyPoolBlock((PPOOL_HEADER)block->PoolEntry.Next, block->PoolType) == FALSE)
+		ExVerifyPoolBlock((PPOOL_HEADER)block->PoolEntry.Next, block->PoolType) 
+			== FALSE)
 	{
 		KeBugCheckEx(
 			BAD_POOL_HEADER,
 			0, /* TODO, fill those params */
 			0,
 			0,
-			0
-		);
+			0);
 	}
 
 	next = (PPOOL_HEADER)block->PoolEntry.Next;
@@ -567,9 +570,9 @@ MergeWithNextBlock(
 }
 
 VOID
+NTAPI
 ExMergePool(
-	POOL_TYPE poolType
-)
+	POOL_TYPE poolType)
 {
 	PPOOL_HEADER currentHeader;
 	KIRQL irql;
@@ -586,13 +589,15 @@ ExMergePool(
 				0x01,
 				(ULONG_PTR)currentHeader,
 				(ULONG_PTR)currentHeader->PoolEntry.Next,
-				0
-			);
+				0);
 		}
 
-		if (currentHeader->Size + (ULONG_PTR)currentHeader + sizeof(POOL_HEADER) == (ULONG_PTR)currentHeader->PoolEntry.Next &&
+		if (currentHeader->Size + (ULONG_PTR)currentHeader 
+				+ sizeof(POOL_HEADER) 
+				== (ULONG_PTR)currentHeader->PoolEntry.Next &&
 			currentHeader->AllocationTag == POOL_ALLOCATION_TAG_FREE &&
-			((PPOOL_HEADER)currentHeader->PoolEntry.Next)->AllocationTag == POOL_ALLOCATION_TAG_FREE)
+			((PPOOL_HEADER)currentHeader->PoolEntry.Next)->AllocationTag 
+				== POOL_ALLOCATION_TAG_FREE)
 		{
 			MergeWithNextBlock(currentHeader);
 		}
@@ -606,10 +611,10 @@ ExMergePool(
 }
 
 BOOL
+NTAPI
 ExVerifyPoolBlock(
 	PPOOL_HEADER blockHeader,
-	POOL_TYPE poolType
-)
+	POOL_TYPE poolType)
 {
 	BOOL result;
 	PPOOL_DESCRIPTOR poolDecsriptor = Pools[poolType];
@@ -617,7 +622,9 @@ ExVerifyPoolBlock(
 	result = TRUE;
 	
 	if (poolDecsriptor->PoolLock == 0)
+	{
 		KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
+	}
 
 	/* check if pool type remains unchanged */
 	if (blockHeader->PoolType != poolType)
@@ -663,12 +670,12 @@ ExVerifyPoolBlock(
 }
 
 NTSTATUS
+NTAPI
 ExInitializePool(
 	PVOID PagedPoolMemoryRegion,
 	SIZE_T PagedPoolMemoryRegionSize,
 	PVOID NonPagedPoolMemoryRegion,
-	SIZE_T NonPagedPoolMemoryRegionSize
-)
+	SIZE_T NonPagedPoolMemoryRegionSize)
 {
 	PPOOL_DESCRIPTOR pPagedPoolDesc, pNonPagedPoolDesc;
 	PPOOL_HEADER pagedFirstBlock, nonPagedFirstBlock;
@@ -679,16 +686,25 @@ ExInitializePool(
 		return STATUS_NO_MEMORY;
 	}
 
-	PrintT("Allocated pools %X %X\n", PagedPoolMemoryRegion, NonPagedPoolMemoryRegion);
+	PrintT(
+		"Allocated pools %X %X\n",
+		PagedPoolMemoryRegion, 
+		NonPagedPoolMemoryRegion);
 
 	pPagedPoolDesc = (PPOOL_DESCRIPTOR)PagedPoolMemoryRegion;
 	pNonPagedPoolDesc = (PPOOL_DESCRIPTOR)NonPagedPoolMemoryRegion;
 
-	pPagedPoolDesc->AddressStart = (PVOID)((ULONG_PTR)PagedPoolMemoryRegion + sizeof(*pPagedPoolDesc));
-	pNonPagedPoolDesc->AddressStart = (PVOID)((ULONG_PTR)NonPagedPoolMemoryRegion + sizeof(*pNonPagedPoolDesc));
+	pPagedPoolDesc->AddressStart = 
+		(PVOID)((ULONG_PTR)PagedPoolMemoryRegion + sizeof(*pPagedPoolDesc));
+	pNonPagedPoolDesc->AddressStart = 
+		(PVOID)((ULONG_PTR)NonPagedPoolMemoryRegion 
+			+ sizeof(*pNonPagedPoolDesc));
 
-	pPagedPoolDesc->AddressEnd = (PVOID)((ULONG_PTR)PagedPoolMemoryRegion + PagedPoolMemoryRegionSize);
-	pNonPagedPoolDesc->AddressEnd = (PVOID)((ULONG_PTR)NonPagedPoolMemoryRegion + NonPagedPoolMemoryRegionSize);
+	pPagedPoolDesc->AddressEnd = 
+		(PVOID)((ULONG_PTR)PagedPoolMemoryRegion + PagedPoolMemoryRegionSize);
+	pNonPagedPoolDesc->AddressEnd = 
+		(PVOID)((ULONG_PTR)NonPagedPoolMemoryRegion 
+			+ NonPagedPoolMemoryRegionSize);
 
 	pPagedPoolDesc->MaximalIrql = APC_LEVEL;
 	pNonPagedPoolDesc->MaximalIrql = 0xFF;
@@ -705,24 +721,27 @@ ExInitializePool(
 	nonPagedFirstBlock->PoolType = NonPagedPool;
 	pagedFirstBlock->PoolType = PagedPool;
 
-	pagedFirstBlock->Size = PagedPoolMemoryRegionSize - sizeof(*pPagedPoolDesc) - sizeof(POOL_HEADER);
-	nonPagedFirstBlock->Size = NonPagedPoolMemoryRegionSize - sizeof(*pNonPagedPoolDesc) - sizeof(POOL_HEADER);
+	pagedFirstBlock->Size = 
+		PagedPoolMemoryRegionSize 
+			- sizeof(*pPagedPoolDesc) - sizeof(POOL_HEADER);
+	nonPagedFirstBlock->Size = 
+		NonPagedPoolMemoryRegionSize 
+			- sizeof(*pNonPagedPoolDesc) - sizeof(POOL_HEADER);
 
 	PrintT("Initial non paged pool size %i\n", nonPagedFirstBlock->Size);
 
-	pagedFirstBlock->AllocationTag = nonPagedFirstBlock->AllocationTag = POOL_ALLOCATION_TAG_FREE;
+	pagedFirstBlock->AllocationTag =
+		nonPagedFirstBlock->AllocationTag = POOL_ALLOCATION_TAG_FREE;
 
 	InitializeListHead(&pPagedPoolDesc->PoolHead);
 	InitializeListHead(&pNonPagedPoolDesc->PoolHead);
 
 	InsertTailList(
 		&pPagedPoolDesc->PoolHead, 
-		&pagedFirstBlock->PoolEntry
-	);
+		&pagedFirstBlock->PoolEntry);
 	InsertTailList(
 		&pNonPagedPoolDesc->PoolHead,
-		&nonPagedFirstBlock->PoolEntry
-	);
+		&nonPagedFirstBlock->PoolEntry);
 
 	return STATUS_SUCCESS;
 }
@@ -730,8 +749,7 @@ ExInitializePool(
 static
 VOID
 DebugEnumeratePoolBlocks(
-	POOL_TYPE poolType
-)
+	POOL_TYPE poolType)
 {
 	PPOOL_DESCRIPTOR poolDescriptor;
 	PPOOL_HEADER current;
@@ -741,7 +759,9 @@ DebugEnumeratePoolBlocks(
 	poolDescriptor = Pools[poolType];
 
 	if (poolDescriptor->PoolLock == 0)
+	{
 		KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
+	}
 
 	totalSize = 0;
 	current = (PPOOL_HEADER)poolDescriptor->PoolHead.First;
@@ -755,8 +775,8 @@ DebugEnumeratePoolBlocks(
 			current->AllocationTag,
 			current->Size,
 			(ULONG_PTR)current->PoolType,
-			(ULONG_PTR)((ULONG_PTR)current + sizeof(POOL_HEADER) + current->Size)
-		);
+			(ULONG_PTR)((ULONG_PTR)current 
+				+ sizeof(POOL_HEADER) + current->Size));
 
 		if (current->Size > 0xFFFFFF)
 		{
@@ -776,12 +796,12 @@ DebugEnumeratePoolBlocks(
 			current->PoolEntry.Next,
 			current->PoolEntry.Prev,
 			current->Size, 
-			current->AllocationTag
-		);
+			current->AllocationTag);
 	}
 }
 
 NTSTATUS
+NTAPI
 ExPoolSelfCheck()
 {
 	PPOOL_DESCRIPTOR poolDescriptor;

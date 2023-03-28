@@ -152,6 +152,11 @@ typedef VOID *PVOID, *LPVOID;
 #define FASTCALL __fastcall
 #endif
 
+#ifdef __amd64__
+#define NTAPI __attribute__((ms_abi))
+#define FASTCALL __attribute__((fastcall))
+#endif
+
 inline bool GetBit(unsigned int num, unsigned int n) 
 {
 	return ((num >> n) & 1);

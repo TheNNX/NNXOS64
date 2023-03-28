@@ -88,7 +88,10 @@ ExInterlockedRemoveTailList(
     return removedEntry;
 }
 
-PLIST_ENTRY_POINTER FindElementInPointerList(PLIST_ENTRY_POINTER Head, PVOID Pointer)
+PLIST_ENTRY_POINTER 
+FindElementInPointerList(
+    PLIST_ENTRY_POINTER Head,
+    PVOID Pointer)
 {
     PLIST_ENTRY_POINTER current = (PLIST_ENTRY_POINTER)Head->First;
 

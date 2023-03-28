@@ -63,21 +63,26 @@ VOID KeLoadStub(
 	MaxKernelPhysAddr = bootdata->MaxKernelPhysAddress;
 
 	/* Initialize the physical page allocator and temporary core PCR. */
-	MmReinitPhysAllocator(bootdata->PageFrameDescriptorEntries, bootdata->NumberOfPageFrames);
+	MmReinitPhysAllocator(
+		bootdata->PageFrameDescriptorEntries, 
+		bootdata->NumberOfPageFrames);
 	HalpInitDummyPcr();
 	HalpSetDummyPcr();
 
     /* Calculate the new address of our kernel entrypoint. */
-    mainDelta = (ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule->ImageBase;
+    mainDelta = 
+		(ULONG_PTR)KeEntry - (ULONG_PTR)bootdata->MainKernelModule->ImageBase;
 	mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
 
     /* Map kernel pages. */
     NTSTATUS status = PagingInit(MinKernelPhysAddr, MaxKernelPhysAddr);
     PagingMapAndInitFramebuffer();
-	bootdata->MainKernelModule->SectionHeaders = (PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
-		(ULONG_PTR)bootdata->MainKernelModule->SectionHeaders,
-		bootdata->MainKernelModule->NumberOfSectionHeaders * sizeof(IMAGE_SECTION_HEADER), 
-		PAGE_WRITE | PAGE_PRESENT);
+	bootdata->MainKernelModule->SectionHeaders = 
+		(PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
+			(ULONG_PTR)bootdata->MainKernelModule->SectionHeaders,
+			bootdata->MainKernelModule->NumberOfSectionHeaders 
+				* sizeof(IMAGE_SECTION_HEADER), 
+			PAGE_WRITE | PAGE_PRESENT);
 
 	/* Remap the stack. */
 	currentStack = GetStack();
@@ -152,8 +157,9 @@ BindRelocatedImports(
 
 	PIMAGE_IMPORT_DESCRIPTOR importDesc = 
 		(PIMAGE_IMPORT_DESCRIPTOR)
-			(Module->DirectoryEntires[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddressRVA +
-			Module->ImageBase);
+			(Module->DirectoryEntires[IMAGE_DIRECTORY_ENTRY_IMPORT]
+				.VirtualAddressRVA 
+				+ Module->ImageBase);
 
 	while (importDesc->NameRVA)
 	{
@@ -268,10 +274,10 @@ RemapModule(
 	
 			MmMarkPfnAsUsed(PFN_FROM_PA(physAddress));
 
-			/* copy the current flags */
+			/* Copy the current flags. */
 			newFlags = currentMapping & PAGE_FLAGS_MASK;
 
-			/* if this is an usercode section */
+			/* If this is an usercode section. */
 			if (usersection)
 			{
 				newFlags |= PAGE_USER;
@@ -281,7 +287,8 @@ RemapModule(
 				newFlags &= ~PAGE_USER;
 			}
 			
-			/* if this is not a writable section, remove the writable attribute */
+			/* If this is not a writable section, 
+			 * remove the writable attribute. */
 			if (!(current->Characteristics & IMAGE_SCN_MEM_WRITE))
 			{
 				newFlags &= ~PAGE_WRITE;

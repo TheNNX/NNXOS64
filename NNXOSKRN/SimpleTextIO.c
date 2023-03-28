@@ -443,18 +443,18 @@ void PrintTA(const char* input, ...)
 	va_list		args;
 	va_start(args, input);
 
-	/*KIRQL oldIrql = KeGetCurrentIrql();
+	KIRQL oldIrql = KeGetCurrentIrql();
 
 	if (oldIrql < DISPATCH_LEVEL)
 		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-		*/
-	// HalAcquireLockRaw(&PrintLock);
+	
+	KiAcquireSpinLock(&PrintLock);
 	TextIoOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
-	//HalReleaseLockRaw(&PrintLock);
+	KiReleaseSpinLock(&PrintLock);
 
-	/*if (oldIrql < DISPATCH_LEVEL)
+	if (oldIrql < DISPATCH_LEVEL)
 		KeLowerIrql(oldIrql);
-		*/
+		
 	va_end(args);
 }
 

@@ -7,7 +7,14 @@ KeAcquireSpinLockAtDpcLevel(
     PKSPIN_LOCK Lock)
 {
     if (KeGetCurrentIrql() < DISPATCH_LEVEL)
-        KeBugCheckEx(IRQL_NOT_DISPATCH_LEVEL, __LINE__, KeGetCurrentIrql(), 0, 0);
+    {
+        KeBugCheckEx(
+            IRQL_NOT_DISPATCH_LEVEL, 
+            __LINE__,
+            KeGetCurrentIrql(),
+            0,
+            0);
+    }
 
     KiAcquireSpinLock(Lock);
 }
@@ -18,7 +25,14 @@ KeReleaseSpinLockFromDpcLevel(
     PKSPIN_LOCK Lock)
 {
     if (KeGetCurrentIrql() < DISPATCH_LEVEL)
-        KeBugCheckEx(IRQL_NOT_DISPATCH_LEVEL, __LINE__, KeGetCurrentIrql(), 0, 0);
+    {
+        KeBugCheckEx(
+            IRQL_NOT_DISPATCH_LEVEL, 
+            __LINE__,
+            KeGetCurrentIrql(),
+            0, 
+            0);
+    }
 
     KiReleaseSpinLock(Lock);
 }
@@ -43,7 +57,12 @@ KfReleaseSpinLock(
 {
     if (KeGetCurrentIrql() == PASSIVE_LEVEL)
     {
-        KeBugCheckEx(IRQL_NOT_GREATER_OR_EQUAL, __LINE__, KeGetCurrentIrql(), 0, 0);
+        KeBugCheckEx(
+            IRQL_NOT_GREATER_OR_EQUAL, 
+            __LINE__, 
+            KeGetCurrentIrql(), 
+            0, 
+            0);
     }
     KiReleaseSpinLock(lock);
 	KeLowerIrql(newIrql);
