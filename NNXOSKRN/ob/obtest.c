@@ -56,7 +56,8 @@ ObpTestNamespace()
         0,
         KernelMode,
         &ObpTestPath,
-        TRUE);
+        TRUE,
+        NULL);
 
     if (status != STATUS_SUCCESS)
     {
@@ -70,7 +71,8 @@ ObpTestNamespace()
         0,
         KernelMode,
         &ObpInvalidTestPath,
-        TRUE);
+        TRUE,
+        NULL);
 
     if (status != STATUS_OBJECT_PATH_INVALID)
     {
@@ -89,7 +91,8 @@ ObpTestNamespace()
         0,
         KernelMode,
         &ObpNonExistentTestPath,
-        TRUE);
+        TRUE,
+        NULL);
 
     if (status != STATUS_OBJECT_NAME_NOT_FOUND)
     {
@@ -146,7 +149,7 @@ Test2()
             &objAttribs,
             NULL, 
             OBJ_KERNEL_HANDLE, 
-            INVALID_HANDLE_VALUE,
+            NULL,
             0);
 
         status = ObCreateObject(
@@ -155,9 +158,7 @@ Test2()
             UserMode,
             &objAttribs,
             ObTypeObjectType,
-            NULL
-        );
-
+            NULL);
         if (status != STATUS_SUCCESS)
         {
             return status;
@@ -319,7 +320,7 @@ NTSTATUS ObpMpTestNamespace()
     }
 
     PrintT(
-        "%s %i %i\n", 
+        "%s %i %i\n",
         __FUNCTION__, 
         KeGetCurrentProcessorId(), 
         KeGetCurrentIrql());

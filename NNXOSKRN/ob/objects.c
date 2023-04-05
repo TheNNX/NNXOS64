@@ -85,7 +85,7 @@ ObReferenceObjectByHandle(
     PVOID localObjectPtr;
     NTSTATUS status;
 
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle == NULL)
         return STATUS_INVALID_HANDLE;
 
     if (pObject == NULL)
@@ -264,7 +264,7 @@ NTSTATUS ObpDeleteObject(PVOID object)
     }
 
     /* If has a root, remove own entry from root's children. */
-    if (header->Root && header->Root != INVALID_HANDLE_VALUE)
+    if (header->Root && header->Root != NULL)
     {
         status = ObReferenceObjectByHandle(
             header->Root, 
@@ -306,85 +306,88 @@ ObCreateObject(
     ACCESS_MASK DesiredAccess, 
     KPROCESSOR_MODE AccessMode, 
     POBJECT_ATTRIBUTES Attributes,
-    POBJECT_TYPE objectType,
-    PVOID optionalData)
+    POBJECT_TYPE pObjectType,
+    PVOID OptionalData)
 {
-    HANDLE root;
-    NTSTATUS status;
-    PVOID rootObject;
-    POBJECT_HEADER header;
-    POBJECT_TYPE rootType;
-    PVOID potentialCollision;
+    HANDLE Root;
+    NTSTATUS Status;
+    PVOID RootObject;
+    POBJECT_HEADER Header;
+    POBJECT_TYPE RootType;
+    PVOID PotentialCollision;
 
     if (pObject == NULL)
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    root = INVALID_HANDLE_VALUE;
-    status = STATUS_SUCCESS;
+    Root = NULL;
+    Status = STATUS_SUCCESS;
     
     if (Attributes->ObjectName != NULL)
     {
-        root = Attributes->Root;
-        if (root == INVALID_HANDLE_VALUE)
+        Root = Attributes->Root;
+        if (Root == NULL)
         {
-            root = ObGetGlobalNamespaceHandle();
+            Root = ObGetGlobalNamespaceHandle();
         }
 
-        /* If root still INVALID_HANDLE_VALUE after setting to global namespace,
+        /* If root still NULL after setting to global namespace,
          * it means object manager is not initialized yet. */
-        if (root != INVALID_HANDLE_VALUE)
+        if (Root != NULL)
         {
+            POBJECT_HEADER RootHeader;
+
             /* Reference the root handle to get access to root's type. */
-            status = ObReferenceObjectByHandle(
-                root,
+            Status = ObReferenceObjectByHandle(
+                Root,
                 DesiredAccess,
                 NULL,
                 AccessMode,
-                &rootObject,
+                &RootObject,
                 NULL
             );
 
-            if (status != STATUS_SUCCESS)
+            if (Status != STATUS_SUCCESS)
             {
-                return status;
+                return Status;
             }
 
-            POBJECT_HEADER rootHeader = ObGetHeaderFromObject(rootObject);
-            rootType = rootHeader->ObjectType;
+            RootHeader = ObGetHeaderFromObject(RootObject);
+            RootType = RootHeader->ObjectType;
 
             /* Try traversing root to the object - if it succeded, 
              * object with this name already exists. */
-            if (rootType->ObjectOpen == NULL)
+            if (RootType->ObjectOpen == NULL)
             {
-                status = STATUS_OBJECT_PATH_INVALID;
+                Status = STATUS_OBJECT_PATH_INVALID;
             }
             else
             {
-                status = rootType->ObjectOpen(
-                    rootObject,
-                    &potentialCollision,
+                Status = RootType->ObjectOpen(
+                    RootObject,
+                    &PotentialCollision,
                     DesiredAccess,
                     AccessMode,
                     Attributes->ObjectName,
-                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0);
+                    (Attributes->Attributes & OBJ_CASE_INSENSITIVE) != 0,
+                    OptionalData);
             }
 
-            if (status == STATUS_SUCCESS)
+            if (Status == STATUS_SUCCESS)
             {
                 /* If OBJ_OPENIF was specifed to this function, simply 
                  * return the existing object. */
                 /* TODO: check if NT checks for types in this situation. */
                 if (Attributes->Attributes & OBJ_OPENIF)
                 {
-                    *pObject = potentialCollision;
+                    *pObject = PotentialCollision;
                     return STATUS_SUCCESS;
                 }
                 /* Fail otherwise. */
                 else
                 {
-                    ObDereferenceObject(potentialCollision);
+                    ObDereferenceObject(PotentialCollision);
                     return STATUS_OBJECT_NAME_COLLISION;
                 }
             }
@@ -392,72 +395,72 @@ ObCreateObject(
     }
 
     /* Allocate header and the object. */
-    header = ExAllocatePoolWithTag(
+    Header = ExAllocatePoolWithTag(
         NonPagedPool,
-        sizeof(OBJECT_HEADER) + objectType->InstanceSize, 
+        sizeof(OBJECT_HEADER) + pObjectType->InstanceSize, 
         'OBJ ');
 
     /* If system's out of memory, fail. */
-    if (header == NULL)
+    if (Header == NULL)
     {
         return STATUS_NO_MEMORY;
     }
 
-    KeInitializeSpinLock(&header->Lock);
-    header->Access = DesiredAccess;
-    header->Attributes = Attributes->Attributes;
-    header->Root = root;
-    header->ObjectType = objectType;
+    KeInitializeSpinLock(&Header->Lock);
+    Header->Access = DesiredAccess;
+    Header->Attributes = Attributes->Attributes;
+    Header->Root = Root;
+    Header->ObjectType = pObjectType;
 
     /* Caller has to somehow close/dereference this object. */
-    header->ReferenceCount = 1;
+    Header->ReferenceCount = 1;
 
     /* Initialize the handle list. */
-    header->HandleCount = 0;
-    InitializeListHead(&header->HandlesHead);
+    Header->HandleCount = 0;
+    InitializeListHead(&Header->HandlesHead);
     
     /* Copy the struct (it doesn't copy the buffer though, 
      * but according to MSDN that is okay). */
     if (Attributes->ObjectName != NULL)
     {
-        header->Name = *Attributes->ObjectName;
+        Header->Name = *Attributes->ObjectName;
     }
     else
     {
-        header->Name.Buffer = NULL;
-        header->Name.MaxLength = 0;
-        header->Name.Length = 0;
+        Header->Name.Buffer = NULL;
+        Header->Name.MaxLength = 0;
+        Header->Name.Length = 0;
     }
 
-    *pObject = ObGetObjectFromHeader(header);
+    *pObject = ObGetObjectFromHeader(Header);
     
     /* Add to root's children. */
-    if (root != INVALID_HANDLE_VALUE)
+    if (Root != NULL)
     {
-        if (rootType->AddChildObject == NULL)
+        if (RootType->AddChildObject == NULL)
         {
-            status = STATUS_INVALID_HANDLE;
+            Status = STATUS_INVALID_HANDLE;
         }
         else
         {
-            status = rootType->AddChildObject(rootObject, *pObject);
+            Status = RootType->AddChildObject(RootObject, *pObject);
         }
     }
 
     /* If there was no problem with adding to the root (or no adding was done),
      * and the object type provides a custom OnCreate method, call it. */
-    if (status == STATUS_SUCCESS && header->ObjectType->OnCreate != NULL)
+    if (Status == STATUS_SUCCESS && Header->ObjectType->OnCreate != NULL)
     {
-        status = header->ObjectType->OnCreate(*pObject, optionalData);
+        Status = Header->ObjectType->OnCreate(*pObject, OptionalData);
     }
 
     /* If there was some problem creating the object, delete it. */
-    if (status != STATUS_SUCCESS)
+    if (Status != STATUS_SUCCESS)
     {
         *pObject = NULL;
         /* Derefernce the object to delete it. */
         ObDereferenceObject(pObject);
-        return status;
+        return Status;
     }
 
     return STATUS_SUCCESS;

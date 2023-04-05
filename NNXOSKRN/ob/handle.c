@@ -50,7 +50,7 @@ ObGetHandleDatabaseEntryFromHandle(
     PLIST_ENTRY current;
     ULONG_PTR currentIndex, handleAsIndex;
 
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle == NULL)
         return STATUS_INVALID_HANDLE;
 
     if (outpEntry == NULL)
@@ -101,7 +101,7 @@ ObExtractAndReferenceObjectFromHandle(
 
     localObject = NULL;
 
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle == NULL)
         return STATUS_INVALID_HANDLE;
 
     /* If the LS bit is set, this is a kernel handle 

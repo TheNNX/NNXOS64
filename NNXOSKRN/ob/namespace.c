@@ -20,10 +20,14 @@ typedef struct _OBJECT_TYPE_IMPL
 
 #pragma pack(pop)
 
-HANDLE GlobalNamespace = INVALID_HANDLE_VALUE;
-static HANDLE ObpTypeDirHandle = INVALID_HANDLE_VALUE;
+HANDLE GlobalNamespace = NULL;
+static HANDLE ObpTypeDirHandle = NULL;
 
-static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
+static 
+NTSTATUS 
+DirObjTypeAddChildObject(
+    PVOID selfObject, 
+    PVOID newObject)
 {
     POBJECT_HEADER header, newHeader;
     POBJECT_DIRECTORY selfDir;
@@ -32,7 +36,9 @@ static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
     header = ObGetHeaderFromObject(selfObject);
     newHeader = ObGetHeaderFromObject(newObject);
     
-    InsertHeadList(&selfDir->ChildrenHead, &newHeader->ParentChildListEntry);
+    InsertHeadList(
+        &selfDir->ChildrenHead, 
+        &newHeader->ParentChildListEntry);
 
     return STATUS_SUCCESS;
 }
@@ -45,147 +51,176 @@ static NTSTATUS DirObjTypeAddChildObject(PVOID selfObject, PVOID newObject)
  * @param AccessMode
  * @param KnownName - name (and not the path) of the object
  * @param CaseInsensitive - if true, function ignores case in string comparisons */
-static NTSTATUS DirObjTypeOpenObjectWithNameDecoded(
+static 
+NTSTATUS 
+DirObjTypeOpenObjectWithNameDecoded(
     PVOID SelfObject, 
     PVOID* pOutObject, 
     ACCESS_MASK DesiredAccess,
     KPROCESSOR_MODE AccessMode,
     PUNICODE_STRING KnownName,
-    BOOL CaseInsensitive
-)
+    BOOL CaseInsensitive,
+    PVOID OptionalData)
 {
-    POBJECT_DIRECTORY directoryData;
-    PLIST_ENTRY currentListEntry;
+    POBJECT_DIRECTORY DirectoryData;
+    PLIST_ENTRY CurrentListEntry;
 
-    ObReferenceObject(SelfObject);
+    DirectoryData = (POBJECT_DIRECTORY)SelfObject;
+    CurrentListEntry = DirectoryData->ChildrenHead.First;
 
-    directoryData = (POBJECT_DIRECTORY)SelfObject;
-    currentListEntry = directoryData->ChildrenHead.First;
-
-    /* iterate over all child items */
-    while (currentListEntry != &directoryData->ChildrenHead)
+    /* Iterate over all child items. */
+    while (CurrentListEntry != &DirectoryData->ChildrenHead)
     {
-        POBJECT_HEADER objectHeader;
-        objectHeader = (POBJECT_HEADER)currentListEntry;
+        POBJECT_HEADER ObjectHeader;
+        ObjectHeader = (POBJECT_HEADER)CurrentListEntry;
 
-        /* if names match */
-        if (RtlEqualUnicodeString(&objectHeader->Name, KnownName, CaseInsensitive))
+        /* If names match. */
+        if (RtlEqualUnicodeString(
+                &ObjectHeader->Name, 
+                KnownName, 
+                CaseInsensitive))
         {
-            PVOID object;
-            NTSTATUS status;
+            PVOID Object;
+            NTSTATUS Status;
 
-            object = ObGetObjectFromHeader(objectHeader);
-
-            ObDereferenceObject(SelfObject);
+            Object = ObGetObjectFromHeader(ObjectHeader);
            
-            /* reference the found object doing access checks */
-            status = ObReferenceObjectByPointer(object, DesiredAccess, NULL, AccessMode);
-            if (status != STATUS_SUCCESS)
-                return status;
-
-            /* if the object has a custom open handler, call it */
-            if (objectHeader->ObjectType->OnOpen != NULL)
+            /* Reference the found object doing access checks. */
+            Status = ObReferenceObjectByPointer(
+                Object, 
+                DesiredAccess, 
+                NULL, 
+                AccessMode);
+            if (Status != STATUS_SUCCESS)
             {
-                status = objectHeader->ObjectType->OnOpen(object);
-                /* if the handler failed, return */
-                if (status != STATUS_SUCCESS)
-                    return status;
+                return Status;
             }
 
-            *pOutObject = object;
+            /* If the object has a custom OnOpen handler, call it. */
+            if (ObjectHeader->ObjectType->OnOpen != NULL)
+            {
+                Status = ObjectHeader->ObjectType->OnOpen(
+                    Object, 
+                    OptionalData);
+                if (Status != STATUS_SUCCESS)
+                {
+                    ObDereferenceObject(Object);
+                    return Status;
+                }
+            }
+
+            *pOutObject = Object;
             return STATUS_SUCCESS;
         }
 
-        /* go to next entry */
-        currentListEntry = currentListEntry->Next;
+        /* Go to next entry. */
+        CurrentListEntry = CurrentListEntry->Next;
     }
 
-    ObDereferenceObject(SelfObject);
     return STATUS_OBJECT_NAME_NOT_FOUND;
 }
 
-static NTSTATUS DirObjTypeOpenObject(
+static 
+NTSTATUS 
+DirObjTypeOpenObject(
     PVOID SelfObject,
     PVOID* pOutObject,
     ACCESS_MASK DesiredAccess,
     KPROCESSOR_MODE AccessMode,
     PUNICODE_STRING Name,
-    BOOL CaseInsensitive
-)
+    BOOL CaseInsensitive,
+    PVOID OptionalData)
 {
     USHORT firstSlashPosition;
 
-    /* if the name of the object is empty, the path is invalid */
+    /* If the name of the object is empty, the path is invalid. */
     if (Name == NULL || Name->Length == 0)
+    {
         return STATUS_OBJECT_PATH_INVALID;
+    }
 
-    /* find the first slash */
-    for (firstSlashPosition = 0; firstSlashPosition < Name->Length / sizeof(*Name->Buffer); firstSlashPosition++)
+    /* Find the first slash. */
+    for (firstSlashPosition = 0;
+         firstSlashPosition < Name->Length / sizeof(*Name->Buffer); 
+         firstSlashPosition++)
     {
         if (Name->Buffer[firstSlashPosition] == '\\')
+        {
             break;
+        }
     }
 
     if (firstSlashPosition == Name->Length / sizeof(*Name->Buffer))
     {
-        /* last path part */
-        return DirObjTypeOpenObjectWithNameDecoded(SelfObject, pOutObject, DesiredAccess, AccessMode, Name, CaseInsensitive);
+        /* Last path part. */
+        return DirObjTypeOpenObjectWithNameDecoded(
+            SelfObject, 
+            pOutObject, 
+            DesiredAccess, 
+            AccessMode, 
+            Name, 
+            CaseInsensitive,
+            OptionalData);
     }
     else if (firstSlashPosition == 0) 
     {
-        /* invalid path (those paths are relative paths) */
+        /* Invalid path (those paths are relative paths). */
         return STATUS_OBJECT_PATH_INVALID;
     }
     else
     {
-        /* parse further */
+        /* Parse further. */
         UNICODE_STRING childStr, parentStr;
         POBJECT_HEADER parentHeader;
         NTSTATUS status;
-        PVOID parent;
+        PVOID nextParent;
 
+        /* Open the first object in the path and try to open the target object
+         * recursively in it. */
         childStr.Buffer = Name->Buffer + firstSlashPosition + 1;
-        childStr.Length = Name->Length - (firstSlashPosition + 1) * sizeof(*Name->Buffer);
-        childStr.MaxLength = Name->Length - (firstSlashPosition + 1) * sizeof(*Name->Buffer);
+        childStr.Length = Name->Length - (firstSlashPosition + 1) 
+            * sizeof(*Name->Buffer);
+        childStr.MaxLength = Name->Length - (firstSlashPosition + 1) 
+            * sizeof(*Name->Buffer);
 
         parentStr.Buffer = Name->Buffer;
-        /* index of an element in an array is basically number of elements preceding it */
         parentStr.Length = firstSlashPosition * sizeof(*Name->Buffer);
         parentStr.MaxLength = firstSlashPosition * sizeof(*Name->Buffer);
 
-        /* open the parent directory */
+        /* Open the parent directory. */
         status = DirObjTypeOpenObjectWithNameDecoded(
             SelfObject,
-            &parent,
+            &nextParent,
             DesiredAccess, 
             AccessMode, 
             &parentStr, 
-            CaseInsensitive
-        );
+            CaseInsensitive,
+            OptionalData);
 
         if (status != STATUS_SUCCESS)
             return status;
 
-        /* if the found parent object cannot be traversed, the path is invalid */
-        parentHeader = ObGetHeaderFromObject(parent);
+        /* If the found parent object cannot be traversed, 
+         * the path is invalid. */
+        parentHeader = ObGetHeaderFromObject(nextParent);
         if (parentHeader->ObjectType->ObjectOpen == NULL)
         {
-            ObDereferenceObject(parent);
+            ObDereferenceObject(nextParent);
             return STATUS_OBJECT_PATH_INVALID;
         }
 
-        /* recursivly open the shortened child path in parent */
+        /* Recursivly open the shortened child path in parent. */
         status = parentHeader->ObjectType->ObjectOpen(
-            parent, 
+            nextParent, 
             pOutObject, 
             DesiredAccess, 
             AccessMode,
             &childStr,
-            CaseInsensitive
-        );
+            CaseInsensitive,
+            OptionalData);
             
-        /* dereference parent and return result of its ObjectOpen */
-        ObDereferenceObject(parent);
+        /* Dereference parent and return result of its ObjectOpen. */
+        ObDereferenceObject(nextParent);
         return status;
     }
 
@@ -197,7 +232,7 @@ static OBJECT_TYPE_IMPL ObTypeTypeImpl =
     {
         {NULL, NULL}, 
         RTL_CONSTANT_STRING(L"Type"), 
-        INVALID_HANDLE_VALUE, 
+        NULL, 
         0,
         0, 
         1, 
@@ -223,7 +258,7 @@ static OBJECT_TYPE_IMPL ObDirectoryTypeImpl =
     {
         {NULL, NULL}, 
         RTL_CONSTANT_STRING(L"Directory"), 
-        INVALID_HANDLE_VALUE, 
+        NULL, 
         0, 
         0, 
         1, 
@@ -277,7 +312,7 @@ ObChangeRoot(
     NTSTATUS status;
     BOOL failed;
 
-    originalRoot = INVALID_HANDLE_VALUE;
+    originalRoot = NULL;
 
     ObReferenceObject(object);
     header = ObGetHeaderFromObject(object);
@@ -285,7 +320,7 @@ ObChangeRoot(
 
     rootHandle = header->Root;
 
-    if (rootHandle != INVALID_HANDLE_VALUE)
+    if (rootHandle != NULL)
     {
         /* reference the old root */
         status = ObReferenceObjectByHandle(
@@ -304,7 +339,7 @@ ObChangeRoot(
             return status;
         }
 
-        header->Root = INVALID_HANDLE_VALUE;
+        header->Root = NULL;
 
         /* remove child entry from child chain in root */
         RemoveEntryList(&header->ParentChildListEntry);
@@ -351,7 +386,7 @@ ObChangeRoot(
         KeReleaseSpinLock(&rootHeader->Lock, irql2);
         KeReleaseSpinLock(&header->Lock, irql1);
         /* try setting the root back */
-        if (originalRoot != INVALID_HANDLE_VALUE)
+        if (originalRoot != NULL)
         {
             
             status = ObChangeRoot(object, originalRoot, accessMode);
@@ -372,7 +407,7 @@ ObChangeRoot(
     ObDereferenceObject(object);
 
     /* if the object originally had any parent, dereference the parent */
-    if (originalRoot != INVALID_HANDLE_VALUE)
+    if (originalRoot != NULL)
         ObDereferenceObject(originalRoot);
 
     return STATUS_SUCCESS;

@@ -61,7 +61,6 @@ extern "C" {
         PVOID Unused;
     }OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-
     inline VOID InitializeObjectAttributes(
         POBJECT_ATTRIBUTES pAttributes,
         PUNICODE_STRING name,
@@ -71,8 +70,6 @@ extern "C" {
     {
         pAttributes->Attributes = flags;
         pAttributes->ObjectName = name;
-        if (root == NULL)
-            root = INVALID_HANDLE_VALUE;
         pAttributes->Root = root;
         pAttributes->SecurityDescriptor = security;
         pAttributes->Length = sizeof(*pAttributes);
@@ -122,33 +119,35 @@ extern "C" {
 #ifdef NNX_KERNEL
     struct _OBJECT_TYPE
     {
-        NTSTATUS(*ObjectOpen)(
+        NTSTATUS(NTAPI*ObjectOpen)(
             PVOID SelfObject,
             PVOID* pOutObject,
             ACCESS_MASK DesiredAccess,
             KPROCESSOR_MODE AcessMode,
             PUNICODE_STRING Name,
-            BOOL CaseInsensitive);
+            BOOL CaseInsensitive,
+            PVOID OptionalOpenData);
 
-        NTSTATUS(*AddChildObject)(
+        NTSTATUS(NTAPI*AddChildObject)(
             PVOID SelfObject,
             PVOID Child);
 
-        NTSTATUS(*OnOpen)(
+        NTSTATUS(NTAPI*OnOpen)(
+            PVOID SelfObject,
+            PVOID OptionalData);
+
+        NTSTATUS(NTAPI*OnClose)(
             PVOID SelfObject);
 
-        NTSTATUS(*OnClose)(
-            PVOID SelfObject);
-
-        NTSTATUS(*EnumerateChildren)(
+        NTSTATUS(NTAPI*EnumerateChildren)(
             PVOID SelfObject,
             PLIST_ENTRY CurrentEntry);
 
-        NTSTATUS(*OnCreate)(
+        NTSTATUS(NTAPI*OnCreate)(
             PVOID SelfObject, 
-            PVOID data);
+            PVOID OptionalData);
 
-        NTSTATUS(*OnDelete)(
+        NTSTATUS(NTAPI*OnDelete)(
             PVOID SelfObject);
 
         SIZE_T InstanceSize;

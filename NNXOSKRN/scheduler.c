@@ -765,7 +765,7 @@ PspCreateProcessInternal(
         &processObjAttributes,
         NULL,
         OBJ_KERNEL_HANDLE,
-        INVALID_HANDLE_VALUE,
+        NULL,
         NULL
     );
 
@@ -775,8 +775,7 @@ PspCreateProcessInternal(
         KernelMode, 
         &processObjAttributes, 
         PsProcessType,
-        NULL
-    );
+        NULL);
 
     if (status != STATUS_SUCCESS)
         return status;
@@ -868,7 +867,7 @@ PspCreateThreadInternal(
         &threadObjAttributes,
         NULL,
         OBJ_KERNEL_HANDLE,
-        INVALID_HANDLE_VALUE,
+        NULL,
         NULL);
 
     data.Entrypoint = EntryPoint;
@@ -881,8 +880,7 @@ PspCreateThreadInternal(
         KernelMode,
         &threadObjAttributes,
         PsThreadType,
-        &data
-    );
+        &data);
 
     if (status != STATUS_SUCCESS)
         return status;
