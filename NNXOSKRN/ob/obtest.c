@@ -43,7 +43,6 @@ ObpTestNamespace()
         KernelMode,
         &globalNamespaceObject,
         NULL);
-
     if (status != STATUS_SUCCESS)
     {
         return status;
@@ -73,7 +72,6 @@ ObpTestNamespace()
         &ObpInvalidTestPath,
         TRUE,
         NULL);
-
     if (status != STATUS_OBJECT_PATH_INVALID)
     {
         KeBugCheckEx(
@@ -93,7 +91,6 @@ ObpTestNamespace()
         &ObpNonExistentTestPath,
         TRUE,
         NULL);
-
     if (status != STATUS_OBJECT_NAME_NOT_FOUND)
     {
         KeBugCheckEx(
@@ -305,7 +302,6 @@ ObpMpTestNamespaceThread()
 
     PrintT("Success\n");
     PsExitThread(0);
-    return STATUS_SUCCESS;
 }
 
 NTSTATUS ObpMpTestNamespace()

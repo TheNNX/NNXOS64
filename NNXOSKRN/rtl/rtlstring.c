@@ -77,3 +77,47 @@ RtlCompareString(
 
     return 0;
 }
+
+NTSTATUS
+NTAPI
+RtlUnicodeStringCat(
+    PUNICODE_STRING  DestinationString,
+    PCUNICODE_STRING SourceString)
+{
+    SIZE_T i;
+
+    if (DestinationString == NULL || SourceString == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (DestinationString->Buffer == NULL ||
+        SourceString->Buffer == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (DestinationString->Length == DestinationString->MaxLength &&
+        SourceString->Length > 0)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    for (i = 0; 
+         i < SourceString->Length / 2 && 
+         DestinationString->Length < DestinationString->MaxLength;
+         i++)
+    {
+        DestinationString->Buffer[DestinationString->Length / 2] =
+            SourceString->Buffer[i];
+
+        DestinationString->Length += sizeof(WCHAR);
+    }
+
+    if (i < SourceString->Length / 2)
+    {
+        return STATUS_BUFFER_OVERFLOW;
+    }
+
+    return STATUS_SUCCESS;
+}

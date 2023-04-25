@@ -19,7 +19,7 @@ extern "C" {
 		UINT64 FilePointer;
 		UINT64 FileSize;
 		struct VIRTUAL_FILE_SYSTEM* Filesystem;
-	}VFS_FILE;
+	} VFS_FILE, *PVFS_FILE;
 
 	typedef struct VFS_FUNCTION_SET
 	{
@@ -69,7 +69,7 @@ extern "C" {
 		VFS_FUNCTION_SET Functions;
 		VOID* FilesystemSpecificData;
 		KSPIN_LOCK DeviceSpinlock;
-	}VIRTUAL_FILE_SYSTEM, VFS;
+	}VIRTUAL_FILE_SYSTEM, VFS, *PVIRTUAL_FILE_SYSTEM, *PVFS;
 
 
 #define VFS_ERR_INVALID_FILENAME			0xFFFF0001

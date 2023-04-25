@@ -249,8 +249,14 @@ ObCreateHandle(
     SIZE_T currentIndex;
     KIRQL irql;
 
+    if (pOutHandle == NULL || object == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
     objHeader = ObGetHeaderFromObject(object);
-    isKernelHandle = (objHeader->Attributes & OBJ_KERNEL_HANDLE) != 0;
+    isKernelHandle = (objHeader->Attributes & OBJ_KERNEL_HANDLE) != 0 ||
+                      accessMode == KernelMode;
 
     if (isKernelHandle && accessMode == UserMode)
     {

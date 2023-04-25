@@ -19,6 +19,7 @@
 #include <Keyboard.h>
 #include <rtc.h>
 #include <syscall.h>
+#include <file.h>
 
 extern "C"
 {
@@ -56,6 +57,67 @@ extern "C"
 	}
 
 	__declspec(dllimport) const char* HalTest();
+
+	static
+	NTSTATUS
+	TestFileIo()
+	{
+		HANDLE hFile;
+		NTSTATUS Status;
+		IO_STATUS_BLOCK StatusBlock;
+		OBJECT_ATTRIBUTES FileAttributes;
+		LARGE_INTEGER ByteOffset;
+		CHAR Buffer[513] = { 0 };
+		UNICODE_STRING TestFileName = RTL_CONSTANT_STRING(L"EFI\\BOOT\\FILE.ASM");
+
+		InitializeObjectAttributes(
+			&FileAttributes,
+			&TestFileName,
+			0,
+			NULL,
+			NULL);
+
+		PrintT("Create file\n");
+		Status = NtCreateFile(&hFile, FILE_READ_DATA,
+			&FileAttributes,
+			&StatusBlock,
+			0,
+			FILE_ATTRIBUTE_NORMAL,
+			FILE_SHARE_READ,
+			FILE_OPEN,
+			FILE_NON_DIRECTORY_FILE,
+			NULL,
+			0);
+		if (!NT_SUCCESS(Status))
+		{
+			return Status;
+		}
+
+		ByteOffset.QuadPart = 69;
+
+		PrintT("Read file\n");
+		Status = NtReadFile(
+			hFile,
+			NULL,
+			NULL,
+			NULL,
+			&StatusBlock,
+			Buffer,
+			512,
+			&ByteOffset,
+			NULL);
+		if (!NT_SUCCESS(Status))
+		{
+			return Status;
+		}
+
+		for (int i = 0; i < 512; i++)
+		{
+			PrintT("%c", Buffer[i]);
+		}
+
+		return STATUS_SUCCESS;
+	}
 
 	__declspec(dllexport) 
 	UINT64 
@@ -185,6 +247,14 @@ extern "C"
 		PrintT(" ");
 		HalpPrintCurrentTime();
 		PrintT("\n");
+
+		NtFileObjInit();
+
+		Status = TestFileIo();
+		if (!NT_SUCCESS(Status))
+		{
+			KeBugCheck(PHASE1_INITIALIZATION_FAILED);
+		}
 
 		MpInitialize();
 

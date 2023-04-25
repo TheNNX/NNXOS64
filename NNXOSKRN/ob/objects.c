@@ -315,6 +315,7 @@ ObCreateObject(
     POBJECT_HEADER Header;
     POBJECT_TYPE RootType;
     PVOID PotentialCollision;
+    PVOID Object;
 
     if (pObject == NULL)
     {
@@ -432,7 +433,7 @@ ObCreateObject(
         Header->Name.Length = 0;
     }
 
-    *pObject = ObGetObjectFromHeader(Header);
+    Object = ObGetObjectFromHeader(Header);
     
     /* Add to root's children. */
     if (Root != NULL)
@@ -443,7 +444,7 @@ ObCreateObject(
         }
         else
         {
-            Status = RootType->AddChildObject(RootObject, *pObject);
+            Status = RootType->AddChildObject(RootObject, Object);
         }
     }
 
@@ -451,18 +452,18 @@ ObCreateObject(
      * and the object type provides a custom OnCreate method, call it. */
     if (Status == STATUS_SUCCESS && Header->ObjectType->OnCreate != NULL)
     {
-        Status = Header->ObjectType->OnCreate(*pObject, OptionalData);
+        Status = Header->ObjectType->OnCreate(Object, OptionalData);
     }
 
     /* If there was some problem creating the object, delete it. */
     if (Status != STATUS_SUCCESS)
     {
-        *pObject = NULL;
         /* Derefernce the object to delete it. */
-        ObDereferenceObject(pObject);
+        ObDereferenceObject(Object);
         return Status;
     }
 
+    *pObject = Object;
     return STATUS_SUCCESS;
 }
 

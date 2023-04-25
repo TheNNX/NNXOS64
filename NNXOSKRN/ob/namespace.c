@@ -46,11 +46,13 @@ DirObjTypeAddChildObject(
 /* @brief Internal function for opening a child object in a directory object. 
  * All name and path parsing has to be done BEFORE calling this function.
  * @param SelfObject - pointer to the parent directory object
- * @param pOutObject - pointer to a PVOID, where the pointer to the opened object is to be stored
+ * @param pOutObject - pointer to a PVOID, where the pointer to the opened 
+   object is to be stored
  * @param DesiredAccess
  * @param AccessMode
  * @param KnownName - name (and not the path) of the object
- * @param CaseInsensitive - if true, function ignores case in string comparisons */
+ * @param CaseInsensitive - if true, function ignores case in string 
+   comparisons */
 static 
 NTSTATUS 
 DirObjTypeOpenObjectWithNameDecoded(
@@ -85,7 +87,7 @@ DirObjTypeOpenObjectWithNameDecoded(
 
             Object = ObGetObjectFromHeader(ObjectHeader);
            
-            /* Reference the found object doing access checks. */
+            /* Reference the found object performing access checks. */
             Status = ObReferenceObjectByPointer(
                 Object, 
                 DesiredAccess, 

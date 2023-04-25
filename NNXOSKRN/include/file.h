@@ -74,4 +74,47 @@ typedef struct _IO_STATUS_BLOCK
                               FILE_EXECUTE |\
                               SYNCHRONIZE)
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+    NTSTATUS
+    NTAPI
+    NtFileObjInit(VOID);
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtCreateFile(
+        PHANDLE pOutHandle,
+        ACCESS_MASK DesiredAccessMask,
+        POBJECT_ATTRIBUTES pInObjectAttributes,
+        PIO_STATUS_BLOCK IoStatusBlock,
+        PLARGE_INTEGER AllocationSize,
+        ULONG FileAttributes,
+        ULONG ShareAccess,
+        ULONG CreateDisposition,
+        ULONG CreateOptions,
+        PVOID ExtAttributesBuffer,
+        ULONG EaBufferSize);
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtReadFile(
+        HANDLE hFile,
+        HANDLE hEvent,
+        /* Reserved */
+        PVOID pApcRoutine,
+        /* Reserved */
+        PVOID pApcContext,
+        PIO_STATUS_BLOCK pStatusBlock,
+        PVOID Buffer,
+        ULONG Length,
+        PLARGE_INTEGER ByteOffset,
+        PULONG Key);
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -59,7 +59,14 @@ extern "C"
         PCSTRING, 
         BOOLEAN IgnoreCase);
 
-#define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), s}
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    RtlUnicodeStringCat(
+        PUNICODE_STRING  DestinationString,
+        PCUNICODE_STRING SourceString);
+
+#define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), (PWSTR)s}
 
 #ifdef NNX_KERNEL
     inline static void DebugWPrint(PUNICODE_STRING unicodeStr)
