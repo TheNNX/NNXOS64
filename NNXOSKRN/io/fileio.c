@@ -383,6 +383,9 @@ NtCreateFile(
     }
 
     *pOutHandle = Handle;
+    /* Dereference the file object, as it is referenced twice. ObCreateObject
+     * creates an object with one reference, creating the handle creates the
+     * second reference. */
     ObDereferenceObject(FileObject);
     return STATUS_SUCCESS;
 }

@@ -100,7 +100,13 @@ extern "C" {
     NTSYSAPI
     NTSTATUS
     NTAPI
-    ObReferenceObject(PVOID object);
+    ObReferenceObject(
+        PVOID Object);
+
+    NTSTATUS
+    NTAPI
+    ObReferenceObjectUnsafe(
+        PVOID Object);
 
     NTSYSAPI
     NTSTATUS
@@ -114,7 +120,8 @@ extern "C" {
     NTSYSAPI
     NTSTATUS
     NTAPI
-    ObDereferenceObject(PVOID object);
+    ObDereferenceObject(
+        PVOID object);
 
 #ifdef NNX_KERNEL
     struct _OBJECT_TYPE

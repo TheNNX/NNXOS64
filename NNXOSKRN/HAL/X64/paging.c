@@ -245,9 +245,8 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
 }
 
 ULONG_PTR
-PagingGetCurrentMapping(
-    ULONG_PTR virtualAddress
-)
+PagingGetTableMapping(
+    ULONG_PTR virtualAddress)
 {
     ULONG_PTR ptIndex, pdIndex, pdpIndex, pml4Index, vUINT;
     UINT64* const cRecursivePagingPML4Base = RecursivePagingPML4Base;

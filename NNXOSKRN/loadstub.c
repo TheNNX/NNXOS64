@@ -269,7 +269,7 @@ RemapModule(
 				current->VirtualAddressRVA + 
 				j * PAGE_SIZE;
 
-			currentMapping = PagingGetCurrentMapping(currentPageAddress);
+			currentMapping = PagingGetTableMapping(currentPageAddress);
 			physAddress |= currentMapping & PAGE_FLAGS_MASK;
 	
 			MmMarkPfnAsUsed(PFN_FROM_PA(physAddress));

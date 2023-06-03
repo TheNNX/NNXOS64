@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #ifndef ALLOC
-#include "memory/nnxalloc.h"
+#include <nnxalloc.h>
 #define ALLOC(x) NNXAllocatorAlloc(x)
 #define DEALLOC(x) NNXAllocatorFree(x)
 #endif

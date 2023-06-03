@@ -668,10 +668,10 @@ PspCreateKernelStack(
 
     /* Get the current mappings. */
     currentMappingGuard1 = 
-        PagingGetCurrentMapping(blockAllocation)
+        PagingGetTableMapping(blockAllocation)
         & PAGE_ADDRESS_MASK;
     currentMappingGuard2 = 
-        PagingGetCurrentMapping(blockAllocation + PAGE_SIZE * (nPages + 1))
+        PagingGetTableMapping(blockAllocation + PAGE_SIZE * (nPages + 1))
         & PAGE_ADDRESS_MASK;
 
     /* FIXME:
@@ -818,16 +818,16 @@ PspProcessOnCreate(
 NTSTATUS
 NTAPI
 PspProcessOnCreateNoDispatcher(
-    PVOID selfObject,
-    PVOID createData)
+    PVOID SelfObject,
+    PVOID CreateData)
 {
-    PEPROCESS pProcess = (PEPROCESS)selfObject;
+    PEPROCESS pProcess = (PEPROCESS)SelfObject;
 
-    /* make sure it is not prematurely used, */
     pProcess->Initialized = FALSE;
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     InitializeListHead(&pProcess->Pcb.ThreadListHead);
+    InitializeListHead(&pProcess->Pcb.ModuleInstanceHead);
     pProcess->Pcb.BasePriority = 0;
     pProcess->Pcb.AffinityMask = KAFFINITY_ALL;
     pProcess->Pcb.NumberOfThreads = 0;
@@ -1377,7 +1377,9 @@ PsGetProcessorModeFromTrapFrame(
     PKTASK_STATE TrapFrame)
 {
     if ((TrapFrame->Cs & 0x3) == 0x00)
+    {
         return KernelMode;
+    }
     return UserMode;
 }
 
@@ -1410,4 +1412,11 @@ KeRevertToUserAffinityThread()
 
     KiReleaseDispatcherLock(irql);
     KeForceClockTick();
+}
+
+PEPROCESS
+NTAPI
+KeGetCurrentProcess()
+{
+    return CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb);
 }

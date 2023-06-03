@@ -133,7 +133,7 @@ extern "C"
         ULONG_PTR);
     
     ULONG_PTR
-    PagingGetCurrentMapping(
+    PagingGetTableMapping(
         ULONG_PTR virtualAddress);
 
     NTSTATUS

@@ -23,25 +23,28 @@ extern "C" {
     typedef struct _KPROCESS
     {
         DISPATCHER_HEADER Header;
-        KSPIN_LOCK ProcessLock;
+
+        KSPIN_LOCK  ProcessLock;
         /* Base process priority used to compute thread priority. */
-        UCHAR BasePriority;
-        KAFFINITY AffinityMask;
-        ULONG_PTR AddressSpacePhysicalPointer;
-        LIST_ENTRY ThreadListHead;
-        UINT64 NumberOfThreads;
-        LIST_ENTRY ProcessListEntry;
+        UCHAR       BasePriority;
+        KAFFINITY   AffinityMask;
+        ULONG_PTR   AddressSpacePhysicalPointer;
+        LIST_ENTRY  ThreadListHead;
+        UINT64      NumberOfThreads;
+        LIST_ENTRY  ProcessListEntry;
         /* Stores quantum units (3rds of timer interval),
          * multiply by KiCyclesPerQuantum to get value for CyclesLeft. */
-        ULONG_PTR QuantumReset;
-        NTSTATUS ProcessResult;
-        LIST_ENTRY HandleDatabaseHead;
+        ULONG_PTR   QuantumReset;
+        NTSTATUS    ProcessResult;
+        LIST_ENTRY  HandleDatabaseHead;
+
+        LIST_ENTRY  ModuleInstanceHead;
     } KPROCESS, * PKPROCESS;
 
     typedef struct _EPROCESS
     {
         KPROCESS Pcb;
-        BOOL Initialized;
+        BOOL     Initialized;
     } EPROCESS, * PEPROCESS;
 
 
@@ -119,7 +122,7 @@ extern "C" {
             };
             struct
             {
-                KAPC_STATE ApcStates;
+                KAPC_STATE ApcStates[2];
                 PKAPC_STATE ApcStatePointers[2];
             };
         };
@@ -284,6 +287,9 @@ extern "C" {
     HalpApplyTaskState(
         PKTASK_STATE TaskState);
 
+    PEPROCESS
+    NTAPI
+    KeGetCurrentProcess();
 #endif
 
 #ifdef __cplusplus

@@ -21,11 +21,16 @@ extern "C" {
     }MDL, *PMDL;
 
     VOID
-        MmInitializeMdl(
-            PMDL Buffer,
-            PVOID BaseVa,
-            SIZE_T Length
-        );
+    NTAPI
+    MmInitializeMdl(
+        PMDL Buffer,
+        PVOID BaseVa,
+        SIZE_T Length);
+
+    VOID
+    NTAPI
+    MmBuildMdlForNonPagedPool(
+        PMDL pMdl);
 
 #ifdef __cplusplus
 }

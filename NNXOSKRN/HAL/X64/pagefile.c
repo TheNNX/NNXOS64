@@ -201,7 +201,7 @@ PagingPageOutPage(
     }
 
     /* get the old page mapping */
-    oldMapping = PagingGetCurrentMapping(virtualAddress);
+    oldMapping = PagingGetTableMapping(virtualAddress);
     /* get the old flags (but clear the present flag) */
     oldFlags = (oldMapping & 0xFFF) & (~PAGE_PRESENT);
     oldMapping &= (~0xFFF);
@@ -237,7 +237,7 @@ PagingPageInPage(
     KeAcquireSpinLock(&PageFileLock, &irql);
 
     /* Get the temp page-file page mapping */
-    tempMapping = PagingGetCurrentMapping(virtualAddress & PAGE_ADDRESS_MASK);
+    tempMapping = PagingGetTableMapping(virtualAddress & PAGE_ADDRESS_MASK);
     /* Get the old flags (but clear the present flag) */
     originalFlags = (tempMapping & 0xFFF) & (~PAGE_PRESENT);
     tempMapping &= PAGE_ADDRESS_MASK;

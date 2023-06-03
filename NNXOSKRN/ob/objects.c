@@ -127,6 +127,20 @@ ObReferenceObjectByHandle(
     return STATUS_SUCCESS;
 }
 
+NTSTATUS
+NTAPI
+ObReferenceObjectUnsafe(
+    PVOID Object)
+{
+    POBJECT_HEADER Header;
+  
+    Header = ObGetHeaderFromObject(Object);
+    ASSERT(Header->Lock != 0); 
+
+    Header->ReferenceCount++;
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS 
 NTAPI
 ObReferenceObject(
@@ -139,7 +153,7 @@ ObReferenceObject(
 
     /* Acquire the objects lock and increment ref count. */
     KeAcquireSpinLock(&header->Lock, &irql);
-    header->ReferenceCount++;
+    ObReferenceObjectUnsafe(object);
     KeReleaseSpinLock(&header->Lock, irql);
 
     return STATUS_SUCCESS;
