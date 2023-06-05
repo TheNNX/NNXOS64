@@ -14,6 +14,8 @@
 #include <bugcheck.h>
 #include <spinlock.h>
 #include <rtl.h>
+#include <paging.h>
+#include <SimpleTextIO.h>
 
 #define POOL_ALLOCATION_TAG_FREE 0
 #ifdef _M_AMD64

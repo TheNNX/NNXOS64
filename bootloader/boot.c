@@ -237,31 +237,6 @@ HandleImportDirectory(
 }
 
 static
-ULONG_PTR
-CalculateImageAllocationSize(
-    EFI_FILE_HANDLE File,
-    PIMAGE_PE_HEADER ImagePeHeader,
-    PIMAGE_SECTION_HEADER Sections)
-{
-    ULONG_PTR HighestSectionAddress = 0;
-    INT i;
-
-    for (i = 0; i < ImagePeHeader->FileHeader.NumberOfSections; i++)
-    {
-        PIMAGE_SECTION_HEADER Header = &Sections[i];
-        ULONG_PTR HeaderTopRVA = Header->VirtualSize + Header->VirtualAddressRVA;
-        HeaderTopRVA = ((HeaderTopRVA - 1) / PAGE_SIZE + 1) * PAGE_SIZE;
-
-        if (HeaderTopRVA > HighestSectionAddress)
-        {
-            HighestSectionAddress = HeaderTopRVA;
-        }
-    }
-
-    return HighestSectionAddress;
-}
-
-static
 EFI_STATUS
 HandleExportDirectory(
     PLOADED_BOOT_MODULE Module,
@@ -493,10 +468,7 @@ LoadImage(
         return Status;
     }
 
-    HighestSectionAddress = CalculateImageAllocationSize(
-        File, 
-        &ImagePeHeader, 
-        Sections);
+    HighestSectionAddress = ImagePeHeader.OptionalHeader.SizeOfImage;
 
     /* Temporarily allocate a buffer for the sections, so the number of 
      * exports can be read. The number of exports is neccessary for the 

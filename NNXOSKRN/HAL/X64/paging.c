@@ -5,6 +5,7 @@
 #include <spinlock.h>
 #include <HALX64/include/msr.h>
 #include <bugcheck.h>
+#include <scheduler.h>
 
 #define PML4EntryForRecursivePaging 510ULL
 #define PML4_COVERED_SIZE 0x1000000000000ULL
@@ -71,24 +72,56 @@ BOOL PagingCheckIsPageIndexFree(UINT64 pageIndex)
     return FALSE;
 }
 
-ULONG_PTR PagingCreateAddressSpace()
+NTSTATUS 
+NTAPI
+MmCreateAddressSpace(
+    PADDRESS_SPACE pOutAddressSpace)
 {
-    ULONG_PTR physicalPML4;
-    NTSTATUS status;
+    ULONG_PTR PhysicalPML4;
+    NTSTATUS Status;
 
-    status = MmAllocatePhysicalAddress(&physicalPML4);
-    if (!NT_SUCCESS(status))
-        return -1LL;
+    Status = MmAllocatePhysicalAddress(&PhysicalPML4);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
 
-    ULONG_PTR virtualPML4 = PagingAllocatePageWithPhysicalAddress(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, PAGE_PRESENT | PAGE_WRITE, physicalPML4);
+    ULONG_PTR virtualPML4 = PagingAllocatePageWithPhysicalAddress(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, PAGE_PRESENT | PAGE_WRITE, PhysicalPML4);
 
     MemSet((UINT8*)virtualPML4, 0, PAGE_SIZE);
 
-    ((ULONG_PTR*)virtualPML4)[PML4EntryForRecursivePaging] = physicalPML4 | PAGE_PRESENT | PAGE_WRITE;
+    ((ULONG_PTR*)virtualPML4)[PML4EntryForRecursivePaging] = PhysicalPML4 | PAGE_PRESENT | PAGE_WRITE;
     ((ULONG_PTR*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
 
-    return physicalPML4;
+    pOutAddressSpace->TopStructPhysAddress = PhysicalPML4;
+    InitializeListHead(&pOutAddressSpace->MemorySections);
+
+    return STATUS_SUCCESS;
 }
+
+VOID
+NTAPI
+MmGetAddressSpace(
+    PADDRESS_SPACE pOutAddressSpace)
+{
+    if (KeGetCurrentProcess() == NULL)
+    {
+        pOutAddressSpace->TopStructPhysAddress = __readcr3();
+    }
+    else 
+    {
+        *pOutAddressSpace = KeGetCurrentProcess()->Pcb.AddressSpace;
+    }
+}
+
+VOID 
+NTAPI
+MmSetAddressSpace(
+    PADDRESS_SPACE AddressSpace)
+{
+    __writecr3(AddressSpace->TopStructPhysAddress);
+}
+
 
 ULONG_PTR PagingFindFreePages(ULONG_PTR min, ULONG_PTR max, SIZE_T count)
 {
@@ -583,14 +616,4 @@ ULONG_PTR PagingMapStrcutureToVirtual(ULONG_PTR physicalAddress, SIZE_T structur
 
     ULONG_PTR delta = physicalAddress - PAGE_ALIGN(physicalAddress);
     return virt + delta;
-}
-
-ULONG_PTR PagingGetAddressSpace()
-{
-    return (ULONG_PTR)__readcr3();
-}
-
-VOID PagingSetAddressSpace(ULONG_PTR AddressSpace)
-{
-    __writecr3(AddressSpace);
 }

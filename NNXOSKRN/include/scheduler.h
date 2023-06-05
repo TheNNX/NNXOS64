@@ -24,21 +24,21 @@ extern "C" {
     {
         DISPATCHER_HEADER Header;
 
-        KSPIN_LOCK  ProcessLock;
+        KSPIN_LOCK    ProcessLock;
         /* Base process priority used to compute thread priority. */
-        UCHAR       BasePriority;
-        KAFFINITY   AffinityMask;
-        ULONG_PTR   AddressSpacePhysicalPointer;
-        LIST_ENTRY  ThreadListHead;
-        UINT64      NumberOfThreads;
-        LIST_ENTRY  ProcessListEntry;
+        UCHAR         BasePriority;
+        KAFFINITY     AffinityMask;
+        ADDRESS_SPACE AddressSpace;
+        LIST_ENTRY    ThreadListHead;
+        UINT64        NumberOfThreads;
+        LIST_ENTRY    ProcessListEntry;
         /* Stores quantum units (3rds of timer interval),
          * multiply by KiCyclesPerQuantum to get value for CyclesLeft. */
-        ULONG_PTR   QuantumReset;
-        NTSTATUS    ProcessResult;
-        LIST_ENTRY  HandleDatabaseHead;
+        ULONG_PTR     QuantumReset;
+        NTSTATUS      ProcessResult;
+        LIST_ENTRY    HandleDatabaseHead;
 
-        LIST_ENTRY  ModuleInstanceHead;
+        LIST_ENTRY    ModuleInstanceHead;
     } KPROCESS, * PKPROCESS;
 
     typedef struct _EPROCESS

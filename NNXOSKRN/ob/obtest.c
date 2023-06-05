@@ -1,6 +1,7 @@
 #include <scheduler.h>
 #include <pcr.h>
 #include <bugcheck.h>
+#include <SimpleTextIO.h>
 
 NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
 NTSTATUS PspCreateThreadInternal(

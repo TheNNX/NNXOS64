@@ -29,16 +29,21 @@ extern "C" {
     LdrpUnloadImage(
         HANDLE Module);
 
+    typedef struct _LOAD_IMAGE_INFO
+    {
+        LIST_ENTRY DependenciesHead;
+        LIST_ENTRY MemorySectionsHead;
+    }LOAD_IMAGE_INFO, *PLOAD_IMAGE_INFO;
+
     typedef struct _KMODULE
     {
         PCUNICODE_STRING Name;
         HANDLE           File;
         ULONG_PTR        ImageBase;
-
-        LIST_ENTRY       MemorySectionsHead;
         KSPIN_LOCK       Lock;
-
         LIST_ENTRY       InstanceHead;
+        LIST_ENTRY       LoadedModulesEntry;
+        LOAD_IMAGE_INFO  LoadImageInfo;
     }KMODULE, *PKMODULE;
 
     typedef struct _KLOADED_MODULE_INSTANCE
@@ -47,6 +52,7 @@ extern "C" {
         LIST_ENTRY  ModuleListEntry;
         PKMODULE    Module;
         PEPROCESS   Process;
+        ULONG_PTR   References;
     }KLOADED_MODULE_INSTANCE, *PKLOADED_MODULE_INSTANCE;
 #endif
 

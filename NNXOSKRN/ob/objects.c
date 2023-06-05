@@ -3,6 +3,7 @@
 #include <bugcheck.h>
 #include <rtl.h>
 #include <ntdebug.h>
+#include <SimpleTextIO.h>
 
 NTSTATUS 
 ObpTestNamespace();
@@ -329,6 +330,7 @@ ObCreateObject(
     POBJECT_HEADER Header;
     POBJECT_TYPE RootType;
     PVOID PotentialCollision;
+    POBJECT_HEADER RootHeader;
     PVOID Object;
 
     if (pObject == NULL)
@@ -337,6 +339,7 @@ ObCreateObject(
     }
 
     Root = NULL;
+    RootHeader = NULL;
     Status = STATUS_SUCCESS;
     
     if (Attributes->ObjectName != NULL)
@@ -351,8 +354,6 @@ ObCreateObject(
          * it means object manager is not initialized yet. */
         if (Root != NULL)
         {
-            POBJECT_HEADER RootHeader;
-
             /* Reference the root handle to get access to root's type. */
             Status = ObReferenceObjectByHandle(
                 Root,
@@ -446,9 +447,14 @@ ObCreateObject(
         Header->Name.MaxLength = 0;
         Header->Name.Length = 0;
     }
-
+    /* TODO: Make sure the object cannot be accessed by name before calling
+     * its OnCreate. 
+       KeAcquireSpinLock(&RootHeader->Lock, &Irql);
+       KeAcquireSpinLockAtDpcLevel(&Object->Lock);
+       ...
+    */
     Object = ObGetObjectFromHeader(Header);
-    
+
     /* Add to root's children. */
     if (Root != NULL)
     {

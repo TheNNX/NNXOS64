@@ -2,6 +2,7 @@
 #include <spinlock.h>
 #include <rtl.h>
 #include <paging.h>
+#include <SimpleTextIO.h>
 
 static MMPFN_LIST FreeList;
 static MMPFN_LIST WorkingsetList;

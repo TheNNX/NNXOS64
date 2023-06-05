@@ -11,6 +11,7 @@
 #include <dispatcher.h>
 #include <ntqueue.h>
 #include <ntdebug.h>
+#include <SimpleTextIO.h>
 
 static KSPIN_LOCK SystemCallSpinLock;
 SYSCALL_HANDLER HalpSystemCallHandler;

@@ -374,6 +374,7 @@ PspInitializeCore(
     PKPCR pPcr;
     PKPRCB pPrcb;
     NTSTATUS status = STATUS_SUCCESS;
+    PKTASK_STATE pTaskState;
 
     /* check if this is the first core to be initialized */
     /* if so, initialize the scheduler first */
@@ -403,8 +404,7 @@ PspInitializeCore(
 
     PspCoresInitialized++;
     
-    PagingSetAddressSpace(
-        pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
+    MmSetAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
 
     pPrcb->IdleThread->ThreadState = THREAD_STATE_RUNNING;
     KiReleaseDispatcherLock(irql);
@@ -468,10 +468,9 @@ PspInitializeCore(
         }
     }
 
-    PKTASK_STATE pTaskState = pPrcb->IdleThread->KernelStackPointer;
+    pTaskState = pPrcb->IdleThread->KernelStackPointer;
     
-    PagingSetAddressSpace(
-        pPrcb->IdleThread->Process->AddressSpacePhysicalPointer);
+    MmSetAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
     
     HalDisableInterrupts();
     KeLowerIrql(0);
@@ -590,9 +589,7 @@ PspScheduleThread(
                 if (pcr->Prcb->CurrentThread->Process != 
                     pcr->Prcb->NextThread->Process)
                 {
-                    PagingSetAddressSpace(
-                        (ULONG_PTR)nextThread->Process->
-                            AddressSpacePhysicalPointer);
+                    MmSetAddressSpace(&nextThread->Process->AddressSpace);
                 }
             }
 
@@ -831,7 +828,7 @@ PspProcessOnCreateNoDispatcher(
     pProcess->Pcb.BasePriority = 0;
     pProcess->Pcb.AffinityMask = KAFFINITY_ALL;
     pProcess->Pcb.NumberOfThreads = 0;
-    pProcess->Pcb.AddressSpacePhysicalPointer = PagingCreateAddressSpace();
+    MmCreateAddressSpace(&pProcess->Pcb.AddressSpace);
     pProcess->Pcb.QuantumReset = 6;
     InitializeListHead(&pProcess->Pcb.HandleDatabaseHead);
 
@@ -956,7 +953,7 @@ PspThreadOnCreateNoDispatcher(
     PVOID CreateData)
 {
     ULONG_PTR userstack;
-    ULONG_PTR originalAddressSpace;
+    ADDRESS_SPACE originalAddressSpace;
     PTHREAD_ON_CREATE_DATA threadCreationData;
     PETHREAD pThread = (PETHREAD)SelfObject;
     threadCreationData = (PTHREAD_ON_CREATE_DATA)CreateData;
@@ -972,8 +969,8 @@ PspThreadOnCreateNoDispatcher(
     pThread->StartAddress = 0;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
 
-    originalAddressSpace = PagingGetAddressSpace();
-    PagingSetAddressSpace(pThread->Process->Pcb.AddressSpacePhysicalPointer);
+    MmGetAddressSpace(&originalAddressSpace);
+    MmSetAddressSpace(&pThread->Process->Pcb.AddressSpace);
 
     /* Create stacks */
     /* Main kernel stack */
@@ -1000,7 +997,7 @@ PspThreadOnCreateNoDispatcher(
             PAGING_USER_SPACE_END) + PAGE_SIZE;
     }
 
-    PagingSetAddressSpace(originalAddressSpace);
+    MmSetAddressSpace(&originalAddressSpace);
 
     MemSet(
         pThread->Tcb.ThreadWaitBlocks, 
@@ -1119,7 +1116,7 @@ PspProcessOnDelete(
 
     RemoveEntryList(&pProcess->Pcb.ProcessListEntry);
 
-    MmFreePfn(PFN_FROM_PA(pProcess->Pcb.AddressSpacePhysicalPointer));
+    // TODO: PagingDeleteAddressSpace(&pProcess->Pcb.AddressSpace);
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KiReleaseDispatcherLock(irql);
@@ -1418,5 +1415,9 @@ PEPROCESS
 NTAPI
 KeGetCurrentProcess()
 {
+    if (KeGetCurrentThread() == NULL)
+    {
+        return NULL;
+    }
     return CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb);
 }

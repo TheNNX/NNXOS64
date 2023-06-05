@@ -4,13 +4,24 @@
 #include <pool.h>
 #include <file.h>
 #include <nnxpe.h>
+#include <SimpleTextIO.h>
 
 static POBJECT_TYPE   LdrModuleObjType;
 static UNICODE_STRING LdrModuleObjTypeName = RTL_CONSTANT_STRING("Module");
+static LIST_ENTRY     LdrLoadedModulesHead;
+static KSPIN_LOCK     LdrLock;
+
+typedef struct _DEPENDENCY_ENTRY
+{
+    LIST_ENTRY       Entry;
+    PCUNICODE_STRING Filename;
+    PKMODULE         Module;
+}DEPENDENCY_ENTRY, *PDEPENDENCY_ENTRY;
 
 typedef struct _MODULE_CREATION_DATA
 {
     PCUNICODE_STRING Filename;
+    PCUNICODE_STRING SearchPath;
     PEPROCESS        Process;
 }MODULE_CREATION_DATA, *PMODULE_CREATION_DATA;
 
@@ -26,6 +37,14 @@ LdrpFileReadHelper(
     ReadOffset.QuadPart = Offset;
     IO_STATUS_BLOCK StatusBlock;
 
+    /* TODO: when a more complete implementation of NtReadFile is completed, 
+     * this won't work - LdrpFileReadHelper is called exclusively by callers
+     * running in IRQL >= PASSIVE_LEVEL. IRQL should be replaced by other
+     * ways of preventing address space changing and other means of
+     * synchronization. (Or use some other more internal filesystem access
+     * API, this is, however, probably a bad idea - this code shouldn't really
+     * run in high IRQL, maybe create some "Initialized" variable in KMODULE,
+     * and make access to that locked behind a spinlock acquisition). */
     return NtReadFile(
         hFile,
         NULL,
@@ -42,13 +61,25 @@ LdrpFileReadHelper(
 NTSTATUS
 NTAPI
 LdrpLoadFile(
-    HANDLE hFile)
+    HANDLE hFile,
+    PLOAD_IMAGE_INFO pLoadImageInfo)
 {
     IMAGE_DOS_HEADER DosHeader;
     IMAGE_PE_HEADER PeHeader;
+    ULONG DataDirSize;
     NTSTATUS Status;
+    IMAGE_DATA_DIRECTORY DataDirectories[16];
+    PIMAGE_SECTION_HEADER Sections;
+    LONGLONG FilePointer;
+    ULONG SizeOfSectionHeaders;
 
-    Status = LdrpFileReadHelper(hFile, &DosHeader, sizeof(DosHeader), 0);
+    FilePointer = 0;
+    Status = LdrpFileReadHelper(
+        hFile,
+        &DosHeader,
+        sizeof(DosHeader),
+        FilePointer);
+    FilePointer += sizeof(DosHeader);
     if (!NT_SUCCESS(Status))
     {
         return Status;
@@ -64,13 +95,58 @@ LdrpLoadFile(
         &PeHeader, 
         sizeof(PeHeader), 
         DosHeader.e_lfanew);
+    FilePointer = DosHeader.e_lfanew + sizeof(PeHeader);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+    if (PeHeader.Signature != IMAGE_PE_MAGIC ||
+        PeHeader.OptionalHeader.Signature != IMAGE_OPTIONAL_HEADER_NT64 ||
+        PeHeader.FileHeader.Machine != IMAGE_MACHINE_X64)
+    {
+        return STATUS_INVALID_IMAGE_FORMAT;
+    }
+
+    DataDirSize =
+        sizeof(*DataDirectories) *
+        PeHeader.OptionalHeader.NumberOfDataDirectories;
+    Status = LdrpFileReadHelper(
+        hFile,
+        DataDirectories,
+        DataDirSize,
+        FilePointer);
+    FilePointer += DataDirSize;
     if (!NT_SUCCESS(Status))
     {
         return Status;
     }
 
-    /* TODO: WIP. */
+    SizeOfSectionHeaders = 
+        PeHeader.FileHeader.NumberOfSections * sizeof(*Sections);
 
+    Sections = ExAllocatePool(NonPagedPool, SizeOfSectionHeaders);
+    if (Sections == NULL)
+    {
+        return STATUS_NO_MEMORY;
+    }
+
+    FilePointer = DosHeader.e_lfanew + sizeof(PeHeader) + DataDirSize;
+    Status = LdrpFileReadHelper(
+        hFile,
+        Sections,
+        SizeOfSectionHeaders,
+        FilePointer);
+    FilePointer += DataDirSize;
+    if (!NT_SUCCESS(Status))
+    {
+        ExFreePool(Sections);
+        return Status;
+    }
+
+    InitializeListHead(&pLoadImageInfo->MemorySectionsHead);
+    InitializeListHead(&pLoadImageInfo->DependenciesHead);
+
+    ExFreePool(Sections);
     return STATUS_SUCCESS;
 }
 
@@ -78,9 +154,10 @@ NTSTATUS
 NTAPI
 LdrpLoadModuleFromFileToProcess(
     HANDLE hFile,
-    PEPROCESS pProcess)
+    PEPROCESS pProcess,
+    PLOAD_IMAGE_INFO pLoadImageInfo)
 {
-    ULONG_PTR CurrentAddressSpace;
+    PADDRESS_SPACE CurrentAddressSpace;
     NTSTATUS Status;
     KIRQL Irql;
 
@@ -89,15 +166,127 @@ LdrpLoadModuleFromFileToProcess(
     KeRaiseIrql(DISPATCH_LEVEL, &Irql);
     
     /* Change the address space to the target process' address space. */
-    CurrentAddressSpace = PagingGetAddressSpace();
-    PagingSetAddressSpace(pProcess->Pcb.AddressSpacePhysicalPointer);
+    CurrentAddressSpace = &KeGetCurrentProcess()->Pcb.AddressSpace;
+    MmSetAddressSpace(&pProcess->Pcb.AddressSpace);
 
-    Status = LdrpLoadFile(hFile);
+    Status = LdrpLoadFile(hFile, pLoadImageInfo);
 
     /* Restore the original address space and IRQL. */
-    PagingSetAddressSpace(CurrentAddressSpace);
+    MmSetAddressSpace(CurrentAddressSpace);
     KeLowerIrql(Irql);
     return Status;
+}
+
+BOOLEAN
+NTAPI
+LdrpReferenceModuleByName(
+    PCUNICODE_STRING ModuleFilename,
+    PKMODULE* outpModule)
+{
+    PLIST_ENTRY Head = &LdrLoadedModulesHead;
+    PLIST_ENTRY Current = Head->First;
+
+    while (Head != Current)
+    {
+        PKMODULE Module = CONTAINING_RECORD(
+            Current, 
+            KMODULE, 
+            LoadedModulesEntry);
+
+        /* TODO! ModuleFilename should be an absolute path, and absolute 
+         * paths should be compared AS PATHS and not strings (take into
+         * account the potential object manager links between devices etc.) */
+        if (RtlCompareUnicodeString(Module->Name, ModuleFilename, TRUE) == 0)
+        {
+            *outpModule = Module;
+            return TRUE;
+        }
+
+        Current = Current->Next;
+    }
+
+    return FALSE;
+}
+
+NTSTATUS
+NTAPI
+LdrpHandleDependencies(
+    PCUNICODE_STRING SearchPath,
+    PKMODULE pModule)
+{
+    PLIST_ENTRY Current = pModule->LoadImageInfo.DependenciesHead.First;
+    PLIST_ENTRY Head = &pModule->LoadImageInfo.DependenciesHead;
+    NTSTATUS Status;
+
+    while (Current != Head)
+    {
+        PKMODULE pDependency = NULL;
+        PDEPENDENCY_ENTRY Entry = CONTAINING_RECORD(
+            Current,
+            DEPENDENCY_ENTRY, 
+            Entry);
+
+        if (!LdrpReferenceModuleByName(Entry->Filename, &pDependency))
+        {
+            HANDLE hDependency;
+            Status = LdrpLoadImage(SearchPath, Entry->Filename, &hDependency);
+            if (!NT_SUCCESS(Status))
+            {
+                return Status;
+            }
+
+            Status = ObReferenceObjectByHandle(
+                hDependency, 
+                0, 
+                LdrModuleObjType, 
+                KernelMode, 
+                &pDependency, 
+                NULL);
+            if (!NT_SUCCESS(Status))
+            {
+                return Status;
+            }
+
+            ObCloseHandle(hDependency, KernelMode);
+        }
+        Entry->Module = pDependency;
+
+        Current = Current->Next;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NTAPI
+LdrpDereferenceDependencies(
+    PKMODULE pModule)
+{
+    PLIST_ENTRY Current = pModule->LoadImageInfo.DependenciesHead.First;
+    PLIST_ENTRY Head = &pModule->LoadImageInfo.DependenciesHead;
+    NTSTATUS Status;
+
+    while (Current != Head)
+    {
+        PKMODULE pDependency = NULL;
+        PDEPENDENCY_ENTRY Entry = CONTAINING_RECORD(
+            Current,
+            DEPENDENCY_ENTRY,
+            Entry);
+
+        if (Entry->Module != NULL)
+        {
+            Status = ObDereferenceObject(Entry->Module);
+            if (!NT_SUCCESS(Status))
+            {
+                return Status;
+            }
+        }
+
+        Current = Current->Next;
+    }
+
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -123,7 +312,8 @@ LdrpAddModuleToProcess(
 
     pInstance->Module = Object;
     pInstance->Process = Process;
-
+    pInstance->References = 0;
+    
     KeAcquireSpinLockAtDpcLevel(&Object->Lock);
     
     ObReferenceObjectUnsafe(Object);
@@ -139,7 +329,22 @@ LdrpAddModuleToProcess(
 
 NTSTATUS
 NTAPI
-LdrpModuleOnOpen(
+LdrpModuleOnDelete(
+    PVOID SelfObject)
+{
+    PKMODULE pModule;
+
+    ASSERT(SelfObject != NULL);
+    pModule = (PKMODULE)SelfObject;
+
+    PrintT("Deleting module - unimplemented.\n");
+    /* TODO: Unimplemented. */
+    return STATUS_NOT_SUPPORTED;
+}
+
+NTSTATUS
+NTAPI
+LdrpModuleOnCreate(
     PVOID SelfObject,
     PVOID OptionalData)
 {
@@ -155,12 +360,11 @@ LdrpModuleOnOpen(
 
     KeInitializeSpinLock(&Object->Lock);
     InitializeListHead(&Object->InstanceHead);
-    InitializeListHead(&Object->MemorySectionsHead);
     Object->Name = CreationData->Filename;
 
     InitializeObjectAttributes(
         &FileObjAttributes,
-        (PUNICODE_STRING)CreationData->Filename,
+        NULL,
         OBJ_CASE_INSENSITIVE,
         NULL,
         NULL);
@@ -184,7 +388,8 @@ LdrpModuleOnOpen(
 
     Status = LdrpLoadModuleFromFileToProcess(
         Object->File, 
-        CreationData->Process);
+        CreationData->Process,
+        &Object->LoadImageInfo);
     if (!NT_SUCCESS(Status))
     {
         ObCloseHandle(Object->File, KernelMode);
@@ -199,6 +404,19 @@ LdrpModuleOnOpen(
         ObCloseHandle(Object->File, KernelMode);
         return Status;
     }
+
+    Status = LdrpHandleDependencies(CreationData->SearchPath, Object);
+    if (!NT_SUCCESS(Status))
+    {
+        LdrpDereferenceDependencies(Object);
+        ObCloseHandle(Object->File, KernelMode);
+        return Status;
+    }
+
+    ExInterlockedInsertTailList(
+        &LdrLoadedModulesHead,
+        &Object->LoadedModulesEntry,
+        &LdrLock);
 
     return STATUS_SUCCESS;
 }
@@ -222,11 +440,12 @@ LdrpInitialize()
         return Status;
     }
 
-    /* Add OnCreate and OnClose, which will open and close the file object
+    /* Add OnCreate and OnDelete, which will open and close the file object
        and/or create mappings. */
+    LdrModuleObjType->OnCreate = LdrpModuleOnCreate;
+    LdrModuleObjType->OnDelete = LdrpModuleOnDelete;
 
-    /* THIS SHOULD BE OnCreate I THINK!!! */
-    LdrModuleObjType->OnOpen = LdrpModuleOnOpen;
+    InitializeListHead(&LdrLoadedModulesHead);
 
     return STATUS_SUCCESS;
 }
@@ -257,6 +476,7 @@ LdrpLoadImage(
         Pcb);
 
     CreationData.Filename = ImageName;
+    CreationData.SearchPath = SearchPath;
 
     Status = ObCreateObject(
         &pModule, 

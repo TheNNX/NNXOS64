@@ -38,7 +38,7 @@ extern "C" {
 			systemPartition->Functions.CloseFile(apCodeFile);
 		}
 
-		data->ApCR3 = PagingGetAddressSpace();
+		data->ApCR3 = __readcr3();
 		data->ApStackPointerArray = ApStackPointerArray;
 		data->ApProcessorInit = ApProcessorInit;
 		_sgdt(&data->ApGdtr);

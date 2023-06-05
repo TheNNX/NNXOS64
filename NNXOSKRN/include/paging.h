@@ -1,6 +1,7 @@
 #ifndef NNX_PAGING_HEADER
 #define NNX_PAGING_HEADER
 #include <nnxtype.h>
+#include <ntlist.h>
 
 #ifdef _M_AMD64
 #define PAGE_PRESENT 1
@@ -28,6 +29,12 @@
 #define PAGE_FLAGS_MASK 0xFFFULL
 #define PAGE_ADDRESS_MASK (~PAGE_FLAGS_MASK)
 #define PAGE_ALIGN(x) (((ULONG_PTR)x)&PAGE_ADDRESS_MASK)
+
+typedef struct _ADDRESS_SPACE
+{
+    ULONG_PTR  TopStructPhysAddress;
+    LIST_ENTRY MemorySections;
+}ADDRESS_SPACE, *PADDRESS_SPACE;
 
 inline ULONG_PTR ToCanonicalAddress(ULONG_PTR address)
 {
@@ -122,15 +129,20 @@ extern "C"
         ULONG_PTR max, 
         SIZE_T count);
 
-    ULONG_PTR 
-    PagingCreateAddressSpace();
-
-    ULONG_PTR 
-    PagingGetAddressSpace();
+    NTSTATUS
+    NTAPI
+    MmCreateAddressSpace(
+        PADDRESS_SPACE pOutAddressSpace);
 
     VOID 
-    PagingSetAddressSpace(
-        ULONG_PTR);
+    NTAPI
+    MmSetAddressSpace(
+        PADDRESS_SPACE AddressSpace);
+
+    VOID
+    NTAPI
+    MmGetAddressSpace(
+        PADDRESS_SPACE pOutAddressSpace);
     
     ULONG_PTR
     PagingGetTableMapping(
