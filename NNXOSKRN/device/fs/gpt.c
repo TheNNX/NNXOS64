@@ -6,6 +6,6 @@ GUID GPT_EMPTY_TYPE = { 0x0000000000000000, 0x0000000000000000 };
 
 BOOL GptCompareGuid(GUID a1, GUID a2)
 {
-	return (a1.a[0] == a2.a[0]) && (a1.a[1] == a2.a[1]);
+    return (a1.a[0] == a2.a[0]) && (a1.a[1] == a2.a[1]);
 }
 

@@ -13,16 +13,16 @@
 
 typedef struct
 {
-	UINT16 Year : 7;
-	UINT16 Month : 4;
-	UINT16 Day : 5;
+    UINT16 Year : 7;
+    UINT16 Month : 4;
+    UINT16 Day : 5;
 }FAT_DATE;
 
 typedef struct
 {
-	UINT16 Hour : 5;
-	UINT16 Minutes : 6;
-	UINT16 Seconds : 5;
+    UINT16 Hour : 5;
+    UINT16 Minutes : 6;
+    UINT16 Seconds : 5;
 }FAT_TIME;
 
 #define FAT_READONLY 1
@@ -35,52 +35,52 @@ typedef struct
 
 typedef struct BPB
 {
-	UINT8 ReservedJump[3];
-	UINT8 OemName[8];
-	UINT16 BytesPerSector;
-	UINT8 SectorsPerCluster;
-	UINT16 SectorReservedSize;
-	UINT8 NumberOfFats;
-	UINT16 RootEntryCount;
-	UINT16 SectorTotSize16;
-	UINT8 MediaType;
-	UINT16 SectorFatSize16;
-	UINT16 SectorsPerTrack;
-	UINT16 HeadsVolumeSize;
-	UINT32 SectorsHidden;
-	UINT32 SectorTotSize32;
-	UINT8 _[476];
+    UINT8 ReservedJump[3];
+    UINT8 OemName[8];
+    UINT16 BytesPerSector;
+    UINT8 SectorsPerCluster;
+    UINT16 SectorReservedSize;
+    UINT8 NumberOfFats;
+    UINT16 RootEntryCount;
+    UINT16 SectorTotSize16;
+    UINT8 MediaType;
+    UINT16 SectorFatSize16;
+    UINT16 SectorsPerTrack;
+    UINT16 HeadsVolumeSize;
+    UINT32 SectorsHidden;
+    UINT32 SectorTotSize32;
+    UINT8 _[476];
 }BPB, BIOS_PARAMETER_BLOCK;
 
 typedef struct
 {
-	BYTE BiosIntNumber;
-	BYTE reserved0;
-	BYTE HasNameOrID;
-	union
-	{
-		UINT32 VolumeSerialNumber;
-		UINT32 VolumeID;
-	};
-	BYTE VolumeLabel[11];
-	BYTE FatTypeInfo[8];
+    BYTE BiosIntNumber;
+    BYTE reserved0;
+    BYTE HasNameOrID;
+    union
+    {
+        UINT32 VolumeSerialNumber;
+        UINT32 VolumeID;
+    };
+    BYTE VolumeLabel[11];
+    BYTE FatTypeInfo[8];
 }BPB_EXT_FAT1X, BPB1X;
 
 typedef struct FAT_DIRECTORY_ENTRY
 {
-	unsigned char Filename[8];
-	unsigned char FileExtension[3];
-	BYTE FileAttributes;
-	BYTE Reserved;
-	BYTE CreateTimeHRes;
-	FAT_TIME CreationTime;
-	FAT_DATE CreationDate;
-	FAT_DATE AccessDate;
-	UINT16 HighCluster;
-	FAT_TIME ModifiedTime;
-	FAT_DATE ModifiedDate;
-	UINT16 LowCluster;
-	UINT32 FileSize;
+    unsigned char Filename[8];
+    unsigned char FileExtension[3];
+    BYTE FileAttributes;
+    BYTE Reserved;
+    BYTE CreateTimeHRes;
+    FAT_TIME CreationTime;
+    FAT_DATE CreationDate;
+    FAT_DATE AccessDate;
+    UINT16 HighCluster;
+    FAT_TIME ModifiedTime;
+    FAT_DATE ModifiedDate;
+    UINT16 LowCluster;
+    UINT32 FileSize;
 }FAT_DIRECTORY_ENTRY;
 
 BOOL FatIsFileOrDir(FAT_DIRECTORY_ENTRY* sectorData);
@@ -121,8 +121,8 @@ BOOL NNXFatAutomaticTest(VFS* filesystem);
 
 typedef struct _FAT_FILESYSTEM_SPECIFIC_VFS_DATA
 {
-	VOID* CachedFatSector;
-	UINT32 CachedFatSectorNumber;
+    VOID* CachedFatSector;
+    UINT32 CachedFatSectorNumber;
 }FAT_FILESYSTEM_SPECIFIC_VFS_DATA;
 
 #pragma pack(pop)

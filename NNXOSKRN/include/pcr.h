@@ -22,66 +22,66 @@ extern "C"
 
 #define FIELD_OFFSET(t,field) ((ULONG_PTR)&(((t*)0)->field))
 
-	typedef struct _KPCR
-	{
-		PKGDTENTRY64	Gdt;
-		PKTSS			Tss;
-		LONG_PTR		CyclesLeft;
-		struct _KPCR	*SelfPcr;
-		struct _KPRCB	*Prcb;
-		KIRQL			Irql;
+    typedef struct _KPCR
+    {
+        PKGDTENTRY64    Gdt;
+        PKTSS            Tss;
+        LONG_PTR        CyclesLeft;
+        struct _KPCR    *SelfPcr;
+        struct _KPRCB    *Prcb;
+        KIRQL            Irql;
 
-		/* These have to be accessed with interrupts disabled.
-		 * Once interrupts are reenabled, the value of these should
-		 * be assumed to be invalid. They're used by the system call
-		 * handler to store thread pointers in order to get the thread
-		 * kernel stack and access other per thread variables. */
-		ULONG_PTR		TempHandlerVals[2];
+        /* These have to be accessed with interrupts disabled.
+         * Once interrupts are reenabled, the value of these should
+         * be assumed to be invalid. They're used by the system call
+         * handler to store thread pointers in order to get the thread
+         * kernel stack and access other per thread variables. */
+        ULONG_PTR        TempHandlerVals[2];
 
-		LONG			Reserved0;
-		PKIDTENTRY64	Idt;
-		ULONG			Reserved4[3];
-		USHORT			MajorVersion;
-		USHORT			MinorVersion;
-		LIST_ENTRY		InterruptListHead;
-		PKINTERRUPT		ClockInterrupt;
-	}KPCR, *LPKPCR, *PKPCR;
+        LONG            Reserved0;
+        PKIDTENTRY64    Idt;
+        ULONG            Reserved4[3];
+        USHORT            MajorVersion;
+        USHORT            MinorVersion;
+        LIST_ENTRY        InterruptListHead;
+        PKINTERRUPT        ClockInterrupt;
+    }KPCR, *LPKPCR, *PKPCR;
 
-	PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
-	VOID HalpSetDummyPcr();
-	VOID HalpInitDummyPcr();
-	VOID HalSetPcr(PKPCR);
+    PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);
+    VOID HalpSetDummyPcr();
+    VOID HalpInitDummyPcr();
+    VOID HalSetPcr(PKPCR);
 #else
 #error "Architecture unsupported"
 #endif
 
-	typedef struct _KPRCB
-	{
-		ULONG MxCsr;
-		USHORT LegacyNumber;
-		UCHAR InterruptRequest;
-		UCHAR IdleHalt;
-		struct _KTHREAD* CurrentThread;
-		struct _KTHREAD* NextThread;
-		struct _KTHREAD* IdleThread;
-		UCHAR NestingLevel;
-		UCHAR Pad0[3];
-		ULONG Number;
-		ULONG_PTR Reserved;
-		KSPIN_LOCK Lock;
-	}KPRCB, *PKPRCB, *LPKRCB;
+    typedef struct _KPRCB
+    {
+        ULONG MxCsr;
+        USHORT LegacyNumber;
+        UCHAR InterruptRequest;
+        UCHAR IdleHalt;
+        struct _KTHREAD* CurrentThread;
+        struct _KTHREAD* NextThread;
+        struct _KTHREAD* IdleThread;
+        UCHAR NestingLevel;
+        UCHAR Pad0[3];
+        ULONG Number;
+        ULONG_PTR Reserved;
+        KSPIN_LOCK Lock;
+    }KPRCB, *PKPRCB, *LPKRCB;
 
-	typedef struct _KARCH_CORE_DATA
-	{
-		KGDTENTRY64 GdtEntires[16];
-		KIDTENTRY64 IdtEntries[256];
-		KIDTR64		Idtr;
-		KGDTR64		Gdtr;
-		KTSS		Tss;
-	}KARCH_CORE_DATA, *PKARCH_CORE_DATA;
+    typedef struct _KARCH_CORE_DATA
+    {
+        KGDTENTRY64 GdtEntires[16];
+        KIDTENTRY64 IdtEntries[256];
+        KIDTR64        Idtr;
+        KGDTR64        Gdtr;
+        KTSS        Tss;
+    }KARCH_CORE_DATA, *PKARCH_CORE_DATA;
 
-	PKPCR KeGetPcr();
-	VOID HalpSetupPcrForCurrentCpu(UCHAR id);
+    PKPCR KeGetPcr();
+    VOID HalpSetupPcrForCurrentCpu(UCHAR id);
 
 #ifdef __cplusplus
 }

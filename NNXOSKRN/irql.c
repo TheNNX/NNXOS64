@@ -12,159 +12,159 @@
 static
 VOID
 KiApplyIrql(
-	KIRQL OldValue, 
-	KIRQL NewValue)
+    KIRQL OldValue, 
+    KIRQL NewValue)
 {
 #ifndef THE_OLD_RELIABLE
-	PKPCR Pcr;
-	PKINTERRUPT Interrupt;
-	PLIST_ENTRY Entry;
+    PKPCR Pcr;
+    PKINTERRUPT Interrupt;
+    PLIST_ENTRY Entry;
 
-	if (OldValue == NewValue)
-		return;
+    if (OldValue == NewValue)
+        return;
 
-	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
-	/* This *MAYBE* works. */
-	HalSetTpr(0xF);
+    __writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
+    /* This *MAYBE* works. */
+    HalSetTpr(0xF);
 
-	Pcr = KeGetPcr();
-	Entry = Pcr->InterruptListHead.First;
+    Pcr = KeGetPcr();
+    Entry = Pcr->InterruptListHead.First;
 
-	while (Entry != &Pcr->InterruptListHead)
-	{
-		KIRQL InterruptIrql;
-		Interrupt = CONTAINING_RECORD(Entry, KINTERRUPT, CpuListEntry);
-		InterruptIrql = Interrupt->InterruptIrql;
+    while (Entry != &Pcr->InterruptListHead)
+    {
+        KIRQL InterruptIrql;
+        Interrupt = CONTAINING_RECORD(Entry, KINTERRUPT, CpuListEntry);
+        InterruptIrql = Interrupt->InterruptIrql;
 
-		if (Interrupt->pfnSetMask == NULL)
-		{
-			Entry = Entry->Next;
-			continue;
-		}
+        if (Interrupt->pfnSetMask == NULL)
+        {
+            Entry = Entry->Next;
+            continue;
+        }
 
-		if (NewValue > OldValue)
-		{
-			if (InterruptIrql > OldValue &&
-				InterruptIrql <= NewValue)
-			{
-				Interrupt->pfnSetMask(Interrupt, TRUE);
-			}
-		}
-		
-		else if (OldValue > NewValue)
-		{
-			if (InterruptIrql > NewValue &&
-				InterruptIrql <= OldValue)
-			{
-				Interrupt->pfnSetMask(Interrupt, FALSE);
-			}
-		}
+        if (NewValue > OldValue)
+        {
+            if (InterruptIrql > OldValue &&
+                InterruptIrql <= NewValue)
+            {
+                Interrupt->pfnSetMask(Interrupt, TRUE);
+            }
+        }
+        
+        else if (OldValue > NewValue)
+        {
+            if (InterruptIrql > NewValue &&
+                InterruptIrql <= OldValue)
+            {
+                Interrupt->pfnSetMask(Interrupt, FALSE);
+            }
+        }
 
-		Entry = Entry->Next;
-	}
+        Entry = Entry->Next;
+    }
 
-	HalSetTpr(0);
+    HalSetTpr(0);
 #else
-	if (OldValue == NewValue)
-		return;
-	__writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
-	HalSetTpr(NewValue);
+    if (OldValue == NewValue)
+        return;
+    __writegsbyte(FIELD_OFFSET(KPCR, Irql), NewValue);
+    HalSetTpr(NewValue);
 #endif
 }
 
 KIRQL 
 FASTCALL 
 KfRaiseIrql(
-	KIRQL NewIrql)
+    KIRQL NewIrql)
 {
-	KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+    KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
-	if (NewIrql < OldIrql)
-	{
-		KeBugCheckEx(
-			IRQL_NOT_GREATER_OR_EQUAL,
-			(ULONG_PTR)NewIrql,
-			(ULONG_PTR)OldIrql,
-			0,
-			(ULONG_PTR)_ReturnAddress());
-	}
+    if (NewIrql < OldIrql)
+    {
+        KeBugCheckEx(
+            IRQL_NOT_GREATER_OR_EQUAL,
+            (ULONG_PTR)NewIrql,
+            (ULONG_PTR)OldIrql,
+            0,
+            (ULONG_PTR)_ReturnAddress());
+    }
 
-	KiApplyIrql(OldIrql, NewIrql);
-	return OldIrql;
+    KiApplyIrql(OldIrql, NewIrql);
+    return OldIrql;
 }
 
 VOID 
 FASTCALL 
 KfLowerIrql(
-	KIRQL NewIrql)
+    KIRQL NewIrql)
 {
-	KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+    KIRQL OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 
-	if (NewIrql > OldIrql)
-	{
-		KeBugCheckEx(
-			IRQL_NOT_LESS_OR_EQUAL,
-			(ULONG_PTR)NewIrql,
-			(ULONG_PTR)OldIrql,
-			0,
-			(ULONG_PTR)_ReturnAddress());
-	}
+    if (NewIrql > OldIrql)
+    {
+        KeBugCheckEx(
+            IRQL_NOT_LESS_OR_EQUAL,
+            (ULONG_PTR)NewIrql,
+            (ULONG_PTR)OldIrql,
+            0,
+            (ULONG_PTR)_ReturnAddress());
+    }
 
-	KiApplyIrql(OldIrql, NewIrql);
+    KiApplyIrql(OldIrql, NewIrql);
 }
 
 VOID 
 NTAPI 
 KeRaiseIrql(
-	KIRQL NewIrql, 
-	PKIRQL OldIrql)
+    KIRQL NewIrql, 
+    PKIRQL OldIrql)
 {
-	if (OldIrql == (PKIRQL) NULL)
-		return;
-	if (NewIrql < KeGetCurrentIrql())
-	{
-		KeBugCheckEx(
-			IRQL_NOT_GREATER_OR_EQUAL,
-			(ULONG_PTR)NewIrql,
-			(ULONG_PTR)KeGetCurrentIrql(),
-			0,
-			(ULONG_PTR)_ReturnAddress());
-	}
-	*OldIrql = KfRaiseIrql(NewIrql);
+    if (OldIrql == (PKIRQL) NULL)
+        return;
+    if (NewIrql < KeGetCurrentIrql())
+    {
+        KeBugCheckEx(
+            IRQL_NOT_GREATER_OR_EQUAL,
+            (ULONG_PTR)NewIrql,
+            (ULONG_PTR)KeGetCurrentIrql(),
+            0,
+            (ULONG_PTR)_ReturnAddress());
+    }
+    *OldIrql = KfRaiseIrql(NewIrql);
 }
 
 VOID 
 NTAPI 
 KeLowerIrql(
-	KIRQL OldIrql)
+    KIRQL OldIrql)
 {
-	if (OldIrql > KeGetCurrentIrql())
-	{
-		KeBugCheckEx(
-			IRQL_NOT_LESS_OR_EQUAL,
-			(ULONG_PTR)OldIrql,
-			(ULONG_PTR)KeGetCurrentIrql(),
-			0,
-			(ULONG_PTR)_ReturnAddress());
-	}
-	KfLowerIrql(OldIrql);
+    if (OldIrql > KeGetCurrentIrql())
+    {
+        KeBugCheckEx(
+            IRQL_NOT_LESS_OR_EQUAL,
+            (ULONG_PTR)OldIrql,
+            (ULONG_PTR)KeGetCurrentIrql(),
+            0,
+            (ULONG_PTR)_ReturnAddress());
+    }
+    KfLowerIrql(OldIrql);
 }
 
 KIRQL 
 NTAPI 
 KeGetCurrentIrql()
 {
-	return __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+    return __readgsbyte(FIELD_OFFSET(KPCR, Irql));
 }
 
 KIRQL
 KiSetIrql(
-	KIRQL NewIrql)
+    KIRQL NewIrql)
 {
-	KIRQL OldIrql;
+    KIRQL OldIrql;
 
-	OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
-	KiApplyIrql(OldIrql, NewIrql);
+    OldIrql = __readgsbyte(FIELD_OFFSET(KPCR, Irql));
+    KiApplyIrql(OldIrql, NewIrql);
 
-	return OldIrql;
+    return OldIrql;
 }

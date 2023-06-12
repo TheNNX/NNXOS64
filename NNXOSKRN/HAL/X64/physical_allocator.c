@@ -201,32 +201,32 @@ VOID MiFlagPfnsForRemap()
 VOID 
 DrawMap()
 {
-	UINT x = 0;
-	UINT y = 0;
-	UINT a;
+    UINT x = 0;
+    UINT y = 0;
+    UINT a;
 
-	TextIoGetCursorPosition(&x, &y);
+    TextIoGetCursorPosition(&x, &y);
 
-	x = 0;
-	y += 10;
+    x = 0;
+    y += 10;
     PrintT("Physical memory layout:\n");
-	for (a = 0; a < NumberOfPfnEntries; a++)
-	{
+    for (a = 0; a < NumberOfPfnEntries; a++)
+    {
         if (y > gHeight || a > 10000)
         {
             PrintT("Too much memory to finish drawing the map.\n");
             break;
         }
 
-		if (PfnEntries[a].InList == &FreeList)
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
+        if (PfnEntries[a].InList == &FreeList)
+            gFramebuffer[x + y * gPixelsPerScanline] = 0xFF007F00;
         else
-			gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
-		x++;
-		if (x > gWidth)
-		{
-			y++;
-			x = 0;
-		}
-	}
+            gFramebuffer[x + y * gPixelsPerScanline] = 0xFF7F0000;
+        x++;
+        if (x > gWidth)
+        {
+            y++;
+            x = 0;
+        }
+    }
 }

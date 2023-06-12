@@ -12,14 +12,14 @@ VOID
 NTAPI
 KeBugCheck(ULONG code)
 {
-	KeBugCheckEx(code, NULL, NULL, NULL, NULL);
+    KeBugCheckEx(code, NULL, NULL, NULL, NULL);
 }
 
 VOID
 NTAPI
 KeStopOtherCores()
 {
-	KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
+    KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
 }
 
 #pragma warning(push)
@@ -33,66 +33,66 @@ __declspec(noreturn)
 BOOLEAN
 NTAPI
 KeStopIsr(
-	PKINTERRUPT StopInterrupt,
-	PVOID ServiceContext)
+    PKINTERRUPT StopInterrupt,
+    PVOID ServiceContext)
 {
-	KeStop();
+    KeStop();
 }
 #pragma warning(pop)
 
 __declspec(noreturn)
 VOID
 KeBugCheckEx(
-	ULONG code,
-	ULONG_PTR param1,
-	ULONG_PTR param2,
-	ULONG_PTR param3,
-	ULONG_PTR param4
+    ULONG code,
+    ULONG_PTR param1,
+    ULONG_PTR param2,
+    ULONG_PTR param3,
+    ULONG_PTR param4
 )
 {
-	KeStopOtherCores();
-	HalDisableInterrupts();
-	TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
+    KeStopOtherCores();
+    HalDisableInterrupts();
+    TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
 #ifndef _DEBUG
-	TextIoClear();
-	TextIoSetCursorPosition(0, 8);
+    TextIoClear();
+    TextIoSetCursorPosition(0, 8);
 #endif
 
-	PrintT(
-		"\n%s: Core %i, thread %X\n\nCritical system failure\n", 
-		__FUNCTION__,
-		KeGetCurrentProcessorId(), 
-		KeGetCurrentThread());
+    PrintT(
+        "\n%s: Core %i, thread %X\n\nCritical system failure\n", 
+        __FUNCTION__,
+        KeGetCurrentProcessorId(), 
+        KeGetCurrentThread());
 
-	/* TODO */
-	if (code == KMODE_EXCEPTION_NOT_HANDLED)
-	{
-		PrintT("KMODE_EXCEPTION_NOT_HANDLED");	
-	}
-	else if (code == PHASE1_INITIALIZATION_FAILED)
-	{
-		PrintT("PHASE1_INITIALIZATION_FAILED");
-	}
-	else if (code == HAL_INITIALIZATION_FAILED)
-	{
-		PrintT("HAL_INITIALIZATION_FAILED");
-	}
-	else if (code == IRQL_NOT_GREATER_OR_EQUAL)
-	{
-		PrintT("IRQL_NOT_GREATER_OR_EQUAL");
-	}
-	else if (code == IRQL_NOT_LESS_OR_EQUAL)
-	{
-		PrintT("IRQL_NOT_LESS_OR_EQUAL");
-	}
-	else
-	{
-		PrintT("BUGCHECK_CODE_%X", code);
-	}
+    /* TODO */
+    if (code == KMODE_EXCEPTION_NOT_HANDLED)
+    {
+        PrintT("KMODE_EXCEPTION_NOT_HANDLED");    
+    }
+    else if (code == PHASE1_INITIALIZATION_FAILED)
+    {
+        PrintT("PHASE1_INITIALIZATION_FAILED");
+    }
+    else if (code == HAL_INITIALIZATION_FAILED)
+    {
+        PrintT("HAL_INITIALIZATION_FAILED");
+    }
+    else if (code == IRQL_NOT_GREATER_OR_EQUAL)
+    {
+        PrintT("IRQL_NOT_GREATER_OR_EQUAL");
+    }
+    else if (code == IRQL_NOT_LESS_OR_EQUAL)
+    {
+        PrintT("IRQL_NOT_LESS_OR_EQUAL");
+    }
+    else
+    {
+        PrintT("BUGCHECK_CODE_%X", code);
+    }
 
-	PrintT("\n\n");
-	PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
-	PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
+    PrintT("\n\n");
+    PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
+    PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
 
-	KeStop();
+    KeStop();
 }

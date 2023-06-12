@@ -10,10 +10,10 @@ typedef enum _MODE
     UserMode = 1
 }MODE;
 
-typedef CHAR	KPROCESSOR_MODE;
+typedef CHAR    KPROCESSOR_MODE;
 
 #define KAFFINITY_ALL 0xFFFFFFFFFFFFFFFFULL
-typedef ULONG_PTR	KAFFINITY;
+typedef ULONG_PTR    KAFFINITY;
 
 #ifdef __cplusplus
 extern "C" {

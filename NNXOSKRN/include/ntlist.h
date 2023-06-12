@@ -11,19 +11,19 @@
 
 typedef struct _LIST_ENTRY
 {
-	union
-	{
-		struct _LIST_ENTRY* Flink;
-		struct _LIST_ENTRY* Next;
-		struct _LIST_ENTRY* First;
-	};
+    union
+    {
+        struct _LIST_ENTRY* Flink;
+        struct _LIST_ENTRY* Next;
+        struct _LIST_ENTRY* First;
+    };
 
-	union
-	{
-		struct _LIST_ENTRY* Blink;
-		struct _LIST_ENTRY* Prev;
-		struct _LIST_ENTRY* Last;
-	};
+    union
+    {
+        struct _LIST_ENTRY* Blink;
+        struct _LIST_ENTRY* Prev;
+        struct _LIST_ENTRY* Last;
+    };
 }LIST_ENTRY, * PLIST_ENTRY;
 
 typedef struct _LIST_ENTRY_POINTER
@@ -119,18 +119,18 @@ extern "C" {
         PKSPIN_LOCK Lock);
 
     NTSYSAPI
-	PLIST_ENTRY 
+    PLIST_ENTRY 
     NTAPI
     ExInterlockedRemoveHeadList(
-		PLIST_ENTRY ListHead,
-		PKSPIN_LOCK Lock);
+        PLIST_ENTRY ListHead,
+        PKSPIN_LOCK Lock);
 
     NTSYSAPI
-	PLIST_ENTRY 
+    PLIST_ENTRY 
     NTAPI
     ExInterlockedRemoveTailList(
-		PLIST_ENTRY ListHead,
-		PKSPIN_LOCK Lock);
+        PLIST_ENTRY ListHead,
+        PKSPIN_LOCK Lock);
 
 #ifdef NNX_KERNEL
     /**

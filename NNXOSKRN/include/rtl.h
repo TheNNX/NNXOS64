@@ -23,6 +23,14 @@ extern "C"
         SIZE_T Length, 
         INT Fill);
 
+    NTSYSAPI
+    VOID 
+    NTAPI
+    RtlCopyMemory(
+        PVOID Destination, 
+        PVOID Source,
+        SIZE_T Size);
+
 #include <rtlstring.h>
 
 #ifdef __cplusplus

@@ -17,8 +17,7 @@ static
 BOOL
 PagingSetPageFileMapBit(
     ULONG_PTR pageFilePageIndex,
-    BOOL value
-);
+    BOOL value);
 
 static
 ULONG_PTR
@@ -27,15 +26,13 @@ PagingSelectPageFilePageIndex();
 static
 BOOL
 PagingGetPageFileMapBit(
-    ULONG_PTR pageFilePageIndex
-);
+    ULONG_PTR pageFilePageIndex);
 
 NTSTATUS
 PagingInitializePageFile(
     SIZE_T pageFileSize,
     const char* filePath,
-    VIRTUAL_FILE_SYSTEM* filesystem
-)
+    VIRTUAL_FILE_SYSTEM* filesystem)
 {
     SIZE_T pageFileNumberOfPages;
 
@@ -89,8 +86,7 @@ static
 BOOL
 PagingSetPageFileMapBit(
     ULONG_PTR pageFilePageIndex,
-    BOOL value
-)
+    BOOL value)
 {
     SIZE_T containingCellOffset;
     SIZE_T bitNumber;
@@ -116,8 +112,7 @@ PagingSetPageFileMapBit(
 static
 BOOL
 PagingGetPageFileMapBit(
-    ULONG_PTR pageFilePageIndex
-)
+    ULONG_PTR pageFilePageIndex)
 {
     SIZE_T containingCellOffset;
     SIZE_T bitNumber;
@@ -139,8 +134,7 @@ static
 NTSTATUS
 PagingSavePageToPageFile(
     ULONG_PTR virtualAddress,
-    ULONG_PTR pageFilePageIndex
-)
+    ULONG_PTR pageFilePageIndex)
 {
     VFS* filesystem;
 
@@ -158,8 +152,7 @@ static
 NTSTATUS
 PagingLoadPageFromPageFile(
     ULONG_PTR virtualAddress,
-    ULONG_PTR pageFilePageIndex
-)
+    ULONG_PTR pageFilePageIndex)
 {
     VFS* filesystem;
 
@@ -175,8 +168,7 @@ PagingLoadPageFromPageFile(
 
 NTSTATUS
 PagingPageOutPage(
-    ULONG_PTR virtualAddress
-)
+    ULONG_PTR virtualAddress)
 {
     ULONG_PTR pageFilePageIndex;
     ULONG_PTR oldMapping;
@@ -223,8 +215,7 @@ PagingPageOutPage(
 
 NTSTATUS
 PagingPageInPage(
-    ULONG_PTR virtualAddress
-)
+    ULONG_PTR virtualAddress)
 {
     ULONG_PTR pageFilePageIndex;
     ULONG_PTR tempMapping;

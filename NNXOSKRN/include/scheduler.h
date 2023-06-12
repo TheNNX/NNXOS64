@@ -15,10 +15,10 @@ extern "C" {
 #define THREAD_WAIT_OBJECTS 3
 
 #define THREAD_STATE_INITIALIZATION 0
-#define THREAD_STATE_READY			1
-#define THREAD_STATE_RUNNING		2
-#define THREAD_STATE_TERMINATED		4
-#define THREAD_STATE_WAITING		5
+#define THREAD_STATE_READY            1
+#define THREAD_STATE_RUNNING        2
+#define THREAD_STATE_TERMINATED        4
+#define THREAD_STATE_WAITING        5
 
     typedef struct _KPROCESS
     {

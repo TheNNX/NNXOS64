@@ -275,9 +275,6 @@
     <ClInclude Include="include\nnxalloc.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
-    <ClInclude Include="include\MemoryOperations.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
     <ClInclude Include="include\SimpleTextIO.h">
       <Filter>Header Files\video</Filter>
     </ClInclude>

@@ -24,3 +24,16 @@ RtlZeroMemory(
 {
     RtlFillMemory(Memory, Size, 0);
 }
+
+VOID
+NTAPI
+RtlCopyMemory(
+    PVOID dst, 
+    PVOID src, 
+    SIZE_T size)
+{
+    for (int b = 0; b < size; b++)
+    {
+        ((UINT8*)dst)[b] = ((UINT8*)src)[b];
+    }
+}

@@ -1,7 +1,7 @@
 #include <paging.h>
 #include <SimpleTextIo.h>
 #include <physical_allocator.h>
-#include <MemoryOperations.h>
+#include <rtl.h>
 #include <spinlock.h>
 #include <HALX64/include/msr.h>
 #include <bugcheck.h>
@@ -88,7 +88,7 @@ MmCreateAddressSpace(
 
     ULONG_PTR virtualPML4 = PagingAllocatePageWithPhysicalAddress(PAGING_KERNEL_SPACE, PAGING_KERNEL_SPACE_END, PAGE_PRESENT | PAGE_WRITE, PhysicalPML4);
 
-    MemSet((UINT8*)virtualPML4, 0, PAGE_SIZE);
+    RtlZeroMemory((UINT8*)virtualPML4, PAGE_SIZE);
 
     ((ULONG_PTR*)virtualPML4)[PML4EntryForRecursivePaging] = PhysicalPML4 | PAGE_PRESENT | PAGE_WRITE;
     ((ULONG_PTR*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
@@ -234,7 +234,7 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPML4Base[pml4Index] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64)cRecursivePagingPDPsBase + 512 * pml4Index);
-        MemSet(cRecursivePagingPDPsBase + 512 * pml4Index, 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory(cRecursivePagingPDPsBase + 512 * pml4Index, PAGE_SIZE_SMALL);
     }
 
     if (!(cRecursivePagingPDPsBase[pdpIndex]))
@@ -247,7 +247,7 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPDPsBase[pdpIndex] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64)cRecursivePagingPDsBase + 512 * pdpIndex);
-        MemSet(cRecursivePagingPDsBase + 512 * pdpIndex, 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory(cRecursivePagingPDsBase + 512 * pdpIndex, PAGE_SIZE_SMALL);
     }
 
     if (!(cRecursivePagingPDsBase[pdIndex]))
@@ -260,7 +260,7 @@ NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         cRecursivePagingPDsBase[pdIndex] = allocatedPhysAddr | (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         PagingTLBFlushPage((UINT64)cRecursivePagingPTsBase + 512 * pdIndex);
-        MemSet(cRecursivePagingPTsBase + 512 * pdIndex, 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory(cRecursivePagingPTsBase + 512 * pdIndex, PAGE_SIZE_SMALL);
     }
 
     cRecursivePagingPTsBase[ptIndex] = ((UINT64)p) | f;
@@ -385,7 +385,7 @@ PagingMapPageBeforeInit(
         }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         PML4[pml4Index] = allocatedPhysAddr;
-        MemSet((PVOID)PML4[pml4Index], 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory((PVOID)PML4[pml4Index], PAGE_SIZE_SMALL);
         PML4[pml4Index] |= (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
@@ -400,7 +400,7 @@ PagingMapPageBeforeInit(
         }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         Pdp[pdpIndex] = allocatedPhysAddr;
-        MemSet((PVOID)Pdp[pdpIndex], 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory((PVOID)Pdp[pdpIndex], PAGE_SIZE_SMALL);
         Pdp[pdpIndex] |= (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
@@ -415,7 +415,7 @@ PagingMapPageBeforeInit(
         }
         allocatedPhysAddr = PA_FROM_PFN(allocatedPfn);
         Pd[pdIndex] = allocatedPhysAddr;
-        MemSet((PVOID)Pd[pdIndex], 0, PAGE_SIZE_SMALL);
+        RtlZeroMemory((PVOID)Pd[pdIndex], PAGE_SIZE_SMALL);
         Pd[pdIndex] |= (PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
@@ -477,7 +477,7 @@ NTSTATUS PagingInit(
         return status;
 
     pml4 = (UINT64*)physAddr;
-    MemSet(pml4, 0, PAGE_SIZE_SMALL);
+    RtlZeroMemory(pml4, PAGE_SIZE_SMALL);
 
     /* Identitty map the temporary kernel location. */
     PagingMapRangeBeforeInit(

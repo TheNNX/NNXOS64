@@ -2,7 +2,7 @@
 #include <pool.h>
 #include <paging.h>
 #include <SimpleTextIo.h>
-#include <MemoryOperations.h>
+#include <rtl.h>
 #include <physical_allocator.h>
 #include <pcr.h>
 #include <bugcheck.h>
@@ -735,7 +735,7 @@ PspSetupThreadState(
     data0 = HalpGdtFindEntry(gdt, 7, FALSE, FALSE);
     data3 = HalpGdtFindEntry(gdt, 7, FALSE, TRUE);
 
-    MemSet(pThreadState, 0, sizeof(*pThreadState));
+    RtlZeroMemory(pThreadState, sizeof(*pThreadState));
     pThreadState->Rip = (UINT64)Entrypoint;
     pThreadState->Cs = IsKernel ? code0 : code3;
     pThreadState->Ds = IsKernel ? data0 : data3;
@@ -999,10 +999,10 @@ PspThreadOnCreateNoDispatcher(
 
     MmSetAddressSpace(&originalAddressSpace);
 
-    MemSet(
+    RtlZeroMemory(
         pThread->Tcb.ThreadWaitBlocks, 
-        0, 
         sizeof(pThread->Tcb.ThreadWaitBlocks));
+
     pThread->Tcb.ThreadPriority = 0;
     pThread->Tcb.NumberOfCurrentWaitBlocks = 0;
     pThread->Tcb.NumberOfActiveWaitBlocks = 0;

@@ -249,8 +249,8 @@ LdrpHandleDependencies(
 
             ObCloseHandle(hDependency, KernelMode);
         }
-        Entry->Module = pDependency;
 
+        Entry->Module = pDependency;
         Current = Current->Next;
     }
 

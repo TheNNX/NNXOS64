@@ -101,160 +101,160 @@ KEY(PrintScreen, K_SNAPSHOT, 0, 0, 0, 0);
 
 
 UINT8(*ScancodeSet2Keys[])() = { KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyUNDEF, KeyF10, KeyF8,
-								KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ,
-								Key1, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyZ, KeyS, KeyA, KeyW, Key2, KeyUNDEF, KeyUNDEF, KeyC, KeyX, KeyD,
-								KeyE, Key4, Key3, KeyUNDEF, KeyUNDEF, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyUNDEF, KeyUNDEF,
-								KeyN, KeyB, KeyH, KeyG, KeyY, Key6, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyM, KeyJ, KeyU, Key7, Key8, KeyUNDEF,
-								KeyUNDEF, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyUNDEF, KeyUNDEF, KeyPeriod, KeySlash, KeyL, KeySemicolon,
-								KeyP, KeyMinus, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyQuote, KeyUNDEF, KeySQB_Open, KeyEquals, KeyUNDEF, KeyUNDEF,
-								KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyUNDEF, KeyBackslash, KeyUNDEF, KeyUNDEF, KeyUNDEF,
-								KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace };
+                                KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ,
+                                Key1, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyZ, KeyS, KeyA, KeyW, Key2, KeyUNDEF, KeyUNDEF, KeyC, KeyX, KeyD,
+                                KeyE, Key4, Key3, KeyUNDEF, KeyUNDEF, KeySpace, KeyV, KeyF, KeyT, KeyR, Key5, KeyUNDEF, KeyUNDEF,
+                                KeyN, KeyB, KeyH, KeyG, KeyY, Key6, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyM, KeyJ, KeyU, Key7, Key8, KeyUNDEF,
+                                KeyUNDEF, KeyComma, KeyK, KeyI, KeyO, Key0, Key9, KeyUNDEF, KeyUNDEF, KeyPeriod, KeySlash, KeyL, KeySemicolon,
+                                KeyP, KeyMinus, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyQuote, KeyUNDEF, KeySQB_Open, KeyEquals, KeyUNDEF, KeyUNDEF,
+                                KeyCapslock, KeyRShift, KeyEnter, KeySQB_Close, KeyUNDEF, KeyBackslash, KeyUNDEF, KeyUNDEF, KeyUNDEF,
+                                KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyBackspace };
 
 static BOOLEAN KeyboardInitialized = FALSE;
 
 static
 BOOLEAN
 KeyboardIsr(
-	PKINTERRUPT InterruptObj,
-	PVOID Ctx)
+    PKINTERRUPT InterruptObj,
+    PVOID Ctx)
 {
-	KeyboardInterrupt();
-	return TRUE;
+    KeyboardInterrupt();
+    return TRUE;
 }
 
 VOID KeyboardInitialize()
 {
-	UINT8 selfTest, KCB;
-	PKINTERRUPT interrupt;
-	
-	outb(KEYBOARD_COMMAND_PORT, 0xFF);
-	selfTest = inb(KEYBOARD_PORT);
-	ScancodeSet = GetScancodeSet();
+    UINT8 selfTest, KCB;
+    PKINTERRUPT interrupt;
+    
+    outb(KEYBOARD_COMMAND_PORT, 0xFF);
+    selfTest = inb(KEYBOARD_PORT);
+    ScancodeSet = GetScancodeSet();
 
-	if (ScancodeSet != 2)
-	{
-		SetScancodeSet(2);
-	}
+    if (ScancodeSet != 2)
+    {
+        SetScancodeSet(2);
+    }
 
-	ScancodeSet = 2;
-	outb(KEYBOARD_COMMAND_PORT, 0x20);
+    ScancodeSet = 2;
+    outb(KEYBOARD_COMMAND_PORT, 0x20);
 
-	while (inb(KEYBOARD_COMMAND_PORT) & 2);
+    while (inb(KEYBOARD_COMMAND_PORT) & 2);
 
-	KCB = inb(KEYBOARD_PORT);
-	KCB &= ~(0X40);	
-	outb(KEYBOARD_COMMAND_PORT, 0x60);
-	outb(KEYBOARD_PORT, KCB);
+    KCB = inb(KEYBOARD_PORT);
+    KCB &= ~(0X40);    
+    outb(KEYBOARD_COMMAND_PORT, 0x60);
+    outb(KEYBOARD_PORT, KCB);
 
-	IoCreateInterrupt(
-		&interrupt, 
-		KEYBOARD_VECTOR, 
-		IrqHandler, 
-		KeGetCurrentProcessorId(), 
-		3, 
-		FALSE,
-		KeyboardIsr);
+    IoCreateInterrupt(
+        &interrupt, 
+        KEYBOARD_VECTOR, 
+        IrqHandler, 
+        KeGetCurrentProcessorId(), 
+        3, 
+        FALSE,
+        KeyboardIsr);
 
-	/* FIXME */
-	interrupt->IoApicVector = 1;
-	interrupt->pfnSetMask = ApicSetInterruptMask;
+    /* FIXME */
+    interrupt->IoApicVector = 1;
+    interrupt->pfnSetMask = ApicSetInterruptMask;
 
-	KeConnectInterrupt(interrupt);
-	KeyboardInitialized = TRUE;
+    KeConnectInterrupt(interrupt);
+    KeyboardInitialized = TRUE;
 }
 
 /* TODO: no idea what this should return, might investigate later */
 UINT8 SpecialKey()
 {
-	while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
-	return NULL;
+    while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
+    return NULL;
 }
 
 UINT8 GetKeyOnInterrupt()
 {
-	if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
-		return 0;
+    if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
+        return 0;
 
-	if (!KeyboardInitialized)
-		return 0;
-	UINT8 scancode = inb(KEYBOARD_PORT);
+    if (!KeyboardInitialized)
+        return 0;
+    UINT8 scancode = inb(KEYBOARD_PORT);
 
-	UINT8(*key)();
-	if (scancode == 0xf0)
-	{
-		while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-		scancode = inb(KEYBOARD_PORT);
-		if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
-			return 0;
-		key = ScancodeSet2Keys[scancode];
-		return key(1);
-	}
-	else if (scancode == 0xe0)
-	{
-		return SpecialKey();
-	}
-	if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
-		return 0;
-	key = ScancodeSet2Keys[scancode];
-	return key(0);
+    UINT8(*key)();
+    if (scancode == 0xf0)
+    {
+        while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
+        scancode = inb(KEYBOARD_PORT);
+        if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+            return 0;
+        key = ScancodeSet2Keys[scancode];
+        return key(1);
+    }
+    else if (scancode == 0xe0)
+    {
+        return SpecialKey();
+    }
+    if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+        return 0;
+    key = ScancodeSet2Keys[scancode];
+    return key(0);
 }
 
 UINT8 KeyboardInterrupt()
 {
-	char k = GetKeyOnInterrupt();
-	if (k)
-		PrintT("%c", k);
-	return  k;
+    char k = GetKeyOnInterrupt();
+    if (k)
+        PrintT("%c", k);
+    return  k;
 }
 
 UINT8 GetScancodeSet()
 {
-	outb(KEYBOARD_PORT, 0xf0);
-	while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
-	outb(KEYBOARD_PORT, 0);
-	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-	UINT8 byte = inb(KEYBOARD_PORT);
-	if (byte == KB_ACK)
-	{
-		while (byte = inb(KEYBOARD_PORT) == KB_ACK);
-		byte = inb(KEYBOARD_PORT);
-		while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
-		PrintT("BYTE: %X\n", byte);
-		switch (byte)
-		{
-			case 0x43:	//TRANSLATED
-			case 1:		//NOT TRANSLATED
-				return KB_SCANCODESET1;
-			case 0x41:	//TRANSLATED
-			case 2:		//NOT TRANSLATED
-				return KB_SCANCODESET2;
-			case 0x3f:	//TRANSLATED
-			case 3:		//NOT TRANSLATED
-				return KB_SCANCODESET3;
-			default:
-				return KB_SCANCODESET_UNKNOWN;
-		}
-	}
-	else
-	{
-		return GetScancodeSet();
-	}
+    outb(KEYBOARD_PORT, 0xf0);
+    while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
+    outb(KEYBOARD_PORT, 0);
+    while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
+    UINT8 byte = inb(KEYBOARD_PORT);
+    if (byte == KB_ACK)
+    {
+        while (byte = inb(KEYBOARD_PORT) == KB_ACK);
+        byte = inb(KEYBOARD_PORT);
+        while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
+        PrintT("BYTE: %X\n", byte);
+        switch (byte)
+        {
+            case 0x43:    //TRANSLATED
+            case 1:        //NOT TRANSLATED
+                return KB_SCANCODESET1;
+            case 0x41:    //TRANSLATED
+            case 2:        //NOT TRANSLATED
+                return KB_SCANCODESET2;
+            case 0x3f:    //TRANSLATED
+            case 3:        //NOT TRANSLATED
+                return KB_SCANCODESET3;
+            default:
+                return KB_SCANCODESET_UNKNOWN;
+        }
+    }
+    else
+    {
+        return GetScancodeSet();
+    }
 
-	return byte;
+    return byte;
 }
 
 UINT8 SetScancodeSet(UINT8 setNumber)
 {
-	if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
-		return 0;
-	outb(KEYBOARD_PORT, 0xf0);
-	while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
-	outb(KEYBOARD_PORT, setNumber);
-	while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-	UINT8 status = inb(KEYBOARD_PORT);
-	if (status == KB_ACK)
-		return 1;
-	else
-		return 0;
+    if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
+        return 0;
+    outb(KEYBOARD_PORT, 0xf0);
+    while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
+    outb(KEYBOARD_PORT, setNumber);
+    while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
+    UINT8 status = inb(KEYBOARD_PORT);
+    if (status == KB_ACK)
+        return 1;
+    else
+        return 0;
 
 }

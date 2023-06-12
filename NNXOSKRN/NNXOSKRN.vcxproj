@@ -286,7 +286,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\rtlstring.h" />
     <ClInclude Include="include\scheduler.h" />
     <ClInclude Include="include\klist.h" />
-    <ClInclude Include="include\MemoryOperations.h" />
     <ClInclude Include="include\nnxalloc.h" />
     <ClInclude Include="include\nnxcfg.h" />
     <ClInclude Include="include\ntlist.h" />

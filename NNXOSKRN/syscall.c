@@ -31,28 +31,28 @@ VOID
 NTAPI
 HalInitializeSystemCallForCurrentCore(ULONG_PTR SyscallStub)
 {
-	KIRQL irql;
+    KIRQL irql;
 
-	/* Enable syscalls */
-	__writemsr(IA32_EFER, __readmsr(IA32_EFER) | 1);
+    /* Enable syscalls */
+    __writemsr(IA32_EFER, __readmsr(IA32_EFER) | 1);
 
-	/* Disable interrupts in the syscall dispatcher routine to avoid
-	 * race conditions when switching the GSBase and KernelGSBase MSRs */
-	__writemsr(IA32_FMASK, (UINT64)(0x200ULL));
+    /* Disable interrupts in the syscall dispatcher routine to avoid
+     * race conditions when switching the GSBase and KernelGSBase MSRs */
+    __writemsr(IA32_FMASK, (UINT64)(0x200ULL));
 
-	/* Set CS/SS and syscall selectors */
-	__writemsr(IA32_STAR, (0x13ULL << 48) | (0x08ULL << 32));
+    /* Set CS/SS and syscall selectors */
+    __writemsr(IA32_STAR, (0x13ULL << 48) | (0x08ULL << 32));
 
-	/* Set the syscall dispatcher routine */
-	__writemsr(IA32_LSTAR, SyscallStub);
+    /* Set the syscall dispatcher routine */
+    __writemsr(IA32_LSTAR, SyscallStub);
 
-	KeAcquireSpinLock(&SystemCallSpinLock, &irql);
-	if (QueueInitialized == FALSE)
-	{
-		QueueInitialized = TRUE;
-		KeInitializeQueue(&Queue, 0);
-	}
-	KeReleaseSpinLock(&SystemCallSpinLock, irql);
+    KeAcquireSpinLock(&SystemCallSpinLock, &irql);
+    if (QueueInitialized == FALSE)
+    {
+        QueueInitialized = TRUE;
+        KeInitializeQueue(&Queue, 0);
+    }
+    KeReleaseSpinLock(&SystemCallSpinLock, irql);
 }
 
 /**
@@ -62,11 +62,11 @@ HalInitializeSystemCallForCurrentCore(ULONG_PTR SyscallStub)
 SYSCALL_HANDLER
 NTAPI
 SetupSystemCallHandler(
-	SYSCALL_HANDLER SystemRoutine)
+    SYSCALL_HANDLER SystemRoutine)
 {
-	SYSCALL_HANDLER oldHandler = HalpSystemCallHandler;
-	HalpSystemCallHandler = SystemRoutine;
-	return oldHandler;
+    SYSCALL_HANDLER oldHandler = HalpSystemCallHandler;
+    HalpSystemCallHandler = SystemRoutine;
+    return oldHandler;
 }
 
 /**
@@ -79,26 +79,26 @@ SetupSystemCallHandler(
 ULONG_PTR
 NTAPI
 SystemCallHandler(
-	ULONG_PTR p1,
-	ULONG_PTR p2,
-	ULONG_PTR p3,
-	ULONG_PTR p4)
+    ULONG_PTR p1,
+    ULONG_PTR p2,
+    ULONG_PTR p3,
+    ULONG_PTR p4)
 {
-	ULONG_PTR result = 0;
-	LONG64 timeout = -10000000;
-	ULONG threadId = (ULONG_PTR)KeGetCurrentThread() & 0xFFFF;
+    ULONG_PTR result = 0;
+    LONG64 timeout = -10000000;
+    ULONG threadId = (ULONG_PTR)KeGetCurrentThread() & 0xFFFF;
 
-	switch (p1)
-	{
-	case 1:
-	case 2:
-		PrintT("s%X%i ", threadId, KeGetCurrentIrql());
-		KeWaitForSingleObject(&Queue, Executive, KernelMode, FALSE, &timeout);
-		break;
-	default:
-		PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
-		ASSERT(FALSE);
-	}
+    switch (p1)
+    {
+    case 1:
+    case 2:
+        PrintT("s%X%i ", threadId, KeGetCurrentIrql());
+        KeWaitForSingleObject(&Queue, Executive, KernelMode, FALSE, &timeout);
+        break;
+    default:
+        PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
+        ASSERT(FALSE);
+    }
 
-	return result;
+    return result;
 }
