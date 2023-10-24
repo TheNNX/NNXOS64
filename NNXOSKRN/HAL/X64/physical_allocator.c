@@ -4,11 +4,11 @@
 #include <paging.h>
 #include <SimpleTextIO.h>
 
-static MMPFN_LIST FreeList;
-static MMPFN_LIST WorkingsetList;
-static KSPIN_LOCK PfnEntriesLock;
 PMMPFN_ENTRY PfnEntries;
-SIZE_T NumberOfPfnEntries;
+SIZE_T       NumberOfPfnEntries;
+static MMPFN_LIST   FreeList;
+static MMPFN_LIST   WorkingsetList;
+static KSPIN_LOCK   PfnEntriesLock;
 
 /**
  * @brief This function initializes the physical memory allocator. 
@@ -181,7 +181,9 @@ MmMarkPfnAsUsed(
     return result;
 }
 
-VOID MiFlagPfnsForRemap()
+VOID 
+NTAPI
+MiFlagPfnsForRemap()
 {
     PFN_NUMBER i;
 

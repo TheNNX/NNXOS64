@@ -9,8 +9,7 @@
 __declspec(noreturn)
 VOID
 KiUserRestoreUserContext(
-    PKTASK_STATE Context
-);
+    PKTASK_STATE Context);
 
 __declspec(noreturn)
 VOID
@@ -19,8 +18,7 @@ KiUserApcDispatcher(
     PVOID NormalContext, 
     PVOID SystemArgument1, 
     PVOID SystemArgument2,
-    PKTASK_STATE pTaskState
-)
+    PKTASK_STATE pTaskState)
 {
     NormalRoutine(
         NormalContext, 

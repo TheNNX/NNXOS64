@@ -14,7 +14,7 @@ extern "C" {
 #define PCI_SUBCLASS_NON_VGA_COMPATIBLE 0
 #define PCI_SUBCLASS_VGA_COMPATIBLE 1
 #define PCI_CLASS_MASS_STORAGE_CONTROLLER 0X1
-#define	PCI_SUBCLASS_SCSI_BUS_CONTROLLER 0x0
+#define    PCI_SUBCLASS_SCSI_BUS_CONTROLLER 0x0
 #define PCI_SUBCLASS_IDE_CONTROLLER 0x1
 #define PCI_SUBCLASS_FLOPPY_DISK_CONTROLLER 0x2
 #define PCI_SUBCLASS_IPI_BUS_CONTROLLER 0X3
@@ -49,82 +49,82 @@ extern "C" {
 #define PCI_SUBCLASS_OTHER 0x80
 
 
-	UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
-	UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+    UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+    UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
 
-	inline UINT16 PCIGetVendor(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0);
-	}
+    inline UINT16 PCIGetVendor(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0);
+    }
 
-	inline bool PciCheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function)
-	{
+    inline bool PciCheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function)
+    {
 
-		return PCIGetVendor(bus, slot, function) != 0xffff;
-	}
+        return PCIGetVendor(bus, slot, function) != 0xffff;
+    }
 
-	inline UINT8 PciGetHeader(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0xe) & 0xff;
-	}
+    inline UINT8 PciGetHeader(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0xe) & 0xff;
+    }
 
-	inline UINT8 PciGetSubclass(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0xa) & 0xff;
-	}
+    inline UINT8 PciGetSubclass(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0xa) & 0xff;
+    }
 
-	inline UINT8 PCIGetClass(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0xb) & 0xff;
-	}
+    inline UINT8 PCIGetClass(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0xb) & 0xff;
+    }
 
-	inline UINT8 PciToPciGetSecondaryBus(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0x19) & 0xff;
-	}
+    inline UINT8 PciToPciGetSecondaryBus(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0x19) & 0xff;
+    }
 
-	inline UINT8 PciGetProgIf(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciConfigReadWord(bus, slot, function, 0x9) & 0xff;
-	}
+    inline UINT8 PciGetProgIf(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 0x9) & 0xff;
+    }
 
-	inline UINT32 PciGetBar(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n)
-	{
-		return PciConfigReadDWord(bus, slot, function, (UINT8) (0x10 + 0x4 * n));
-	}
+    inline UINT32 PciGetBar(UINT8 bus, UINT8 slot, UINT8 function, UINT32 n)
+    {
+        return PciConfigReadDWord(bus, slot, function, (UINT8) (0x10 + 0x4 * n));
+    }
 
-	inline UINT32 PciGetBar0(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciGetBar(bus, slot, function, 0);
-	}
+    inline UINT32 PciGetBar0(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciGetBar(bus, slot, function, 0);
+    }
 
-	inline UINT32 PciGetBar1(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciGetBar(bus, slot, function, 1);
-	}
+    inline UINT32 PciGetBar1(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciGetBar(bus, slot, function, 1);
+    }
 
-	inline UINT32 PciGetBar2(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciGetBar(bus, slot, function, 2);
-	}
+    inline UINT32 PciGetBar2(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciGetBar(bus, slot, function, 2);
+    }
 
-	inline UINT32 PciGetBar3(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciGetBar(bus, slot, function, 3);
-	}
+    inline UINT32 PciGetBar3(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciGetBar(bus, slot, function, 3);
+    }
 
-	inline UINT32 PciGetBar4(UINT8 bus, UINT8 slot, UINT8 function)
-	{
-		return PciGetBar(bus, slot, function, 4);
-	}
+    inline UINT32 PciGetBar4(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciGetBar(bus, slot, function, 4);
+    }
 
-	VOID PciScan();
-	void PciScanBus(UINT8 bus);
-	void PciScanDevice(UINT8 bus, UINT8 device);
-	void PciScanFunction(UINT8 bus, UINT8 device, UINT8 function);
-	UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
-	UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
-	VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UINT8 byte);
+    VOID PciScan();
+    void PciScanBus(UINT8 bus);
+    void PciScanDevice(UINT8 bus, UINT8 device);
+    void PciScanFunction(UINT8 bus, UINT8 device, UINT8 function);
+    UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+    UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
+    VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UINT8 byte);
 #ifdef __cplusplus
 }
 #endif

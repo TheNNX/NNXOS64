@@ -6,6 +6,7 @@
 #include <HALX64/include/msr.h>
 #include <bugcheck.h>
 #include <scheduler.h>
+#include <ntdebug.h>
 
 #define PML4EntryForRecursivePaging 510ULL
 #define PML4_COVERED_SIZE 0x1000000000000ULL
@@ -80,6 +81,8 @@ MmCreateAddressSpace(
     ULONG_PTR PhysicalPML4;
     NTSTATUS Status;
 
+    KeInitializeSpinLock(&pOutAddressSpace->Lock);
+
     Status = MmAllocatePhysicalAddress(&PhysicalPML4);
     if (!NT_SUCCESS(Status))
     {
@@ -94,14 +97,14 @@ MmCreateAddressSpace(
     ((ULONG_PTR*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
 
     pOutAddressSpace->TopStructPhysAddress = PhysicalPML4;
-    InitializeListHead(&pOutAddressSpace->MemorySections);
+    InitializeListHead(&pOutAddressSpace->SectionLinkHead);
 
     return STATUS_SUCCESS;
 }
 
 VOID
 NTAPI
-MmGetAddressSpace(
+MmCopyCurrentAddressSpaceRef(
     PADDRESS_SPACE pOutAddressSpace)
 {
     if (KeGetCurrentProcess() == NULL)
@@ -110,13 +113,20 @@ MmGetAddressSpace(
     }
     else 
     {
-        *pOutAddressSpace = KeGetCurrentProcess()->Pcb.AddressSpace;
+        PKPROCESS Process = &KeGetCurrentProcess()->Pcb;
+
+        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
+
+        KeAcquireSpinLockAtDpcLevel(&Process->AddressSpace.Lock);
+        *pOutAddressSpace = Process->AddressSpace;
+        KeReleaseSpinLockFromDpcLevel(&Process->AddressSpace.Lock);
     }
+    KeInitializeSpinLock(&pOutAddressSpace->Lock);
 }
 
 VOID 
 NTAPI
-MmSetAddressSpace(
+MmApplyAddressSpace(
     PADDRESS_SPACE AddressSpace)
 {
     __writecr3(AddressSpace->TopStructPhysAddress);

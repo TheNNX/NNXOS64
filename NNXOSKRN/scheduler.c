@@ -11,6 +11,7 @@
 #include <dispatcher.h>
 #include <apc.h>
 #include <ntdebug.h>
+#include <ldr.h>
 
 LIST_ENTRY ProcessListHead;
 LIST_ENTRY ThreadListHead;
@@ -404,7 +405,7 @@ PspInitializeCore(
 
     PspCoresInitialized++;
     
-    MmSetAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
+    MmApplyAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
 
     pPrcb->IdleThread->ThreadState = THREAD_STATE_RUNNING;
     KiReleaseDispatcherLock(irql);
@@ -412,6 +413,9 @@ PspInitializeCore(
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
+        PEPROCESS ldrTester;
+        PETHREAD ldrTesterThread;
+
 #if 0
         NTSTATUS ObpMpTest();
 
@@ -466,11 +470,34 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
         }
+
+        for (int i = 0; i < 10; i++)
+        {
+            status = PspCreateProcessInternal(&ldrTester);
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
+
+            status = PspCreateThreadInternal(&ldrTesterThread, 
+                                             ldrTester, 
+                                             TRUE, 
+                                             (ULONG_PTR)LdrTestThread);
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
+
+            ldrTesterThread->Tcb.ThreadPriority = 5;
+            ldrTester->Pcb.BasePriority = 5;
+
+            PspInsertIntoSharedQueueLocked((PKTHREAD)ldrTesterThread);
+        }
     }
 
     pTaskState = pPrcb->IdleThread->KernelStackPointer;
     
-    MmSetAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
+    MmApplyAddressSpace(&pPrcb->IdleThread->Process->AddressSpace);
     
     HalDisableInterrupts();
     KeLowerIrql(0);
@@ -586,10 +613,14 @@ PspScheduleThread(
             /* if thread was found */
             if (nextThread != originalRunningThread)
             {
-                if (pcr->Prcb->CurrentThread->Process != 
+                if (nextThread->CustomAddressSpace != NULL)
+                {
+                    MmApplyAddressSpace(nextThread->CustomAddressSpace);
+                }
+                else if (pcr->Prcb->CurrentThread->Process != 
                     pcr->Prcb->NextThread->Process)
                 {
-                    MmSetAddressSpace(&nextThread->Process->AddressSpace);
+                    MmApplyAddressSpace(&nextThread->Process->AddressSpace);
                 }
             }
 
@@ -969,8 +1000,8 @@ PspThreadOnCreateNoDispatcher(
     pThread->StartAddress = 0;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
 
-    MmGetAddressSpace(&originalAddressSpace);
-    MmSetAddressSpace(&pThread->Process->Pcb.AddressSpace);
+    MmCopyCurrentAddressSpaceRef(&originalAddressSpace);
+    MmApplyAddressSpace(&pThread->Process->Pcb.AddressSpace);
 
     /* Create stacks */
     /* Main kernel stack */
@@ -997,7 +1028,7 @@ PspThreadOnCreateNoDispatcher(
             PAGING_USER_SPACE_END) + PAGE_SIZE;
     }
 
-    MmSetAddressSpace(&originalAddressSpace);
+    MmApplyAddressSpace(&originalAddressSpace);
 
     RtlZeroMemory(
         pThread->Tcb.ThreadWaitBlocks, 
@@ -1420,4 +1451,35 @@ KeGetCurrentProcess()
         return NULL;
     }
     return CONTAINING_RECORD(KeGetCurrentThread()->Process, EPROCESS, Pcb);
+}
+
+NTSTATUS
+NTAPI
+KeClearCustomThreadAddressSpace(
+    PKTHREAD pThread)
+{
+    KIRQL Irql = KiAcquireDispatcherLock();
+    pThread->CustomAddressSpace = NULL;
+    if (pThread == KeGetCurrentThread())
+    {
+        MmApplyAddressSpace(&pThread->Process->AddressSpace);
+    }
+    KiReleaseDispatcherLock(Irql);
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NTAPI
+KeSetCustomThreadAddressSpace(
+    PKTHREAD pThread,
+    PADDRESS_SPACE AddressSpace)
+{
+    KIRQL Irql = KiAcquireDispatcherLock();
+    pThread->CustomAddressSpace = AddressSpace;
+    if (pThread == KeGetCurrentThread())
+    {
+        MmApplyAddressSpace(AddressSpace);
+    }
+    KiReleaseDispatcherLock(Irql);
+    return STATUS_SUCCESS;
 }

@@ -33,7 +33,8 @@
 typedef struct _ADDRESS_SPACE
 {
     ULONG_PTR  TopStructPhysAddress;
-    LIST_ENTRY MemorySections;
+    LIST_ENTRY SectionLinkHead;
+    KSPIN_LOCK Lock;
 }ADDRESS_SPACE, *PADDRESS_SPACE;
 
 inline ULONG_PTR ToCanonicalAddress(ULONG_PTR address)
@@ -136,12 +137,12 @@ extern "C"
 
     VOID 
     NTAPI
-    MmSetAddressSpace(
+    MmApplyAddressSpace(
         PADDRESS_SPACE AddressSpace);
 
     VOID
     NTAPI
-    MmGetAddressSpace(
+    MmCopyCurrentAddressSpaceRef(
         PADDRESS_SPACE pOutAddressSpace);
     
     ULONG_PTR

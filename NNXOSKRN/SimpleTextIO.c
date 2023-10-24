@@ -439,6 +439,19 @@ void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
                         }
                         break;
                     }
+                    case 'U':
+                    {
+                        PUNICODE_STRING pStr = (PUNICODE_STRING)*((UINT64*)args);
+                        args = ((UINT64*)args) + 1;
+                        
+                        for (int i = 0; i < pStr->Length / 2; i++)
+                        {
+                            char buffer[2] = { 0,0 };
+                            buffer[0] = (char)pStr->Buffer[i];
+                            TextIoOutputStringGlobal(buffer);
+                        }
+                        break;
+                    }
                     case 'c':;
                         char string[2] = { 0,0 };
                         string[0] = (char)*((UINT64*) args);

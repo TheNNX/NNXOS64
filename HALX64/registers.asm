@@ -7,10 +7,10 @@
 ; "return" address in rdx
 [export SetupStack]
 func SetupStack
-	mov rsp, rcx
-	jmp rdx
+    mov rsp, rcx
+    jmp rdx
 
 [export HalpGetCurrentAddress]
 func HalpGetCurrentAddress
-	mov rax, [rsp]
-	ret
+    mov rax, [rsp]
+    ret

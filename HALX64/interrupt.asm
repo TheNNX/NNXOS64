@@ -5,26 +5,26 @@
 
 export HalpDefInterruptHandler
 func HalpDefInterruptHandler
-	iretq
+    iretq
 
 [export KiEnableInterrupts]
 [export HalEnableInterrupts]
 func KiEnableInterrupts
 func HalEnableInterrupts
-	sti
-	ret
+    sti
+    ret
 
 [export KiDisableInterrupts]
 [export HalDisableInterrupts]
 func KiDisableInterrupts
 func HalDisableInterrupts
-	cli
-	ret
+    cli
+    ret
 
 [export KeStop]
 func KeStop
-	cli
-	hlt
+    cli
+    hlt
 
 [export HalpUpdateThreadKernelStack]
 func HalpUpdateThreadKernelStack 

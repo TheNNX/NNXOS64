@@ -14,15 +14,15 @@ extern "C"
 #endif
 
 #if defined(NNX_KERNEL) | defined(NNX_HAL)
-	NTHALAPI
-	VOID 
-	NTAPI	
-	PicInitialize();
+    NTHALAPI
+    VOID 
+    NTAPI    
+    PicInitialize();
 
-	NTHALAPI
-	VOID 
-	NTAPI
-	PicDisableForApic();
+    NTHALAPI
+    VOID 
+    NTAPI
+    PicDisableForApic();
 
 #endif
 

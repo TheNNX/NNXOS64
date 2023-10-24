@@ -20,14 +20,18 @@ extern "C" {
     NTSTATUS
     NTAPI
     LdrpLoadImage(
-        PCUNICODE_STRING SearchPath,
-        PCUNICODE_STRING ImageName,
+        PUNICODE_STRING SearchPath,
+        PUNICODE_STRING ImageName,
         PHANDLE pOutMoudleHandle);
 
     NTSTATUS
     NTAPI
     LdrpUnloadImage(
         HANDLE Module);
+
+    VOID
+    NTAPI
+    LdrTestThread();
 
     typedef struct _LOAD_IMAGE_INFO
     {

@@ -4,24 +4,24 @@
 [global GetStack]
 [export GetStack]
 GetStack:
-	MOV RAX, RSP
-	RET
+    MOV RAX, RSP
+    RET
 
 [global SetStack]
 [export SetStack]
 SetStack:
-	XCHG RCX, RSP
-	JMP QWORD [RCX]
+    XCHG RCX, RSP
+    JMP QWORD [RCX]
 
 [global PagingInvalidatePage]
 [export PagingInvalidatePage]
 PagingInvalidatePage:
-	INVLPG [RCX]
-	RET
+    INVLPG [RCX]
+    RET
 
 [global PagingTLBFlush]
 [export PagingTLBFlush]
 PagingTLBFlush:
-	MOV RAX, CR3
-	MOV CR3, RAX
-	RET
+    MOV RAX, CR3
+    MOV CR3, RAX
+    RET

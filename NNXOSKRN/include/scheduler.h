@@ -37,7 +37,6 @@ extern "C" {
         ULONG_PTR     QuantumReset;
         NTSTATUS      ProcessResult;
         LIST_ENTRY    HandleDatabaseHead;
-
         LIST_ENTRY    ModuleInstanceHead;
     } KPROCESS, * PKPROCESS;
 
@@ -132,6 +131,7 @@ extern "C" {
         BOOLEAN WaitIrql;
         KIRQL   WaitIrqlRestore;
 
+        PADDRESS_SPACE CustomAddressSpace;
     } KTHREAD, * PKTHREAD;
 
     typedef struct _ETHREAD
@@ -290,6 +290,17 @@ extern "C" {
     PEPROCESS
     NTAPI
     KeGetCurrentProcess();
+
+    NTSTATUS
+    NTAPI
+    KeClearCustomThreadAddressSpace(
+        PKTHREAD Thread);
+
+    NTSTATUS
+    NTAPI
+    KeSetCustomThreadAddressSpace(
+        PKTHREAD pThread,
+        PADDRESS_SPACE AddressSpace);
 #endif
 
 #ifdef __cplusplus

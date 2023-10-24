@@ -136,7 +136,7 @@ ObReferenceObjectUnsafe(
     POBJECT_HEADER Header;
   
     Header = ObGetHeaderFromObject(Object);
-    ASSERT(Header->Lock != 0); 
+    ASSERTMSG("["__FUNCTION__"] Lock not held!", Header->Lock != 0);
 
     Header->ReferenceCount++;
     return STATUS_SUCCESS;
@@ -474,6 +474,8 @@ ObCreateObject(
     {
         Status = Header->ObjectType->OnCreate(Object, OptionalData);
     }
+
+    if (RootHeader != 0)
 
     /* If there was some problem creating the object, delete it. */
     if (Status != STATUS_SUCCESS)

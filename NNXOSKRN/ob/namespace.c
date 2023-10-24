@@ -3,6 +3,7 @@
 #include <text.h>
 #include <scheduler.h>
 #include <cpu.h>
+#include <SimpleTextIO.h>
 
 #pragma pack(push, 1)
 
@@ -166,6 +167,7 @@ DirObjTypeOpenObject(
     }
     else if (firstSlashPosition == 0) 
     {
+        PrintT("First slash position invalid\n");
         /* Invalid path (those paths are relative paths). */
         return STATUS_OBJECT_PATH_INVALID;
     }
@@ -208,6 +210,7 @@ DirObjTypeOpenObject(
         if (parentHeader->ObjectType->ObjectOpen == NULL)
         {
             ObDereferenceObject(nextParent);
+            PrintT("Not a traversable object\n");
             return STATUS_OBJECT_PATH_INVALID;
         }
 

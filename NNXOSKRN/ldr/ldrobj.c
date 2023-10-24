@@ -13,16 +13,16 @@ static KSPIN_LOCK     LdrLock;
 
 typedef struct _DEPENDENCY_ENTRY
 {
-    LIST_ENTRY       Entry;
-    PCUNICODE_STRING Filename;
-    PKMODULE         Module;
+    LIST_ENTRY      Entry;
+    PUNICODE_STRING Filename;
+    PKMODULE        Module;
 }DEPENDENCY_ENTRY, *PDEPENDENCY_ENTRY;
 
 typedef struct _MODULE_CREATION_DATA
 {
-    PCUNICODE_STRING Filename;
-    PCUNICODE_STRING SearchPath;
-    PEPROCESS        Process;
+    PUNICODE_STRING Filename;
+    PUNICODE_STRING SearchPath;
+    PEPROCESS       Process;
 }MODULE_CREATION_DATA, *PMODULE_CREATION_DATA;
 
 NTSTATUS
@@ -167,12 +167,12 @@ LdrpLoadModuleFromFileToProcess(
     
     /* Change the address space to the target process' address space. */
     CurrentAddressSpace = &KeGetCurrentProcess()->Pcb.AddressSpace;
-    MmSetAddressSpace(&pProcess->Pcb.AddressSpace);
+    MmApplyAddressSpace(&pProcess->Pcb.AddressSpace);
 
     Status = LdrpLoadFile(hFile, pLoadImageInfo);
 
     /* Restore the original address space and IRQL. */
-    MmSetAddressSpace(CurrentAddressSpace);
+    MmApplyAddressSpace(CurrentAddressSpace);
     KeLowerIrql(Irql);
     return Status;
 }
@@ -211,7 +211,7 @@ LdrpReferenceModuleByName(
 NTSTATUS
 NTAPI
 LdrpHandleDependencies(
-    PCUNICODE_STRING SearchPath,
+    PUNICODE_STRING SearchPath,
     PKMODULE pModule)
 {
     PLIST_ENTRY Current = pModule->LoadImageInfo.DependenciesHead.First;
@@ -316,7 +316,7 @@ LdrpAddModuleToProcess(
     
     KeAcquireSpinLockAtDpcLevel(&Object->Lock);
     
-    ObReferenceObjectUnsafe(Object);
+    ObReferenceObject(Object);
     InsertTailList(&Object->InstanceHead, &pInstance->ModuleListEntry);
     InsertTailList(
         &Process->Pcb.ModuleInstanceHead, 
@@ -338,8 +338,43 @@ LdrpModuleOnDelete(
     pModule = (PKMODULE)SelfObject;
 
     PrintT("Deleting module - unimplemented.\n");
+
     /* TODO: Unimplemented. */
     return STATUS_NOT_SUPPORTED;
+}
+
+NTSTATUS
+NTAPI
+LdrpModuleOnOpen(
+    PVOID SelfObject,
+    PVOID OptionalData)
+{
+    PKMODULE Object;
+    NTSTATUS Status;
+    PMODULE_CREATION_DATA CreationData;
+
+    ASSERT(OptionalData != NULL && SelfObject != NULL);
+    CreationData = (PMODULE_CREATION_DATA)OptionalData;
+    Object = (PKMODULE)SelfObject;
+
+    Status = LdrpAddModuleToProcess(
+        Object,
+        CreationData->Process);
+    if (!NT_SUCCESS(Status))
+    {
+        ObCloseHandle(Object->File, KernelMode);
+        return Status;
+    }
+
+    Status = LdrpHandleDependencies(CreationData->SearchPath, Object);
+    if (!NT_SUCCESS(Status))
+    {
+        LdrpDereferenceDependencies(Object);
+        ObCloseHandle(Object->File, KernelMode);
+        return Status;
+    }
+
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -361,10 +396,11 @@ LdrpModuleOnCreate(
     KeInitializeSpinLock(&Object->Lock);
     InitializeListHead(&Object->InstanceHead);
     Object->Name = CreationData->Filename;
+    PrintT("Creating module\n");
 
     InitializeObjectAttributes(
         &FileObjAttributes,
-        NULL,
+        CreationData->Filename, /* FIXME: weird const cast? */
         OBJ_CASE_INSENSITIVE,
         NULL,
         NULL);
@@ -383,6 +419,7 @@ LdrpModuleOnCreate(
         0);
     if (!NT_SUCCESS(Status))
     {
+        PrintT("NtCreateFile failed, status: %X\n", Status);
         return Status;
     }
 
@@ -396,19 +433,9 @@ LdrpModuleOnCreate(
         return Status;
     }
 
-    Status = LdrpAddModuleToProcess(
-        Object, 
-        CreationData->Process);
+    Status = LdrpModuleOnOpen(SelfObject, OptionalData);
     if (!NT_SUCCESS(Status))
     {
-        ObCloseHandle(Object->File, KernelMode);
-        return Status;
-    }
-
-    Status = LdrpHandleDependencies(CreationData->SearchPath, Object);
-    if (!NT_SUCCESS(Status))
-    {
-        LdrpDereferenceDependencies(Object);
         ObCloseHandle(Object->File, KernelMode);
         return Status;
     }
@@ -444,17 +471,20 @@ LdrpInitialize()
        and/or create mappings. */
     LdrModuleObjType->OnCreate = LdrpModuleOnCreate;
     LdrModuleObjType->OnDelete = LdrpModuleOnDelete;
+    LdrModuleObjType->OnOpen = LdrpModuleOnOpen;
 
     InitializeListHead(&LdrLoadedModulesHead);
 
     return STATUS_SUCCESS;
 }
 
+static UNICODE_STRING Dummy = RTL_CONSTANT_STRING(L"chuj");
+
 NTSTATUS
 NTAPI
 LdrpLoadImage(
-    PCUNICODE_STRING SearchPath,
-    PCUNICODE_STRING ImageName,
+    PUNICODE_STRING SearchPath,
+    PUNICODE_STRING ImageName,
     PHANDLE pOutMoudleHandle)
 {
     PKMODULE pModule;
@@ -462,12 +492,33 @@ LdrpLoadImage(
     MODULE_CREATION_DATA CreationData;
     NTSTATUS Status;
     HANDLE Handle;
+    UNICODE_STRING Filename;
+    PWSTR LastSlash;
+    SIZE_T i;
+    USHORT NewLen;
+
+    Filename = *ImageName;
+    NewLen = Filename.Length;
+
+    /* Find the last slash in the path to get the filename. */
+    LastSlash = Filename.Buffer;
+    for (i = 0; i < Filename.Length / sizeof(*Filename.Buffer); i++)
+    {
+        if (Filename.Buffer[i] == L'\\' || Filename.Buffer[i] == L'/')
+        {
+            LastSlash = Filename.Buffer + i + 1;
+            NewLen = 
+                Filename.Length - (USHORT)(sizeof(*Filename.Buffer) * (i + 1));
+        }
+    }
+    Filename.Buffer = LastSlash;
+    Filename.Length = Filename.MaxLength = NewLen;
 
     InitializeObjectAttributes(
         &Attributes, 
-        NULL, 
-        0, 
-        NULL, 
+        &Filename, 
+        OBJ_OPENIF,
+        NULL,
         NULL);
 
     CreationData.Process = CONTAINING_RECORD(
@@ -508,4 +559,26 @@ LdrpUnloadImage(
     HANDLE Module)
 {
     return STATUS_NOT_SUPPORTED;
+}
+
+static UNICODE_STRING LdrpTestFileName = RTL_CONSTANT_STRING(L"EFI\\BOOT\\NNXOSKRN.EXE");
+
+VOID
+NTAPI
+LdrTestThread(VOID)
+{
+    HANDLE hModule;
+    NTSTATUS Status;
+
+    PrintT("[" __FUNCTION__ "] Starting\n");
+
+    for (int i = 0; i < 24; i++)
+    {
+        Status = LdrpLoadImage(NULL, &LdrpTestFileName, &hModule);
+        ASSERTMSG("Ldr test failed\n", NT_SUCCESS(Status));
+    }
+
+    PrintT("[" __FUNCTION__ "] Done\n");
+    while (1);
+    PsExitThread(-1);
 }

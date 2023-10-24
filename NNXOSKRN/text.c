@@ -1,9 +1,9 @@
 #include "text.h"
 
-SIZE_T 
+SIZE_T
 FindCharacterLast(
     const char* string,
-    SIZE_T len, 
+    SIZE_T len,
     char character)
 {
     SIZE_T current = -1;
@@ -20,10 +20,10 @@ FindCharacterLast(
     return current;
 }
 
-SIZE_T 
+SIZE_T
 FindCharacterFirst(
-    const char* string, 
-    SIZE_T len, 
+    const char* string,
+    SIZE_T len,
     char character)
 {
     SIZE_T i;
@@ -39,10 +39,10 @@ FindCharacterFirst(
     return -1;
 }
 
-SIZE_T 
+SIZE_T
 IntegerToAsciiBase(
-    ULONG_PTR i, 
-    INT8 base, 
+    ULONG_PTR i,
+    INT8 base,
     char *b,
     const char *digit)
 {
@@ -53,9 +53,9 @@ IntegerToAsciiBase(
     if (base == 0)
         return 0;
 
-    if (base < 0 && ((INT64) i) < 0)
+    if (base < 0 && ((INT64)i) < 0)
     {
-        i = (-((INT64) i));
+        i = (-((INT64)i));
         if (b)
         {
             *b++ = '-';
@@ -114,8 +114,8 @@ IntegerToAsciiBase(
 */
 SIZE_T
 IntegerToAscii(
-    ULONG_PTR i, 
-    INT8 base, 
+    ULONG_PTR i,
+    INT8 base,
     char *b)
 {
     return IntegerToAsciiBase(i, base, b, "0123456789abcdef");
@@ -128,14 +128,14 @@ IntegerToAscii(
 */
 SIZE_T
 IntegerToAsciiCapital(
-    ULONG_PTR i, 
-    INT8 base, 
+    ULONG_PTR i,
+    INT8 base,
     char *b)
 {
     return IntegerToAsciiBase(i, base, b, "0123456789ABCDEF");
 }
 
-char 
+char
 ToUppercase(
     char c)
 {
@@ -144,7 +144,7 @@ ToUppercase(
     return c;
 }
 
-char 
+char
 ToLowercase(
     char c)
 {

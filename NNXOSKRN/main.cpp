@@ -7,7 +7,7 @@
 #include <SimpleTextIo.h>
 #include <nnxcfg.h>
 #include <paging.h>
-#include <physical_allocator.h>
+#include <mm.h>
 #include <vfs.h>
 #include <bugcheck.h>
 #include <cpu.h>
@@ -20,6 +20,7 @@
 #include <rtc.h>
 #include <syscall.h>
 #include <file.h>
+#include <ldr.h>
 
 extern "C"
 {
@@ -238,8 +239,10 @@ extern "C"
             VfsGetSystemVfs());
             */
 
+        MmInitObjects();
         CmosInitialize();
         HalRtcInitialize(pFacp->CenturyRegister);
+        LdrpInitialize();
         
         KeQuerySystemTime(&CurrentTime);
         PrintT("Current date and time (%i): ", CurrentTime);

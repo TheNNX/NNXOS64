@@ -13,7 +13,6 @@ extern "C"
         USHORT Length;
         USHORT MaxLength;
         PWSTR Buffer;
-
     }UNICODE_STRING, *PUNICODE_STRING;
 
     typedef const UNICODE_STRING CUNICODE_STRING, *PCUNICODE_STRING;

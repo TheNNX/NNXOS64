@@ -10,6 +10,13 @@ extern "C" {
 #define ASSERT(expr) (!(expr) ? \
     __debugbreak() \
     : ((VOID)0))
+
+#define ASSERTMSG(msg, expr) \
+    if (!(expr))\
+    {\
+        PrintT("%s", msg); __debugbreak();\
+    }
+
 #else
 #define ASSERT(expr) ((VOID)0)
 #endif

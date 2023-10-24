@@ -223,6 +223,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\X64\pagefile.c" />
     <ClCompile Include="HAL\X64\rtc.c" />
     <ClCompile Include="ldr\ldrobj.c" />
+    <ClCompile Include="mm\mmobj.c" />
     <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="spinlock.c" />
     <ClCompile Include="HAL\X64\cpu.c" />
@@ -259,6 +260,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\gpt.h" />
     <ClInclude Include="include\ldr.h" />
     <ClInclude Include="include\mbr.h" />
+    <ClInclude Include="include\mm.h" />
     <ClInclude Include="include\vfs.h" />
     <ClInclude Include="include\hdd.h" />
     <ClInclude Include="include\Keyboard.h" />

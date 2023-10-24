@@ -9,32 +9,21 @@ extern "C"
 #endif
     typedef ULONG_PTR PFN_NUMBER;
 
-
     typedef struct _MMPFN_LIST
     {
-        LIST_ENTRY PfnListHead;
-        SIZE_T NumberOfPfns;
+        LIST_ENTRY  PfnListHead;
+        SIZE_T      NumberOfPfns;
     }MMPFN_LIST, *PMMPFN_LIST;
 
     typedef struct _MMPFN_ENTRY
     {
-        /** 
-         * this has to start with a ListEntry (it is convienient to not have to use some
-         * CONTAINING_RECORD macro) 
-         */
-        LIST_ENTRY ListEntry;
+        LIST_ENTRY  ListEntry;
         PMMPFN_LIST InList;
-        ULONG_PTR Flags;
+        ULONG_PTR   Flags;
     }MMPFN_ENTRY, *PMMPFN_ENTRY;
 
 #define MMPFN_FLAG_NO_PAGEOUT 1
-#define MMPFN_FLAG_PERMAMENT 2
-
-    typedef struct _MMINIT_USED_REGION
-    {
-        PVOID PhysRegionStart;
-        SIZE_T NumberOfPages;
-    }MMINIT_USED_REGION, *PMMINIT_USED_REGION;
+#define MMPFN_FLAG_PERMAMENT  2
 
 #define PFN_FROM_PA(x) ((PFN_NUMBER)(x / PAGE_SIZE))
 #define PA_FROM_PFN(x) ((ULONG_PTR)(x * PAGE_SIZE))
@@ -45,6 +34,10 @@ extern "C"
     MmReinitPhysAllocator(
         PMMPFN_ENTRY pfnEntries,
         SIZE_T numberOfPfnEntries);
+
+    NTSTATUS
+    NTAPI
+    MmMapSection();
 
     NTSTATUS 
     NTAPI
@@ -79,7 +72,7 @@ extern "C"
     DrawMap();
 
     extern PMMPFN_ENTRY PfnEntries;
-    extern SIZE_T NumberOfPfnEntries;
+    extern SIZE_T       NumberOfPfnEntries;
 #endif
 
 #ifdef __cplusplus
