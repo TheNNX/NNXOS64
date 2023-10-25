@@ -4,6 +4,7 @@
 #include <syscall.h>
 #include <rtl.h>
 #include <ntdebug.h>
+#include <scheduler.h>
 
 #define HalGetPcr() ((PKPCR)__readgsqword(0x18))
 VOID HalSetPcr(PKPCR);
@@ -87,9 +88,23 @@ PKPCR KeGetPcr()
 
 PKPRCB HalCreatePrcb(UCHAR CoreNumber)
 {
+    PETHREAD pDummyThread;
+    PEPROCESS pDummyProcess;
+
     PKPRCB prcb = (PKPRCB) ExAllocatePool(NonPagedPool, sizeof(KPRCB));
     KeInitializeSpinLock(&prcb->Lock);
-    prcb->CurrentThread = prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
+    
+    pDummyProcess = (PEPROCESS)ExAllocatePool(NonPagedPool, sizeof(EPROCESS));
+    pDummyThread = (PETHREAD) ExAllocatePool(NonPagedPool, sizeof(ETHREAD));
+    
+    pDummyProcess->Pcb.AddressSpace.TopStructPhysAddress = __readcr3();
+
+    pDummyThread->Process     = pDummyProcess;
+    pDummyThread->Tcb.Process = &pDummyProcess->Pcb;
+    prcb->CurrentThread = &pDummyThread->Tcb;
+    prcb->DummyThread   = &pDummyThread->Tcb;
+
+    prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
     prcb->Number = CoreNumber;
 
     return prcb;

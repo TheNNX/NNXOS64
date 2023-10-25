@@ -253,12 +253,6 @@ extern "C"
 
         NtFileObjInit();
 
-        Status = TestFileIo();
-        if (!NT_SUCCESS(Status))
-        {
-            KeBugCheck(PHASE1_INITIALIZATION_FAILED);
-        }
-
         MpInitialize();
 
         KeBugCheck(PHASE1_INITIALIZATION_FAILED);

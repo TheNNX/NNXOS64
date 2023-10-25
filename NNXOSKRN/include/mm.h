@@ -2,6 +2,7 @@
 #define NNX_MM_HEADER
 
 #include "physical_allocator.h"
+#include <object.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,12 +19,24 @@ extern "C" {
         ULONG_PTR   Flags;
         LIST_ENTRY  ProcessLinkHead;
         KSPIN_LOCK  SectionLock;
+        HANDLE      SectionFile;
     }KMEMORY_SECTION, *PKMEMORY_SECTION;
 
 #ifdef NNX_KERNEL
     NTSTATUS
     NTAPI
     MmInitObjects(VOID);
+
+    NTSTATUS
+    NTAPI
+    MmHandleSectionPageFault(
+        PKMEMORY_SECTION pMemorySection,
+        ULONG_PTR Address);
+
+    NTSTATUS
+    NTAPI
+    MmHandlePageFault(
+        ULONG_PTR Address);
 #endif
 
 #ifdef __cplusplus

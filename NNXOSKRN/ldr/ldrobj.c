@@ -25,6 +25,8 @@ typedef struct _MODULE_CREATION_DATA
     PEPROCESS       Process;
 }MODULE_CREATION_DATA, *PMODULE_CREATION_DATA;
 
+/* TODO: Remove when sections are able to load files.
+ * Because of the TODO, this function is WONTFIX (it has some IRQL issues). */
 NTSTATUS
 NTAPI
 LdrpFileReadHelper(
@@ -37,14 +39,6 @@ LdrpFileReadHelper(
     ReadOffset.QuadPart = Offset;
     IO_STATUS_BLOCK StatusBlock;
 
-    /* TODO: when a more complete implementation of NtReadFile is completed, 
-     * this won't work - LdrpFileReadHelper is called exclusively by callers
-     * running in IRQL >= PASSIVE_LEVEL. IRQL should be replaced by other
-     * ways of preventing address space changing and other means of
-     * synchronization. (Or use some other more internal filesystem access
-     * API, this is, however, probably a bad idea - this code shouldn't really
-     * run in high IRQL, maybe create some "Initialized" variable in KMODULE,
-     * and make access to that locked behind a spinlock acquisition). */
     return NtReadFile(
         hFile,
         NULL,
@@ -579,6 +573,5 @@ LdrTestThread(VOID)
     }
 
     PrintT("[" __FUNCTION__ "] Done\n");
-    while (1);
     PsExitThread(-1);
 }

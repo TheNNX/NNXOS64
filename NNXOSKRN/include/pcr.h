@@ -67,7 +67,7 @@ extern "C"
         UCHAR NestingLevel;
         UCHAR Pad0[3];
         ULONG Number;
-        ULONG_PTR Reserved;
+        struct _KTHREAD* DummyThread;
         KSPIN_LOCK Lock;
     }KPRCB, *PKPRCB, *LPKRCB;
 
@@ -81,6 +81,7 @@ extern "C"
     }KARCH_CORE_DATA, *PKARCH_CORE_DATA;
 
     PKPCR KeGetPcr();
+    PKPRCB HalCreatePrcb(UCHAR CoreNumber);
     VOID HalpSetupPcrForCurrentCpu(UCHAR id);
 
 #ifdef __cplusplus

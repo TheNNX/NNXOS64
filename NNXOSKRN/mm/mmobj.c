@@ -17,7 +17,6 @@ typedef struct _SECTION_PROCESS_LINK
     PKMEMORY_SECTION Section;
 }SECTION_PROCESS_LINK, *PSECTION_PROCESS_LINK;
 
-static KSPIN_LOCK     MmSectionGlobalLock;
 static POBJECT_TYPE   MmSectionType;
 static UNICODE_STRING MmSectionTypeName = RTL_CONSTANT_STRING(L"MemorySection");
 
@@ -150,6 +149,7 @@ MiMapSection(
     return STATUS_SUCCESS;
 }
 
+/* TODO: Check for collisions. */
 NTSTATUS
 NTAPI
 MmAttachSectionToProcess(
@@ -160,13 +160,8 @@ MmAttachSectionToProcess(
     PSECTION_PROCESS_LINK Link;
     NTSTATUS Status;
     
-    /* The MmSectionGlobalLock is used to "atomize" the double lock
-       acquisition, so it is possible to lock section locks without any address
-       space locking. */
-    KeAcquireSpinLock(&MmSectionGlobalLock, &Irql);
-    KeAcquireSpinLockAtDpcLevel(&AddressSpace->Lock);
+    KeAcquireSpinLock(&AddressSpace->Lock, &Irql);
     KeAcquireSpinLockAtDpcLevel(&Section->SectionLock);
-    KeReleaseSpinLockFromDpcLevel(&MmSectionGlobalLock);
 
     Status = STATUS_SUCCESS;
 
@@ -189,10 +184,8 @@ MmAttachSectionToProcess(
     InsertTailList(&Section->ProcessLinkHead, &Link->SectionEntry);
     InsertTailList(&AddressSpace->SectionLinkHead, &Link->AddressSpaceEntry);
 Exit:
-    KeAcquireSpinLockAtDpcLevel(&MmSectionGlobalLock);
     KeReleaseSpinLockFromDpcLevel(&Section->SectionLock);
-    KeReleaseSpinLockFromDpcLevel(&AddressSpace->Lock);
-    KeReleaseSpinLock(&MmSectionGlobalLock, Irql);
+    KeReleaseSpinLock(&AddressSpace->Lock, Irql);
     return Status;
 }
 
@@ -207,15 +200,12 @@ MmDeteachSectionFromProcess(
     PLIST_ENTRY Current, Head;
     NTSTATUS Status;
 
-    KeAcquireSpinLock(&MmSectionGlobalLock, &Irql);
-    KeAcquireSpinLockAtDpcLevel(&AddressSpace->Lock);
+    KeAcquireSpinLock(&AddressSpace->Lock, &Irql);
     KeAcquireSpinLockAtDpcLevel(&Section->SectionLock);
-    KeReleaseSpinLockFromDpcLevel(&MmSectionGlobalLock);
 
     Status = STATUS_SUCCESS;
 
-    /* Find the link between the address space and the section and delete it. 
-       */
+    /* Find the link between the address space and the section and delete it. */
     Current = AddressSpace->SectionLinkHead.First;
     Head = &AddressSpace->SectionLinkHead;
     Link = NULL;
@@ -248,10 +238,8 @@ MmDeteachSectionFromProcess(
     ExFreePool(Link);
     ObDereferenceObject(Section);
 Exit:
-    KeAcquireSpinLockAtDpcLevel(&MmSectionGlobalLock);
     KeReleaseSpinLockFromDpcLevel(&Section->SectionLock);
-    KeReleaseSpinLockFromDpcLevel(&AddressSpace->Lock);
-    KeReleaseSpinLock(&MmSectionGlobalLock, Irql);
+    KeReleaseSpinLock(&AddressSpace->Lock, Irql);
     return Status;
 }
 
@@ -260,8 +248,6 @@ NTAPI
 MmInitObjects()
 {
     NTSTATUS Status;
-
-    KeInitializeSpinLock(&MmSectionGlobalLock);
 
     Status = ObCreateType(
         &MmSectionType,
@@ -307,3 +293,89 @@ MiCreateSectionObject(
     return Status;
 }
 
+PADDRESS_SPACE
+NTAPI
+MmGetCurrentAddressSpace(VOID)
+{
+    if (KeGetCurrentThread()->CustomAddressSpace != NULL)
+    {
+        return KeGetCurrentThread()->CustomAddressSpace;
+    }
+
+    return &KeGetCurrentThread()->Process->AddressSpace;
+}
+
+NTSTATUS
+NTAPI
+MmHandleSectionPageFault(
+    PKMEMORY_SECTION pSection,
+    ULONG_PTR Address)
+{
+    ASSERT(pSection->SectionLock != NULL);
+
+    if (pSection->SectionFile != NULL)
+    {
+        /* TODO: Load file. */
+    }
+
+    return STATUS_NOT_SUPPORTED;
+}
+
+static
+BOOLEAN
+MmIsAddressInSection(
+    PKMEMORY_SECTION pMemorySection,
+    ULONG_PTR Address)
+{
+    ULONG_PTR Base = pMemorySection->BaseVirtualAddress;
+    SIZE_T Size = pMemorySection->NumberOfPages * PAGE_SIZE;
+
+    return (Address >= Base) && (Address < Base + Size);
+}
+
+NTSTATUS
+NTAPI
+MmHandlePageFault(
+    ULONG_PTR Address)
+{
+    PADDRESS_SPACE pCurrentAddressSpace;
+    PLIST_ENTRY Current, Head;
+    KIRQL Irql;
+    NTSTATUS Status;
+    
+    pCurrentAddressSpace = MmGetCurrentAddressSpace();
+
+    /* Lock the address space. */
+    KeAcquireSpinLock(&pCurrentAddressSpace->Lock, &Irql);
+    Current = pCurrentAddressSpace->SectionLinkHead.First;
+    Head = &pCurrentAddressSpace->SectionLinkHead;
+
+    /* Iterate over each section in the address space. */
+    while (Current != Head)
+    {
+        PSECTION_PROCESS_LINK CurrentLink = 
+            CONTAINING_RECORD(Current, 
+                              SECTION_PROCESS_LINK, 
+                              AddressSpaceEntry);
+
+        /* Lock the section. */
+        KeAcquireSpinLockAtDpcLevel(&CurrentLink->Section->SectionLock);
+        /* If the address falls into this section, try to handle it. */
+        if (MmIsAddressInSection(CurrentLink->Section, Address))
+        {
+            Status =  MmHandleSectionPageFault(CurrentLink->Section, Address);
+            KeReleaseSpinLockFromDpcLevel(&CurrentLink->Section->SectionLock);
+            KeReleaseSpinLock(&pCurrentAddressSpace->Lock, Irql);
+            /* Address was handled, exit. */
+            return Status;
+        }
+        KeReleaseSpinLockFromDpcLevel(&CurrentLink->Section->SectionLock);
+
+        /* Address was not handled, go to the next section. */
+        Current = Current->Next;
+    }
+
+    /* Address could not be handled, this is an access violation. */
+    KeReleaseSpinLock(&pCurrentAddressSpace->Lock, Irql);
+    return STATUS_INVALID_PARAMETER;
+}

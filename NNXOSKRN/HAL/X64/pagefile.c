@@ -7,6 +7,7 @@
 #include <HALX64/include/IDT.h>
 #include <physical_allocator.h>
 #include <cpu.h>
+#include <mm.h>
 
 SIZE_T PageFileSize;
 KSPIN_LOCK PageFileLock;
@@ -270,6 +271,13 @@ PagingPageInPage(
     return STATUS_SUCCESS;
 }
 
+ULONG_PTR ToBugcheck50Param4(NTSTATUS Status)
+{
+    /* TODO: implement this in MmHandleSectionPageFault through enums,
+     * and not here. */
+    return Status;
+}
+
 VOID
 PageFaultHandler(
     ULONG_PTR n,
@@ -278,6 +286,7 @@ PageFaultHandler(
     ULONG_PTR rip)
 {
     NTSTATUS status;
+    ULONG_PTR Address = __readcr2();
 
     PrintT("Servicing page fault %X %X %X\n", rip, errcode, KeGetCurrentProcessorId());
 
@@ -291,16 +300,18 @@ PageFaultHandler(
             (ULONG_PTR)KeGetCurrentIrql());
     }
 
-    if ((errcode & PAGE_PRESENT) == 0)
+    if (PagingGetTableMapping(PAGE_ALIGN(Address)) & PAGE_PRESENT) 
     {
-        status = PagingPageInPage(__readcr2());
-        if (status)
+        status = MmHandlePageFault(Address);
+        if (!NT_SUCCESS(status))
         {
-            KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, __readcr2(), 1, status, rip);
+            /* TODO: switch bugcheck code from status. */
+            KeBugCheckEx(
+                PAGE_FAULT_IN_NONPAGED_AREA,
+                Address,
+                (errcode & 2) != 0,
+                (ULONG_PTR)rip,
+                ToBugcheck50Param4(status));
         }
-    }
-    else
-    {
-        KeBugCheckEx(PAGE_FAULT_IN_NONPAGED_AREA, __readcr2(), 2, 0, rip);
     }
 }

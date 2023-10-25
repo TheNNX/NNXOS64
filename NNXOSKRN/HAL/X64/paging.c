@@ -102,28 +102,6 @@ MmCreateAddressSpace(
     return STATUS_SUCCESS;
 }
 
-VOID
-NTAPI
-MmCopyCurrentAddressSpaceRef(
-    PADDRESS_SPACE pOutAddressSpace)
-{
-    if (KeGetCurrentProcess() == NULL)
-    {
-        pOutAddressSpace->TopStructPhysAddress = __readcr3();
-    }
-    else 
-    {
-        PKPROCESS Process = &KeGetCurrentProcess()->Pcb;
-
-        ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-
-        KeAcquireSpinLockAtDpcLevel(&Process->AddressSpace.Lock);
-        *pOutAddressSpace = Process->AddressSpace;
-        KeReleaseSpinLockFromDpcLevel(&Process->AddressSpace.Lock);
-    }
-    KeInitializeSpinLock(&pOutAddressSpace->Lock);
-}
-
 VOID 
 NTAPI
 MmApplyAddressSpace(

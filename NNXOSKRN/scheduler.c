@@ -275,19 +275,18 @@ PspCreateIdleProcessForCore(
     PETHREAD pIdleThread;
     THREAD_ON_CREATE_DATA threadCreationData;
 
-    /**
-     * Since DispatcherLock is already held, we cannot call the ObjectManager to create the idle thread.
-     * This isn't a problem, because the idle thread cannot be dereferenced or deleted, and as such
-     * can be manually created, without deadlock due to trying to acquire a lock already held bu this
-     * core. 
-     */
+    /* Since DispatcherLock is already held, we cannot call the ObjectManager 
+     * to create the idle thread. This isn't a problem, because the idle thread
+     * cannot be dereferenced or deleted, and as such can be manually created, 
+     * without deadlock due to trying to acquire a lock already held bu this
+     * core. */
 
-    /* allocate memory for the process structure */
+    /* Allocate memory for the process structure. */
     pIdleProcess = ExAllocatePool(NonPagedPool, sizeof(*pIdleProcess));
     if (pIdleProcess == NULL)
         return STATUS_NO_MEMORY;
 
-    /* initialize the process structure */
+    /* Initialize the process structure. */
     status = PspProcessOnCreateNoDispatcher((PVOID)pIdleProcess, NULL);
     if (!NT_SUCCESS(status))
     {
@@ -296,7 +295,7 @@ PspCreateIdleProcessForCore(
     }
     pIdleProcess->Pcb.AffinityMask = (1ULL << (ULONG_PTR)coreNumber);
 
-    /* allocate memory fot the thread structure */
+    /* Allocate memory fot the thread structure. */
     pIdleThread = ExAllocatePool(NonPagedPool, sizeof(*pIdleThread));
     if (pIdleThread == NULL)
     {
@@ -304,15 +303,13 @@ PspCreateIdleProcessForCore(
         return STATUS_NO_MEMORY;
     }
 
-    /** 
-     * initialize the thread creation data structure, 
-     * which is neccessary to initialize the thread 
-     */
+    /* Initialize the thread creation data structure, 
+     * which is neccessary to initialize the thread. */
     threadCreationData.Entrypoint = (ULONG_PTR)PspIdleThreadProcedure;
     threadCreationData.IsKernel = TRUE;
     threadCreationData.ParentProcess = pIdleProcess;
 
-    /* initialize the thread structure */
+    /* Initialize the thread structure. */
     status = PspThreadOnCreateNoDispatcher(
         (PVOID)pIdleThread,
         &threadCreationData);
@@ -327,7 +324,7 @@ PspCreateIdleProcessForCore(
 
     PrintT("Core %i's idle thread %X\n", coreNumber, pIdleThread);
 
-    /* add the idle process and the idle thread to their respective lists */
+    /* Add the idle process and the idle thread to their respective lists */
     InsertHeadList(&ProcessListHead, &pIdleProcess->Pcb.ProcessListEntry);
     InsertHeadList(&ThreadListHead, &pIdleThread->Tcb.ThreadListEntry);
 
@@ -376,6 +373,7 @@ PspInitializeCore(
     PKPRCB pPrcb;
     NTSTATUS status = STATUS_SUCCESS;
     PKTASK_STATE pTaskState;
+    PKTHREAD pDummyThread;
 
     /* check if this is the first core to be initialized */
     /* if so, initialize the scheduler first */
@@ -396,10 +394,16 @@ PspInitializeCore(
     pPcr = KeGetPcr();
     pPrcb = pPcr->Prcb;
     KeAcquireSpinLockAtDpcLevel(&pPrcb->Lock);
-#pragma warning(disable: 6011)
+
+    /* Copy the idle thread info into the PRCB. */
+    ASSERT(CoresSchedulerData != NULL);
     pPrcb->IdleThread = &CoresSchedulerData[CoreNumber].IdleThread->Tcb;
     pPrcb->NextThread = pPrcb->IdleThread;
     pPrcb->CurrentThread = pPrcb->IdleThread;
+
+    pDummyThread = pPrcb->DummyThread;
+    pPrcb->DummyThread = NULL;
+
     pPcr->CyclesLeft = (LONG_PTR)KiCyclesPerQuantum * 100;
     KeReleaseSpinLockFromDpcLevel(&pPrcb->Lock);
 
@@ -409,6 +413,10 @@ PspInitializeCore(
 
     pPrcb->IdleThread->ThreadState = THREAD_STATE_RUNNING;
     KiReleaseDispatcherLock(irql);
+
+    /* Free the dummy thread used for system initialization. */
+    ExFreePool(CONTAINING_RECORD(pDummyThread->Process, EPROCESS, Pcb));
+    ExFreePool(CONTAINING_RECORD(pDummyThread, ETHREAD, Tcb));
 
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
@@ -446,8 +454,7 @@ PspInitializeCore(
                 &userThread1,
                 userProcess1,
                 FALSE,
-                (ULONG_PTR)TestUserThread1
-            );
+                (ULONG_PTR)TestUserThread1);
             if (!NT_SUCCESS(status))
             {
                 return status;
@@ -984,7 +991,6 @@ PspThreadOnCreateNoDispatcher(
     PVOID CreateData)
 {
     ULONG_PTR userstack;
-    ADDRESS_SPACE originalAddressSpace;
     PTHREAD_ON_CREATE_DATA threadCreationData;
     PETHREAD pThread = (PETHREAD)SelfObject;
     threadCreationData = (PTHREAD_ON_CREATE_DATA)CreateData;
@@ -1000,8 +1006,9 @@ PspThreadOnCreateNoDispatcher(
     pThread->StartAddress = 0;
     KeInitializeSpinLock(&pThread->Tcb.ThreadLock);
 
-    MmCopyCurrentAddressSpaceRef(&originalAddressSpace);
-    MmApplyAddressSpace(&pThread->Process->Pcb.AddressSpace);
+    KeSetCustomThreadAddressSpace(
+        KeGetCurrentThread(), 
+        &pThread->Process->Pcb.AddressSpace);
 
     /* Create stacks */
     /* Main kernel stack */
@@ -1028,7 +1035,7 @@ PspThreadOnCreateNoDispatcher(
             PAGING_USER_SPACE_END) + PAGE_SIZE;
     }
 
-    MmApplyAddressSpace(&originalAddressSpace);
+    KeClearCustomThreadAddressSpace(KeGetCurrentThread());
 
     RtlZeroMemory(
         pThread->Tcb.ThreadWaitBlocks, 
@@ -1296,6 +1303,8 @@ PsExitThread(
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
     KeReleaseSpinLockFromDpcLevel(&DispatcherLock);
 
+    /* TODO: Handle sections. */
+
     HalDisableInterrupts();
     KeLowerIrql(originalIrql);
     KeForceClockTick();
@@ -1458,13 +1467,14 @@ NTAPI
 KeClearCustomThreadAddressSpace(
     PKTHREAD pThread)
 {
-    KIRQL Irql = KiAcquireDispatcherLock();
+    ASSERT(pThread != NULL);
+
     pThread->CustomAddressSpace = NULL;
     if (pThread == KeGetCurrentThread())
     {
         MmApplyAddressSpace(&pThread->Process->AddressSpace);
     }
-    KiReleaseDispatcherLock(Irql);
+
     return STATUS_SUCCESS;
 }
 
@@ -1472,14 +1482,15 @@ NTSTATUS
 NTAPI
 KeSetCustomThreadAddressSpace(
     PKTHREAD pThread,
-    PADDRESS_SPACE AddressSpace)
+    PADDRESS_SPACE pAddressSpace)
 {
-    KIRQL Irql = KiAcquireDispatcherLock();
-    pThread->CustomAddressSpace = AddressSpace;
+    ASSERT(pThread != NULL && pAddressSpace != NULL);
+
+    pThread->CustomAddressSpace = pAddressSpace;
     if (pThread == KeGetCurrentThread())
     {
-        MmApplyAddressSpace(AddressSpace);
+        MmApplyAddressSpace(pAddressSpace);
     }
-    KiReleaseDispatcherLock(Irql);
+
     return STATUS_SUCCESS;
 }
