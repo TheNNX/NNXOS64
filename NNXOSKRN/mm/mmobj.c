@@ -297,6 +297,7 @@ PADDRESS_SPACE
 NTAPI
 MmGetCurrentAddressSpace(VOID)
 {
+    ASSERT(KeGetCurrentThread()->ThreadLock);
     if (KeGetCurrentThread()->CustomAddressSpace != NULL)
     {
         return KeGetCurrentThread()->CustomAddressSpace;
@@ -343,10 +344,11 @@ MmHandlePageFault(
     KIRQL Irql;
     NTSTATUS Status;
     
+    KeAcquireSpinLock(&KeGetCurrentThread()->ThreadLock, &Irql);
     pCurrentAddressSpace = MmGetCurrentAddressSpace();
 
     /* Lock the address space. */
-    KeAcquireSpinLock(&pCurrentAddressSpace->Lock, &Irql);
+    KeAcquireSpinLockAtDpcLevel(&pCurrentAddressSpace->Lock);
     Current = pCurrentAddressSpace->SectionLinkHead.First;
     Head = &pCurrentAddressSpace->SectionLinkHead;
 
@@ -365,7 +367,8 @@ MmHandlePageFault(
         {
             Status =  MmHandleSectionPageFault(CurrentLink->Section, Address);
             KeReleaseSpinLockFromDpcLevel(&CurrentLink->Section->SectionLock);
-            KeReleaseSpinLock(&pCurrentAddressSpace->Lock, Irql);
+            KeReleaseSpinLockFromDpcLevel(&pCurrentAddressSpace->Lock);
+            KeReleaseSpinLock(&KeGetCurrentThread()->ThreadLock, Irql);
             /* Address was handled, exit. */
             return Status;
         }
@@ -376,6 +379,7 @@ MmHandlePageFault(
     }
 
     /* Address could not be handled, this is an access violation. */
-    KeReleaseSpinLock(&pCurrentAddressSpace->Lock, Irql);
+    KeReleaseSpinLockFromDpcLevel(&pCurrentAddressSpace->Lock);
+    KeReleaseSpinLock(&KeGetCurrentThread()->ThreadLock, Irql);
     return STATUS_INVALID_PARAMETER;
 }
