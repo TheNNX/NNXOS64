@@ -3,11 +3,13 @@
  * This file defines the object types used by the memory manager.
  */
 
+#include <SimpleTextIO.h>
 #include <mm.h>
 #include <object.h>
 #include <pool.h>
 #include <ntdebug.h>
 #include <scheduler.h>
+#include <file.h>
 
 typedef struct _SECTION_PROCESS_LINK
 {
@@ -316,10 +318,25 @@ MmHandleSectionPageFault(
 
     if (pSection->SectionFile != NULL)
     {
-        /* TODO: Load file. */
+        LARGE_INTEGER Offset;
+        IO_STATUS_BLOCK StatusBlock;
+
+        Offset.QuadPart = PAGE_ALIGN(Address - pSection->BaseVirtualAddress);
+
+        ASSERTMSG(KeGetCurrentIrql() <= DISPATCH_LEVEL, "");
+
+        return NtReadFile(pSection->SectionFile, 
+                          NULL, 
+                          NULL, 
+                          NULL, 
+                          &StatusBlock, 
+                          (PVOID)PAGE_ALIGN(Address),
+                          PAGE_SIZE,
+                          &Offset,
+                          NULL);
     }
 
-    return STATUS_NOT_SUPPORTED;
+    return STATUS_INVALID_ADDRESS;
 }
 
 static

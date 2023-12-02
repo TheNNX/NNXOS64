@@ -569,7 +569,7 @@ LdrTestThread(VOID)
     for (int i = 0; i < 24; i++)
     {
         Status = LdrpLoadImage(NULL, &LdrpTestFileName, &hModule);
-        ASSERTMSG("Ldr test failed\n", NT_SUCCESS(Status));
+        ASSERTMSG(NT_SUCCESS(Status), "Ldr test failed\n");
     }
 
     PrintT("[" __FUNCTION__ "] Done\n");

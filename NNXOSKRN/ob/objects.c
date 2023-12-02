@@ -136,7 +136,7 @@ ObReferenceObjectUnsafe(
     POBJECT_HEADER Header;
   
     Header = ObGetHeaderFromObject(Object);
-    ASSERTMSG("["__FUNCTION__"] Lock not held!", Header->Lock != 0);
+    ASSERTMSG(Header->Lock != 0, "["__FUNCTION__"] Lock not held!");
 
     Header->ReferenceCount++;
     return STATUS_SUCCESS;

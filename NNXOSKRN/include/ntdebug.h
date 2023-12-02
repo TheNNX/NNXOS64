@@ -11,10 +11,10 @@ extern "C" {
     __debugbreak() \
     : ((VOID)0))
 
-#define ASSERTMSG(msg, expr) \
+#define ASSERTMSG(expr, ...) \
     if (!(expr))\
     {\
-        PrintT("%s", msg); __debugbreak();\
+        PrintT(__VA_ARGS__); __debugbreak();\
     }
 
 #else
