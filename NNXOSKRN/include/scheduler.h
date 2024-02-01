@@ -37,7 +37,6 @@ extern "C" {
         ULONG_PTR     QuantumReset;
         NTSTATUS      ProcessResult;
         LIST_ENTRY    HandleDatabaseHead;
-        LIST_ENTRY    ModuleInstanceHead;
     } KPROCESS, * PKPROCESS;
 
     typedef struct _EPROCESS
@@ -292,6 +291,13 @@ extern "C" {
         ULONG_PTR* Parameters,
         SIZE_T NumberOfParameters,
         PVOID ReturnAddress);
+
+    NTSTATUS
+    NTAPI
+    PspSetUsercallParameter(
+        PKTHREAD pThread,
+        ULONG ParameterIndex,
+        ULONG_PTR Value);
 
     BOOL
     NTAPI

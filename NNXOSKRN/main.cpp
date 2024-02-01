@@ -20,7 +20,6 @@
 #include <rtc.h>
 #include <syscall.h>
 #include <file.h>
-#include <ldr.h>
 
 extern "C"
 {

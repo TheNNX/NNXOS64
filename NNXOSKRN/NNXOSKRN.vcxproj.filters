@@ -225,6 +225,9 @@
     <ClCompile Include="mm\mmobj.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ldr\ldr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bugcheck.h">
@@ -348,9 +351,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\file.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ldr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\mm.h">

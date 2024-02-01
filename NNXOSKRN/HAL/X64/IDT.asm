@@ -277,7 +277,7 @@ func HalpSystemCall
     swapgs
 
     ; store the user stack to a PCR temp variable
-    mov [gs:0x28], rsp
+    mov rax, rsp
 
     ; get the TSS pointer to RSP
     mov rsp, [gs:0x08]
@@ -285,11 +285,8 @@ func HalpSystemCall
     ; get the RSP0 into RSP
     mov rsp, QWORD [rsp+0x04]
 
-    ; store the user stack on the kernel stack (we can't rely on the temp variables,
-    ; once interrupts are reenabled)
-    push QWORD [gs:0x28]
-
     sti
+    push QWORD rax
 
     ; store the register state
     pushvolnorax
@@ -298,6 +295,7 @@ func HalpSystemCall
     sub rsp, 32
 
     mov rcx, r9
+    mov r9, rax
 
     ; call the syscall handler 
     mov rax, HalpSystemCallHandler
@@ -309,11 +307,11 @@ func HalpSystemCall
     ; restore the register state
     popvolnorax
 
-    cli
     push rcx
     mov rcx, rsp
     ; unreserve syscall handler data
     add rcx, 16
+    cli
     call HalpUpdateThreadKernelStack
     pop rcx
 

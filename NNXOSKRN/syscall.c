@@ -69,6 +69,19 @@ SetupSystemCallHandler(
     return oldHandler;
 }
 
+NTSTATUS NtDll5Test()
+{
+    return STATUS_NOT_SUPPORTED;
+}
+
+NTSTATUS KiInvokeService(
+    NTSTATUS(NTAPI* Service)(),
+    SIZE_T NumberOfArgs, 
+    ULONG_PTR Stack)
+{
+    return Service();
+}
+
 /**
  * @brief The default system call handler - note: it is possible
  * to use different handlers, and even to chain load them - to
@@ -113,6 +126,8 @@ SystemCallHandler(
         ASSERT(status == STATUS_TIMEOUT);
 
         break;
+    case 3:
+        return KiInvokeService(NtDll5Test, 5, p4);
     default:
         PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
         ASSERT(FALSE);

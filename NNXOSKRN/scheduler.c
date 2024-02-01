@@ -11,9 +11,9 @@
 #include <dispatcher.h>
 #include <apc.h>
 #include <ntdebug.h>
-#include <ldr.h>
 #include <mm.h>
 #include <file.h>
+#include <intrin.h>
 
 LIST_ENTRY ProcessListHead;
 LIST_ENTRY ThreadListHead;
@@ -33,6 +33,13 @@ extern ULONG_PTR KeMaximumIncrement;
 extern ULONG_PTR KiCyclesPerClockQuantum;
 extern ULONG_PTR KiCyclesPerQuantum;
 extern UINT KeNumberOfProcessors;
+
+NTSTATUS
+NTAPI
+NnxStartUserProcess(
+    PCUNICODE_STRING Filepath,
+    HANDLE hOutProcess,
+    ULONG Priority);
 
 VOID
 NTAPI
@@ -56,24 +63,6 @@ PspCreateThreadInternal(
     PEPROCESS pParentProcess,
     BOOL IsKernel, 
     ULONG_PTR EntryPoint);
-
-BOOL 
-NTAPI
-TestBit(
-    ULONG_PTR Number,
-    ULONG_PTR BitIndex);
-
-ULONG_PTR 
-NTAPI
-ClearBit(
-    ULONG_PTR Number, 
-    ULONG_PTR BitIndex);
-
-ULONG_PTR 
-NTAPI
-SetBit(
-    ULONG_PTR Number, 
-    ULONG_PTR BitIndex);
 
 NTSTATUS 
 NTAPI 
@@ -151,10 +140,7 @@ inline VOID ClearSummaryBitIfNeccessary(
 {
     if (IsListEmpty(&ThreadReadyQueues[Priority]))
     {
-        *Summary = (ULONG)ClearBit(
-            *Summary,
-            Priority
-        );
+        _bittestandreset(Summary, Priority);
     }
 }
 
@@ -165,9 +151,7 @@ inline VOID SetSummaryBitIfNeccessary(
 {
     if (!IsListEmpty(&ThreadReadyQueues[Priority]))
     {
-        *Summary = (ULONG)SetBit(
-            *Summary,
-            Priority);
+        _bittestandset(Summary, Priority);
     }
 }
 
@@ -243,10 +227,10 @@ PspSelectNextReadyThread(
     PspManageSharedReadyQueue(CoreNumber);
     result = &coreOwnData->IdleThread->Tcb;
 
-    /* start with the highest priority */
+    /* Start with the highest priority. */
     for (priority = 31; priority >= 0; priority--)
     {
-        if (TestBit(coreOwnData->ThreadReadyQueuesSummary, priority))
+        if (_bittest(&coreOwnData->ThreadReadyQueuesSummary, priority))
         {
             PLIST_ENTRY dequeuedEntry = 
                 (PLIST_ENTRY)RemoveHeadList(&coreOwnData->
@@ -263,7 +247,7 @@ PspSelectNextReadyThread(
         }
     }
 
-    /* if no process was found on queue(s), return the idle thread */
+    /* If no process was found on queue(s), return the idle thread. */
     return result;
 }
 
@@ -328,7 +312,7 @@ PspCreateIdleProcessForCore(
 
     PrintT("Core %i's idle thread %X\n", coreNumber, pIdleThread);
 
-    /* Add the idle process and the idle thread to their respective lists */
+    /* Add the idle process and the idle thread to their respective lists. */
     InsertHeadList(&ProcessListHead, &pIdleProcess->Pcb.ProcessListEntry);
     InsertHeadList(&ThreadListHead, &pIdleThread->Tcb.ThreadListEntry);
 
@@ -442,6 +426,8 @@ PspInitializeCore(
             PEPROCESS userProcess1;
             PETHREAD userThread1, userThread2;
 
+            HANDLE hProcess;
+
             VOID TestUserThread1();
             VOID TestUserThread2();
 
@@ -466,8 +452,7 @@ PspInitializeCore(
                 &userThread2,
                 userProcess1,
                 FALSE,
-                (ULONG_PTR)TestUserThread2
-            );
+                (ULONG_PTR)TestUserThread2);
             if (!NT_SUCCESS(status))
             {
                 return status;
@@ -478,6 +463,15 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread1);
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
+
+            UNICODE_STRING t = RTL_CONSTANT_STRING(L"whatever.exe");
+            status = NnxStartUserProcess(&t, &hProcess, 10);
+            if (!NT_SUCCESS(status))
+            {
+                return status;
+            }
+
+            PrintT("hProcess: %X\n");
         }
     }
 
@@ -846,7 +840,6 @@ PspProcessOnCreateNoDispatcher(
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     KeInitializeSpinLock(&pProcess->Pcb.ProcessLock);
     InitializeListHead(&pProcess->Pcb.ThreadListHead);
-    InitializeListHead(&pProcess->Pcb.ModuleInstanceHead);
     pProcess->Pcb.BasePriority = 0;
     pProcess->Pcb.AffinityMask = KAFFINITY_ALL;
     pProcess->Pcb.NumberOfThreads = 0;
@@ -1174,8 +1167,8 @@ PspInsertIntoSharedQueue(
         &PspSharedReadyQueue.ThreadReadyQueues[ThreadPriority], 
         (PLIST_ENTRY)&Thread->ReadyQueueEntry);
 
-    PspSharedReadyQueue.ThreadReadyQueuesSummary = (ULONG)SetBit(
-        PspSharedReadyQueue.ThreadReadyQueuesSummary,
+    _bittestandset(
+        &PspSharedReadyQueue.ThreadReadyQueuesSummary,
         ThreadPriority);
 }
 
@@ -1219,8 +1212,8 @@ PspManageSharedReadyQueue(
         PLIST_ENTRY current;
          
         /* If this priority doesn't have any threads in the shared queue. */
-        if (!TestBit(
-                PspSharedReadyQueue.ThreadReadyQueuesSummary,
+        if (!_bittest(
+                &PspSharedReadyQueue.ThreadReadyQueuesSummary,
                 checkedPriority))
         {
             continue;
@@ -1307,7 +1300,7 @@ KiSetUserMemory(
 }
 
 /* TODO: implement a PspGetUsercallParameter maybe? */
-VOID
+NTSTATUS
 NTAPI
 PspSetUsercallParameter(
     PKTHREAD pThread,
@@ -1346,9 +1339,10 @@ PspSetUsercallParameter(
         stackLocation += sizeof(ULONG_PTR) * (ParameterIndex - 4);
 
         KiSetUserMemory((PVOID)stackLocation, Value);
-        break;
+        return STATUS_INVALID_ADDRESS;
     }
     }
+    return STATUS_SUCCESS;
 #else
 #error Unimplemented
 #endif
@@ -1564,7 +1558,10 @@ NtCreateProcess(
 static UNICODE_STRING NtdllPath = RTL_CONSTANT_STRING(L"NTDLL.DLL");
 static const ULONG DummyTag = 'THRD';
 
-VOID NnxDummyLdrThread(PUNICODE_STRING Filepath)
+VOID 
+NTAPI
+NnxDummyLdrThread(
+    PUNICODE_STRING Filepath)
 {
     NTSTATUS status;
     SIZE_T i;
@@ -1584,6 +1581,7 @@ VOID NnxDummyLdrThread(PUNICODE_STRING Filepath)
 }
 
 NTSTATUS
+NTAPI
 NnxStartUserProcess(
     PCUNICODE_STRING Filepath,
     HANDLE hOutProcess,
@@ -1638,6 +1636,6 @@ NnxStartUserProcess(
     PspSetUsercallParameter(&pThread->Tcb, 0, (ULONG_PTR)strCopy);
     pThread->Tcb.ThreadPriority = 0;
 
-    PspInsertIntoSharedQueue(&pThread->Tcb);
-    return STATUS_NOT_SUPPORTED;
+    PspInsertIntoSharedQueueLocked(&pThread->Tcb);
+    return ObCreateHandle(hOutProcess, 0, pProcess);
 }
