@@ -222,7 +222,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="HAL\X64\pagefile.c" />
     <ClCompile Include="HAL\X64\rtc.c" />
-    <ClCompile Include="ldr\ldrobj.c" />
     <ClCompile Include="mm\mmobj.c" />
     <ClCompile Include="nnxalloccpp.cpp" />
     <ClCompile Include="spinlock.c" />

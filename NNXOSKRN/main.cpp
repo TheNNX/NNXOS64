@@ -233,16 +233,14 @@ extern "C"
                 0);
         }
 
-        /*PagingInitializePageFile(
+        PagingInitializePageFile(
             16 * PAGE_SIZE,
             "PAGEFILE.SYS", 
             VfsGetSystemVfs());
-            */
 
         MmInitObjects();
         CmosInitialize();
         HalRtcInitialize(pFacp->CenturyRegister);
-        LdrpInitialize();
         
         KeQuerySystemTime(&CurrentTime);
         PrintT("Current date and time (%i): ", CurrentTime);

@@ -192,20 +192,47 @@ extern "C" {
     KeRevertToUserAffinityThread(VOID);
 
     NTSYSAPI
+    PKTHREAD
+    NTAPI
+    KeGetCurrentThread();
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtCreateProcessEx(
+        PHANDLE pHandle,
+        ACCESS_MASK DesiredAccess,
+        POBJECT_ATTRIBUTES pObjectAttributes,
+        HANDLE pParentProcess,
+        ULONG Flags,
+        HANDLE SectionHandle,
+        HANDLE DebugPort,
+        HANDLE ExceptionPort,
+        BOOL InJob);
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtCreateProcess(
+        PHANDLE Handle,
+        ACCESS_MASK DesiredAccess,
+        POBJECT_ATTRIBUTES ObjectAttributes,
+        HANDLE ParentProcess,
+        BOOLEAN InheritObjectTable,
+        HANDLE SectionHandle,
+        HANDLE DebugPort,
+        HANDLE ExceptionPort);
+
+#ifdef NNX_KERNEL
+    NTSTATUS 
+    PspDebugTest();
+
+    NTSYSAPI
     ULONG_PTR
     NTAPI
     PspScheduleThread(
         PKINTERRUPT clockInterrupt,
         PKTASK_STATE stack);
-
-    NTSYSAPI
-    PKTHREAD
-    NTAPI
-    KeGetCurrentThread();
-
-#ifdef NNX_KERNEL
-    NTSTATUS 
-    PspDebugTest();
 
     PKTHREAD 
     NTAPI

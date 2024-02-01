@@ -39,6 +39,13 @@ extern "C" {
         ULONG_PTR Address);
 #endif
 
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtCreateSectionFromFile(
+        PHANDLE pOutHandle,
+        PUNICODE_STRING pFileName);
+
 #ifdef __cplusplus
 }
 #endif

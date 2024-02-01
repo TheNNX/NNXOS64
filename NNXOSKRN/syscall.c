@@ -87,13 +87,31 @@ SystemCallHandler(
     ULONG_PTR result = 0;
     LONG64 timeout = -10000000;
     ULONG threadId = (ULONG_PTR)KeGetCurrentThread() & 0xFFFF;
+    NTSTATUS status;
+    KIRQL irql;
+
+    KeAcquireSpinLock(&SystemCallSpinLock, &irql);
+    if (QueueInitialized == FALSE)
+    {
+        QueueInitialized = TRUE;
+        KeInitializeQueue(&Queue, 0);
+    }
+    KeReleaseSpinLock(&SystemCallSpinLock, irql);
 
     switch (p1)
     {
     case 1:
     case 2:
         PrintT("s%X%i ", threadId, KeGetCurrentIrql());
-        KeWaitForSingleObject(&Queue, Executive, KernelMode, FALSE, &timeout);
+        status = KeWaitForSingleObject(
+            &Queue, 
+            Executive,
+            KernelMode,
+            FALSE, 
+            &timeout);
+
+        ASSERT(status == STATUS_TIMEOUT);
+
         break;
     default:
         PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);

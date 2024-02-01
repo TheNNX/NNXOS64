@@ -159,7 +159,7 @@ KeWaitForMultipleObjects(
     /* Force a clock tick - if the thread is waiting, it will have the control 
      * back only when the wait conditions are satisfied. */
     KeForceClockTick();
-    return STATUS_SUCCESS;
+    return (NTSTATUS) CurrentThread->WaitStatus;
 }
 
 NTSTATUS 
@@ -179,8 +179,7 @@ KeWaitForSingleObject(
         WaitMode,
         Alertable, 
         Timeout,
-        NULL
-    );
+        NULL);
 }
 
 static

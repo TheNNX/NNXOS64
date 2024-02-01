@@ -3,8 +3,16 @@
 #include <bugcheck.h>
 #include <SimpleTextIO.h>
 
-NTSTATUS PspCreateProcessInternal(PEPROCESS* ppProcess);
-NTSTATUS PspCreateThreadInternal(
+NTSTATUS
+NTAPI
+PspCreateProcessInternal(
+    PEPROCESS* ppProcess,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES pObjectAttributes);
+
+NTSTATUS 
+NTAPI
+PspCreateThreadInternal(
     PETHREAD* ppThread,
     PEPROCESS pParentProcess,
     BOOL IsKernel,
@@ -225,7 +233,7 @@ ObpMpTestNamespaceThread()
             i, 
             KeGetCurrentProcessorId());
 
-        creationStatus = PspCreateProcessInternal(&WorkerProcesses[i]);
+        creationStatus = PspCreateProcessInternal(&WorkerProcesses[i], 0, NULL);
 
         if (!NT_SUCCESS(creationStatus))
         {
@@ -322,7 +330,7 @@ NTSTATUS ObpMpTestNamespace()
         KeGetCurrentProcessorId(), 
         KeGetCurrentIrql());
 
-    status = PspCreateProcessInternal(&process);
+    status = PspCreateProcessInternal(&process, 0, NULL);
     if (status != STATUS_SUCCESS)
     {
         PrintT("NTSTATUS: %X\n", status);

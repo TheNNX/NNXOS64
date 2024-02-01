@@ -1,4 +1,3 @@
-
 #include <SimpleTextIo.h>
 #include <physical_allocator.h>
 #include <rtl.h>

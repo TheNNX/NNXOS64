@@ -166,10 +166,16 @@ ObCloseHandleByEntry(
     PHANDLE_DATABASE_ENTRY entry)
 {
     KIRQL irql;
+    POBJECT_HEADER objHeader;
 
     KeAcquireSpinLock(&HandleManagerLock, &irql);
+    objHeader = ObGetObjectFromHeader(entry->Object);
+    KeAcquireSpinLockAtDpcLevel(&objHeader->Lock);
+    objHeader->HandleCount--;
     entry->Object = NULL;
+    KeReleaseSpinLockFromDpcLevel(&objHeader->Lock);
     KeReleaseSpinLock(&HandleManagerLock, irql);
+    ObDereferenceObject(entry->Object);
 }
 
 /* @brief Gets the handle database entry for the handle given and performs 
@@ -181,7 +187,6 @@ ObCloseHandle(
     KPROCESSOR_MODE accessMode)
 {
     PHANDLE_DATABASE_ENTRY entry;
-    POBJECT_HEADER objHeader;
     PLIST_ENTRY databaseHead;
     BOOLEAN isKernelHandle;
     PKSPIN_LOCK lock;
@@ -222,11 +227,6 @@ ObCloseHandle(
         KeReleaseSpinLock(lock, irql);
         return STATUS_INVALID_HANDLE;
     }
-
-    objHeader = ObGetObjectFromHeader(entry->Object);
-    KeAcquireSpinLockAtDpcLevel(&objHeader->Lock);
-    objHeader->HandleCount--;
-    KeReleaseSpinLockFromDpcLevel(&objHeader->Lock);
 
     ObCloseHandleByEntry(entry);
 
@@ -288,6 +288,7 @@ ObCreateHandle(
                 handleDatabase->Entries[i].Object = object;
                 objHeader->HandleCount++;
                 KeReleaseSpinLock(&HandleManagerLock, irql);
+                ObReferenceObject(object);
                 return STATUS_SUCCESS;
             }
 

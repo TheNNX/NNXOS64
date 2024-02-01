@@ -400,3 +400,13 @@ MmHandlePageFault(
     KeReleaseSpinLock(&KeGetCurrentThread()->ThreadLock, Irql);
     return STATUS_INVALID_PARAMETER;
 }
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtCreateSectionFromFile(
+    PHANDLE pOutHandle,
+    PUNICODE_STRING pFilepath)
+{
+    return STATUS_NOT_SUPPORTED;
+}

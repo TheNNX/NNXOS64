@@ -222,9 +222,6 @@
     <ClCompile Include="syscall.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ldr\ldrobj.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="mm\mmobj.c">
       <Filter>Source Files</Filter>
     </ClCompile>

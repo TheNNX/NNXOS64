@@ -12,6 +12,8 @@
 #include <apc.h>
 #include <ntdebug.h>
 #include <ldr.h>
+#include <mm.h>
+#include <file.h>
 
 LIST_ENTRY ProcessListHead;
 LIST_ENTRY ThreadListHead;
@@ -43,7 +45,9 @@ PspSetupThreadState(
 NTSTATUS 
 NTAPI
 PspCreateProcessInternal(
-    PEPROCESS* ppProcess);
+    PEPROCESS* ppProcess,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES pObjectAttributes);
 
 NTSTATUS 
 NTAPI
@@ -421,8 +425,6 @@ PspInitializeCore(
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
-        PEPROCESS ldrTester;
-        PETHREAD ldrTesterThread;
 
 #if 0
         NTSTATUS ObpMpTest();
@@ -443,7 +445,7 @@ PspInitializeCore(
             VOID TestUserThread1();
             VOID TestUserThread2();
 
-            status = PspCreateProcessInternal(&userProcess1);
+            status = PspCreateProcessInternal(&userProcess1, 0, NULL);
             userProcess1->Pcb.AffinityMask = KAFFINITY_ALL;
             if (!NT_SUCCESS(status))
             {
@@ -476,29 +478,6 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread1);
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            status = PspCreateProcessInternal(&ldrTester);
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            status = PspCreateThreadInternal(&ldrTesterThread, 
-                                             ldrTester, 
-                                             TRUE, 
-                                             (ULONG_PTR)LdrTestThread);
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            ldrTesterThread->Tcb.ThreadPriority = 5;
-            ldrTester->Pcb.BasePriority = 5;
-
-            PspInsertIntoSharedQueueLocked((PKTHREAD)ldrTesterThread);
         }
     }
 
@@ -789,26 +768,31 @@ PspSetupThreadState(
 NTSTATUS 
 NTAPI
 PspCreateProcessInternal(
-    PEPROCESS* ppProcess)
+    PEPROCESS* ppProcess, 
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES pProcessObjAttributes)
 {
     NTSTATUS status;
     PEPROCESS pProcess;
     OBJECT_ATTRIBUTES processObjAttributes;
 
     /* Create the process object. */
-    InitializeObjectAttributes(
-        &processObjAttributes,
-        NULL,
-        OBJ_KERNEL_HANDLE,
-        NULL,
-        NULL
-    );
 
+    if (pProcessObjAttributes == NULL)
+    {
+        InitializeObjectAttributes(
+            &processObjAttributes,
+            NULL,
+            OBJ_KERNEL_HANDLE,
+            NULL,
+            NULL);
+        pProcessObjAttributes = &processObjAttributes;
+    }
     status = ObCreateObject(
         &pProcess, 
-        0, 
+        DesiredAccess, 
         KernelMode, 
-        &processObjAttributes, 
+        pProcessObjAttributes,
         PsProcessType,
         NULL);
 
@@ -1493,4 +1477,167 @@ KeSetCustomThreadAddressSpace(
     }
 
     return STATUS_SUCCESS;
+}
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtCreateProcessEx(
+    PHANDLE pHandle,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES pObjectAttributes,
+    HANDLE pParentProcess,
+    ULONG Flags,
+    HANDLE SectionHandle,
+    HANDLE DebugPort,
+    HANDLE ExceptionPort,
+    BOOL InJob)
+{
+    PEPROCESS pProcess;
+    NTSTATUS Status;
+    HANDLE Handle;
+
+    /* TODO: passing pObjectAttributes here is bullshit, we shouldn't pass
+     * the name - the process is not a named object. Could this work, because
+     * it has no parent?? 
+     * 
+     * TODO2: What's the root in the attributes anyway? */
+    Status = PspCreateProcessInternal(
+        &pProcess, 
+        DesiredAccess,
+        pObjectAttributes);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    Status = ObCreateHandle(
+        &Handle, 
+        DesiredAccess, /* TODO: Should this be passed for the second time?? 
+                          Can handles have different access than the objects 
+                          they refer to? */
+        pProcess);
+    if (!NT_SUCCESS(Status))
+    {
+        ObDereferenceObject(pProcess);
+        return Status;
+    }
+
+    /* TODO: copy object table, do all the other fancy stuff with arguments */
+
+    *pHandle = Handle;
+    return STATUS_SUCCESS;
+}
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtCreateProcess(
+    PHANDLE Handle,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    HANDLE ParentProcess,
+    BOOLEAN InheritObjectTable,
+    HANDLE SectionHandle,
+    HANDLE DebugPort,
+    HANDLE ExceptionPort)
+{
+    ULONG Flags = 0;
+
+    if (InheritObjectTable)
+    {
+        Flags |= 0x00000004L;
+    }
+
+    return NtCreateProcessEx(
+        Handle,
+        DesiredAccess,
+        ObjectAttributes,
+        ParentProcess,
+        Flags,
+        SectionHandle,
+        DebugPort,
+        ExceptionPort,
+        FALSE);
+}
+
+static UNICODE_STRING NtdllPath = RTL_CONSTANT_STRING(L"NTDLL.DLL");
+static const ULONG DummyTag = 'THRD';
+
+VOID NnxDummyLdrThread(PUNICODE_STRING Filepath)
+{
+    NTSTATUS status;
+    SIZE_T i;
+
+    status = STATUS_SUCCESS;
+
+    PrintT("LdrThread run with %x:%i:%i:");
+    for (i = 0; i < Filepath->Length / sizeof(*Filepath->Buffer); i++)
+    {
+        PrintT("%c", (char)Filepath->Buffer[i]);
+    }
+    PrintT("\n");
+
+    ExFreePoolWithTag(Filepath->Buffer, DummyTag);
+    ExFreePoolWithTag(Filepath, DummyTag);
+    PsExitThread(status);
+}
+
+NTSTATUS
+NnxStartUserProcess(
+    PCUNICODE_STRING Filepath,
+    HANDLE hOutProcess,
+    ULONG Priority)
+{
+    PEPROCESS pProcess;
+    PETHREAD pThread;
+    NTSTATUS status;
+    PUNICODE_STRING strCopy;
+
+    /* Create a copy of the filepath for the loader thread. This copy is owned 
+     * by that thread - it is responsible for freeing it. This is done, so the 
+     * caller can modify/free the memory pointed to by Firepath after returning 
+     * from this function. */
+    strCopy = ExAllocatePoolWithTag(NonPagedPool, sizeof(UNICODE_STRING), DummyTag);
+    if (strCopy == NULL)
+    {
+        return STATUS_NO_MEMORY;
+    }
+
+    strCopy->Buffer = ExAllocatePoolWithTag(
+        NonPagedPool,
+        Filepath->MaxLength * sizeof(*strCopy->Buffer),
+        DummyTag);
+    if (strCopy->Buffer == NULL)
+    {
+        ExFreePoolWithTag(strCopy, DummyTag);
+        return STATUS_NO_MEMORY;
+    }
+
+    strCopy->Length = Filepath->Length;;
+    strCopy->MaxLength = Filepath->MaxLength;
+    RtlCopyMemory(strCopy->Buffer, Filepath->Buffer, strCopy->Length);
+
+    /* Create the process and its initialzer thread. */
+    status = PspCreateProcessInternal(&pProcess, 0, NULL);
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+    pProcess->Pcb.BasePriority = Priority;
+
+    status = PspCreateThreadInternal(
+        &pThread, 
+        pProcess, 
+        TRUE, 
+        (ULONG_PTR)NnxDummyLdrThread);
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+    PspSetUsercallParameter(&pThread->Tcb, 0, (ULONG_PTR)strCopy);
+    pThread->Tcb.ThreadPriority = 0;
+
+    PspInsertIntoSharedQueue(&pThread->Tcb);
+    return STATUS_NOT_SUPPORTED;
 }
