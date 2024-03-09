@@ -52,6 +52,29 @@ HalBindInterrupt(
 
 VOID
 NTAPI
+HalpInitLegacyInterruptHandlerStub(
+    PKINTERRUPT pInterrupt,
+    ULONG_PTR ProperHandler)
+{
+    SIZE_T idx = 0;
+
+    /* push ProperHandler[31:0] ; (as 64 bit) */
+    pInterrupt->Handler[idx++] = 0x68;
+    *((DWORD*)&pInterrupt->Handler[idx]) = ProperHandler & ((DWORD)-1L);
+    idx += sizeof(DWORD);
+
+    /* mov dword [rsp+4], ProperHandler[63:32] */
+    *((DWORD*)&pInterrupt->Handler[idx]) = 0x042444C7UL;
+    idx += sizeof(DWORD);
+    *((DWORD*)&pInterrupt->Handler[idx]) = ProperHandler >> 32;
+    idx += sizeof(DWORD);
+
+    /* ret */
+    pInterrupt->Handler[idx++] = 0xC3;
+}
+
+VOID
+NTAPI
 HalpInitInterruptHandlerStub(
     PKINTERRUPT pInterrupt,
     ULONG_PTR ProperHandler)

@@ -7,6 +7,7 @@
 #include <bugcheck.h>
 #include <scheduler.h>
 #include <ntdebug.h>
+#include <mm.h>
 
 #define PML4EntryForRecursivePaging 510ULL
 #define PML4_COVERED_SIZE 0x1000000000000ULL
@@ -97,7 +98,7 @@ MmCreateAddressSpace(
     ((ULONG_PTR*)virtualPML4)[KERNEL_DESIRED_PML4_ENTRY] = KernelPml4Entry;
 
     pOutAddressSpace->TopStructPhysAddress = PhysicalPML4;
-    InitializeListHead(&pOutAddressSpace->SectionLinkHead);
+    InitializeListHead(&pOutAddressSpace->SectionViewHead);
 
     return STATUS_SUCCESS;
 }
@@ -191,6 +192,28 @@ ULONG_PTR PagingAllocatePageFromRange(ULONG_PTR min, ULONG_PTR max)
 ULONG_PTR PagingAllocatePage()
 {
     return PagingAllocatePageFromRange(0, (PML4EntryForRecursivePaging - 1) * PDP_COVERED_SIZE - 1);
+}
+
+UINT16
+PagingFlagsFromSectionFlags(
+    PFN_NUMBER Mapping,
+    PKMEMORY_SECTION Section)
+{
+    if (Mapping == NULL)
+    {
+        return 0;
+    }
+
+    switch (Section->Protection)
+    {
+    case PAGE_READONLY:
+        return PAGE_PRESENT | PAGE_READ | PAGE_USER;
+    case PAGE_READWRITE:
+        return PAGE_PRESENT | PAGE_READ | PAGE_USER | PAGE_WRITE;
+    default:
+        /* TODO */
+        return 0;
+    }
 }
 
 NTSTATUS PagingMapPage(ULONG_PTR v, ULONG_PTR p, UINT16 f)

@@ -124,6 +124,8 @@ KiInitializeInterrupts(VOID)
             (i == 1) || (i == 3) || (i == 4),
             NULL);
 
+        HalpInitLegacyInterruptHandlerStub(exception, (ULONG_PTR)exceptionHandlers[i]);
+
         if (!NT_SUCCESS(status))
         {
             return status;

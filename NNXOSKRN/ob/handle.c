@@ -2,6 +2,7 @@
 #include "object.h"
 #include <scheduler.h>
 #include <bugcheck.h>
+#include <SimpleTextIO.h>
 
 LIST_ENTRY SystemHandleDatabaseHead;
 HANDLE_DATABASE InitialSystemHandleDatabase;
@@ -168,14 +169,12 @@ ObCloseHandleByEntry(
     KIRQL irql;
     POBJECT_HEADER objHeader;
 
-    KeAcquireSpinLock(&HandleManagerLock, &irql);
     objHeader = ObGetObjectFromHeader(entry->Object);
-    KeAcquireSpinLockAtDpcLevel(&objHeader->Lock);
+    KeAcquireSpinLock(&objHeader->Lock, &irql);
     objHeader->HandleCount--;
-    entry->Object = NULL;
-    KeReleaseSpinLockFromDpcLevel(&objHeader->Lock);
-    KeReleaseSpinLock(&HandleManagerLock, irql);
+    KeReleaseSpinLock(&objHeader->Lock, irql);
     ObDereferenceObject(entry->Object);
+    entry->Object = NULL;
 }
 
 /* @brief Gets the handle database entry for the handle given and performs 
@@ -229,7 +228,6 @@ ObCloseHandle(
     }
 
     ObCloseHandleByEntry(entry);
-
     /* Unlock the database spinlock. */
     KeReleaseSpinLock(lock, irql);
     return STATUS_SUCCESS;
@@ -300,4 +298,35 @@ ObCreateHandle(
 
     KeReleaseSpinLock(&HandleManagerLock, irql);
     return STATUS_NO_MEMORY;
+}
+
+NTSTATUS
+NTAPI
+ObCloneHandle(HANDLE InHandle, PHANDLE pOutHandle)
+{
+    PVOID Object;
+    NTSTATUS Status;
+
+    if (pOutHandle == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (InHandle == NULL)
+    {
+        return STATUS_INVALID_HANDLE;
+    }
+
+    Status = ObExtractAndReferenceObjectFromHandle(
+        InHandle, 
+        &Object, 
+        KernelMode);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    Status = ObCreateHandle(pOutHandle, KernelMode, Object);
+    ObDereferenceObject(Object);
+    return Status;
 }

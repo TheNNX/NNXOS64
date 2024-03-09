@@ -121,6 +121,7 @@ SharedObjOnCreate(
     PSHARED_FILE_OBJECT SharedObject = (PSHARED_FILE_OBJECT)Self;
     PSHARED_FILE_OBJECT_INIT_DATA InitData =
         (PSHARED_FILE_OBJECT_INIT_DATA)OpenData;
+    
     SIZE_T i;
     PVFS pFilesystem;
     CHAR asciiPath[VFS_MAX_PATH] = { 0 };
@@ -139,6 +140,10 @@ SharedObjOnCreate(
 
     SharedObject->pFile =
         pFilesystem->Functions.OpenFile(pFilesystem, asciiPath);
+    if (SharedObject->pFile == NULL)
+    {
+        return STATUS_NO_SUCH_FILE;
+    }
 
     InitializeListHead(&SharedObject->Instances);
     return STATUS_SUCCESS;
@@ -439,6 +444,41 @@ NtReadFile(
     }    
 
     pStatusBlock->Status = STATUS_SUCCESS;
+
+    Status = ObDereferenceObject(pInstance);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NTAPI
+NnxGetNtFileSize(HANDLE hFile, PLARGE_INTEGER outSize)
+{
+    PVFS_FILE pFile;
+    NTSTATUS Status;
+    PVFS pFilesystem;
+    PFILE_OPEN_INSTANCE_OBJECT pInstance;
+
+    Status = ObReferenceObjectByHandle(
+        hFile,
+        0,
+        IoFileOpenInstanceObjectType,
+        KernelMode,
+        &pInstance,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    pFilesystem = pInstance->SharedFileObject->pFileSystem;
+    pFile = pInstance->SharedFileObject->pFile;
+
+    outSize->QuadPart = pFile->FileSize;
 
     Status = ObDereferenceObject(pInstance);
     if (!NT_SUCCESS(Status))

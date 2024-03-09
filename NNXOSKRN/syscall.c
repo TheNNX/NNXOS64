@@ -74,12 +74,43 @@ NTSTATUS NtDll5Test()
     return STATUS_NOT_SUPPORTED;
 }
 
+NTSTATUS
+NTAPI
+KiInvokeServiceHelper(
+    ULONG_PTR Arg0,
+    ULONG_PTR Arg1,
+    ULONG_PTR Service,
+    ULONG_PTR NumberOfStackArgs,
+    ULONG_PTR AdjustedUserStack);
+
 NTSTATUS KiInvokeService(
-    NTSTATUS(NTAPI* Service)(),
+    NTSTATUS(NTAPI *Service)(),
     SIZE_T NumberOfArgs, 
+    ULONG_PTR Rdx,
+    ULONG_PTR R8,
     ULONG_PTR Stack)
 {
-    return Service();
+    switch (NumberOfArgs)
+    {
+    case 0:
+        return Service();
+    case 1:
+        return Service(Rdx);
+    case 2:
+        return Service(Rdx, R8);
+    case 3:
+        ASSERT(FALSE);
+        return KiInvokeServiceHelper(
+            Rdx,
+            R8,
+            (ULONG_PTR)Service,
+            NumberOfArgs - 2,
+            /* + ReturnAddress + ShadowZone */
+            Stack + 8 + 32);
+    default:
+        ASSERT(FALSE);
+        return 0;
+    }
 }
 
 /**
@@ -127,7 +158,7 @@ SystemCallHandler(
 
         break;
     case 3:
-        return KiInvokeService(NtDll5Test, 5, p4);
+        return KiInvokeService(NtDll5Test, 5, p2, p3, p4);
     default:
         PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
         ASSERT(FALSE);

@@ -33,7 +33,7 @@
 typedef struct _ADDRESS_SPACE
 {
     ULONG_PTR  TopStructPhysAddress;
-    LIST_ENTRY SectionLinkHead;
+    LIST_ENTRY SectionViewHead;
     KSPIN_LOCK Lock;
 }ADDRESS_SPACE, *PADDRESS_SPACE;
 

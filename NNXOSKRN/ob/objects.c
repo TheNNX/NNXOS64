@@ -87,10 +87,9 @@ ObReferenceObjectByHandle(
     NTSTATUS status;
 
     if (handle == NULL)
+    {
         return STATUS_INVALID_HANDLE;
-
-    if (pObject == NULL)
-        return STATUS_INVALID_PARAMETER;
+    }
 
     /* Try extracting the object pointer. */
     status = ObExtractAndReferenceObjectFromHandle(
@@ -119,8 +118,11 @@ ObReferenceObjectByHandle(
         return status;
     }
 
-    /* Return our pointer. */
-    *pObject = localObjectPtr;
+    if (pObject != NULL)
+    {
+        /* Return the pointer. */
+        *pObject = localObjectPtr;
+    }
 
     /* Derefence the original refernece. */
     ObDereferenceObject(localObjectPtr);

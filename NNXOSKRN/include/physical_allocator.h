@@ -35,10 +35,6 @@ extern "C"
         PMMPFN_ENTRY pfnEntries,
         SIZE_T numberOfPfnEntries);
 
-    NTSTATUS
-    NTAPI
-    MmMapSection();
-
     NTSTATUS 
     NTAPI
     MmAllocatePfn(

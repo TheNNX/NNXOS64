@@ -83,6 +83,13 @@ extern "C"
     HalpInitInterruptHandlerStub(
         PKINTERRUPT pInterrupt,
         ULONG_PTR ProperHandler);
+
+    NTHALAPI
+    VOID
+    NTAPI
+    HalpInitLegacyInterruptHandlerStub(
+        PKINTERRUPT pInterrupt,
+        ULONG_PTR ProperHandler);
 #ifdef __cplusplus
 }
 #endif

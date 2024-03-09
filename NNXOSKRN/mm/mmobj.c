@@ -11,13 +11,17 @@
 #include <scheduler.h>
 #include <file.h>
 
-typedef struct _SECTION_PROCESS_LINK
+UINT16
+PagingFlagsFromSectionFlags(
+    PFN_NUMBER Mapping,
+    PKMEMORY_SECTION Section);
+
+
+VOID MiNotifyAboutSectionChanges()
 {
-    LIST_ENTRY       AddressSpaceEntry;
-    LIST_ENTRY       SectionEntry;
-    PADDRESS_SPACE   AddressSpace;
-    PKMEMORY_SECTION Section;
-}SECTION_PROCESS_LINK, *PSECTION_PROCESS_LINK;
+    /* TODO: Notify other cores about changes in a section/address space, so
+     * they can update their address spaces accordingly. */
+}
 
 static POBJECT_TYPE   MmSectionType;
 static UNICODE_STRING MmSectionTypeName = RTL_CONSTANT_STRING(L"MemorySection");
@@ -25,8 +29,9 @@ static UNICODE_STRING MmSectionTypeName = RTL_CONSTANT_STRING(L"MemorySection");
 typedef struct _MEMORY_SECTION_CREATION_DATA
 {
     SIZE_T    NumberOfPages;
-    ULONG_PTR BaseVirtualAddress;
+    ULONG     Protection;
     ULONG_PTR Flags;
+    HANDLE    File;
 }MEMORY_SECTION_CREATION_DATA, *PMEMORY_SECTION_CREATION_DATA;
 
 static
@@ -41,9 +46,9 @@ MiCreateSection(
         return STATUS_INVALID_PARAMETER;
     }
     Section->NumberOfPages = Data->NumberOfPages;
-    Section->BaseVirtualAddress = Data->BaseVirtualAddress;
     Section->Flags = Data->Flags;
-    KeInitializeSpinLock(&Section->SectionLock);
+    Section->Protection = Data->Protection;
+    Section->SectionFile = Data->File;
 
     /* FIXME: Potential non paged pool memory hog. */
     Section->Mappings = ExAllocatePoolZero(
@@ -66,11 +71,15 @@ MiDeleteSection(
 {
     ASSERT(Section != NULL && Section->Mappings != NULL);
 
+    if (Section->SectionFile != NULL)
+    {
+        // ObCloseHandle(Section->SectionFile, KernelMode);
+    }
+
     ExFreePoolWithTag(Section->Mappings, 'MSEC');
 
     Section->NumberOfPages = 0;
     Section->Mappings = NULL;
-    Section->BaseVirtualAddress = NULL;
 
     return STATUS_SUCCESS;
 }
@@ -78,59 +87,57 @@ MiDeleteSection(
 static
 NTSTATUS
 NTAPI
-MiMapSection(
+MiMapView(
     PADDRESS_SPACE AddressSpace,
-    PKMEMORY_SECTION Section)
+    PSECTION_VIEW SectionView)
 {
-    SIZE_T Index;
+    SIZE_T Index, MappingIndex;
     ULONG_PTR Address;
-    ULONG_PTR VirtualAddress = Section->BaseVirtualAddress;
+    PKMEMORY_SECTION Section;
+    ULONG_PTR VirtualAddress;
     NTSTATUS Status;
 
+    Status = ObReferenceObjectByHandle(
+        SectionView->hSection,
+        0,
+        NULL,
+        KernelMode,
+        &Section,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
     KeSetCustomThreadAddressSpace(KeGetCurrentThread(), AddressSpace);
+    VirtualAddress = SectionView->BaseAddress;
 
     /* Check if the section can be mapped into this address space at this
      * virtual address. */
-    for (Index = 0; Index < Section->NumberOfPages; Index++)
+    for (Index = 0; Index < SectionView->SizePages; Index++)
     {
         Address = VirtualAddress + Index * PAGE_SIZE;
-        if (PagingGetTableMapping(Address) != 0)
+        MappingIndex = Index - (SectionView->SectionOffset / PAGE_SIZE);
+
+        if (PagingGetTableMapping(Address) != 0 ||
+            MappingIndex >= Section->NumberOfPages)
         {
+            KeClearCustomThreadAddressSpace(KeGetCurrentThread());
+            ObDereferenceObject(Section);
             return STATUS_CONFLICTING_ADDRESSES;
         }
     }
 
-    /* No process is using the section yet - initialize it.
-       It is neccessary, beacause there aren't any preexisting mapping that can
-       be used yet. */
-    if (IsListEmpty(&Section->ProcessLinkHead))
-    {
-        for (Index = 0; Index < Section->NumberOfPages; Index++)
-        {
-            Status = MmAllocatePfn(&Section->Mappings[Index]);
-            if (!NT_SUCCESS(Status))
-            {
-                SIZE_T Jndex;
-                for (Jndex = 0; Jndex < Index; Jndex++)
-                {
-                    /* Ignore the status - nothing can be done if this fails. */
-                    MmFreePfn(Section->Mappings[Jndex]);
-                }
-
-                KeClearCustomThreadAddressSpace(KeGetCurrentThread());
-                return Status;
-            }
-        }
-    }
-
     /* Actually map the section pages into the address space. */
-    for (Index = 0; Index < Section->NumberOfPages; Index++)
+    for (Index = 0; Index < SectionView->SizePages; Index++)
     {
         Address = VirtualAddress + Index * PAGE_SIZE;
+        MappingIndex = Index - (SectionView->SectionOffset / PAGE_SIZE);
+
         Status = PagingMapPage(
             Address, 
-            PA_FROM_PFN(Section->Mappings[Index]), 
-            PAGING_USER_SPACE);
+            PA_FROM_PFN(Section->Mappings[MappingIndex]), 
+            PagingFlagsFromSectionFlags(Section->Mappings[MappingIndex], Section));
         if (!NT_SUCCESS(Status))
         {
             /* Unmap all previously mapped pages of the section if an error
@@ -143,106 +150,129 @@ MiMapSection(
             }
 
             KeClearCustomThreadAddressSpace(KeGetCurrentThread());
+            ObDereferenceObject(Section);
             return Status;
         }
     }
 
     KeClearCustomThreadAddressSpace(KeGetCurrentThread());
+    ObDereferenceObject(Section);
     return STATUS_SUCCESS;
 }
 
-/* TODO: Check for collisions. */
 NTSTATUS
 NTAPI
-MmAttachSectionToProcess(
+MmCreateView(
     PADDRESS_SPACE AddressSpace,
-    PKMEMORY_SECTION Section)
+    HANDLE hSection,
+    ULONG_PTR VirtualAddress,
+    ULONG_PTR Offset,
+    SIZE_T Size,
+    PSECTION_VIEW* pOutView)
 {
     KIRQL Irql;
-    PSECTION_PROCESS_LINK Link;
+    PSECTION_VIEW View;
     NTSTATUS Status;
-    
-    KeAcquireSpinLock(&AddressSpace->Lock, &Irql);
-    KeAcquireSpinLockAtDpcLevel(&Section->SectionLock);
+    PKMEMORY_SECTION Section;
 
-    Status = STATUS_SUCCESS;
+    Size = PAGE_ALIGN(Size + PAGE_SIZE - 1);
+    Offset = PAGE_ALIGN(Offset);
+    VirtualAddress = PAGE_ALIGN(VirtualAddress);
 
-    ObReferenceObject(Section);
-    Link = ExAllocatePoolWithTag(NonPagedPool, sizeof(*Link), 'MSEL');
-    if (Link == NULL)
-    {
-        Status = STATUS_NO_MEMORY;
-        goto Exit;
-    }
-
-    Status = MiMapSection(AddressSpace, Section);
+    /* Do not dereference on success - the view holds a reference to the section
+     * object. */
+    Status = ObReferenceObjectByHandle(
+        hSection,
+        0,
+        NULL,
+        KernelMode,
+        &Section,
+        NULL);
     if (!NT_SUCCESS(Status))
     {
+        return Status;
+    }
+
+    KeAcquireSpinLock(&AddressSpace->Lock, &Irql);
+
+    if (Size == 0)
+    {
+        Size = Section->NumberOfPages * PAGE_SIZE;
+    }
+
+    if (VirtualAddress == NULL)
+    {
+        VirtualAddress = PagingFindFreePages(
+            PAGING_USER_SPACE,
+            PAGING_USER_SPACE_END,
+            Size / PAGE_SIZE + 1);
+    }
+
+    View = ExAllocatePoolWithTag(NonPagedPool, sizeof(*View), 'MSEL');
+    if (View == NULL)
+    {
+        Status = STATUS_NO_MEMORY;
+        ObDereferenceObject(Section);
+        goto Exit;
+    }
+    View->hSection = hSection;
+    View->BaseAddress = VirtualAddress;
+    View->SizePages = Size / PAGE_SIZE;
+    View->SectionOffset = Offset;
+
+    Status = MiMapView(AddressSpace, View);
+    if (!NT_SUCCESS(Status))
+    {
+        ObDereferenceObject(Section);
         goto Exit;
     }
 
-    Link->AddressSpace = AddressSpace;
-    Link->Section = Section;
-    InsertTailList(&Section->ProcessLinkHead, &Link->SectionEntry);
-    InsertTailList(&AddressSpace->SectionLinkHead, &Link->AddressSpaceEntry);
+    InsertTailList(&AddressSpace->SectionViewHead, &View->AddressSpaceEntry);
+    *pOutView = View;
 Exit:
-    KeReleaseSpinLockFromDpcLevel(&Section->SectionLock);
+    MiNotifyAboutSectionChanges();
     KeReleaseSpinLock(&AddressSpace->Lock, Irql);
     return Status;
 }
 
 NTSTATUS
 NTAPI
-MmDeteachSectionFromProcess(
+MmDeleteView(
     PADDRESS_SPACE AddressSpace,
-    PKMEMORY_SECTION Section)
+    PSECTION_VIEW View)
 {
     KIRQL Irql;
-    PSECTION_PROCESS_LINK Link, CurrentLink;
-    PLIST_ENTRY Current, Head;
+    SIZE_T Index;
     NTSTATUS Status;
+    PKMEMORY_SECTION Section;
 
+    Status = ObReferenceObjectByHandle(
+        View->hSection,
+        0,
+        NULL,
+        KernelMode,
+        &Section,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
     KeAcquireSpinLock(&AddressSpace->Lock, &Irql);
-    KeAcquireSpinLockAtDpcLevel(&Section->SectionLock);
 
-    Status = STATUS_SUCCESS;
-
-    /* Find the link between the address space and the section and delete it. */
-    Current = AddressSpace->SectionLinkHead.First;
-    Head = &AddressSpace->SectionLinkHead;
-    Link = NULL;
-
-    while (Current != Head)
+    for (Index = 0; Index < View->SizePages; Index++)
     {
-        CurrentLink = CONTAINING_RECORD(
-            Current, 
-            SECTION_PROCESS_LINK, 
-            AddressSpaceEntry);
-
-        if (CurrentLink->Section == Section)
-        {
-            Link = CurrentLink;
-        }
-
-        Current = Current->Next;
+        PagingMapPage(View->BaseAddress + Index * PAGE_SIZE, NULL, 0);
     }
 
-    if (Link == NULL)
-    {
-        /* TODO: Better status for section not being mapped into the given 
-           address space. */
-        Status = STATUS_INVALID_PARAMETER;
-        goto Exit;
-    }
-
-    RemoveEntryList(&Link->SectionEntry);
-    RemoveEntryList(&Link->AddressSpaceEntry);
-    ExFreePool(Link);
+    RemoveEntryList(&View->AddressSpaceEntry);
+    ExFreePool(View);
+    /* Remove view's reference to the section if successful. */
     ObDereferenceObject(Section);
-Exit:
-    KeReleaseSpinLockFromDpcLevel(&Section->SectionLock);
+    /* Remove this function's reference. */
+    ObDereferenceObject(Section);
+    MiNotifyAboutSectionChanges();
     KeReleaseSpinLock(&AddressSpace->Lock, Irql);
-    return Status;
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -269,9 +299,10 @@ MmInitObjects()
 NTSTATUS
 NTAPI
 MiCreateSectionObject(
-    ULONG_PTR BaseVa,
     SIZE_T NumberOfPages,
     ULONG_PTR Flags,
+    ULONG Protection,
+    HANDLE File,
     PKMEMORY_SECTION *outSection)
 {
     NTSTATUS Status;
@@ -280,12 +311,18 @@ MiCreateSectionObject(
 
     InitializeObjectAttributes(&Attributes, NULL, 0, NULL, NULL);
 
-    Data.BaseVirtualAddress = BaseVa;
     Data.NumberOfPages = NumberOfPages;
     Data.Flags = Flags;
+    Data.Protection = Protection;
+    Data.File = File;
+    Status = ObCloneHandle(File, &Data.File);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
 
     Status = ObCreateObject(
-        (PVOID*)&outSection,
+        (PVOID*)outSection,
         0, 
         KernelMode, 
         &Attributes,
@@ -310,22 +347,69 @@ MmGetCurrentAddressSpace(VOID)
 
 NTSTATUS
 NTAPI
-MmHandleSectionPageFault(
-    PKMEMORY_SECTION pSection,
-    ULONG_PTR Address)
+MmHandleViewPageFault(
+    PSECTION_VIEW SectionView,
+    ULONG_PTR Address,
+    BOOLEAN Write)
 {
-    ASSERT(pSection->SectionLock != NULL);
+    PKMEMORY_SECTION Section;
+    NTSTATUS Status;
 
-    if (pSection->SectionFile != NULL)
+    PrintT("[%s]\n", __FUNCTION__);
+
+    Status = ObReferenceObjectByHandle(
+        SectionView->hSection,
+        0,
+        NULL,
+        KernelMode,
+        &Section,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        PrintT("Bad section\n");
+        return Status;
+    }
+    PrintT("Handle opened, trying write:%i file:%X\n", Write, Section->SectionFile);
+
+    if (Section->SectionFile != NULL && !Write)
     {
         LARGE_INTEGER Offset;
         IO_STATUS_BLOCK StatusBlock;
+        SIZE_T MappingIndex;
+        ULONG_PTR FileOffset;
+        PFN_NUMBER Pfn;
 
-        Offset.QuadPart = PAGE_ALIGN(Address - pSection->BaseVirtualAddress);
+        FileOffset = PAGE_ALIGN(Address - SectionView->BaseAddress);
+
+        MappingIndex = (Address - SectionView->BaseAddress) / PAGE_SIZE;
+        Offset.QuadPart = FileOffset;
+
+        PrintT("Mapping: %X\n", Section->Mappings[MappingIndex]);
+        if (Section->Mappings[MappingIndex] == NULL)
+        {
+            PrintT("Allocate PFN for %i\n", MappingIndex);
+
+            Status = MmAllocatePfn(&Section->Mappings[MappingIndex]);
+            if (!NT_SUCCESS(Status))
+            {
+                ObDereferenceObject(Section);
+                return Status;
+            }
+
+            Pfn = Section->Mappings[MappingIndex];
+
+            PagingMapPage(
+                PAGE_ALIGN(Address),
+                PA_FROM_PFN(Pfn),
+                PAGE_PRESENT | PAGE_WRITE);
+
+            PrintT("Mapped in %X[%X]\n", __readcr3(), KeGetCurrentProcess()->Pcb.AddressSpace.TopStructPhysAddress);
+        }
 
         ASSERTMSG(KeGetCurrentIrql() <= DISPATCH_LEVEL, "");
 
-        return NtReadFile(pSection->SectionFile, 
+        PrintT("Read file\n");
+        Status = NtReadFile(Section->SectionFile,
                           NULL, 
                           NULL, 
                           NULL, 
@@ -334,19 +418,29 @@ MmHandleSectionPageFault(
                           PAGE_SIZE,
                           &Offset,
                           NULL);
+
+        ObDereferenceObject(Section);
+        return Status;
+    }
+    else if (Section->SectionFile != NULL && Write)
+    {
+        /* TODO */
+        ASSERT(FALSE);
+        return STATUS_NOT_SUPPORTED;
     }
 
+    ObDereferenceObject(Section);
     return STATUS_INVALID_ADDRESS;
 }
 
 static
 BOOLEAN
-MmIsAddressInSection(
-    PKMEMORY_SECTION pMemorySection,
+MmIsAddressInView(
+    PSECTION_VIEW View,
     ULONG_PTR Address)
 {
-    ULONG_PTR Base = pMemorySection->BaseVirtualAddress;
-    SIZE_T Size = pMemorySection->NumberOfPages * PAGE_SIZE;
+    ULONG_PTR Base = View->BaseAddress;
+    SIZE_T Size = View->SizePages * PAGE_SIZE;
 
     return (Address >= Base) && (Address < Base + Size);
 }
@@ -354,48 +448,47 @@ MmIsAddressInSection(
 NTSTATUS
 NTAPI
 MmHandlePageFault(
-    ULONG_PTR Address)
+    ULONG_PTR Address,
+    BOOLEAN Write)
 {
     PADDRESS_SPACE pCurrentAddressSpace;
     PLIST_ENTRY Current, Head;
     KIRQL Irql;
     NTSTATUS Status;
-    
+
     KeAcquireSpinLock(&KeGetCurrentThread()->ThreadLock, &Irql);
     pCurrentAddressSpace = MmGetCurrentAddressSpace();
 
     /* Lock the address space. */
     KeAcquireSpinLockAtDpcLevel(&pCurrentAddressSpace->Lock);
-    Current = pCurrentAddressSpace->SectionLinkHead.First;
-    Head = &pCurrentAddressSpace->SectionLinkHead;
+    Current = pCurrentAddressSpace->SectionViewHead.First;
+    Head = &pCurrentAddressSpace->SectionViewHead;
 
-    /* Iterate over each section in the address space. */
+    /* Iterate over each view in the address space. */
     while (Current != Head)
     {
-        PSECTION_PROCESS_LINK CurrentLink = 
+        PSECTION_VIEW CurrentView = 
             CONTAINING_RECORD(Current, 
-                              SECTION_PROCESS_LINK, 
+                              SECTION_VIEW, 
                               AddressSpaceEntry);
 
-        /* Lock the section. */
-        KeAcquireSpinLockAtDpcLevel(&CurrentLink->Section->SectionLock);
         /* If the address falls into this section, try to handle it. */
-        if (MmIsAddressInSection(CurrentLink->Section, Address))
+        if (MmIsAddressInView(CurrentView, Address))
         {
-            Status =  MmHandleSectionPageFault(CurrentLink->Section, Address);
-            KeReleaseSpinLockFromDpcLevel(&CurrentLink->Section->SectionLock);
+            Status = MmHandleViewPageFault(CurrentView, Address, Write);
+            MiNotifyAboutSectionChanges();
             KeReleaseSpinLockFromDpcLevel(&pCurrentAddressSpace->Lock);
             KeReleaseSpinLock(&KeGetCurrentThread()->ThreadLock, Irql);
             /* Address was handled, exit. */
             return Status;
         }
-        KeReleaseSpinLockFromDpcLevel(&CurrentLink->Section->SectionLock);
 
         /* Address was not handled, go to the next section. */
         Current = Current->Next;
     }
 
     /* Address could not be handled, this is an access violation. */
+    MiNotifyAboutSectionChanges();
     KeReleaseSpinLockFromDpcLevel(&pCurrentAddressSpace->Lock);
     KeReleaseSpinLock(&KeGetCurrentThread()->ThreadLock, Irql);
     return STATUS_INVALID_PARAMETER;
@@ -408,5 +501,50 @@ NtCreateSectionFromFile(
     PHANDLE pOutHandle,
     PUNICODE_STRING pFilepath)
 {
-    return STATUS_NOT_SUPPORTED;
+    HANDLE hFile;
+    NTSTATUS Status;
+    OBJECT_ATTRIBUTES objAttr;
+    IO_STATUS_BLOCK ioStatus;
+    PKMEMORY_SECTION MemorySection;
+    LARGE_INTEGER FileSize;
+
+    InitializeObjectAttributes(&objAttr, pFilepath, 0, NULL, NULL);
+    Status = NtCreateFile(
+        &hFile, 
+        FILE_GENERIC_READ, 
+        &objAttr, 
+        &ioStatus, 
+        NULL, 
+        FILE_ATTRIBUTE_NORMAL,
+        FILE_SHARE_READ,
+        FILE_OPEN,
+        FILE_NON_DIRECTORY_FILE,
+        NULL, 
+        0);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    Status = NnxGetNtFileSize(hFile, &FileSize);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    Status = MiCreateSectionObject(
+        (FileSize.QuadPart + PAGE_SIZE - 1) / PAGE_SIZE, 
+        0, 
+        PAGE_READONLY, 
+        hFile, 
+        &MemorySection);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    // ObCloseHandle(hFile, KernelMode);
+    Status = ObCreateHandle(pOutHandle, KernelMode, MemorySection);
+
+    return Status;
 }

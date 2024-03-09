@@ -59,6 +59,12 @@ extern "C" {
         KPROCESSOR_MODE accessMode, 
         PVOID object);
 
+    NTSTATUS
+    NTAPI
+    ObCloneHandle(
+        HANDLE InHandle,
+        PHANDLE pOutHandle);
+
 #endif
 
 #ifdef __cplusplus

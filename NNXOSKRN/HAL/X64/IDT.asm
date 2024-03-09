@@ -241,11 +241,10 @@ exception_error 30
 [extern PageFaultHandler]
 func Exception14
     cli
-    add rsp, 8
-    ;cmp QWORD [rsp+8], 0x08
-    ;je .noswap
-    ;swapgs
-;.noswap:
+    cmp QWORD [rsp+16], 0x08
+    je .noswap
+    swapgs
+.noswap:
 
     pushvol
     mov rcx, 14
@@ -257,10 +256,11 @@ func Exception14
     add rsp, 32
     popvol
 
-    cmp QWORD [rsp+8], 0x08
+    cmp QWORD [rsp+16], 0x08
     je .noswap2
     swapgs
 .noswap2:
+    add rsp, 8
     iretq
 
 [GLOBAL ExceptionReserved]

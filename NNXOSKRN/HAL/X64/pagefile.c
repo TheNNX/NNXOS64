@@ -288,7 +288,7 @@ PageFaultHandler(
     NTSTATUS status;
     ULONG_PTR Address = __readcr2();
 
-    PrintT("Servicing page fault %X %X %X\n", rip, errcode, KeGetCurrentProcessorId());
+    PrintT("Servicing page fault %X %X %X %X %X\n", n, rip, errcode, KeGetCurrentProcessorId(), Address);
 
     if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
     {
@@ -300,9 +300,9 @@ PageFaultHandler(
             (ULONG_PTR)KeGetCurrentIrql());
     }
 
-    if (PagingGetTableMapping(PAGE_ALIGN(Address)) & PAGE_PRESENT) 
+    if ((PagingGetTableMapping(PAGE_ALIGN(Address)) & PAGE_PRESENT) == 0) 
     {
-        status = MmHandlePageFault(Address);
+        status = MmHandlePageFault(Address, (errcode & 2) != 0);
         if (!NT_SUCCESS(status))
         {
             /* TODO: switch bugcheck code from status. */
@@ -313,5 +313,14 @@ PageFaultHandler(
                 (ULONG_PTR)rip,
                 ToBugcheck50Param4(status));
         }
+    }
+    else
+    {
+        KeBugCheckEx(
+            PAGE_FAULT_IN_NONPAGED_AREA,
+            Address,
+            (errcode & 2) != 0,
+            (ULONG_PTR)rip,
+            0);
     }
 }

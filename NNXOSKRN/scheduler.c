@@ -464,7 +464,7 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
 
-            UNICODE_STRING t = RTL_CONSTANT_STRING(L"whatever.exe");
+            UNICODE_STRING t = RTL_CONSTANT_STRING(L"\\EFI\\BOOT\\APSTART.BIN");
             status = NnxStartUserProcess(&t, &hProcess, 10);
             if (!NT_SUCCESS(status))
             {
@@ -1563,21 +1563,59 @@ NTAPI
 NnxDummyLdrThread(
     PUNICODE_STRING Filepath)
 {
-    NTSTATUS status;
+    PUBYTE pByte;
+    NTSTATUS Status;
     SIZE_T i;
+    HANDLE Section;
+    PSECTION_VIEW View;
 
-    status = STATUS_SUCCESS;
+    Status = STATUS_SUCCESS;
 
-    PrintT("LdrThread run with %x:%i:%i:");
     for (i = 0; i < Filepath->Length / sizeof(*Filepath->Buffer); i++)
     {
         PrintT("%c", (char)Filepath->Buffer[i]);
     }
     PrintT("\n");
 
+    PrintT("Trying to load %U\n", Filepath);
+    Status = NtCreateSectionFromFile(&Section, Filepath);
+    if (!NT_SUCCESS(Status))
+    {
+        PrintT("Creating file section failed\n");
+        PsExitThread(Status);
+    }
+
+    Status = MmCreateView(
+        &KeGetCurrentProcess()->Pcb.AddressSpace, 
+        Section, 
+        0x4321000, 
+        0, 
+        0, 
+        &View);
+
+    if (!NT_SUCCESS(Status))
+    {
+        PrintT("Creating section view failed\n");
+        ObCloseHandle(Section, KernelMode);
+        PsExitThread(Status);
+    }
+
     ExFreePoolWithTag(Filepath->Buffer, DummyTag);
     ExFreePoolWithTag(Filepath, DummyTag);
-    PsExitThread(status);
+
+    pByte = (PUBYTE)View->BaseAddress;
+
+    for (; (ULONG_PTR)pByte < View->BaseAddress + View->SizePages * PAGE_SIZE / 16; pByte++)
+    {
+        PrintT("0x%X, ", *pByte);
+    }
+
+    PrintT("Exiting LdrThread %X with status %X\n", 
+           KeGetCurrentThread(), 
+           Status);
+
+    ObCloseHandle(Section, KernelMode);
+    PsExitThread(Status);
 }
 
 NTSTATUS

@@ -98,6 +98,12 @@ extern "C"{
         PVOID ExtAttributesBuffer,
         ULONG EaBufferSize);
 
+    NTSTATUS
+    NTAPI
+    NnxGetNtFileSize(
+        HANDLE hFile, 
+        PLARGE_INTEGER outSize);
+
     NTSYSAPI
     NTSTATUS
     NTAPI

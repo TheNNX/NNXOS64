@@ -8,3 +8,18 @@
 func PspIdleThreadProcedure
     hlt
     jmp PspIdleThreadProcedure
+
+; RCX - Arg0
+; RDX - Arg1
+; R8  - Service
+; R9 - NumberOfStackArgs
+; RSP[8 + 32 + 32] - AdjustedUserStack
+func KiInvokeServiceHelper
+    
+    sub rsp, 32
+    
+
+
+    call [rax]
+    add rsp, 32
+    ret
