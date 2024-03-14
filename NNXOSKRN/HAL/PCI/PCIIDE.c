@@ -213,17 +213,14 @@ UINT8 IdePoll(PCI_IDE_CONTROLLER* controller, UINT8 channel, BOOL setError)
     {
         if (status & ATA_SR_ERR)
         {
-            PrintTA("ERR\n");
             return status;
         }
         if (status & ATA_SR_DF)
         {
-            PrintTA("DF\n");
             return status;
         }
         if (!(status & ATA_SR_DRQ))
         {
-            PrintTA("DRQ\n");
             return status;
         }
     }
@@ -290,7 +287,7 @@ VFS_STATUS PciIdeDiskIo(IDE_DRIVE* drive, UINT8 direction, UINT64 lba, UINT16 nu
         
         if (err & (ATA_SR_ERR || ATA_SR_DF))
         {
-            PrintT("ERR: %X, %i/%i\n", lba, i + 1, (ULONG64)numberOfSectors);
+            PrintT("[%s]: %X, %i/%i\n", __FUNCTION__, lba, i + 1, (ULONG64)numberOfSectors);
             return err;
         }
         if (direction == 0)

@@ -34,74 +34,7 @@ extern ULONG_PTR KiCyclesPerClockQuantum;
 extern ULONG_PTR KiCyclesPerQuantum;
 extern UINT KeNumberOfProcessors;
 
-NTSTATUS
-NTAPI
-NnxStartUserProcess(
-    PCUNICODE_STRING Filepath,
-    HANDLE hOutProcess,
-    ULONG Priority);
-
-VOID
-NTAPI
-PspSetupThreadState(
-    PKTASK_STATE pThreadState, 
-    BOOL IsKernel, 
-    ULONG_PTR EntryPoint,
-    ULONG_PTR Userstack);
-
-NTSTATUS 
-NTAPI
-PspCreateProcessInternal(
-    PEPROCESS* ppProcess,
-    ACCESS_MASK DesiredAccess,
-    POBJECT_ATTRIBUTES pObjectAttributes);
-
-NTSTATUS 
-NTAPI
-PspCreateThreadInternal(
-    PETHREAD* ppThread, 
-    PEPROCESS pParentProcess,
-    BOOL IsKernel, 
-    ULONG_PTR EntryPoint);
-
-NTSTATUS 
-NTAPI 
-PspProcessOnCreate(
-    PVOID SelfObject, 
-    PVOID CreateData);
-
-NTSTATUS 
-NTAPI 
-PspProcessOnCreateNoDispatcher(
-    PVOID SelfObject, 
-    PVOID CreateData);
-
-NTSTATUS 
-NTAPI 
-PspProcessOnDelete(
-    PVOID SelfObject);
-
-NTSTATUS 
-NTAPI 
-PspThreadOnCreate(
-    PVOID SelfObject,
-    PVOID CreateData);
-
-NTSTATUS 
-NTAPI 
-PspThreadOnCreateNoDispatcher(
-    PVOID SelfObject, 
-    PVOID CreateData);
-
-NTSTATUS 
-NTAPI 
-PspThreadOnDelete(
-    PVOID SelfObject);
-
-__declspec(noreturn) VOID NTAPI PspTestAsmUser();
-__declspec(noreturn) VOID NTAPI PspTestAsmUserEnd();
-__declspec(noreturn) VOID NTAPI PspTestAsmUser2();
-__declspec(noreturn) VOID NTAPI PspIdleThreadProcedure();
+#include <scheduler_internal.h>
 
 struct _READY_QUEUES
 {
@@ -464,7 +397,7 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
 
-            UNICODE_STRING t = RTL_CONSTANT_STRING(L"\\EFI\\BOOT\\APSTART.BIN");
+            UNICODE_STRING t = RTL_CONSTANT_STRING(L"\\EFI\\BOOT\\SMSS.EXE");
             status = NnxStartUserProcess(&t, &hProcess, 10);
             if (!NT_SUCCESS(status))
             {
@@ -846,6 +779,7 @@ PspProcessOnCreateNoDispatcher(
     MmCreateAddressSpace(&pProcess->Pcb.AddressSpace);
     pProcess->Pcb.QuantumReset = 6;
     InitializeListHead(&pProcess->Pcb.HandleDatabaseHead);
+    InitializeListHead(&pProcess->Pcb.LdrModulesHead);
 
     return STATUS_SUCCESS;
 }
@@ -1132,6 +1066,8 @@ PspProcessOnDelete(
     RemoveEntryList(&pProcess->Pcb.ProcessListEntry);
 
     // TODO: PagingDeleteAddressSpace(&pProcess->Pcb.AddressSpace);
+
+    /* TODO: LdrOnProcessExit(pProcess); */
 
     KeReleaseSpinLockFromDpcLevel(&pProcess->Pcb.ProcessLock);
     KiReleaseDispatcherLock(irql);
@@ -1452,6 +1388,10 @@ KeClearCustomThreadAddressSpace(
     {
         MmApplyAddressSpace(&pThread->Process->AddressSpace);
     }
+    else
+    {
+        /* TODO: Notify core running the thread, if any. */
+    }
 
     return STATUS_SUCCESS;
 }
@@ -1553,127 +1493,4 @@ NtCreateProcess(
         DebugPort,
         ExceptionPort,
         FALSE);
-}
-
-static UNICODE_STRING NtdllPath = RTL_CONSTANT_STRING(L"NTDLL.DLL");
-static const ULONG DummyTag = 'THRD';
-
-VOID 
-NTAPI
-NnxDummyLdrThread(
-    PUNICODE_STRING Filepath)
-{
-    PUBYTE pByte;
-    NTSTATUS Status;
-    SIZE_T i;
-    HANDLE Section;
-    PSECTION_VIEW View;
-
-    Status = STATUS_SUCCESS;
-
-    for (i = 0; i < Filepath->Length / sizeof(*Filepath->Buffer); i++)
-    {
-        PrintT("%c", (char)Filepath->Buffer[i]);
-    }
-    PrintT("\n");
-
-    PrintT("Trying to load %U\n", Filepath);
-    Status = NtCreateSectionFromFile(&Section, Filepath);
-    if (!NT_SUCCESS(Status))
-    {
-        PrintT("Creating file section failed\n");
-        PsExitThread(Status);
-    }
-
-    Status = MmCreateView(
-        &KeGetCurrentProcess()->Pcb.AddressSpace, 
-        Section, 
-        0x4321000, 
-        0, 
-        0, 
-        &View);
-
-    if (!NT_SUCCESS(Status))
-    {
-        PrintT("Creating section view failed\n");
-        ObCloseHandle(Section, KernelMode);
-        PsExitThread(Status);
-    }
-
-    ExFreePoolWithTag(Filepath->Buffer, DummyTag);
-    ExFreePoolWithTag(Filepath, DummyTag);
-
-    pByte = (PUBYTE)View->BaseAddress;
-
-    for (; (ULONG_PTR)pByte < View->BaseAddress + View->SizePages * PAGE_SIZE / 16; pByte++)
-    {
-        PrintT("0x%X, ", *pByte);
-    }
-
-    PrintT("Exiting LdrThread %X with status %X\n", 
-           KeGetCurrentThread(), 
-           Status);
-
-    ObCloseHandle(Section, KernelMode);
-    PsExitThread(Status);
-}
-
-NTSTATUS
-NTAPI
-NnxStartUserProcess(
-    PCUNICODE_STRING Filepath,
-    HANDLE hOutProcess,
-    ULONG Priority)
-{
-    PEPROCESS pProcess;
-    PETHREAD pThread;
-    NTSTATUS status;
-    PUNICODE_STRING strCopy;
-
-    /* Create a copy of the filepath for the loader thread. This copy is owned 
-     * by that thread - it is responsible for freeing it. This is done, so the 
-     * caller can modify/free the memory pointed to by Firepath after returning 
-     * from this function. */
-    strCopy = ExAllocatePoolWithTag(NonPagedPool, sizeof(UNICODE_STRING), DummyTag);
-    if (strCopy == NULL)
-    {
-        return STATUS_NO_MEMORY;
-    }
-
-    strCopy->Buffer = ExAllocatePoolWithTag(
-        NonPagedPool,
-        Filepath->MaxLength * sizeof(*strCopy->Buffer),
-        DummyTag);
-    if (strCopy->Buffer == NULL)
-    {
-        ExFreePoolWithTag(strCopy, DummyTag);
-        return STATUS_NO_MEMORY;
-    }
-
-    strCopy->Length = Filepath->Length;;
-    strCopy->MaxLength = Filepath->MaxLength;
-    RtlCopyMemory(strCopy->Buffer, Filepath->Buffer, strCopy->Length);
-
-    /* Create the process and its initialzer thread. */
-    status = PspCreateProcessInternal(&pProcess, 0, NULL);
-    if (!NT_SUCCESS(status))
-    {
-        return status;
-    }
-    pProcess->Pcb.BasePriority = Priority;
-
-    status = PspCreateThreadInternal(
-        &pThread, 
-        pProcess, 
-        TRUE, 
-        (ULONG_PTR)NnxDummyLdrThread);
-    if (!NT_SUCCESS(status))
-    {
-        return status;
-    }
-    PspSetUsercallParameter(&pThread->Tcb, 0, (ULONG_PTR)strCopy);
-    pThread->Tcb.ThreadPriority = 0;
-
-    PspInsertIntoSharedQueueLocked(&pThread->Tcb);
-    return ObCreateHandle(hOutProcess, 0, pProcess);
 }

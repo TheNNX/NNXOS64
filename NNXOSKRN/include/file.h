@@ -104,6 +104,18 @@ extern "C"{
         HANDLE hFile, 
         PLARGE_INTEGER outSize);
 
+    NTSTATUS
+    NTAPI
+    NnxGetImageSection(
+        HANDLE hFile,
+        PHANDLE outSection);
+
+    NTSTATUS
+    NTAPI
+    NnxSetImageSection(
+        HANDLE hFile,
+        HANDLE hSection);
+
     NTSYSAPI
     NTSTATUS
     NTAPI

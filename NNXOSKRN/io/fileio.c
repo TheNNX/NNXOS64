@@ -17,6 +17,7 @@
 #include <object.h>
 #include <file.h>
 #include <vfs.h>
+#include <ntdebug.h>
 
 /**
  * @brief This object is used to hold general filesystem information about the 
@@ -32,6 +33,8 @@ typedef struct _SHARED_FILE_OBJECT
 
     PVFS       pFileSystem;
     PVFS_FILE  pFile;
+    
+    HANDLE     hImageSection;
 }SHARED_FILE_OBJECT, *PSHARED_FILE_OBJECT;
 
 /**
@@ -132,6 +135,8 @@ SharedObjOnCreate(
     /* TODO: device selection. */
     pFilesystem = VfsGetSystemVfs();
     SharedObject->pFileSystem = pFilesystem;
+
+    SharedObject->hImageSection = NULL;
 
     for (i = 0; i < VFS_MAX_PATH && i < InitData->Filepath->Length / 2; i++)
     {
@@ -487,4 +492,61 @@ NnxGetNtFileSize(HANDLE hFile, PLARGE_INTEGER outSize)
     }
 
     return STATUS_SUCCESS;
+}
+
+NTSTATUS
+NTAPI
+NnxGetImageSection(
+    HANDLE hFile,
+    PHANDLE outSection)
+{
+    NTSTATUS Status;
+    PFILE_OPEN_INSTANCE_OBJECT pInstance;
+
+    Status = ObReferenceObjectByHandle(
+        hFile,
+        0,
+        IoFileOpenInstanceObjectType,
+        KernelMode,
+        &pInstance,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    ASSERT(pInstance != NULL && pInstance->SharedFileObject != NULL);
+    *outSection = pInstance->SharedFileObject->hImageSection;
+
+    ObDereferenceObject(pInstance);
+    return Status;
+}
+
+
+NTSTATUS
+NTAPI
+NnxSetImageSection(
+    HANDLE hFile,
+    HANDLE hSection)
+{
+    NTSTATUS Status;
+    PFILE_OPEN_INSTANCE_OBJECT pInstance;
+
+    Status = ObReferenceObjectByHandle(
+        hFile,
+        0,
+        IoFileOpenInstanceObjectType,
+        KernelMode,
+        &pInstance,
+        NULL);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    ASSERT(pInstance != NULL && pInstance->SharedFileObject != NULL);
+    pInstance->SharedFileObject->hImageSection = hSection;
+
+    ObDereferenceObject(pInstance);
+    return Status;
 }

@@ -23,6 +23,8 @@ extern "C" {
         PFN_NUMBER *Mappings;
         ULONG_PTR   Flags;
         HANDLE      SectionFile;
+        KSPIN_LOCK  Lock;
+        /* TODO: This should be managed per view. */
         ULONG       Protection;
     }KMEMORY_SECTION, *PKMEMORY_SECTION;
 
@@ -30,10 +32,12 @@ extern "C" {
     {
         LIST_ENTRY AddressSpaceEntry;
         HANDLE     hSection;
-        ULONG_PTR  SectionOffset;
+        ULONG_PTR  FileOffset;
+        ULONG_PTR  MappingStart;
         ULONG_PTR  BaseAddress;
         ULONG_PTR  SizePages;
-    }SECTION_VIEW, * PSECTION_VIEW;
+        PUCHAR     Name;
+    }SECTION_VIEW, *PSECTION_VIEW;
 
 #ifdef NNX_KERNEL
     NTSTATUS
@@ -57,7 +61,7 @@ extern "C" {
     NTSYSAPI
     NTSTATUS
     NTAPI
-    NtCreateSectionFromFile(
+    NtReferenceSectionFromFile(
         PHANDLE pOutHandle,
         PUNICODE_STRING pFileName);
 
@@ -67,9 +71,16 @@ extern "C" {
         PADDRESS_SPACE AddressSpace,
         HANDLE hSection,
         ULONG_PTR VirtualAddress,
+        ULONG_PTR MappingStart,
         ULONG_PTR Offset,
         SIZE_T Size,
         PSECTION_VIEW* pOutView);
+
+    NTSTATUS
+    NTAPI
+    MmDeleteView(
+        PADDRESS_SPACE AddressSpace,
+        PSECTION_VIEW View);
 
 #ifdef __cplusplus
 }
