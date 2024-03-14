@@ -15,7 +15,8 @@
 UINT16
 PagingFlagsFromSectionFlags(
     PFN_NUMBER Mapping,
-    PKMEMORY_SECTION Section);
+    PKMEMORY_SECTION Section,
+    PSECTION_VIEW View);
 
 
 VOID MiNotifyAboutSectionChanges()
@@ -30,7 +31,6 @@ static UNICODE_STRING MmSectionTypeName = RTL_CONSTANT_STRING(L"MemorySection");
 typedef struct _MEMORY_SECTION_CREATION_DATA
 {
     SIZE_T    NumberOfPages;
-    ULONG     Protection;
     ULONG_PTR Flags;
     HANDLE    File;
 }MEMORY_SECTION_CREATION_DATA, *PMEMORY_SECTION_CREATION_DATA;
@@ -48,7 +48,6 @@ MiCreateSection(
     }
     Section->NumberOfPages = Data->NumberOfPages;
     Section->Flags = Data->Flags;
-    Section->Protection = Data->Protection;
     Section->SectionFile = Data->File;
     KeInitializeSpinLock(&Section->Lock);
 
@@ -173,7 +172,10 @@ MiMapView(
         Status = PagingMapPage(
             Address, 
             PA_FROM_PFN(Section->Mappings[MappingIndex]), 
-            PagingFlagsFromSectionFlags(Section->Mappings[MappingIndex], Section));
+            PagingFlagsFromSectionFlags(
+                Section->Mappings[MappingIndex],
+                Section,
+                SectionView));
         if (!NT_SUCCESS(Status))
         {
             /* Unmap all previously mapped pages of the section if an error
@@ -204,6 +206,7 @@ MmCreateView(
     ULONG_PTR VirtualAddress,
     ULONG_PTR MappingStart,
     ULONG_PTR FileOffset,
+    ULONG Protection,
     SIZE_T Size,
     PSECTION_VIEW* pOutView)
 {
@@ -282,6 +285,7 @@ MmCreateView(
     View->SizePages = Size / PAGE_SIZE;
     View->FileOffset = FileOffset;
     View->MappingStart = MappingStart;
+    View->Protection = Protection;
 
     Status = MiMapView(AddressSpace, View);
     if (!NT_SUCCESS(Status))
@@ -384,7 +388,6 @@ NTAPI
 MiCreateSectionObject(
     SIZE_T NumberOfPages,
     ULONG_PTR Flags,
-    ULONG Protection,
     HANDLE File,
     PKMEMORY_SECTION *outSection)
 {
@@ -396,7 +399,6 @@ MiCreateSectionObject(
 
     Data.NumberOfPages = NumberOfPages;
     Data.Flags = Flags;
-    Data.Protection = Protection;
     Data.File = File;
     Status = ObCloneHandle(File, &Data.File);
     if (!NT_SUCCESS(Status))
@@ -641,7 +643,6 @@ NtReferenceSectionFromFile(
     Status = MiCreateSectionObject(
         (FileSize.QuadPart + PAGE_SIZE - 1) / PAGE_SIZE, 
         0, 
-        PAGE_READONLY, 
         hFile, 
         &MemorySection);
     if (!NT_SUCCESS(Status))

@@ -13,9 +13,9 @@ extern "C" {
 
 /* Windows constants, nothing to do with the architecure dependent ones
  * from paging.h*/
-#define PAGE_READONLY  0x02
-#define PAGE_READWRITE 0x04
-#define PAGE_WRITECOPY 0x08
+#define PAGE_READONLY  0x02L
+#define PAGE_READWRITE 0x04L
+#define PAGE_WRITECOPY 0x08L
 
     typedef struct _KMEMORY_SECTION
     {
@@ -24,8 +24,6 @@ extern "C" {
         ULONG_PTR   Flags;
         HANDLE      SectionFile;
         KSPIN_LOCK  Lock;
-        /* TODO: This should be managed per view. */
-        ULONG       Protection;
     }KMEMORY_SECTION, *PKMEMORY_SECTION;
 
     typedef struct _SECTION_VIEW
@@ -37,6 +35,7 @@ extern "C" {
         ULONG_PTR  BaseAddress;
         ULONG_PTR  SizePages;
         PUCHAR     Name;
+        ULONG      Protection;
     }SECTION_VIEW, *PSECTION_VIEW;
 
 #ifdef NNX_KERNEL
@@ -73,6 +72,7 @@ extern "C" {
         ULONG_PTR VirtualAddress,
         ULONG_PTR MappingStart,
         ULONG_PTR Offset,
+        ULONG Protection,
         SIZE_T Size,
         PSECTION_VIEW* pOutView);
 

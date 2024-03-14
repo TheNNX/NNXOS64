@@ -197,14 +197,15 @@ ULONG_PTR PagingAllocatePage()
 UINT16
 PagingFlagsFromSectionFlags(
     PFN_NUMBER Mapping,
-    PKMEMORY_SECTION Section)
+    PKMEMORY_SECTION Section,
+    PSECTION_VIEW View)
 {
     if (Mapping == NULL)
     {
         return 0;
     }
 
-    switch (Section->Protection)
+    switch (View->Protection)
     {
     case PAGE_READONLY:
         return PAGE_PRESENT | PAGE_READ | PAGE_USER;

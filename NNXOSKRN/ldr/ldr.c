@@ -96,6 +96,8 @@ NnxLdrCreateSectionSubviews(
     ULONG i, j;
     PSECTION_VIEW view;
     PADDRESS_SPACE pAddressSpace;
+    ULONG protection;
+    ULONG characteristics;
 
     dosHeader = (PIMAGE_DOS_HEADER) pInitialView->BaseAddress;
     if (dosHeader->Signature != IMAGE_MZ_MAGIC)
@@ -160,8 +162,13 @@ NnxLdrCreateSectionSubviews(
         /* FIXME: relocation support. */
         ASSERT(sectionHeaders[i].NumberOfRelocations == 0);
 
-        ULONG_PTR oldMapping = PagingGetTableMapping(
-            sectionHeaders[i].VirtualAddressRVA + baseAddress);
+        protection = PAGE_READONLY;
+        characteristics = sectionHeaders[i].Characteristics;
+
+        if (characteristics & IMAGE_SCN_MEM_WRITE)
+        {
+            protection = PAGE_READWRITE;
+        }
 
         Status =
             MmCreateView(
@@ -170,6 +177,7 @@ NnxLdrCreateSectionSubviews(
                 baseAddress + sectionHeaders[i].VirtualAddressRVA, 
                 sectionHeaders[i].VirtualAddressRVA / PAGE_SIZE,
                 sectionHeaders[i].PointerToDataRVA,
+                protection,
                 sectionHeaders[i].VirtualSize, 
                 &view);
         if (!NT_SUCCESS(Status))
@@ -259,6 +267,7 @@ NnxDummyLdrThread(
         0x4321000,
         0,
         0,
+        PAGE_READONLY,
         0,
         &View);
 
