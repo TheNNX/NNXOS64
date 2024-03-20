@@ -33,6 +33,7 @@ LIST_ENTRY LoadedModules;
 
 ULONG_PTR MaxKernelPhysAddress = 0ULL;
 ULONG_PTR MinKernelPhysAddress = (ULONG_PTR)-1LL;
+EFI_GUID gAcpi20TableGuid = ACPI_20_TABLE_GUID;
 
 EFI_STATUS 
 TryToLoadModule(
@@ -846,7 +847,7 @@ efi_main(
     bootdata.ModuleHead.First->Prev = &bootdata.ModuleHead;
     bootdata.MaxKernelPhysAddress = MaxKernelPhysAddress;
     bootdata.MinKernelPhysAddress = MinKernelPhysAddress;
-    LibGetSystemConfigurationTable(&AcpiTableGuid, &bootdata.pRdsp);
+    LibGetSystemConfigurationTable(&gAcpi20TableGuid, & bootdata.pRdsp);
     gBootServices->SetWatchdogTimer(0, 0, 0, NULL);
     status = QueryGraphicsInformation(&bootdata);
     RETURN_IF_ERROR_DEBUG(status);
