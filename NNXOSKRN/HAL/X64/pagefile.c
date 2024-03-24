@@ -8,6 +8,7 @@
 #include <physical_allocator.h>
 #include <cpu.h>
 #include <mm.h>
+#include <scheduler.h>
 
 SIZE_T PageFileSize;
 KSPIN_LOCK PageFileLock;
@@ -288,10 +289,18 @@ PageFaultHandler(
     NTSTATUS status;
     ULONG_PTR Address = __readcr2();
 
-    PrintT("Servicing page fault %X %X %X %X %X\n", n, rip, errcode, KeGetCurrentProcessorId(), Address);
+    PrintT("===Servicing page fault===\n"
+           "RIP: %X, Error: %X,\n"
+           "Core: %i, Address: %X\n"
+           "CR3: %X, Thread: %X\n"
+           "Existing mapping: %X\n"
+           "==========================\n", 
+           rip, errcode, KeGetCurrentProcessorId(), Address, __readcr3(), KeGetCurrentThread(),
+           PagingGetTableMapping(PAGE_ALIGN(Address)));
 
     if (KeGetCurrentIrql() >= DISPATCH_LEVEL)
     {
+        PrintT("Page fault handler line %i\n", __LINE__);
         KeBugCheckEx(
             PAGE_FAULT_WITH_INTERRUPTS_OFF,
             (ULONG_PTR)errcode,
@@ -306,6 +315,7 @@ PageFaultHandler(
         if (!NT_SUCCESS(status))
         {
             /* TODO: switch bugcheck code from status. */
+            PrintT("Page fault handler line %i\n", __LINE__);
             KeBugCheckEx(
                 PAGE_FAULT_IN_NONPAGED_AREA,
                 Address,
@@ -316,6 +326,7 @@ PageFaultHandler(
     }
     else
     {
+        PrintT("Page fault handler line %i, current mapping %X\n", __LINE__, PagingGetTableMapping(PAGE_ALIGN(Address)));
         KeBugCheckEx(
             PAGE_FAULT_IN_NONPAGED_AREA,
             Address,

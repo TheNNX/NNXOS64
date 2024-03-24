@@ -15,11 +15,16 @@ KeBugCheck(ULONG code)
     KeBugCheckEx(code, NULL, NULL, NULL, NULL);
 }
 
+volatile long AtomicStopVariable = 0;
+
 VOID
 NTAPI
 KeStopOtherCores()
 {
-    KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
+    if (_InterlockedCompareExchange(&AtomicStopVariable, 1, 0) == 0)
+    {
+        KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
+    }
 }
 
 #pragma warning(push)

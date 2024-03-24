@@ -462,7 +462,7 @@ MmHandleViewPageFault(
     }
 
     KeAcquireSpinLock(&Section->Lock, &Irql);
-    if (Section->SectionFile != NULL && !Write)
+    if (Section->SectionFile != NULL)
     {
         LARGE_INTEGER Offset;
         IO_STATUS_BLOCK StatusBlock;
@@ -490,11 +490,15 @@ MmHandleViewPageFault(
             PagingMapPage(
                 PAGE_ALIGN(Address),
                 PA_FROM_PFN(Pfn),
-                PAGE_PRESENT | PAGE_WRITE);
+                PagingFlagsFromSectionFlags(
+                    Section->Mappings[MappingIndex],
+                    Section,
+                    SectionView));
         }
 
         ASSERTMSG(KeGetCurrentIrql() <= DISPATCH_LEVEL, "");
 
+        PagingDisableSystemWriteProtection();
         Status = NtReadFile(Section->SectionFile,
                           NULL, 
                           NULL, 
@@ -504,17 +508,11 @@ MmHandleViewPageFault(
                           PAGE_SIZE,
                           &Offset,
                           NULL);
+        PagingEnableSystemWriteProtection();
 
         KeReleaseSpinLock(&Section->Lock, Irql);
         ObDereferenceObject(Section);
         return Status;
-    }
-    else if (Section->SectionFile != NULL && Write)
-    {
-        /* TODO */
-        ASSERT(FALSE);
-        KeReleaseSpinLock(&Section->Lock, Irql);
-        return STATUS_NOT_SUPPORTED;
     }
 
     KeReleaseSpinLock(&Section->Lock, Irql);

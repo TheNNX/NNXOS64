@@ -407,6 +407,13 @@ PspInitializeCore(
             PrintT("hProcess: %X\n");
         }
     }
+    else if (KeNumberOfProcessors - 1 == PspCoresInitialized)
+    {
+        VOID KiPrintSpinlockDebug();
+        PrintT("Core %i on update duty\n", CoreNumber);
+        while (1);
+        KiPrintSpinlockDebug();
+    }
 
     pTaskState = pPrcb->IdleThread->KernelStackPointer;
     
@@ -604,8 +611,7 @@ PspCreateKernelStack(
     blockAllocation = PagingAllocatePageBlockFromRange(
         nPages + 2, 
         PAGING_KERNEL_SPACE, 
-        PAGING_KERNEL_SPACE_END
-    );
+        PAGING_KERNEL_SPACE_END);
 
     /* Get the current mappings. */
     currentMappingGuard1 = 
@@ -895,6 +901,22 @@ PspOnThreadTimeout(
     KeReleaseSpinLockFromDpcLevel(&pThread->ThreadLock);
 }
 
+VOID
+NTAPI
+PspCreateThreadStacks(PKTHREAD tcb)
+{
+    /* Main kernel stack */
+    tcb->NumberOfKernelStackPages = 4;
+    tcb->OriginalKernelStackPointer =
+        PspCreateKernelStack(tcb->NumberOfKernelStackPages);
+    tcb->KernelStackPointer = (PVOID)(
+        (ULONG_PTR)tcb->OriginalKernelStackPointer
+        - sizeof(KTASK_STATE));
+
+    /* Stack for saving the thread context when executing APCs */
+    tcb->ApcBackupKernelStackPointer = PspCreateKernelStack(1);
+}
+
 NTSTATUS 
 NTAPI
 PspThreadOnCreateNoDispatcher(
@@ -921,19 +943,15 @@ PspThreadOnCreateNoDispatcher(
         KeGetCurrentThread(), 
         &pThread->Process->Pcb.AddressSpace);
 
-    /* Create stacks */
-    /* Main kernel stack */
-    pThread->Tcb.NumberOfKernelStackPages = 4;
-    pThread->Tcb.OriginalKernelStackPointer =
-        PspCreateKernelStack(pThread->Tcb.NumberOfKernelStackPages);
-    pThread->Tcb.KernelStackPointer = (PVOID)(
-        (ULONG_PTR)pThread->Tcb.OriginalKernelStackPointer
-        - sizeof(KTASK_STATE));
+    PspCreateThreadStacks(&pThread->Tcb);
+    /* Assuming the memory manager works correctly (it doesn't yet), 
+       this shouldn't fail. This condition is only false when there are no
+       virtual addresses to be assigned (again, assuming a working Mm - for now
+       it can fail when there are no PFNs to be allocated, and there is no way
+       to find PFNs to page out. */
+    ASSERT(pThread->Tcb.OriginalKernelStackPointer != NULL &&
+           pThread->Tcb.ApcBackupKernelStackPointer != NULL);
 
-    /* Stack for saving the thread context when executing APCs */
-    pThread->Tcb.ApcBackupKernelStackPointer = PspCreateKernelStack(1);
-
-    /* allocate stack even if in kernel mode */
     if (threadCreationData->IsKernel)
     {
         userstack = (ULONG_PTR)pThread->Tcb.KernelStackPointer;

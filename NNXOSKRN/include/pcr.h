@@ -25,26 +25,26 @@ extern "C"
     typedef struct _KPCR
     {
         PKGDTENTRY64    Gdt;
-        PKTSS            Tss;
+        PKTSS           Tss;
         LONG_PTR        CyclesLeft;
         struct _KPCR    *SelfPcr;
-        struct _KPRCB    *Prcb;
-        KIRQL            Irql;
+        struct _KPRCB   *Prcb;
+        KIRQL           Irql;
 
         /* These have to be accessed with interrupts disabled.
          * Once interrupts are reenabled, the value of these should
          * be assumed to be invalid. They're used by the system call
          * handler to store thread pointers in order to get the thread
          * kernel stack and access other per thread variables. */
-        ULONG_PTR        TempHandlerVals[2];
+        ULONG_PTR       TempHandlerVals[2];
 
         LONG            Reserved0;
         PKIDTENTRY64    Idt;
-        ULONG            Reserved4[3];
-        USHORT            MajorVersion;
-        USHORT            MinorVersion;
-        LIST_ENTRY        InterruptListHead;
-        PKINTERRUPT        ClockInterrupt;
+        ULONG           Reserved4[3];
+        USHORT          MajorVersion;
+        USHORT          MinorVersion;
+        LIST_ENTRY      InterruptListHead;
+        PKINTERRUPT     ClockInterrupt;
     }KPCR, *LPKPCR, *PKPCR;
 
     PKPCR HalCreatePcr(PKGDTENTRY64 gdt, PKIDTENTRY64 idt, UCHAR CoreNumber);

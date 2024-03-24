@@ -247,8 +247,8 @@ NnxDummyLdrThread(
     HANDLE Section;
     PSECTION_VIEW View;
     PLDR_MODULE pModule;
-    ULONG i;
     PBYTE entrypoint;
+    PETHREAD mainThread;
 
     Status = STATUS_SUCCESS;
 
@@ -264,7 +264,7 @@ NnxDummyLdrThread(
     Status = MmCreateView(
         &KeGetCurrentProcess()->Pcb.AddressSpace,
         Section,
-        0x4321000,
+        0x4321000 /* FIXME */,
         0,
         0,
         PAGE_READONLY,
@@ -290,14 +290,30 @@ NnxDummyLdrThread(
     if (pModule->EntrypointRVA != NULL)
     {
         entrypoint = (PBYTE)(pModule->EntrypointRVA + pModule->BaseAddress);
+ 
+        /* The current loader thread could be reused to host the main process 
+           thread. However, this isn't simple, as the thread has to jump to 
+           usermode. While this could be done, with how the scheduler interrupt
+           is implemented currently, this requires some stack manipultion. */
 
-        PrintT("Reading bytes of the entrypoint at %X+%X: ", pModule->BaseAddress, pModule->EntrypointRVA);
-        for (i = 0; i < 40; i++)
+        /* Create a new thread for now. */
+        Status = PspCreateThreadInternal(
+            &mainThread, 
+            KeGetCurrentProcess(), 
+            FALSE, 
+            (ULONG_PTR)entrypoint);
+        if (!NT_SUCCESS(Status))
         {
-            PrintT("0x%x, ", entrypoint[i] & 0xFF);
+            PrintT("Ldr thread error: %X\n", Status);
+            PsExitThread((DWORD)Status);
         }
+
+        PspInsertIntoSharedQueueLocked(&mainThread->Tcb);
     }
 
+    /* This message cannot be printed in a parent thread that waits for this
+       threads termination, because this thread can be started before there are
+       any threads, that could wait for this thread. */
     PrintT("Exiting Ldr thread with status: %X\n", Status);
     PsExitThread(STATUS_SUCCESS);
 }

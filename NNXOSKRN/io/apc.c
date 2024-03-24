@@ -125,8 +125,7 @@ KiInsertQueueAPC(
 
 VOID
 KiCopyContextToUserStack(
-    PKTHREAD pThread
-)
+    PKTHREAD pThread)
 {
     PKTASK_STATE destination;
     PKTASK_STATE source;

@@ -78,6 +78,78 @@ extern "C" {
     }
 #endif
 
+#if defined(_DEBUG) && !defined(NNX_SPINLOCK_IMPL) 
+
+    KIRQL
+    FASTCALL
+    KfAcquireSpinLockDebug(
+        PKSPIN_LOCK lock,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+    VOID
+    FASTCALL
+    KfReleaseSpinLockDebug(
+        PKSPIN_LOCK lock,
+        KIRQL newIrql,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+    VOID
+    NTAPI
+    KeAcquireSpinLockDebug(
+        PKSPIN_LOCK lock,
+        PKIRQL oldIrql,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+    VOID
+    NTAPI
+    KeReleaseSpinLockDebug(
+        PKSPIN_LOCK lock,
+        KIRQL newIrql,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+    VOID
+    NTAPI
+    KeAcquireSpinLockAtDpcLevelDebug(
+        PKSPIN_LOCK Lock,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+    VOID
+    NTAPI
+    KeReleaseSpinLockFromDpcLevelDebug(
+        PKSPIN_LOCK Lock,
+        const char* lockName,
+        const char* functionName,
+        int line);
+
+#define XSTR(s) #s
+#define STR(s) XSTR(s)
+
+#define KfAcquireSpinLock(lock) \
+KfAcquireSpinLockDebug(lock, #lock, __FUNCTION__, __LINE__)
+#define KfReleaseSpinLock(lock, newIrql) \
+KfReleaseSpinLockDebug(lock, newIrql, #lock, __FUNCTION__, __LINE__)
+#define KeAcquireSpinLock(lock, oldIrql) \
+KeAcquireSpinLockDebug(lock, oldIrql, #lock, __FUNCTION__, __LINE__)
+#define KeReleaseSpinLock(lock, newIrql) \
+KeReleaseSpinLockDebug(lock, newIrql, #lock, __FUNCTION__, __LINE__)
+#define KeAcquireSpinLockAtDpcLevel(lock) \
+KeAcquireSpinLockAtDpcLevelDebug(lock, #lock, __FUNCTION__, __LINE__)
+#define KeReleaseSpinLockFromDpcLevel(lock) \
+KeReleaseSpinLockFromDpcLevelDebug(lock, #lock, __FUNCTION__, __LINE__)
+#undef STR
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -3,6 +3,7 @@
 #include <pcr.h>
 #include <bugcheck.h>
 #include <cpu.h>
+#include <ntdebug.h>
 
 /* FIXME: It turns out, that masking IOAPIC interurpts isn't a good
  * idea after all - interrupts get ignored instead of put in IRR, and

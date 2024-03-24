@@ -12,12 +12,13 @@
 #include <ntqueue.h>
 #include <ntdebug.h>
 #include <SimpleTextIO.h>
+#include <pcr.h>
 
 static KSPIN_LOCK SystemCallSpinLock;
 SYSCALL_HANDLER HalpSystemCallHandler;
 VOID HalpSystemCall();
 
-static BOOLEAN QueueInitialized = FALSE;
+volatile long QueueInitialized = FALSE;
 static KQUEUE Queue;
 static KSPIN_LOCK SystemCallSpinLock = 0;
 
@@ -132,21 +133,23 @@ SystemCallHandler(
     LONG64 timeout = -10000000;
     ULONG threadId = (ULONG_PTR)KeGetCurrentThread() & 0xFFFF;
     NTSTATUS status;
-    KIRQL irql;
 
-    KeAcquireSpinLock(&SystemCallSpinLock, &irql);
-    if (QueueInitialized == FALSE)
+    if (!_InterlockedCompareExchange(&QueueInitialized, TRUE, FALSE))
     {
-        QueueInitialized = TRUE;
         KeInitializeQueue(&Queue, 0);
     }
-    KeReleaseSpinLock(&SystemCallSpinLock, irql);
+
+    VOID KiPrintSpinlockDebug();
 
     switch (p1)
     {
     case 1:
     case 2:
-        PrintT("s%X%i ", threadId, KeGetCurrentIrql());
+        PrintT(
+            "s%X,%i(%i) ",
+            threadId, 
+            KeGetCurrentProcessorId(), 
+            KeGetCurrentIrql());
         status = KeWaitForSingleObject(
             &Queue, 
             Executive,
@@ -159,6 +162,13 @@ SystemCallHandler(
         break;
     case 3:
         return KiInvokeService(NtDll5Test, 5, p2, p3, p4);
+    case 4:
+        PrintT("Ldr Test Syscall called!\n");
+        break;
+    case 5:
+        PrintT("Exiting thread %X\n", KeGetCurrentThread());
+        PsExitThread((DWORD)p2);
+        break;
     default:
         PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
         ASSERT(FALSE);

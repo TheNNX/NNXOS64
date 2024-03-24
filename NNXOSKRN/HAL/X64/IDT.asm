@@ -276,7 +276,6 @@ func HalpSystemCall
     ; all syscalls are from usermode, swap the KernelGSBase with the PCR into GS
     swapgs
 
-    ; store the user stack to a PCR temp variable
     mov rax, rsp
 
     ; get the TSS pointer to RSP
@@ -316,8 +315,7 @@ func HalpSystemCall
     pop rcx
 
     ; get the user stack
-    pop QWORD [gs:0x28]
-    mov rsp, [gs:0x28]
+    pop QWORD rsp
 
     ; restore the usermode GS
     swapgs

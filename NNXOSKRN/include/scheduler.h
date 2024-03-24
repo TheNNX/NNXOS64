@@ -315,6 +315,11 @@ extern "C" {
     NTAPI
     KeForceClockTick();
 
+    VOID
+    NTAPI
+    PspCreateThreadStacks(
+        PKTHREAD tcb);
+
     __declspec(noreturn)
     VOID
     NTAPI

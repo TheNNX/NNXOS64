@@ -385,15 +385,12 @@ HalFullCtxInterruptHandlerEntry(
     return result;
 }
 
-KSPIN_LOCK IpiLock = 0;
-
 VOID
 NTAPI
 KiSendIpiToSingleCore(
     ULONG_PTR ProcessorNumber,
     BYTE Vector)
 {
-    ASSERT(IpiLock != 0);
     ASSERT(ProcessorNumber <= 0xFF);
     ApicSendIpi((BYTE)ProcessorNumber, 0, 0, Vector);
 }
@@ -405,15 +402,7 @@ KeSendIpi(
     BYTE Vector)
 {
     ULONG currentId = 0;
-    KIRQL irql;
     ULONG selfId = KeGetCurrentProcessorId();
-
-    irql = KeGetCurrentIrql();
-    if (irql < DISPATCH_LEVEL)
-        KeRaiseIrql(DISPATCH_LEVEL, &irql);
-
-    KeAcquireSpinLockAtDpcLevel(&IpiLock);
-    KfRaiseIrql(IPI_LEVEL);
 
     for (currentId = 0; currentId < KeNumberOfProcessors; currentId++)
     {
@@ -423,9 +412,6 @@ KeSendIpi(
             KiSendIpiToSingleCore(currentId, Vector);
         }
     }
-
-    KeReleaseSpinLockFromDpcLevel(&IpiLock);
-    KeLowerIrql(irql);
 }
 
 VOID
