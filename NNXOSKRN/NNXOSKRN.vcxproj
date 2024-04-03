@@ -202,6 +202,7 @@ $(SolutionDir)genverh.bat</Command>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="device\fs\preloaded.c" />
     <ClCompile Include="dispatcher\dispatcher.c" />
     <ClCompile Include="dispatcher\mutex.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
@@ -260,6 +261,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\gpt.h" />
     <ClInclude Include="include\mbr.h" />
     <ClInclude Include="include\mm.h" />
+    <ClInclude Include="include\preloaded.h" />
     <ClInclude Include="include\scheduler_internal.h" />
     <ClInclude Include="include\vfs.h" />
     <ClInclude Include="include\hdd.h" />

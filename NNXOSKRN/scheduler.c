@@ -397,7 +397,7 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
 
-            UNICODE_STRING t = RTL_CONSTANT_STRING(L"\\EFI\\BOOT\\SMSS.EXE");
+            UNICODE_STRING t = RTL_CONSTANT_STRING(L"EFI\\BOOT\\SMSS.EXE");
             status = NnxStartUserProcess(&t, &hProcess, 10);
             if (!NT_SUCCESS(status))
             {
@@ -407,6 +407,7 @@ PspInitializeCore(
             PrintT("hProcess: %X\n");
         }
     }
+#ifdef DESPERATE_SPINLOCK_DEBUG
     else if (KeNumberOfProcessors - 1 == PspCoresInitialized)
     {
         VOID KiPrintSpinlockDebug();
@@ -414,6 +415,7 @@ PspInitializeCore(
         while (1);
         KiPrintSpinlockDebug();
     }
+#endif
 
     pTaskState = pPrcb->IdleThread->KernelStackPointer;
     
@@ -984,6 +986,7 @@ PspThreadOnCreateNoDispatcher(
     pThread->Tcb.UserAffinity = 0;
     pThread->Tcb.ThreadIrql = PASSIVE_LEVEL;
 
+    pThread->Tcb.CustomAddressSpace = NULL;
     /* Inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
 
@@ -1109,7 +1112,7 @@ PspInsertIntoSharedQueue(
 {
     UCHAR ThreadPriority;
 
-    if (DispatcherLock == 0)
+    if (!LOCKED(DispatcherLock))
     {
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
     }
@@ -1401,7 +1404,9 @@ KeClearCustomThreadAddressSpace(
 {
     ASSERT(pThread != NULL);
 
+    //PrintT("[%i] Clearing %X-%X\n", KeGetCurrentProcessorId(), pThread, pThread->CustomAddressSpace);
     pThread->CustomAddressSpace = NULL;
+    //PrintT("[%i] Cleared %X-%X\n", KeGetCurrentProcessorId(), pThread, pThread->CustomAddressSpace);
     if (pThread == KeGetCurrentThread())
     {
         MmApplyAddressSpace(&pThread->Process->AddressSpace);
@@ -1422,7 +1427,9 @@ KeSetCustomThreadAddressSpace(
 {
     ASSERT(pThread != NULL && pAddressSpace != NULL);
 
+    //PrintT("[%i] Setting %X-%X\n", KeGetCurrentProcessorId(), pThread, pThread->CustomAddressSpace);
     pThread->CustomAddressSpace = pAddressSpace;
+    //PrintT("[%i] Set %X-%X\n", KeGetCurrentProcessorId(), pThread, pThread->CustomAddressSpace);
     if (pThread == KeGetCurrentThread())
     {
         MmApplyAddressSpace(pAddressSpace);

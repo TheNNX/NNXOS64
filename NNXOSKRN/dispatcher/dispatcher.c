@@ -96,12 +96,12 @@ KiUnwaitWaitBlock(
     PDISPATCHER_HEADER Object = pWaitBlock->Object;
     PDISPATCHER_TYPE DispatcherType = &DispatcherDecodeTable[Object->Type];
 
-    ASSERT(DispatcherLock != 0);
+    ASSERT(LOCKED(DispatcherLock));
     ASSERT(pWaitBlock != NULL);
     ASSERT(pWaitBlock->Object != NULL);
     ASSERT(pWaitBlock->Thread != NULL);
-    ASSERT(pWaitBlock->Thread->ThreadLock != 0);
-    ASSERT(pWaitBlock->Object->Lock & 1);
+    ASSERT(LOCKED(pWaitBlock->Thread->ThreadLock));
+    ASSERT(LOCKED(pWaitBlock->Object->Lock));
     Thread = pWaitBlock->Thread;
     WaitType = pWaitBlock->WaitType;
     
@@ -140,7 +140,7 @@ KiSignal(
     PDISPATCHER_HEADER Object,
     ULONG SignalIncrement)
 {
-    if ((Object->Lock & 1) == 0)
+    if (!LOCKED(Object->Lock))
     {
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
     }

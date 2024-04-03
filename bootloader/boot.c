@@ -25,9 +25,18 @@
 EFI_STATUS
 LoadImage(
     EFI_FILE_HANDLE file,
-    PLOADED_BOOT_MODULE * outModule);
+    PLOADED_BOOT_MODULE* outModule);
 
-const CHAR16 *wszKernelPath = L"efi\\boot\\NNXOSKRN.exe";
+const CHAR16* wszKernelPath = L"efi\\boot\\NNXOSKRN.exe";
+
+static const CHAR16* PreloadPaths[] =
+{
+    L"EFI\\BOOT\\NNXOSKRN.EXE",
+    L"EFI\\BOOT\\SMSS.EXE",
+    L"EFI\\BOOT\\APSTART.BIN",
+    L"EFI\\BOOT\\WIN32K.SYS"
+};
+
 EFI_BOOT_SERVICES* gBootServices;
 LIST_ENTRY LoadedModules;
 
@@ -140,7 +149,6 @@ HandleImportDirectory(
     INT UnresolvedImports = 0;
 
     IMAGE_IMPORT_DESCRIPTOR* Current = ImportDirectoryEntry->Entries;
-    Print(L"%X\n", Current);
 
     while (Current->NameRVA != 0)
     {
@@ -354,11 +362,6 @@ LoadSectionsWithBase(
         }
 
         SectionStart = Section->VirtualAddressRVA + ImageBase;
-        Print(L"Loading section to %X %X %d %X\n", 
-            SectionStart,
-            SectionStart+Section->VirtualSize, 
-            Section->VirtualSize,
-            ImageBase);
 
         ZeroMem(
             (PVOID)SectionStart,
@@ -655,16 +658,19 @@ QueryMemoryMap(
 
     PMMPFN_ENTRY pageFrameEntries;
 
+    memoryMapSize = 1;
+
     do
     {
         if (memoryMap != NULL)
         {
+            Print(L"Trying %d\n", memoryMapSize);
             FreePool(memoryMap);
         }
 
         status = gBootServices->AllocatePool(
-            EfiLoaderData, 
-            memoryMapSize, 
+            EfiLoaderData,
+            memoryMapSize,
             &memoryMap);
 
         if (EFI_ERROR(status) || memoryMap == NULL)
@@ -672,38 +678,47 @@ QueryMemoryMap(
 
         status = gBootServices->GetMemoryMap(
             &memoryMapSize,
-            memoryMap, 
-            &memoryMapKey, 
-            &descriptorSize, 
+            memoryMap,
+            &memoryMapKey,
+            &descriptorSize,
             &descriptorVersion);
-        
-        memoryMapSize += descriptorSize;
+
+        if (status == EFI_BUFFER_TOO_SMALL)
+        {
+            memoryMapSize *= 3;
+            memoryMapSize /= 2;
+        }
     }
     while (status == EFI_BUFFER_TOO_SMALL);
     RETURN_IF_ERROR(status);
 
+    Print(L"Total memmap %d\n", memoryMapSize);
+
     currentDescriptor = memoryMap;
-    while (currentDescriptor <= 
+    while (currentDescriptor < 
            (EFI_MEMORY_DESCRIPTOR*)((ULONG_PTR)memoryMap + memoryMapSize))
     {
-        if (pages < currentDescriptor->NumberOfPages + (
+        if (currentDescriptor->Type == EfiConventionalMemory &&
+            pages < currentDescriptor->NumberOfPages + (
             currentDescriptor->PhysicalStart + PAGE_SIZE - 1) / PAGE_SIZE)
         {
             pages = currentDescriptor->NumberOfPages + (
                 currentDescriptor->PhysicalStart + PAGE_SIZE - 1) / PAGE_SIZE;
         }
-        
+
         currentDescriptor = (EFI_MEMORY_DESCRIPTOR*)
             ((ULONG_PTR)currentDescriptor + descriptorSize);
     }
 
+    Print(L"Found %d megabytes free, pages: %d\n", pages * PAGE_SIZE / 1024 / 1024, pages);
     pageFrameEntries = AllocateZeroPool(pages * sizeof(MMPFN_ENTRY));
+    Print(L"Alloc result %X\n", pageFrameEntries);
 
     for (int i = 0; i < pages; i++)
         pageFrameEntries[i].Flags = 1;
 
     currentDescriptor = memoryMap;
-    while (currentDescriptor <= 
+    while (currentDescriptor < 
            (EFI_MEMORY_DESCRIPTOR*) ((ULONG_PTR) memoryMap + memoryMapSize))
     {
         UINTN relativePageIndex;
@@ -726,6 +741,9 @@ QueryMemoryMap(
             UINTN pageIndex = 
                 currentDescriptor->PhysicalStart / PAGE_SIZE +
                 relativePageIndex;
+
+            if (pageIndex >= pages)
+                break;
 
             pageFrameEntries[pageIndex].Flags = flags;
             
@@ -778,6 +796,121 @@ QueryMemoryMap(
     *pOutMapKey = memoryMapKey;
     bootdata->NumberOfPageFrames = pages;
     bootdata->PageFrameDescriptorEntries = pageFrameEntries;
+
+    return EFI_SUCCESS;
+}
+
+VOID
+RundownLoadedFiles(
+    PBOOTDATA pBootdata)
+{
+    PLIST_ENTRY pCurrent, pHead;
+    PPRELOADED_FILE pPreloaded;
+
+    pHead = &pBootdata->PreloadedFiles;
+    pCurrent = pHead->First;
+
+    while (pCurrent != pHead)
+    {
+        pPreloaded = CONTAINING_RECORD(pCurrent, PRELOADED_FILE, Entry);
+
+        if (pPreloaded->Data != NULL)
+        {
+            gBS->FreePool(pPreloaded->Data);
+        }
+
+        pCurrent = pCurrent->Next;
+        gBS->FreePool(pPreloaded);
+    }
+
+    InitializeListHead(pHead);
+}
+
+EFI_STATUS
+PreloadBootFiles(
+    EFI_FILE_HANDLE filesystem,
+    PBOOTDATA pBootdata)
+{
+    SIZE_T i;
+    PPRELOADED_FILE pCurrent;
+    EFI_STATUS status;
+    EFI_FILE_HANDLE hFile;
+    EFI_FILE_INFO* fileInfo;
+    UINTN bufferSize;
+
+    for (i = 0; i < sizeof(PreloadPaths) / sizeof(*PreloadPaths); i++)
+    {
+        status = gBS->AllocatePool(EfiLoaderData, sizeof(*pCurrent), &pCurrent);
+        if (status != EFI_SUCCESS)
+        {
+            RundownLoadedFiles(pBootdata);
+            return status;
+        }
+
+        InsertTailList(&pBootdata->PreloadedFiles, &pCurrent->Entry);
+        pCurrent->Filesize = 0;
+        pCurrent->Data = NULL;
+        RtStpCpy(pCurrent->Name, PreloadPaths[i]);
+
+        status = filesystem->Open(
+            filesystem,
+            &hFile,
+            (CHAR16*)PreloadPaths[i],
+            EFI_FILE_MODE_READ,
+            0);
+        if (status != EFI_SUCCESS)
+        {
+            RundownLoadedFiles(pBootdata);
+            return status;
+        }
+
+        bufferSize = sizeof(EFI_FILE_INFO);
+        do
+        {
+            status = gBS->AllocatePool(EfiLoaderData, bufferSize, &fileInfo);
+            if (status != EFI_SUCCESS)
+            {
+                break;
+            }
+            
+            status = hFile->GetInfo(hFile, &gEfiFileInfoGuid, &bufferSize, fileInfo);
+        }
+        while (status == EFI_BUFFER_TOO_SMALL);
+
+        if (status != EFI_SUCCESS)
+        {
+            hFile->Close(hFile);
+            RemoveEntryList(&pCurrent->Entry);
+            gBS->FreePool(pCurrent);
+            Print(L"Failed preloading file '%s', %r, %d\n", PreloadPaths[i], status, bufferSize);
+            continue;
+        }
+
+        pCurrent->Filesize = fileInfo->FileSize;
+        gBS->FreePool(fileInfo);
+
+        status = gBS->AllocatePool(EfiLoaderData, pCurrent->Filesize, &pCurrent->Data);
+        if (status != EFI_SUCCESS)
+        {
+            RundownLoadedFiles(pBootdata);
+            hFile->Close(hFile);
+            return status;
+        }
+
+        bufferSize = pCurrent->Filesize;
+        status = hFile->Read(hFile, &bufferSize, pCurrent->Data);
+        if (status != EFI_SUCCESS)
+        {
+            hFile->Close(hFile);
+            RemoveEntryList(&pCurrent->Entry);
+            gBS->FreePool(pCurrent->Data);
+            gBS->FreePool(pCurrent);
+            Print(L"Failed preloading file '%s'\n", PreloadPaths[i]);
+            continue;
+        }
+
+        hFile->Close(hFile);
+    }
 
     return EFI_SUCCESS;
 }
@@ -838,27 +971,65 @@ efi_main(
         L"Kernel entrypoint %X, base %X\n",
         kernelEntrypoint, 
         module->ImageBase);
-
+        
     bootdata.dwKernelSize = module->ImageSize;
     bootdata.pImageHandle = imageHandle;
     bootdata.MainKernelModule = module;
     bootdata.ModuleHead = LoadedModules;
     bootdata.ModuleHead.Last->Next = &bootdata.ModuleHead;
     bootdata.ModuleHead.First->Prev = &bootdata.ModuleHead;
+    InitializeListHead(&bootdata.PreloadedFiles);
     bootdata.MaxKernelPhysAddress = MaxKernelPhysAddress;
     bootdata.MinKernelPhysAddress = MinKernelPhysAddress;
-    LibGetSystemConfigurationTable(&gAcpi20TableGuid, & bootdata.pRdsp);
-    gBootServices->SetWatchdogTimer(0, 0, 0, NULL);
-    status = QueryGraphicsInformation(&bootdata);
-    RETURN_IF_ERROR_DEBUG(status);
-    status = QueryMemoryMap(&bootdata, &MapKey);
-    RETURN_IF_ERROR_DEBUG(status);
-    status = gBootServices->ExitBootServices(imageHandle, MapKey);
+    LibGetSystemConfigurationTable(&gAcpi20TableGuid, &bootdata.pRdsp);
+    
+#ifdef INACCESIBLE_BOOT_DEVICE
+    status = PreloadBootFiles(root, &bootdata);
     if (status != EFI_SUCCESS)
     {
         Print(L"%r", status);
         return status;
     }
+
+    /*
+    PPRELOADED_FILE pCurrent = (PPRELOADED_FILE)bootdata.PreloadedFiles.First;
+    while (pCurrent != (PPRELOADED_FILE)&bootdata.PreloadedFiles)
+    {
+        Print(L"File %s, first 16 characters:\n", pCurrent->Name);
+        for (int i = 0; i < 16; i++)
+        {
+            Print(L"'%c', ", ((PCHAR)pCurrent->Data)[i]);
+        }
+
+        pCurrent = (PPRELOADED_FILE)pCurrent->Entry.Next;
+    }
+
+    while (1);
+    */
+#endif
+
+    gBootServices->SetWatchdogTimer(0, 0, 0, NULL);
+
+    status = QueryGraphicsInformation(&bootdata);
+    RETURN_IF_ERROR_DEBUG(status);
+    status = QueryMemoryMap(&bootdata, &MapKey);
+    RETURN_IF_ERROR_DEBUG(status);
+
+    for (int i = 0; i < 1024 * 768; i++)
+    {
+        if (i % 4 == 0)
+            bootdata.pdwFramebuffer[i] = 0xFF00FFFF;
+    }
+
+    status = gBootServices->ExitBootServices(imageHandle, MapKey);
+    if (status != EFI_SUCCESS)
+    {
+        kernelFile->Close(kernelFile);
+        root->Close(root);
+        Print(L"%r", status);
+        return status;
+    }
+
     kernelEntrypoint(&bootdata);
 
     /* FIXME */

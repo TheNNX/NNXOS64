@@ -73,7 +73,7 @@ MiResizeSection(
     PFN_NUMBER* oldMappings;
     SIZE_T oldSize;
 
-    ASSERT(Section->Lock != 0);
+    ASSERT(LOCKED(Section->Lock));
 
     oldSize = Section->NumberOfPages;
     oldMappings = Section->Mappings;
@@ -144,7 +144,7 @@ MiMapView(
     }
 
     KeSetCustomThreadAddressSpace(KeGetCurrentThread(), AddressSpace);
-    ASSERT(Section->Lock != 0);
+    ASSERT(LOCKED(Section->Lock));
     VirtualAddress = SectionView->BaseAddress;
 
     /* Check if the section can be mapped into this address space at this
@@ -421,7 +421,7 @@ PADDRESS_SPACE
 NTAPI
 MmGetCurrentAddressSpace(VOID)
 {
-    ASSERT(KeGetCurrentThread()->ThreadLock);
+    ASSERT(LOCKED(KeGetCurrentThread()->ThreadLock));
     if (KeGetCurrentThread()->CustomAddressSpace != NULL)
     {
         return KeGetCurrentThread()->CustomAddressSpace;

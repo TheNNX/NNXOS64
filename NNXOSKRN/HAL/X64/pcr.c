@@ -9,7 +9,7 @@
 #define HalGetPcr() ((PKPCR)__readgsqword(0x18))
 VOID HalSetPcr(PKPCR);
 VOID HalpTaskSwitchHandler();
-static KSPIN_LOCK PcrCreationLock = 0;
+static KSPIN_LOCK PcrCreationLock = { 0 };
 
 
 static KPCR dummyPcr;
@@ -37,7 +37,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
     PKARCH_CORE_DATA pCoreData;
     PKPCR pcr, tempPcr;
 
-    KiAcquireSpinLock(&PcrCreationLock);
+    KiAcquireSpinLock((volatile ULONG_PTR*)&PcrCreationLock);
     HalDisableInterrupts();
 
     pCoreData = (PKARCH_CORE_DATA)PagingAllocatePageBlockFromRange(
@@ -63,7 +63,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
     pcr = HalCreatePcr(pCoreData->GdtEntires, pCoreData->IdtEntries, id);
     HalInitializeSystemCallForCurrentCore((ULONG_PTR)HalpSystemCall);
     KfRaiseIrql(DISPATCH_LEVEL);
-    KiReleaseSpinLock(&PcrCreationLock);
+    KiReleaseSpinLock((volatile ULONG_PTR*)&PcrCreationLock);
 }
 
 PKIDTENTRY64 HalpGetIdt()

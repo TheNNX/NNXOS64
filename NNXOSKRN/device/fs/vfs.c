@@ -4,51 +4,97 @@
 #include <text.h>
 #include <rtl.h>
 
+/* TODO: Decouple IDE code form VFS code. Move IDE VFS initialization to 
+   apropriate IDE codde. */
+
 VIRTUAL_FILE_SYSTEM virtualFileSystems[VFS_MAX_NUMBER];
+
+VFS_STATUS IdeReadSector(VFS* vfs, SIZE_T sectorIndex, BYTE* destination)
+{
+    IDE_VFS* ideVfs = vfs->DeviceSpecificData;
+    return PciIdeDiskIo(
+        ideVfs->Drive, 
+        0,
+        ideVfs->LbaStart + sectorIndex, 
+        1,
+        destination);
+}
+
+VFS_STATUS IdeWriteSector(VFS* vfs, SIZE_T sectorIndex, BYTE* source)
+{
+    IDE_VFS* ideVfs = vfs->DeviceSpecificData;
+    return PciIdeDiskIo(
+        ideVfs->Drive, 
+        1, 
+        ideVfs->LbaStart + sectorIndex, 
+        1, 
+        source);
+}
 
 void VfsInit()
 {
     int i;
     VFS empty = { 0 };
-    
+
     for (i = 0; i < VFS_MAX_NUMBER; i++)
+    {
         virtualFileSystems[i] = empty;
+    }
 }
 
-SIZE_T VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functions)
+SIZE_T VfsRegister(
+    PVOID deviceSpecificData,
+    VFS_STATUS(*readSector)(VFS*, SIZE_T, PBYTE),
+    VFS_STATUS(*writeSector)(VFS*, SIZE_T, PBYTE),
+    const VFS_FUNCTION_SET* functions)
 {
-    SIZE_T found = -1;
     SIZE_T i;
 
-    for (i = 0; (i < VFS_MAX_NUMBER) && (found == -1); i++)
+    for (i = 0; i < VFS_MAX_NUMBER; i++)
     {
-        if (virtualFileSystems[i].Drive == 0)
+        if (virtualFileSystems[i].DeviceSpecificData == NULL)
         {
-            virtualFileSystems[i].Drive = drive;
-            virtualFileSystems[i].LbaStart = lbaStart;
-            virtualFileSystems[i].SizeInSectors = partitionSize;
-            virtualFileSystems[i].Functions = functions;
-            found = i;
-            break;
+            virtualFileSystems[i].DeviceSpecificData = deviceSpecificData;
+            virtualFileSystems[i].Functions = *functions;
+            virtualFileSystems[i].ReadSector = readSector;
+            virtualFileSystems[i].WriteSector = writeSector;
+            return i;
         }
     }
 
-    return found;
+    return -1;
+}
+
+SIZE_T VfsAddIdePartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, const VFS_FUNCTION_SET* functions)
+{
+    SIZE_T i;
+
+    IDE_VFS* ideSpecific = ExAllocatePool(NonPagedPool, sizeof(IDE_VFS));
+    ideSpecific->Drive = drive;
+    ideSpecific->LbaStart = lbaStart;
+    ideSpecific->SizeInSectors = partitionSize;
+
+    i = VfsRegister(ideSpecific, IdeReadSector, IdeWriteSector, functions);
+    if (i == -1)
+    {
+        ExFreePool(ideSpecific);
+    }
+    return i;
 }
 
 VFS_STATUS VfsReadSector(VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* destination)
 {
-    return PciIdeDiskIo(vfs->Drive, 0, vfs->LbaStart + sectorIndex, 1, destination);
+    return vfs->ReadSector(vfs, sectorIndex, destination);
 }
 
 VFS_STATUS VfsWriteSector(VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* source)
 {
-    return PciIdeDiskIo(vfs->Drive, 1, vfs->LbaStart + sectorIndex, 1, source);
+    return vfs->WriteSector(vfs, sectorIndex, source);
 }
 
 VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(SIZE_T n)
 {
-    if (virtualFileSystems[n].Drive == 0)
+    if (virtualFileSystems[n].DeviceSpecificData == NULL)
     {
         return NULL;
     }

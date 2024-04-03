@@ -65,8 +65,6 @@ BOOL RegisterPartition(UINT64 Number)
         UINT32 freeClusters;
         UCHAR nameCopy[12] = { 0 };
         
-        filesystem->AllocationUnitSize = (UINT64)bpb->SectorsPerCluster * (UINT64)bpb->BytesPerSector;
-
         for (n = 0; n < 8; n++)
         {
             nameCopy[n] = fatTypeInfo[n];
@@ -153,7 +151,11 @@ VOID DiskCheck()
                         GPT_PARTITION_ENTRY* entry = (GPT_PARTITION_ENTRY*)(buffer + currentEntryPos);
                         if (!GptCompareGuid(entry->TypeGuid, GPT_EMPTY_TYPE))
                         {
-                            number = VfsAddPartition(Drives + i, entry->LbaPartitionStart, entry->LbaPartitionEnd - entry->LbaPartitionStart - 1, FatVfsInterfaceGetFunctionSet());
+                            number = VfsAddIdePartition(
+                                Drives + i,
+                                entry->LbaPartitionStart,
+                                entry->LbaPartitionEnd - entry->LbaPartitionStart - 1,
+                                FatVfsInterfaceGetFunctionSet());
                             FatInitVfs(VfsGetPointerToVfs(number));
                         }
                         entryNumber++;
@@ -171,7 +173,11 @@ VOID DiskCheck()
                     if (entry.PartitionSizeInSectors == 0)
                         continue;
 
-                    number = VfsAddPartition(Drives + i, entry.PartitionStartLBA28, entry.PartitionSizeInSectors, FatVfsInterfaceGetFunctionSet());
+                    number = VfsAddIdePartition(
+                        Drives + i,
+                        entry.PartitionStartLBA28, 
+                        entry.PartitionSizeInSectors, 
+                        FatVfsInterfaceGetFunctionSet());
                     FatInitVfs(VfsGetPointerToVfs(number));
                 }
             }

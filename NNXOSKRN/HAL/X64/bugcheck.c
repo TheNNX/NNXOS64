@@ -6,6 +6,7 @@
 #include <cpu.h>
 #include <HALX64/include/APIC.h>
 #include <interrupt.h>
+#include <pool.h>
 
 __declspec(noreturn)
 VOID
@@ -52,8 +53,7 @@ KeBugCheckEx(
     ULONG_PTR param1,
     ULONG_PTR param2,
     ULONG_PTR param3,
-    ULONG_PTR param4
-)
+    ULONG_PTR param4)
 {
     KeStopOtherCores();
     HalDisableInterrupts();
@@ -98,6 +98,13 @@ KeBugCheckEx(
     PrintT("\n\n");
     PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
     PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
+
+    HalDisableInterrupts();
+    KeLowerIrql(0);
+    //ExPoolSelfCheck();
+
+    //VOID KiPrintSpinlockDebug();
+    //KiPrintSpinlockDebug();
 
     KeStop();
 }

@@ -169,7 +169,7 @@ ObCloseHandleByEntry(
     KIRQL irql;
     POBJECT_HEADER objHeader;
 
-    objHeader = ObGetObjectFromHeader(entry->Object);
+    objHeader = ObGetHeaderFromObject(entry->Object);
     KeAcquireSpinLock(&objHeader->Lock, &irql);
     objHeader->HandleCount--;
     KeReleaseSpinLock(&objHeader->Lock, irql);

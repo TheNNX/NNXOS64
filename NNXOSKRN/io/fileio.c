@@ -331,11 +331,12 @@ NtCreateFile(
         {
             return Status;
         }
-    }
-    Status = RtlUnicodeStringCat(&Path, &PathSeparatorString);
-    if (!NT_SUCCESS(Status))
-    {
-        return Status;
+
+        Status = RtlUnicodeStringCat(&Path, &PathSeparatorString);
+        if (!NT_SUCCESS(Status))
+        {
+            return Status;
+        }
     }
 
     Status = RtlUnicodeStringCat(&Path, ObjectAttributes.ObjectName);

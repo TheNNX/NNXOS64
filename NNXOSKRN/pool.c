@@ -543,7 +543,7 @@ MergeWithNextBlock(
     
     desciptor = Pools[block->PoolType];
 
-    if (desciptor->PoolLock == 0)
+    if (!LOCKED(desciptor->PoolLock))
     {
         KeBugCheckEx(
             SPIN_LOCK_NOT_OWNED,
@@ -623,7 +623,7 @@ ExVerifyPoolBlock(
 
     result = TRUE;
     
-    if (poolDecsriptor->PoolLock == 0)
+    if (!LOCKED(poolDecsriptor->PoolLock))
     {
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
     }
@@ -760,7 +760,7 @@ DebugEnumeratePoolBlocks(
     PrintT("----------------------------\n");
     poolDescriptor = Pools[poolType];
 
-    if (poolDescriptor->PoolLock == 0)
+    if (!LOCKED(poolDescriptor->PoolLock))
     {
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
     }
@@ -772,9 +772,10 @@ DebugEnumeratePoolBlocks(
         (PLIST_ENTRY)current != &poolDescriptor->PoolHead)
     {
         PrintT(
-            "%x: [%X] size=%i pooltype=%i, next: %X\n", 
+            "%x: [%S] size=%i pooltype=%i, next: %X\n", 
             current, 
-            current->AllocationTag,
+            &current->AllocationTag,
+            4,
             current->Size,
             (ULONG_PTR)current->PoolType,
             (ULONG_PTR)((ULONG_PTR)current 
@@ -807,26 +808,10 @@ NTAPI
 ExPoolSelfCheck()
 {
     PPOOL_DESCRIPTOR poolDescriptor;
-    PVOID pageSizeAllocation;
-    PVOID smallAllocation;
     KIRQL irql;
 
     PrintT("Testing pool\n");
     poolDescriptor = Pools[NonPagedPool];
-
-    KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
-    DebugEnumeratePoolBlocks(NonPagedPool);
-    KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
-
-    smallAllocation = ExAllocatePoolWithTag(NonPagedPool, 16, 'TEST');
-    pageSizeAllocation = ExAllocatePoolWithTag(NonPagedPool, 4096, 'TEST');
-
-    KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
-    DebugEnumeratePoolBlocks(NonPagedPool);
-    KeReleaseSpinLock(&poolDescriptor->PoolLock, irql);
-
-    ExFreePool(smallAllocation);
-    ExFreePool(pageSizeAllocation);
 
     KeAcquireSpinLock(&poolDescriptor->PoolLock, &irql);
     DebugEnumeratePoolBlocks(NonPagedPool);

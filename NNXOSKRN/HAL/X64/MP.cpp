@@ -76,7 +76,9 @@ extern "C" {
         NTSTATUS status;
 
         currentLapicId = ApicGetCurrentLapicId();
+
         KeNumberOfProcessors = ApicNumberOfCoresDetected;
+        PrintT("Number of detected processors %i %i\n", KeNumberOfProcessors, currentLapicId);
         
         if (ApicNumberOfCoresDetected != 1)
         {

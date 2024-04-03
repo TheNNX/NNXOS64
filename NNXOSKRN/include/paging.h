@@ -137,8 +137,10 @@ extern "C"
 
     VOID 
     NTAPI
-    MmApplyAddressSpace(
-        PADDRESS_SPACE AddressSpace);
+    MmApplyAddressSpaceImpl(
+        PADDRESS_SPACE AddressSpace, char*, int);
+
+#define MmApplyAddressSpace(x) MmApplyAddressSpaceImpl(x, __FILE__, __LINE__)
 
     VOID
     NTAPI

@@ -228,6 +228,9 @@
     <ClCompile Include="ldr\ldr.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="device\fs\preloaded.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bugcheck.h">
@@ -357,6 +360,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\scheduler_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\preloaded.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

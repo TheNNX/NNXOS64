@@ -67,8 +67,7 @@ PagingSelectPageFilePageIndex()
 {
     ULONG_PTR currentCheckedIndex;
 
-
-    if (PageFileLock == 0)
+    if (!LOCKED(PageFileLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     for (currentCheckedIndex = 1; currentCheckedIndex < PageFileSize / PAGE_SIZE; currentCheckedIndex++)
@@ -93,7 +92,7 @@ PagingSetPageFileMapBit(
     SIZE_T containingCellOffset;
     SIZE_T bitNumber;
 
-    if (PageFileLock == 0)
+    if (!LOCKED(PageFileLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     containingCellOffset = pageFilePageIndex / (sizeof(*PageFileMap) * 8);
@@ -119,7 +118,7 @@ PagingGetPageFileMapBit(
     SIZE_T containingCellOffset;
     SIZE_T bitNumber;
 
-    if (PageFileLock == 0)
+    if (!LOCKED(PageFileLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     containingCellOffset = pageFilePageIndex / (sizeof(*PageFileMap) * 8);
@@ -140,7 +139,7 @@ PagingSavePageToPageFile(
 {
     VFS* filesystem;
 
-    if (PageFileLock == 0)
+    if (!LOCKED(PageFileLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     filesystem = PageFile->Filesystem;
@@ -158,7 +157,7 @@ PagingLoadPageFromPageFile(
 {
     VFS* filesystem;
 
-    if (PageFileLock == 0)
+    if (!LOCKED(PageFileLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     filesystem = PageFile->Filesystem;

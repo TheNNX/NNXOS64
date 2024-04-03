@@ -41,7 +41,7 @@ KiInsertQueueAPC(
     PKTHREAD pThread;
     BOOL success;
 
-    if (DispatcherLock == 0)
+    if (!LOCKED(DispatcherLock))
     {
         KeBugCheckEx(
             SPIN_LOCK_NOT_OWNED,
@@ -132,7 +132,7 @@ KiCopyContextToUserStack(
     INT i;
 
     /* check if the thread is locked */
-    if (pThread->ThreadLock == 0)
+    if (!LOCKED(pThread->ThreadLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     source = pThread->KernelStackPointer;

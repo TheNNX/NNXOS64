@@ -9,6 +9,8 @@
 #include <nnxcfg.h>
 #include <physical_allocator.h>
 #include <pcr.h>
+#include <bugcheck.h>
+#include <preloaded.h>
 
 PDWORD gpdwFramebuffer; PDWORD gpdwFramebufferEnd;
 DWORD gdwWidth; DWORD gdwHeight; DWORD gdwPixelsPerScanline;
@@ -33,9 +35,71 @@ RemapModule(
 
 ULONG_PTR GetStack();
 
-VOID KeLoadStub(
-    BOOTDATA* bootdata
-){
+static
+NTSTATUS
+HandlePreloadedFiles(
+    PBOOTDATA pBootdata,
+    PLIST_ENTRY* pOutNewHead)
+{
+    PLIST_ENTRY pHead, pNewHead;
+    PPRELOADED_FILE mapped;
+    PVOID pCurrent, physical;
+
+    pHead = &pBootdata->PreloadedFiles;
+    pCurrent = pHead->First;
+
+    pNewHead = (PLIST_ENTRY)PagingAllocatePageFromRange(
+        PAGING_KERNEL_SPACE, 
+        PAGING_KERNEL_SPACE_END);
+    if (pNewHead == NULL)
+    {
+        return STATUS_NO_MEMORY;
+    }
+    InitializeListHead(pNewHead);
+
+    while (pCurrent != pHead)
+    {
+        physical = CONTAINING_RECORD(pCurrent, PRELOADED_FILE, Entry);
+        mapped = (PPRELOADED_FILE)PagingMapStrcutureToVirtual(
+            (ULONG_PTR)physical, 
+            sizeof(PRELOADED_FILE), 
+            PAGE_PRESENT | PAGE_WRITE);
+
+        if (mapped == NULL)
+        {
+            return STATUS_NO_MEMORY;
+        }
+
+        mapped->Data = (PVOID)PagingMapStrcutureToVirtual(
+            (ULONG_PTR)mapped->Data,
+            mapped->Filesize,
+            PAGE_PRESENT | PAGE_WRITE);
+        if (mapped->Data == NULL)
+        {
+            return STATUS_NO_MEMORY;
+        }
+
+        PrintT("Preloaded file '");
+        for (int i = 0; i < MAX_PATH; i++)
+        {
+            if (mapped->Name[i] == 0)
+                break;
+            PrintT("%c", (char)mapped->Name[i]);
+        }
+        PrintT("'\n");
+
+        pCurrent = mapped->Entry.Next;
+        InsertTailList(pNewHead, &mapped->Entry);
+    }
+
+    *pOutNewHead = pNewHead;
+    return STATUS_SUCCESS;
+}
+
+VOID 
+KeLoadStub(
+    BOOTDATA* bootdata)
+{
     ULONG_PTR mainDelta;
     ULONG_PTR newStack;
     ULONG_PTR currentStack;
@@ -43,6 +107,7 @@ VOID KeLoadStub(
     UINT64(*mainReloc)(VOID*);
     PLIST_ENTRY ModuleEntry;
     ULONG_PTR CurrentBase;
+    NTSTATUS status;
 
     /* Used to temporarily identity-map physical pages allocated by UEFI to 
      * So exports can be bound to the correct, new virtual addresses. */
@@ -75,7 +140,7 @@ VOID KeLoadStub(
     mainReloc = (UINT64(*)(VOID*))(KERNEL_DESIRED_LOCATION + mainDelta);
 
     /* Map kernel pages. */
-    NTSTATUS status = PagingInit(MinKernelPhysAddr, MaxKernelPhysAddr);
+    status = PagingInit(MinKernelPhysAddr, MaxKernelPhysAddr);
     PagingMapAndInitFramebuffer();
     bootdata->MainKernelModule->SectionHeaders = 
         (PIMAGE_SECTION_HEADER)PagingMapStrcutureToVirtual(
@@ -136,6 +201,19 @@ VOID KeLoadStub(
         ModuleEntry = ModuleEntry->Next;
     }
     PagingEnableSystemWriteProtection();
+
+    if (!IsListEmpty(&bootdata->PreloadedFiles))
+    {
+        status = HandlePreloadedFiles(bootdata, &KePreloadedHeadPtr);
+        if (!NT_SUCCESS(status))
+        {
+            KeBugCheck(HAL_INITIALIZATION_FAILED);
+        }
+    }
+    else
+    {
+        KePreloadedHeadPtr = NULL;
+    }
 
     MiFlagPfnsForRemap();
     SetupStack(newStack, mainReloc);

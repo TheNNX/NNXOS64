@@ -5,7 +5,7 @@
 VOID
 NTAPI
 KiAcquireSpinLock(
-    PKSPIN_LOCK SpinLock)
+    volatile ULONG_PTR* SpinLock)
 {
     while (_interlockedbittestandset((PLONG)SpinLock, 0))
     {
@@ -21,7 +21,7 @@ KiAcquireSpinLock(
 VOID
 NTAPI
 KiReleaseSpinLock(
-    PKSPIN_LOCK SpinLock)
+    volatile ULONG_PTR* SpinLock)
 {
 
     _InterlockedAnd((PLONG)SpinLock, 0);

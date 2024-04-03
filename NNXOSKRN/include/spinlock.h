@@ -7,9 +7,23 @@ extern "C" {
 #include <nnxtype.h>
 #include <irql.h>
 
+#define DESPERATE_SPINLOCK_DEBUG
+
 #pragma warning(push)
 #pragma warning(disable: 4324)
+#ifndef DESPERATE_SPINLOCK_DEBUG
     typedef ULONG_PTR volatile KSPIN_LOCK, * volatile PKSPIN_LOCK;
+#define LOCKED(x) (x != 0)
+#else
+    typedef struct _KSPIN_LOCK_DEBUG
+    {
+        ULONG_PTR Number;
+        const char* LockedByFunction;
+        int LockedByLine;
+        int LockedByCore;
+    } volatile KSPIN_LOCK, * volatile PKSPIN_LOCK;
+#define LOCKED(x) (x.Number != 0)
+#endif
 #pragma warning(pop)
 
 #if defined(NNX_HAL) || defined(NNX_KERNEL)
@@ -17,13 +31,13 @@ extern "C" {
     VOID
     NTAPI
     KiAcquireSpinLock(
-        PKSPIN_LOCK SpinLock);
+        volatile ULONG_PTR* SpinLock);
 
     NTHALAPI
     VOID
     NTAPI
     KiReleaseSpinLock(
-        PKSPIN_LOCK SpinLock);
+        volatile ULONG_PTR* SpinLock);
 #endif
 
 #ifndef NNX_HAL

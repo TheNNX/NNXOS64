@@ -56,7 +56,7 @@ ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp)
     return gXsdt;
 }
 
-static KSPIN_LOCK PageViewSpinLock = 0;
+static KSPIN_LOCK PageViewSpinLock = { 0 };
 static __declspec(align(PAGE_SIZE)) volatile char PageView[PAGE_SIZE];
 
 ACPI_SDT_HEADER*
@@ -67,7 +67,7 @@ AcpiRemapSdt(ACPI_SDT_HEADER* Addr)
     SIZE_T Size;
 
     /* Create a temporary mapping, to read the SDT size. */
-    KiAcquireSpinLock(&PageViewSpinLock);
+    KiAcquireSpinLock((volatile ULONG_PTR*)&PageViewSpinLock);
     Status = PagingMapPage((ULONG_PTR)PageView, (ULONG_PTR)Addr, PAGE_PRESENT);
     if (!NT_SUCCESS(Status))
     {
@@ -76,7 +76,7 @@ AcpiRemapSdt(ACPI_SDT_HEADER* Addr)
 
     Virtual = (ACPI_SDT_HEADER*)PageView;
     Size = Virtual->Lenght;
-    KiReleaseSpinLock(&PageViewSpinLock);
+    KiReleaseSpinLock((volatile ULONG_PTR*)&PageViewSpinLock);
 
     /* Remap to a sensible address. */
     Virtual = (ACPI_SDT_HEADER*)

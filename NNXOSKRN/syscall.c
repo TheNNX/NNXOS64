@@ -20,7 +20,7 @@ VOID HalpSystemCall();
 
 volatile long QueueInitialized = FALSE;
 static KQUEUE Queue;
-static KSPIN_LOCK SystemCallSpinLock = 0;
+static KSPIN_LOCK SystemCallSpinLock = { 0 };
 
 
 /**

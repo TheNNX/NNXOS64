@@ -60,17 +60,22 @@ extern "C" {
 
     typedef struct _IDE_DRIVE IDE_DRIVE;
 
-    typedef struct VIRTUAL_FILE_SYSTEM
+    typedef struct _IDE_VFS
     {
         IDE_DRIVE* Drive;
         UINT64 LbaStart;
         UINT64 SizeInSectors;
-        UINT64 AllocationUnitSize;
+        KSPIN_LOCK DeviceSpinlock;
+    } IDE_VFS, *PIDE_VFS;
+
+    typedef struct VIRTUAL_FILE_SYSTEM
+    {
         VFS_FUNCTION_SET Functions;
         VOID* FilesystemSpecificData;
-        KSPIN_LOCK DeviceSpinlock;
+        VOID* DeviceSpecificData;
+        VFS_STATUS (*ReadSector)(struct VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* destination);
+        VFS_STATUS (*WriteSector)(struct VIRTUAL_FILE_SYSTEM* vfs, SIZE_T sectorIndex, BYTE* source);
     }VIRTUAL_FILE_SYSTEM, VFS, *PVIRTUAL_FILE_SYSTEM, *PVFS;
-
 
 #define VFS_ERR_INVALID_FILENAME            0xFFFF0001
 #define VFS_ERR_INVALID_PATH                0xFFFF0002
@@ -87,7 +92,20 @@ extern "C" {
 #define VFS_MAX_PATH (2048)
 
     void VfsInit();
-    SIZE_T VfsAddPartition(IDE_DRIVE* drive, UINT64 lbaStart, UINT64 partitionSize, VFS_FUNCTION_SET functionSet);
+
+    SIZE_T
+    VfsAddIdePartition(
+        IDE_DRIVE* drive, 
+        UINT64 lbaStart, 
+        UINT64 partitionSize,
+        const VFS_FUNCTION_SET* functionSet);
+
+    SIZE_T VfsRegister(
+        PVOID deviceSpecificData,
+        VFS_STATUS(*readSector)(VFS*, SIZE_T, PBYTE),
+        VFS_STATUS(*writeSector)(VFS*, SIZE_T, PBYTE),
+        const VFS_FUNCTION_SET* functions);
+
     VIRTUAL_FILE_SYSTEM* VfsGetPointerToVfs(SIZE_T n);
     VIRTUAL_FILE_SYSTEM* VfsGetSystemVfs();
     VFS_STATUS VfsReadSector(VIRTUAL_FILE_SYSTEM*, SIZE_T sectorIndex, BYTE* destination);

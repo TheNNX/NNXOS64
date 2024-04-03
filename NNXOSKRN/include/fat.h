@@ -115,7 +115,7 @@ VFS_STATUS FatVfsInterfaceDeleteAndCloseFile(VFS_FILE* file);
 VFS_STATUS FatVfsInterfaceRecreateDeletedFile(VFS_FILE* file);
 VFS_STATUS FatReadFatEntry(BPB* bpb, VFS* filesystem, UINT32 n, BYTE* sectorsData, UINT32* currentSector);
 VOID FatInitVfs(VFS* partition);
-VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet();
+const VFS_FUNCTION_SET* FatVfsInterfaceGetFunctionSet();
 
 BOOL NNXFatAutomaticTest(VFS* filesystem);
 

@@ -16,7 +16,7 @@ KiHandleObjectWaitTimeout(
     PKTHREAD Thread, 
     PLONG64 pTimeout)
 {
-    if (DispatcherLock == 0)
+    if (!LOCKED(DispatcherLock))
     {
         KeBugCheckEx(
             SPIN_LOCK_NOT_OWNED, 
@@ -190,8 +190,8 @@ RundownWaitBlocks(
     ULONG i;
 
     ASSERT(KeGetCurrentIrql() >= DISPATCH_LEVEL);
-    ASSERT(pThread->ThreadLock != 0);
-    ASSERT(DispatcherLock != 0);
+    ASSERT(LOCKED(pThread->ThreadLock));
+    ASSERT(LOCKED(DispatcherLock));
 
     for (i = 0; i < pThread->NumberOfCurrentWaitBlocks; i++)
     {
@@ -253,7 +253,7 @@ KeUnwaitThreadNoLock(
         PspInsertIntoSharedQueue(pThread);
     }
 
-    if (pThread->ThreadLock == 0)
+    if (!LOCKED(pThread->ThreadLock))
         KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
 
     KiHandleObjectWaitTimeout(pThread, 0);
@@ -286,7 +286,7 @@ KiClockTick()
     PKTIMEOUT_ENTRY TimeoutEntry;
     ULONG64 Time = 0;
 
-    if (DispatcherLock == 0)
+    if (!LOCKED(DispatcherLock))
     {
         KeBugCheckEx(
             SPIN_LOCK_NOT_OWNED,

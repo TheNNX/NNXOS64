@@ -95,7 +95,7 @@ KiUnwaitWaitBlockFromQueue(
     PKWAIT_BLOCK pWaitBlock)
 {
     PKQUEUE Queue = (PKQUEUE)pWaitBlock->Object;
-    ASSERT(Queue->Header.Lock & 1);
+    ASSERT(LOCKED(Queue->Header.Lock));
 
     Queue->CurrentWaitingThreads--;
 }

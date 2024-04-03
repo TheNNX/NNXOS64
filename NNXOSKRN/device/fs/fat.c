@@ -1499,9 +1499,9 @@ VFS_FILE* FatVfsInterfaceOpenOrCreateFile(VFS* vfs, const char * path)
     return FatVfsInterfaceOpenFile(vfs, path);
 }
 
-VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet()
-{
-    VFS_FUNCTION_SET functionSet = { 0 };
+static VFS_FUNCTION_SET functionSet = { 0 };
+const VFS_FUNCTION_SET* FatVfsInterfaceGetFunctionSet()
+{    
     functionSet.CheckIfFileExists = FatVfsInterfaceCheckIfFileExists;
     functionSet.OpenFile = FatVfsInterfaceOpenFile;
     functionSet.OpenOrCreateFile = FatVfsInterfaceOpenOrCreateFile;
@@ -1515,7 +1515,7 @@ VFS_FUNCTION_SET FatVfsInterfaceGetFunctionSet()
     functionSet.DeleteFile = FatVfsInterfaceDeleteFile;
     functionSet.DeleteAndCloseFile = FatVfsInterfaceDeleteAndCloseFile;
     functionSet.CreateDirectory = FatVfsInterfaceCreateDirectory;
-    return functionSet;
+    return &functionSet;
 }
 
 FAT_DIRECTORY_ENTRY FatEntryFromPath(const char * path)

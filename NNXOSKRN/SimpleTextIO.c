@@ -537,9 +537,9 @@ void PrintTA(const char* input, ...)
     if (oldIrql < DISPATCH_LEVEL)
         KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
     
-    KiAcquireSpinLock(&PrintLock);
+    KiAcquireSpinLock((volatile ULONG_PTR*)&PrintLock);
     TextIoOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
-    KiReleaseSpinLock(&PrintLock);
+    KiReleaseSpinLock((volatile ULONG_PTR*)&PrintLock);
 
     if (oldIrql < DISPATCH_LEVEL)
         KeLowerIrql(oldIrql);

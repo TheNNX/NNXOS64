@@ -34,6 +34,6 @@ KiUnwaitWaitBlockMutex(
 {
     PKMUTEX pMutex = (PKMUTEX)pWaitBlock->Object;
     ASSERT(pMutex->Header.Type == MutexObject);
-    ASSERT(pMutex->Header.Lock & 1);
+    ASSERT(LOCKED(pMutex->Header.Lock));
     pMutex->Owner = pWaitBlock->Thread;
 }
