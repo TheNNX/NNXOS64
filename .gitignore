@@ -33,3 +33,7 @@ fat16
 fat16/*
 create.txt
 *.sqlite
+*.pdb
+.vs/*
+debug/*
+debug
