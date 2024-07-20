@@ -47,7 +47,7 @@
     <TargetExt>.efi</TargetExt>
     <GenerateManifest>false</GenerateManifest>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)image\</OutDir>
+    <OutDir>$(SolutionDir)image\EFI\BOOT\</OutDir>
     <IntDir>$(SolutionDir)temp\$(ProjectName)\</IntDir>
     <TargetName>bootx64</TargetName>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>

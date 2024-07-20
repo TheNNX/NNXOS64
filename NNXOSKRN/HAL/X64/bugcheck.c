@@ -101,10 +101,6 @@ KeBugCheckEx(
 
     HalDisableInterrupts();
     KeLowerIrql(0);
-    //ExPoolSelfCheck();
-
-    //VOID KiPrintSpinlockDebug();
-    //KiPrintSpinlockDebug();
 
     KeStop();
 }

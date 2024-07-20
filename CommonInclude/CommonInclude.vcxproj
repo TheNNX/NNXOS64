@@ -78,6 +78,16 @@
   <ItemGroup>
     <ClInclude Include="nnxpe.h" />
     <ClInclude Include="nnxtype.h" />
+    <Text Include="syscall.inc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ExcludedFromBuild>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </DeploymentContent>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="func.inc" />

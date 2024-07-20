@@ -2,6 +2,7 @@
 [ORG 0x0000]
 
 ApStartup:
+    mov BYTE [Output], __?LINE?__
 .SpinWait:
     pause
     test WORD [ApSpinlock], 0
@@ -79,7 +80,28 @@ LongModeEntry:
     cpuid
     shr rbx, 24
     and rbx, 0x00000000000000FF
-    mov rcx, rbx
+
+    mov rcx, [ApNumberOfProcessors]
+    mov rsi, [ApLapicIds]
+
+.loop:
+    jrcxz .lapicNotFound
+    dec rcx
+
+    cmp [rsi], bl
+    jz .lapicFound
+    inc rsi
+
+    jmp .loop
+.lapicNotFound:
+    cli
+    hlt
+.lapicFound:
+    sub rsi, [ApLapicIds]
+    mov rcx, rsi
+    mov rbx, rcx
+
+    mov QWORD [Output], rcx
 
     ; set the stack for this AP
     mov QWORD rsi, [ApStackPointerArray]
@@ -97,8 +119,6 @@ LongModeEntry:
     call rax
 
     ; shouldn't return, if it did, do a cli+hlt loop
-    jmp Error
-
 Error:
     cli
     hlt
@@ -112,19 +132,18 @@ ApSpinlock: DW 0x0000
 .End:
 align 64
 
-ApCurrentlyBeingInitialized:
-                                db 0x00 
-ApCR3:
-                                dq 0x0000000000000000
-ApStackPointerArray:
-                                dq 0x0000000000000000
-ApProcessorInit:
-                                dq 0x0000000000000000
+ApNumberOfProcessors: db 0x00 
+ApCR3:                dq 0x0000000000000000
+ApStackPointerArray:  dq 0x0000000000000000
+ApProcessorInit:      dq 0x0000000000000000
 ApGdtr64:                        
-.Size:                            dw 0x0000
-.Base:                            dq 0x0000000000000000
+.Size:                dw 0x0000
+.Base:                dq 0x0000000000000000
 ApIdtr64:
-.Size:                            dw 0x0000
-.Base:                            dq 0x0000000000000000
+.Size:                dw 0x0000
+.Base:                dq 0x0000000000000000
+
+Output:               dq 0x0000000000000000
+ApLapicIds:           dq 0x0000000000000000
 
 times 4096 - ($ - ApStartup) db 0x00

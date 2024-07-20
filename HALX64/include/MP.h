@@ -10,19 +10,21 @@
 extern "C" {
 #endif
     VOID MpInitialize();
-    VOID ApProcessorInit(UINT8 lapicID);
+    VOID ApProcessorInit(UINT8 coreNumber);
 
 #pragma pack(push, 1)
     typedef struct _AP_DATA
     {
         UINT16 ApSpinlock;
         UINT8 Padding[62];
-        UINT8 ApCurrentlyBeingInitialized;
+        UINT8 ApNumberOfProcessors;
         UINT64 ApCR3;
         PVOID* ApStackPointerArray;
-        VOID(*ApProcessorInit)(UINT8 lapicId);
+        VOID(*ApProcessorInit)(UINT8 coreNumber);
         KGDTR64 ApGdtr;
         _KIDTR64 ApIdtr;
+        ULONG_PTR Output;
+        UCHAR* ApLapicIds;
     }AP_DATA;
 #pragma pack(pop)
 

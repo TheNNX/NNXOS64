@@ -7,7 +7,7 @@ extern "C" {
 #include <nnxtype.h>
 #include <irql.h>
 
-#define DESPERATE_SPINLOCK_DEBUG
+//#define DESPERATE_SPINLOCK_DEBUG
 
 #pragma warning(push)
 #pragma warning(disable: 4324)

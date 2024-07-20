@@ -32,7 +32,6 @@ func TestUserThread1
 .loop:
     mov rdx, rax
     mov r9, 1
-    syscall
     mov rcx, 0x0
 .decr:
     test rcx, rcx
@@ -48,7 +47,6 @@ func TestUserThread2
 .loop:
     mov rdx, rax
     mov r9, 2
-    syscall
     mov rcx, 0x0
 .decr:
     test rcx, rcx

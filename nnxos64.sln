@@ -31,6 +31,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "smss", "smss\smss.vcxproj",
 		{67E77DD1-D078-48E7-8F75-159C6130C693} = {67E77DD1-D078-48E7-8F75-159C6130C693}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NTDLL", "NTDLL\NTDLL.vcxproj", "{2B555A05-4383-4987-8175-E681164E14CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -95,6 +97,14 @@ Global
 		{00F5B4FD-7CFB-4336-9C18-332EFC1B7ED8}.Release|x64.Build.0 = Release|x64
 		{00F5B4FD-7CFB-4336-9C18-332EFC1B7ED8}.Release|x86.ActiveCfg = Release|Win32
 		{00F5B4FD-7CFB-4336-9C18-332EFC1B7ED8}.Release|x86.Build.0 = Release|Win32
+		{2B555A05-4383-4987-8175-E681164E14CF}.Debug|x64.ActiveCfg = Debug|x64
+		{2B555A05-4383-4987-8175-E681164E14CF}.Debug|x64.Build.0 = Debug|x64
+		{2B555A05-4383-4987-8175-E681164E14CF}.Debug|x86.ActiveCfg = Debug|Win32
+		{2B555A05-4383-4987-8175-E681164E14CF}.Debug|x86.Build.0 = Debug|Win32
+		{2B555A05-4383-4987-8175-E681164E14CF}.Release|x64.ActiveCfg = Release|x64
+		{2B555A05-4383-4987-8175-E681164E14CF}.Release|x64.Build.0 = Release|x64
+		{2B555A05-4383-4987-8175-E681164E14CF}.Release|x86.ActiveCfg = Release|Win32
+		{2B555A05-4383-4987-8175-E681164E14CF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

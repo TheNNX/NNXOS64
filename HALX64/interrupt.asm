@@ -30,6 +30,11 @@ func KeStop
 func HalpUpdateThreadKernelStack 
     push QWORD rdi
     mov QWORD rdi, [gs:0x08]
+    
+    ; sizeof(rsp) + sizeof(ss) + sizeof(rip) + sizeof(cs) + sizeof(rflags)
+    ; + sizeof(return from intermediate interupt handler address)
+    add rcx, 48
+
     ; set RSP0
     mov QWORD [rdi+0x04], rcx
     pop QWORD rdi

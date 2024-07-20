@@ -32,6 +32,7 @@ VOID
 NTAPI
 HalInitializeSystemCallForCurrentCore(ULONG_PTR SyscallStub)
 {
+#ifdef _M_AMD64
     KIRQL irql;
 
     /* Enable syscalls */
@@ -54,6 +55,7 @@ HalInitializeSystemCallForCurrentCore(ULONG_PTR SyscallStub)
         KeInitializeQueue(&Queue, 0);
     }
     KeReleaseSpinLock(&SystemCallSpinLock, irql);
+#endif
 }
 
 /**
@@ -70,8 +72,15 @@ SetupSystemCallHandler(
     return oldHandler;
 }
 
-NTSTATUS NtDll5Test()
+NTSTATUS NtDll5Test(
+    ULONG_PTR Arg1,
+    ULONG_PTR Arg2,
+    ULONG_PTR Arg3,
+    ULONG_PTR Arg4,
+    ULONG_PTR Arg5)
 {
+    PrintT(__FUNCTION__":%i: %X %X %X %X %X\n", Arg1, Arg2, Arg3, Arg4, Arg5);
+
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -100,7 +109,6 @@ NTSTATUS KiInvokeService(
     case 2:
         return Service(Rdx, R8);
     case 3:
-        ASSERT(FALSE);
         return KiInvokeServiceHelper(
             Rdx,
             R8,
@@ -124,10 +132,10 @@ NTSTATUS KiInvokeService(
 ULONG_PTR
 NTAPI
 SystemCallHandler(
-    ULONG_PTR p1,
-    ULONG_PTR p2,
-    ULONG_PTR p3,
-    ULONG_PTR p4)
+    ULONG_PTR R9,
+    ULONG_PTR Rdx,
+    ULONG_PTR R8,
+    ULONG_PTR Rsp)
 {
     ULONG_PTR result = 0;
     LONG64 timeout = -10000000;
@@ -141,7 +149,7 @@ SystemCallHandler(
 
     VOID KiPrintSpinlockDebug();
 
-    switch (p1)
+    switch (R9)
     {
     case 1:
     case 2:
@@ -161,16 +169,16 @@ SystemCallHandler(
 
         break;
     case 3:
-        return KiInvokeService(NtDll5Test, 5, p2, p3, p4);
+        return KiInvokeService(NtDll5Test, 5, Rdx, R8, Rsp);
     case 4:
         PrintT("Ldr Test Syscall called!\n");
         break;
     case 5:
         PrintT("Exiting thread %X\n", KeGetCurrentThread());
-        PsExitThread((DWORD)p2);
+        PsExitThread((DWORD)Rdx);
         break;
     default:
-        PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", p1, p2, p3, p4);
+        PrintT("Warning: unsupported system call %X(%X,%X,%X)!\n", R9, Rdx, R8, Rsp);
         ASSERT(FALSE);
     }
 

@@ -78,6 +78,7 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <BaseAddress>0xFFFFFF8000040000</BaseAddress>
+      <ProgramDatabaseFile>$(SolutionDir)debug\$(ProjectName)\$(TargetName).pdb</ProgramDatabaseFile>
     </Link>
     <CustomBuild>
       <Command>nasm -f win64 %(FullPath) -o $(IntDir)%(Filename)_ASM.obj</Command>

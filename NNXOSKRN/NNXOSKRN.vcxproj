@@ -177,8 +177,9 @@ $(SolutionDir)genverh.bat</Command>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AssemblyDebug>true</AssemblyDebug>
       <GenerateMapFile>true</GenerateMapFile>
-      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <MapFileName>$(SolutionDir)debug\$(ProjectName)\$(TargetName).map</MapFileName>
       <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
+      <ProgramDatabaseFile>$(SolutionDir)debug\$(ProjectName)\$(TargetName).pdb</ProgramDatabaseFile>
     </Link>
     <PreBuildEvent>
       <Command>

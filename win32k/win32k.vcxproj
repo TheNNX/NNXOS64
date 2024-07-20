@@ -79,6 +79,8 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <NoEntryPoint>true</NoEntryPoint>
+      <ProgramDatabaseFile>$(SolutionDir)debug\$(ProjectName)\$(TargetName).pdb</ProgramDatabaseFile>
+      <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

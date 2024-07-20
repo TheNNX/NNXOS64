@@ -397,7 +397,8 @@ PspInitializeCore(
             PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
             PrintT("Userthreads: %X %X\n", userThread1, userThread2);
 
-            UNICODE_STRING t = RTL_CONSTANT_STRING(L"EFI\\BOOT\\SMSS.EXE");
+            UNICODE_STRING t = RTL_CONSTANT_STRING(L"SMSS.EXE");
+            PrintT("Starting SMSS.EXE\n");
             status = NnxStartUserProcess(&t, &hProcess, 10);
             if (!NT_SUCCESS(status))
             {
@@ -987,6 +988,7 @@ PspThreadOnCreateNoDispatcher(
     pThread->Tcb.ThreadIrql = PASSIVE_LEVEL;
 
     pThread->Tcb.CustomAddressSpace = NULL;
+
     /* Inherit affinity after the parent process */
     pThread->Tcb.Affinity = pThread->Tcb.Process->AffinityMask;
 

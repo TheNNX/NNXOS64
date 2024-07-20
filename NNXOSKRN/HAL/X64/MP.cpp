@@ -25,7 +25,7 @@ extern "C" {
 
         apCodeFile = systemPartition->Functions.OpenFile(
             systemPartition, 
-            (char*)"EFI\\BOOT\\APSTART.BIN");
+            (char*)"APSTART.BIN");
 
         if (!apCodeFile)
         {
@@ -41,6 +41,9 @@ extern "C" {
         data->ApCR3 = __readcr3();
         data->ApStackPointerArray = ApStackPointerArray;
         data->ApProcessorInit = ApProcessorInit;
+        data->ApLapicIds = ApicLocalApicIDs;
+        data->ApNumberOfProcessors = ApicNumberOfCoresDetected;
+
         _sgdt(&data->ApGdtr);
         __sidt(&data->ApIdtr);
 
@@ -78,8 +81,8 @@ extern "C" {
         currentLapicId = ApicGetCurrentLapicId();
 
         KeNumberOfProcessors = ApicNumberOfCoresDetected;
-        PrintT("Number of detected processors %i %i\n", KeNumberOfProcessors, currentLapicId);
-        
+        PrintT("Number of detected processors %i, BSP LAPIC ID %i\n", KeNumberOfProcessors, currentLapicId);
+
         if (ApicNumberOfCoresDetected != 1)
         {
             ApStackPointerArray = (PVOID*)ExAllocatePool(
@@ -87,16 +90,18 @@ extern "C" {
                 ApicNumberOfCoresDetected * sizeof(*ApStackPointerArray));
 
             apCode = MpPopulateApStartupCode();
-            apData = (VOID*)(((UINT64)apCode) + 0x800);
+            apData = (VOID*)(((ULONG_PTR)apCode) + 0x800);
 
             ApicClearError();
             for (i = 0; i < ApicNumberOfCoresDetected; i++)
             {
                 if (ApicLocalApicIDs[i] == currentLapicId)
+                {
                     continue;
+                }
 
                 ApStackPointerArray[i] =
-                    (PVOID)((ULONG_PTR)PagingAllocatePageFromRange(
+                    (PVOID)(PagingAllocatePageFromRange(
                         PAGING_KERNEL_SPACE,
                         PAGING_KERNEL_SPACE_END) + PAGE_SIZE);
 
@@ -108,33 +113,47 @@ extern "C" {
                     ApicClearError();
 
                     if ((UINT64)apCode > UINT16_MAX)
+                    {
                         KeBugCheck(HAL_INITIALIZATION_FAILED);
+                    }
 
-                    ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(UINT64)apCode);
+                    ApicStartupIpi(ApicLocalApicIDs[i], 0, (UINT16)(ULONG_PTR)apCode);
                     PitUniprocessorPollSleepUs(200);
                 }
+
+#if 0
+                while (1)
+                {
+                    PrintT("core %i->%i result: %X\n", i, ApicLocalApicIDs[i], ((_AP_DATA*)apData)->Output);
+                    PitUniprocessorPollSleepMs(750);
+                }
+#endif
             }
         }
-        status = PspInitializeCore(currentLapicId);
+
+        /* BSP is always core 0. */
+        status = PspInitializeCore(0);
         PrintT("PspInitializeCore NTSTATUS: %X\n", status);
-        if (status)
+        if (!NT_SUCCESS(status))
+        {
             KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+        }
     }
 
-    __declspec(align(64)) UINT64 DrawLock = 0;
-
-    VOID ApProcessorInit(UINT8 lapicId)
+    VOID ApProcessorInit(UINT8 coreNumber)
     {
         NTSTATUS status;
 
         HalpSetDummyPcr();
 
-        HalpSetupPcrForCurrentCpu(lapicId);
+        HalpSetupPcrForCurrentCpu(coreNumber);
         ApicLocalApicInitializeCore();
-        status = PspInitializeCore(lapicId);
+        status = PspInitializeCore(coreNumber);
 
-        if (status)
+        if (!NT_SUCCESS(status))
+        {
             KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
+        }
 
         /* The system shouldn't get here anyway. */
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, 0, 0, 0, 0);

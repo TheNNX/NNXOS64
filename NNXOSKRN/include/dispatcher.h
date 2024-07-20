@@ -96,8 +96,7 @@ extern "C" {
         KPROCESSOR_MODE WaitMode,
         BOOLEAN Alertable,
         PLONG64 Timeout,
-        PKWAIT_BLOCK WaitBlockArray
-    );
+        PKWAIT_BLOCK WaitBlockArray);
 
     NTSYSAPI
     KIRQL

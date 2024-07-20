@@ -15,5 +15,5 @@ ULONG
 NTAPI
 KeGetCurrentProcessorId()
 {
-    return (ULONG)ApicGetCurrentLapicId();
+    return KeGetPcr()->Prcb->Number;
 }

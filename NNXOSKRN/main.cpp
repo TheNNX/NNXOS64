@@ -114,7 +114,7 @@ extern "C"
             KeBugCheck(HAL_INITIALIZATION_FAILED);
         }
 
-        // PciScan();
+        PciScan();
 
         ACPI_RDSP* pRdsp = (ACPI_RDSP*) 
             PagingMapStrcutureToVirtual(
@@ -153,7 +153,7 @@ extern "C"
         ApicInit(pMadt);
 
         SetupSystemCallHandler(SystemCallHandler);
-        HalpSetupPcrForCurrentCpu(ApicGetCurrentLapicId());
+        HalpSetupPcrForCurrentCpu(0);
         KeyboardInitialize();
 
         PrintT(

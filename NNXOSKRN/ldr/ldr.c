@@ -64,6 +64,7 @@ NnxStartUserProcess(
     }
     pProcess->Pcb.BasePriority = Priority;
 
+    /* Create the loader thread. */
     status = PspCreateThreadInternal(
         &pThread,
         pProcess,
@@ -284,6 +285,7 @@ NnxDummyLdrThread(
     Status = NnxLdrCreateModule(Section, View, &pModule);
     if (!NT_SUCCESS(Status))
     {
+        PrintT("Ldr thread could not initialize the process.\n");
         PsExitThread(Status);
     }
 
@@ -308,6 +310,7 @@ NnxDummyLdrThread(
             PsExitThread((DWORD)Status);
         }
 
+        PrintT("Inserting created thread into shared queue\n");
         PspInsertIntoSharedQueueLocked(&mainThread->Tcb);
     }
 

@@ -105,13 +105,9 @@ MmCreateAddressSpace(
 
 VOID 
 NTAPI
-MmApplyAddressSpaceImpl(
-    PADDRESS_SPACE AddressSpace,
-    char* file, 
-    int line)
+MmApplyAddressSpace(
+    PADDRESS_SPACE AddressSpace)
 {
-    //PrintT("[%s:%i (%i)] Address space %X ", file, line, KeGetCurrentProcessorId(), AddressSpace);
-    //PrintT("%X\n", AddressSpace->TopStructPhysAddress);
     __writecr3(AddressSpace->TopStructPhysAddress);
 }
 

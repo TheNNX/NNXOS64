@@ -128,6 +128,7 @@ extern "C"
 
                 if (lapic->Flags & 1)
                 {
+                    PrintT("Lapic %i->%i\n", currentLocalApicIdIndex, lapic->LapicID);
                     ApicLocalApicIDs[currentLocalApicIdIndex++] = lapic->LapicID;
                 }
             }

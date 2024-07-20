@@ -27,14 +27,14 @@ LoadImage(
     EFI_FILE_HANDLE file,
     PLOADED_BOOT_MODULE* outModule);
 
-const CHAR16* wszKernelPath = L"efi\\boot\\NNXOSKRN.exe";
+const CHAR16* wszKernelPath = L"NNXOSKRN.exe";
 
 static const CHAR16* PreloadPaths[] =
 {
-    L"EFI\\BOOT\\NNXOSKRN.EXE",
-    L"EFI\\BOOT\\SMSS.EXE",
-    L"EFI\\BOOT\\APSTART.BIN",
-    L"EFI\\BOOT\\WIN32K.SYS"
+    L"NNXOSKRN.EXE",
+    L"SMSS.EXE",
+    L"APSTART.BIN",
+    L"WIN32K.SYS"
 };
 
 EFI_BOOT_SERVICES* gBootServices;

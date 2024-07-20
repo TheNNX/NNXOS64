@@ -32,3 +32,4 @@ detach2.txt
 fat16
 fat16/*
 create.txt
+*.sqlite
