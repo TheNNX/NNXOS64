@@ -140,6 +140,8 @@ typedef VOID *PVOID, *LPVOID;
 
 #ifdef NNX_KERNEL
 #define NTSYSAPI __declspec(dllexport) 
+#elif defined(NNX_NTDLL)
+#define NTSYSAPI
 #else
 #define NTSYSAPI __declspec(dllimport)
 #endif

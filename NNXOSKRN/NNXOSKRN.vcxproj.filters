@@ -219,7 +219,7 @@
     <ClCompile Include="io\fileio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="syscall.c">
+    <ClCompile Include="syscall.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="mm\mmobj.c">

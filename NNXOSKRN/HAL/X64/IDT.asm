@@ -202,6 +202,11 @@ func HalpApplyTaskState
     cli
     push rcx
     mov rcx, rsp
+
+    ; sizeof(rsp) + sizeof(ss) + sizeof(rip) + sizeof(cs) + sizeof(rflags)
+    ; + sizeof(return from intermediate interupt handler address)
+    add rcx, 48
+
     call HalpUpdateThreadKernelStack
     pop rcx
     cmp QWORD [rsp+8], 0x08

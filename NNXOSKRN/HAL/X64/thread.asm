@@ -15,11 +15,8 @@ func PspIdleThreadProcedure
 ; R9 - NumberOfStackArgs
 ; RSP[8 + 32 + 32] - AdjustedUserStack
 func KiInvokeServiceHelper
-    
+    mov rax, rcx
     sub rsp, 32
-    
-
-
     call [rax]
     add rsp, 32
     ret

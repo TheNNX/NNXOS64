@@ -34,7 +34,8 @@ static const CHAR16* PreloadPaths[] =
     L"NNXOSKRN.EXE",
     L"SMSS.EXE",
     L"APSTART.BIN",
-    L"WIN32K.SYS"
+    L"WIN32K.SYS",
+    L"NTDLL.DLL"
 };
 
 EFI_BOOT_SERVICES* gBootServices;

@@ -342,71 +342,17 @@ PspInitializeCore(
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
+        HANDLE hProcess;
 
-#if 0
-        NTSTATUS ObpMpTest();
-
-        PrintT("Running mp test for core %i\n", KeGetCurrentProcessorId());
-        status = ObpMpTest();
+        UNICODE_STRING t = RTL_CONSTANT_STRING(L"NTDLL.DLL");
+        PrintT("Starting NTDLL.DLL\n");
+        status = NnxStartUserProcess(&t, &hProcess, 10);
         if (!NT_SUCCESS(status))
         {
             return status;
         }
-#endif
 
-        for (int i = 0; i < 1; i++)
-        {
-            PEPROCESS userProcess1;
-            PETHREAD userThread1, userThread2;
-
-            HANDLE hProcess;
-
-            VOID TestUserThread1();
-            VOID TestUserThread2();
-
-            status = PspCreateProcessInternal(&userProcess1, 0, NULL);
-            userProcess1->Pcb.AffinityMask = KAFFINITY_ALL;
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            status = PspCreateThreadInternal(
-                &userThread1,
-                userProcess1,
-                FALSE,
-                (ULONG_PTR)TestUserThread1);
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            status = PspCreateThreadInternal(
-                &userThread2,
-                userProcess1,
-                FALSE,
-                (ULONG_PTR)TestUserThread2);
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            userThread1->Tcb.ThreadPriority = 1;
-            userThread2->Tcb.ThreadPriority = 1;
-            PspInsertIntoSharedQueueLocked((PKTHREAD)userThread1);
-            PspInsertIntoSharedQueueLocked((PKTHREAD)userThread2);
-            PrintT("Userthreads: %X %X\n", userThread1, userThread2);
-
-            UNICODE_STRING t = RTL_CONSTANT_STRING(L"SMSS.EXE");
-            PrintT("Starting SMSS.EXE\n");
-            status = NnxStartUserProcess(&t, &hProcess, 10);
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-
-            PrintT("hProcess: %X\n");
-        }
+        PrintT("hProcess: %X\n");
     }
 #ifdef DESPERATE_SPINLOCK_DEBUG
     else if (KeNumberOfProcessors - 1 == PspCoresInitialized)
