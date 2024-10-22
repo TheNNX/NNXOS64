@@ -81,6 +81,26 @@ NnxStartUserProcess(
     return ObCreateHandle(hOutProcess, 0, pProcess);
 }
 
+static
+VOID
+FreeSectionViews(
+    PADDRESS_SPACE AddressSpace,
+    PSECTION_VIEW* pSectionViews,
+    SIZE_T numSectionViews)
+{
+    SIZE_T i;
+
+    for (i = 0; i < numSectionViews; i++)
+    {
+        if (pSectionViews[i] != NULL)
+        {
+            MmDeleteView(AddressSpace, pSectionViews[i]);
+        }
+        pSectionViews[i] = NULL;
+    }
+    ExFreePool(pSectionViews);
+}
+
 NTSTATUS
 NTAPI
 NnxLdrCreateSectionSubviews(
@@ -95,10 +115,10 @@ NnxLdrCreateSectionSubviews(
     UINT16 numberOfSections;
     ULONG_PTR baseAddress;
     ULONG i, j;
-    PSECTION_VIEW view;
     PADDRESS_SPACE pAddressSpace;
     ULONG protection;
     ULONG characteristics;
+    ULONG sizeOfHeaders;
 
     dosHeader = (PIMAGE_DOS_HEADER) pInitialView->BaseAddress;
     if (dosHeader->Signature != IMAGE_MZ_MAGIC)
@@ -106,6 +126,7 @@ NnxLdrCreateSectionSubviews(
         return STATUS_INVALID_IMAGE_FORMAT;
     }
 
+    /* TODO: range check */
     peHeader = (PIMAGE_PE_HEADER)
         (pInitialView->BaseAddress + dosHeader->e_lfanew);
     if (peHeader->Signature != IMAGE_PE_MAGIC)
@@ -114,11 +135,12 @@ NnxLdrCreateSectionSubviews(
     }
 
     numberOfSections = peHeader->FileHeader.NumberOfSections;
+    sizeOfHeaders = peHeader->OptionalHeader.SizeOfHeaders;
 
     pModule->SectionViews = 
         ExAllocatePoolWithTag(
             NonPagedPool, 
-            numberOfSections * sizeof(PSECTION_VIEW), 
+            (numberOfSections + 1) * sizeof(PSECTION_VIEW), 
             LdrmTag);
     pModule->EntrypointRVA = peHeader->OptionalHeader.EntrypointRVA;
     
@@ -144,6 +166,8 @@ NnxLdrCreateSectionSubviews(
 
     pAddressSpace = &KeGetCurrentProcess()->Pcb.AddressSpace;
 
+    /* FIXME: probably not needed now, 
+       view at pModule->sectionViews[numberOfSections] holds the headers. */
     /* Delete the initial view - until subviews are created, the contents of the 
        file are inaccesible. This is why a copy of section headers was made. */
     Status = 
@@ -155,6 +179,29 @@ NnxLdrCreateSectionSubviews(
         ExFreePool(sectionHeaders);
         ExFreePool(pModule->SectionViews);
         pModule->SectionViews = NULL;
+        return Status;
+    }
+
+    /* Remap the file headers onto the base address. */
+    Status = MmCreateView(
+        pAddressSpace,
+        hSection,
+        baseAddress,
+        0,
+        0,
+        PAGE_READONLY,
+        sizeOfHeaders,
+        &pModule->SectionViews[numberOfSections]);
+    if (!NT_SUCCESS(Status))
+    {
+        ExFreePool(sectionHeaders);
+        
+        FreeSectionViews(
+            pAddressSpace,
+            pModule->SectionViews,
+            numberOfSections + 1);
+        pModule->SectionViews = NULL;
+        
         return Status;
     }
 
@@ -180,22 +227,27 @@ NnxLdrCreateSectionSubviews(
                 sectionHeaders[i].PointerToDataRVA,
                 protection,
                 sectionHeaders[i].VirtualSize, 
-                &view);
+                &pModule->SectionViews[i]);
         if (!NT_SUCCESS(Status))
         {
             PrintT("View creation failed: NTSTATUS=0x%X\n", Status);
-            ExFreePool(sectionHeaders);
-            ExFreePool(pModule->SectionViews);
+            
+            FreeSectionViews(
+                pAddressSpace, 
+                pModule->SectionViews, 
+                numberOfSections + 1);
             pModule->SectionViews = NULL;
+
+            ExFreePool(sectionHeaders);
             return Status;
         }
 
-        view->Name = ExAllocatePool(NonPagedPool, 9);
+        pModule->SectionViews[i]->Name = ExAllocatePool(NonPagedPool, 9);
         for (j = 0; j < 8; j++)
         {
-            view->Name[j] = sectionHeaders[i].Name[j];
+            pModule->SectionViews[i]->Name[j] = sectionHeaders[i].Name[j];
         }
-        view->Name[j] = 0;
+        pModule->SectionViews[i]->Name[j] = 0;
     }
 
     ExFreePool(sectionHeaders);

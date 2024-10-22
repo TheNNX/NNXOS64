@@ -196,7 +196,6 @@ extern "C"
         PrintT("\n");
 
         NtFileObjInit();
-
         MpInitialize();
 
         KeBugCheck(PHASE1_INITIALIZATION_FAILED);
