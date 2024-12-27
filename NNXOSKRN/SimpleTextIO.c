@@ -3,13 +3,7 @@
 #include <rtl.h>
 #include <text.h>
 
-#define TIMES8(x) x, x, x, x, x, x, x, x
-#define TIMES16(x) TIMES8(x), TIMES8(x)
-#define TIMES32(x) TIMES16(x), TIMES16(x)
-#define TIMES64(x) TIMES32(x), TIMES32(x)
-#define TIMES128(x) TIMES64(x), TIMES64(x)
-
-#define UNKNOWNMARK {0xC7, 0xBB, 0xFB, 0xF7, 0xEF, 0xEF, 0xFF, 0xEF}
+#define UNKNOWNMARK {0xC7,0xBB,0xFB,0xF7,0xEF,0xEF,0xFF,0xEF}
 
 UINT64 FrameBufferSize()
 {
@@ -152,8 +146,6 @@ static UINT8 StaticFont8x8[][8] =
     {0x00, 0x00, 0x00, 0x60, 0x92, 0x0C, 0x00, 0x00}, /* ~ */ 
 
     /* Invalid characters. */
-    TIMES128(UNKNOWNMARK), 
-    UNKNOWNMARK,
     UNKNOWNMARK
 };
 
@@ -262,6 +254,11 @@ void TextIoOutputCharacterWithinBox(
 {
     if (!TextIoIsInitialized())
         return;
+
+    if (characterID >= sizeof(StaticFont8x8) / sizeof(*StaticFont8x8))
+    {
+        characterID = (sizeof(StaticFont8x8) / sizeof(*StaticFont8x8)) - 1;
+    }
     UINT8 *StaticFontEntry = StaticFont8x8[characterID];
 
     for (int y = 0; y < 8; y++)

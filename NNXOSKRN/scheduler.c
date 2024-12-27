@@ -1420,6 +1420,7 @@ NtCreateProcessEx(
 
     Status = ObCreateHandle(
         &Handle, 
+        FALSE,
         DesiredAccess, /* TODO: Should this be passed for the second time?? 
                           Can handles have different access than the objects 
                           they refer to? */

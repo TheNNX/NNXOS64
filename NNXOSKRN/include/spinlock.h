@@ -12,6 +12,7 @@ extern "C" {
 #pragma warning(push)
 #pragma warning(disable: 4324)
 #ifndef DESPERATE_SPINLOCK_DEBUG
+
     typedef ULONG_PTR volatile KSPIN_LOCK, * volatile PKSPIN_LOCK;
 #define LOCKED(x) (x != 0)
 #else

@@ -1,6 +1,7 @@
 #include "dispatcher.h"
 #include <scheduler.h>
 #include "ntqueue.h"
+#include <SimpleTextIO.h>
 #include <ntdebug.h>
 #include "mutex.h"
 
@@ -92,6 +93,7 @@ KiUnwaitWaitBlock(
     LONG PriorityIncrement)
 {
     PKTHREAD Thread;
+    SIZE_T Index;
     WAIT_TYPE WaitType;
     PDISPATCHER_HEADER Object = pWaitBlock->Object;
     PDISPATCHER_TYPE DispatcherType = &DispatcherDecodeTable[Object->Type];
@@ -126,11 +128,17 @@ KiUnwaitWaitBlock(
     /* If thread state is not THREAD_STATE_WAITING, it means that this function
      * has already been called from KeUnwaitThread to unwait a leftover 
      * waitblock, calling it again would create a recursive loop. */
-    if (Thread->ThreadState == THREAD_STATE_WAITING &&
-        (WaitType == WaitAny ||
-        Thread->NumberOfActiveWaitBlocks == 0))
+    if (Thread->ThreadState == THREAD_STATE_WAITING)
     {
-        KeUnwaitThreadNoLock(Thread, WaitStatus, PriorityIncrement);
+        if (Thread->NumberOfActiveWaitBlocks == 0)
+        {
+            KeUnwaitThreadNoLock(Thread, WaitStatus, PriorityIncrement);
+        }
+        else if (WaitType == WaitAny)
+        {
+            Index = pWaitBlock - Thread->CurrentWaitBlocks;
+            KeUnwaitThreadNoLock(Thread, Index, PriorityIncrement);
+        }
     }
 }
 

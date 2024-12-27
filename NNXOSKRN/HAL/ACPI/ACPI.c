@@ -21,7 +21,12 @@ ACPI_RSDT* GetRsdt(ACPI_RDSP* rdsp)
 
     if (gRsdt == NULL)
     {
-        gRsdt = (ACPI_RSDT*)PagingMapStrcutureToVirtual(rdsp->RSDTAddress, sizeof(ACPI_RSDT), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+        gRsdt = 
+            (ACPI_RSDT*)PagingMapStrcutureToVirtual(
+                rdsp->RSDTAddress, 
+                sizeof(ACPI_RSDT), 
+                PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+
         if (!AcpiVerifySdt((ACPI_SDT_HEADER*)gRsdt))
         {
             return NULL;
@@ -45,7 +50,12 @@ ACPI_XSDT* GetXsdt(ACPI_RDSP* rdsp)
     }
     if (gXsdt == NULL)
     {
-        gXsdt = (ACPI_XSDT*)PagingMapStrcutureToVirtual((ULONG_PTR)rdsp->v20.XSDTAddress, sizeof(ACPI_XSDT), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+        gXsdt = 
+            (ACPI_XSDT*)PagingMapStrcutureToVirtual(
+                (ULONG_PTR)rdsp->v20.XSDTAddress, 
+                sizeof(ACPI_XSDT), 
+                PAGE_PRESENT | PAGE_WRITE | PAGE_NO_CACHE);
+
         if (!AcpiVerifySdt((ACPI_SDT_HEADER*)gXsdt))
         {
             return NULL;

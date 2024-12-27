@@ -5,6 +5,7 @@
 #include <scheduler.h>
 #include <rtc.h>
 #include <ntdebug.h>
+#include <SimpleTextIO.h>
 
 extern LIST_ENTRY RelativeTimeoutListHead;
 extern LIST_ENTRY AbsoluteTimeoutListHead;
@@ -100,6 +101,7 @@ KeWaitForMultipleObjects(
     for (i = 0; i < Count; i++)
     {
         PDISPATCHER_HEADER Header = (PDISPATCHER_HEADER)Objects[i];
+
         SelectedWaitBlocks[i].Object = Header;
         SelectedWaitBlocks[i].Thread = CurrentThread;
         SelectedWaitBlocks[i].WaitMode = WaitMode;
@@ -119,23 +121,23 @@ KeWaitForMultipleObjects(
         PDISPATCHER_HEADER Header = SelectedWaitBlocks[i].Object;
         if (Header->SignalState)
         {
-            KiUnwaitWaitBlock(&SelectedWaitBlocks[i], TRUE, 0, 0);
+            KiUnwaitWaitBlock(&SelectedWaitBlocks[i], TRUE, WaitType == WaitAny ? i : 0, 0);
         }
     }
     KeReleaseSpinLockFromDpcLevel(&CurrentThread->ThreadLock);
-
-    /* If no objects are still waited for, the thread can stop waiting. */
-    if (CurrentThread->NumberOfActiveWaitBlocks == 0 ||
-        WaitType == WaitAny)
-    {
-        CurrentThread->ThreadState = THREAD_STATE_RUNNING;
-        CurrentThread->CurrentWaitBlocks = NULL;
-    }
 
     for (i = 0; i < Count; i++)
     {
         PDISPATCHER_HEADER Header = (PDISPATCHER_HEADER)Objects[i];
         KeReleaseSpinLockFromDpcLevel(&Header->Lock);
+    }
+
+    /* If no objects are still waited for, the thread can stop waiting. */
+    if (CurrentThread->NumberOfActiveWaitBlocks == 0 ||
+        (WaitType == WaitAny && CurrentThread->NumberOfActiveWaitBlocks < Count))
+    {
+        KiReleaseDispatcherLock(Irql);
+        return STATUS_SUCCESS;
     }
 
     CurrentThread->Alertable = Alertable;
@@ -147,6 +149,7 @@ KeWaitForMultipleObjects(
         pTimeout != NULL && *pTimeout == 0)
     {
         KeUnwaitThreadNoLock(CurrentThread, STATUS_TIMEOUT, 0);
+        CurrentThread->ThreadState = THREAD_STATE_RUNNING;
         KiReleaseDispatcherLock(Irql);
         return STATUS_TIMEOUT;
     }
@@ -156,6 +159,7 @@ KeWaitForMultipleObjects(
     {
         KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, Irql, 0, 0);
     }
+    
     /* Force a clock tick - if the thread is waiting, it will have the control 
      * back only when the wait conditions are satisfied. */
     KeForceClockTick();
@@ -249,8 +253,15 @@ KeUnwaitThreadNoLock(
 
     if (pThread->ThreadState == THREAD_STATE_WAITING)
     {
-        pThread->ThreadState = THREAD_STATE_READY;
-        PspInsertIntoSharedQueue(pThread);
+        if (pThread == KeGetCurrentThread())
+        {
+            pThread->ThreadState = THREAD_STATE_RUNNING;
+        }
+        else
+        {
+            pThread->ThreadState = THREAD_STATE_READY;
+            PspInsertIntoSharedQueue(pThread);
+        }
     }
 
     if (!LOCKED(pThread->ThreadLock))

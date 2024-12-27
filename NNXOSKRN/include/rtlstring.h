@@ -68,7 +68,8 @@ extern "C"
 #define RTL_CONSTANT_STRING(s) {sizeof(s)-sizeof(*s), sizeof(s), (PWSTR)s}
 
 #ifdef NNX_KERNEL
-    inline static void DebugWPrint(PUNICODE_STRING unicodeStr)
+    inline static void DebugWPrint(
+        PUNICODE_STRING unicodeStr)
     {
         VOID PrintTA(const char*, ...);
 

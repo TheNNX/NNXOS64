@@ -28,7 +28,7 @@ extern "C"
     NTAPI
     RtlCopyMemory(
         PVOID Destination, 
-        PVOID Source,
+        PCVOID Source,
         SIZE_T Size);
 
 #include <rtlstring.h>

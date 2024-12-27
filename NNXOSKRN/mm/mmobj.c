@@ -649,7 +649,8 @@ NtReferenceSectionFromFile(
         return Status;
     }
 
-    Status = ObCreateHandle(&hSection, KernelMode, MemorySection);
+    /* TODO: check should be kernel? */
+    Status = ObCreateHandle(&hSection, KernelMode, TRUE, MemorySection);
     if (!NT_SUCCESS(Status))
     {
         ObDereferenceObject(MemorySection);

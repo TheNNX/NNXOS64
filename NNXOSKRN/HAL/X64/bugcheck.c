@@ -26,6 +26,10 @@ KeStopOtherCores()
     {
         KeSendIpi(KAFFINITY_ALL, STOP_IPI_VECTOR);
     }
+    else
+    {
+        KeStop();
+    }
 }
 
 #pragma warning(push)
@@ -98,6 +102,8 @@ KeBugCheckEx(
     PrintT("\n\n");
     PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
     PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
+
+    PrintT("HAL.dll!HalDisableInterrupts at 0x%X", HalDisableInterrupts);
 
     HalDisableInterrupts();
     KeLowerIrql(0);

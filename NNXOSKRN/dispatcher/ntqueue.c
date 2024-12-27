@@ -12,8 +12,8 @@ VOID
 NTAPI
 KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads) 
 {
+    PrintT("Initializing queue\n");
     InitializeDispatcherHeader(&Queue->Header, QueueObject);
-    KeAcquireSpinLockAtDpcLevel(&Queue->Header.Lock);
 
     Queue->MaximumWaitingThreads = 
         (MaxmimumWaitingThreads == 0) ? 
@@ -24,8 +24,6 @@ KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads)
 
     InitializeListHead(&Queue->EntryListHead);
     InitializeListHead(&Queue->ThreadsHead);
-
-    KeReleaseSpinLockFromDpcLevel(&Queue->Header.Lock);
 }
 
 PLIST_ENTRY 

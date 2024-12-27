@@ -78,7 +78,7 @@ NnxStartUserProcess(
     pThread->Tcb.ThreadPriority = 0;
 
     PspInsertIntoSharedQueueLocked(&pThread->Tcb);
-    return ObCreateHandle(hOutProcess, 0, pProcess);
+    return ObCreateHandle(hOutProcess, KernelMode, TRUE, pProcess);
 }
 
 static

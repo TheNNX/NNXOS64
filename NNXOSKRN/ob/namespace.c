@@ -462,6 +462,7 @@ ObpInitNamespace()
     status = ObCreateHandle(
         &GlobalNamespace, 
         KernelMode, 
+        TRUE,
         (PVOID)globalNamespaceRoot);
     if (status != STATUS_SUCCESS)
         return status;
@@ -493,6 +494,7 @@ ObpInitNamespace()
     status = ObCreateHandle(
         &objectTypeDirHandle,
         KernelMode,
+        TRUE,
         (PVOID)typesDirectory);
 
     if (status != STATUS_SUCCESS)

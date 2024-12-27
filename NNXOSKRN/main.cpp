@@ -21,6 +21,7 @@
 #include <syscall.h>
 #include <file.h>
 #include <preloaded.h>
+#include <gdi.h>
 
 extern "C"
 {
@@ -196,6 +197,13 @@ extern "C"
         PrintT("\n");
 
         NtFileObjInit();
+        
+        //Status = GdiInit(4096 * 4);
+        //if (!NT_SUCCESS(Status))
+        //{
+        //    KeBugCheck(HAL_INITIALIZATION_FAILED);
+        //}
+        
         MpInitialize();
 
         KeBugCheck(PHASE1_INITIALIZATION_FAILED);

@@ -3,6 +3,7 @@
 #include <scheduler.h>
 #include <bugcheck.h>
 #include <SimpleTextIO.h>
+#include <ntdebug.h>
 
 LIST_ENTRY SystemHandleDatabaseHead;
 HANDLE_DATABASE InitialSystemHandleDatabase;
@@ -107,7 +108,7 @@ ObExtractAndReferenceObjectFromHandle(
 
     /* If the LS bit is set, this is a kernel handle 
      * (and not a handle in current process handle table). */
-    isKernelHandle = (((ULONG_PTR)handle) & 0x1) != 0;
+    isKernelHandle = ObpIsKernelHandle(handle);
     if (isKernelHandle && accessMode == UserMode)
     {
         return STATUS_ACCESS_DENIED;
@@ -192,7 +193,7 @@ ObCloseHandle(
     NTSTATUS status;
     KIRQL irql;
 
-    isKernelHandle = (((ULONG_PTR)handle) & 0x01) != 0;
+    isKernelHandle = ObpIsKernelHandle(handle);
 
     if (isKernelHandle && accessMode == UserMode)
         return STATUS_ACCESS_DENIED;
@@ -233,17 +234,19 @@ ObCloseHandle(
     return STATUS_SUCCESS;
 }
 
+/* TODO: check if the addition of isKernelHandle doesn't cause any deadlocks, 
+   or creation of usermode handles, that should be kernel mode instead. */
 NTSTATUS 
 NTAPI
 ObCreateHandle(
     PHANDLE pOutHandle, 
     KPROCESSOR_MODE accessMode, 
+    BOOLEAN isKernelHandle,
     PVOID object)
 {
     PLIST_ENTRY databaseHead;
     POBJECT_HEADER objHeader;
     PLIST_ENTRY current;
-    BOOLEAN isKernelHandle;
     SIZE_T currentIndex;
     KIRQL irql;
 
@@ -253,8 +256,7 @@ ObCreateHandle(
     }
 
     objHeader = ObGetHeaderFromObject(object);
-    isKernelHandle = (objHeader->Attributes & OBJ_KERNEL_HANDLE) != 0 ||
-                      accessMode == KernelMode;
+    isKernelHandle |= (objHeader->Attributes & OBJ_KERNEL_HANDLE) != 0;
 
     if (isKernelHandle && accessMode == UserMode)
     {
@@ -326,7 +328,12 @@ ObCloneHandle(HANDLE InHandle, PHANDLE pOutHandle)
         return Status;
     }
 
-    Status = ObCreateHandle(pOutHandle, KernelMode, Object);
+    Status = ObCreateHandle(pOutHandle, KernelMode, ObpIsKernelHandle(InHandle), Object);
     ObDereferenceObject(Object);
     return Status;
+}
+
+BOOLEAN NTAPI ObpIsKernelHandle(HANDLE InHandle)
+{
+    return (ULONG_PTR)InHandle & 0x1;
 }

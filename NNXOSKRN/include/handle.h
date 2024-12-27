@@ -57,6 +57,7 @@ extern "C" {
     ObCreateHandle(
         PHANDLE pOutHandle, 
         KPROCESSOR_MODE accessMode, 
+        BOOLEAN isKernelHandle,
         PVOID object);
 
     NTSTATUS
@@ -64,6 +65,11 @@ extern "C" {
     ObCloneHandle(
         HANDLE InHandle,
         PHANDLE pOutHandle);
+
+    BOOLEAN
+    NTAPI
+    ObpIsKernelHandle(
+        HANDLE InHandle);
 
 #endif
 

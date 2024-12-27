@@ -10,7 +10,7 @@ extern "C"{
         DISPATCHER_HEADER Header;
         LIST_ENTRY        MutantListEntry;
         struct _KTHREAD*  Owner;
-    }KMUTEX, *PKMUTEX, *KMUTANT, *PKMUTANT;
+    } KMUTEX, *PKMUTEX, *KMUTANT, *PKMUTANT;
 
     NTSYSAPI
     LONG 

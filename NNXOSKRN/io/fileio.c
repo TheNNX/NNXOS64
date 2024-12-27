@@ -385,7 +385,7 @@ NtCreateFile(
         return Status;
     }
 
-    Status = ObCreateHandle(&Handle, KernelMode, Instance);
+    Status = ObCreateHandle(&Handle, KernelMode, TRUE, Instance);
     if (!NT_SUCCESS(Status))
     {
         ObDereferenceObject(Instance);

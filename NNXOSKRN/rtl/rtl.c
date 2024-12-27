@@ -29,7 +29,7 @@ VOID
 NTAPI
 RtlCopyMemory(
     PVOID dst, 
-    PVOID src, 
+    PCVOID src, 
     SIZE_T size)
 {
     for (int b = 0; b < size; b++)

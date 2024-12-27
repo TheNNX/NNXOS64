@@ -129,6 +129,7 @@ typedef BYTE BOOLEAN;
 typedef void VOID;
 #endif
 typedef VOID *PVOID, *LPVOID;
+typedef const VOID *PCVOID, *LPCVOID;
 
 #ifndef NULL
 #ifdef __cplusplus

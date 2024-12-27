@@ -13,6 +13,7 @@
 #include <ntdebug.h>
 #include <SimpleTextIO.h>
 #include <pcr.h>
+#include <pool.h>
 
 template<int I>
 class SyscallInvoker
@@ -181,7 +182,7 @@ extern "C"
         ULONG_PTR p7,
         ULONG_PTR p8)
     {
-        PrintT("P1:%X %X %X %X %X %X %X %X\n", p1, p2, p3, p4, p5, p6, p7, p8);
+        PrintT("1");
         return 0x1111111111111111ULL;
     }
 
@@ -198,7 +199,7 @@ extern "C"
         ULONG_PTR p8,
         ULONG_PTR p9)
     {
-        PrintT("P2:%X %X %X %X %X %X %X %X %X\n", p1, p2, p3, p4, p5, p6, p7, p8, p9);
+        PrintT(" ");
         return 0x2222222222222222ULL;
     }
 
