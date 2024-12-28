@@ -7,6 +7,7 @@
 #include <nnxcfg.h>
 #include <nnxpe.h>
 #include <bootdata.h>
+#include "fswrapper.h"
 
 #define ALLOC(x) AllocateZeroPool(x)
 #define DEALLOC(x) FreePool(x)
@@ -24,7 +25,7 @@
 
 EFI_STATUS
 LoadImage(
-    EFI_FILE_HANDLE file,
+    FILE_WRAPPER_HANDLE file,
     PLOADED_BOOT_MODULE* outModule);
 
 const CHAR16* wszKernelPath = L"NNXOSKRN.exe";
@@ -38,7 +39,7 @@ static const CHAR16* PreloadPaths[] =
     L"NTDLL.DLL"
 };
 
-EFI_BOOT_SERVICES* gBootServices;
+EFI_BOOT_SERVICES* gBS;
 LIST_ENTRY LoadedModules;
 
 ULONG_PTR MaxKernelPhysAddress = 0ULL;
@@ -48,11 +49,11 @@ EFI_GUID gAcpi20TableGuid = ACPI_20_TABLE_GUID;
 EFI_STATUS 
 TryToLoadModule(
     const CHAR* name,
-    EFI_FILE_HANDLE fs,
+    FILE_WRAPPER_HANDLE fs,
     PLOADED_BOOT_MODULE* pOutModule)
 {
     EFI_STATUS status;
-    EFI_FILE_HANDLE moduleFile;
+    FILE_WRAPPER_HANDLE moduleFile;
     SIZE_T Idx;
     WCHAR TempBuffer[256];
 
@@ -142,7 +143,7 @@ TryFindLoadedExport(
 EFI_STATUS 
 HandleImportDirectory(
     LOADED_BOOT_MODULE* Dependent,
-    EFI_FILE_HANDLE SearchDirectory,
+    FILE_WRAPPER_HANDLE SearchDirectory,
     IMAGE_IMPORT_DIRECTORY_ENTRY* ImportDirectoryEntry)
 {
     EFI_STATUS Status;
@@ -291,7 +292,7 @@ static
 EFI_STATUS
 HandleDataDirectories(
     LOADED_BOOT_MODULE* Module,
-    EFI_FILE_HANDLE DllPathFile)
+    FILE_WRAPPER_HANDLE DllPathFile)
 {
     EFI_STATUS Status;
     INT i;
@@ -342,7 +343,7 @@ HandleDataDirectories(
 static
 EFI_STATUS
 LoadSectionsWithBase(
-    EFI_FILE_HANDLE File,
+    FILE_WRAPPER_HANDLE File,
     ULONG_PTR ImageBase,
     PIMAGE_PE_HEADER ImagePeHeader,
     PIMAGE_SECTION_HEADER Sections)
@@ -383,7 +384,7 @@ LoadSectionsWithBase(
 
 EFI_STATUS 
 LoadImage(
-    EFI_FILE_HANDLE File,
+    FILE_WRAPPER_HANDLE File,
     PLOADED_BOOT_MODULE* outModule)
 {
     IMAGE_DOS_HEADER ImageDosHeader;
@@ -399,7 +400,7 @@ LoadImage(
     INTN TotalPagesToBeAllocated;
     INTN SectionHeaderPages, ImagePages, ModulePages, ExportDataPages;
     ULONG_PTR PhysAddr;
-    EFI_FILE_HANDLE DllPathFile;
+    FILE_WRAPPER_HANDLE DllPathFile;
 
     Size = sizeof(ImageDosHeader);
     Status = File->Read(File, &Size, &ImageDosHeader);
@@ -479,7 +480,7 @@ LoadImage(
      * exports can be read. The number of exports is neccessary for the 
      * bootmodule info allocation, as it holds a table of exports in 
      * the module for easier relocation. */
-    Status = gBootServices->AllocatePages(
+    Status = gBS->AllocatePages(
         AllocateAnyPages,
         EfiLoaderData,
         HighestSectionAddress / PAGE_SIZE + 1,
@@ -516,7 +517,7 @@ LoadImage(
     }
 
     /* Free the temporary buffer. */
-    Status = gBootServices->FreePages(
+    Status = gBS->FreePages(
         PhysAddr, 
         HighestSectionAddress / PAGE_SIZE + 1);
     if (EFI_ERROR(Status))
@@ -539,7 +540,7 @@ LoadImage(
     TotalPagesToBeAllocated = 
         ModulePages + ExportDataPages + SectionHeaderPages + ImagePages;
 
-    Status = gBootServices->AllocatePages(
+    Status = gBS->AllocatePages(
         AllocateAnyPages, 
         EfiLoaderData, 
         TotalPagesToBeAllocated, 
@@ -624,7 +625,7 @@ QueryGraphicsInformation(
     EFI_GRAPHICS_OUTPUT_PROTOCOL* graphicsProtocol;
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode;
 
-    status = gBootServices->LocateProtocol(
+    status = gBS->LocateProtocol(
         &gEfiGraphicsOutputProtocolGuid, 
         NULL, 
         &graphicsProtocol);
@@ -669,7 +670,7 @@ QueryMemoryMap(
             FreePool(memoryMap);
         }
 
-        status = gBootServices->AllocatePool(
+        status = gBS->AllocatePool(
             EfiLoaderData,
             memoryMapSize,
             &memoryMap);
@@ -677,7 +678,7 @@ QueryMemoryMap(
         if (EFI_ERROR(status) || memoryMap == NULL)
             return EFI_ERROR(status) ? status : EFI_OUT_OF_RESOURCES;
 
-        status = gBootServices->GetMemoryMap(
+        status = gBS->GetMemoryMap(
             &memoryMapSize,
             memoryMap,
             &memoryMapKey,
@@ -771,7 +772,7 @@ QueryMemoryMap(
             FreePool(memoryMap);
         }
 
-        status = gBootServices->AllocatePool(
+        status = gBS->AllocatePool(
             EfiLoaderData, 
             memoryMapSize, 
             &memoryMap);
@@ -781,7 +782,7 @@ QueryMemoryMap(
             return status;
         }
 
-        status = gBootServices->GetMemoryMap(
+        status = gBS->GetMemoryMap(
             &memoryMapSize, 
             memoryMap, 
             &memoryMapKey, 
@@ -829,13 +830,13 @@ RundownLoadedFiles(
 
 EFI_STATUS
 PreloadBootFiles(
-    EFI_FILE_HANDLE filesystem,
+    FILE_WRAPPER_HANDLE filesystem,
     PBOOTDATA pBootdata)
 {
     SIZE_T i;
     PPRELOADED_FILE pCurrent;
     EFI_STATUS status;
-    EFI_FILE_HANDLE hFile;
+    FILE_WRAPPER_HANDLE hFile;
     EFI_FILE_INFO* fileInfo;
     UINTN bufferSize;
 
@@ -923,34 +924,17 @@ efi_main(
     EFI_SYSTEM_TABLE* systemTable)
 {
     EFI_STATUS status;
-    EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
-    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* filesystem;
-    EFI_FILE_HANDLE root, kernelFile;
+    FILE_WRAPPER_HANDLE root, kernelFile;
     BOOTDATA bootdata;
     VOID (*kernelEntrypoint)(BOOTDATA*);
     PLOADED_BOOT_MODULE module;
     UINTN MapKey;
 
-    gBootServices = systemTable->BootServices;
     InitializeLib(imageHandle, systemTable);
 
     InitializeListHead(&LoadedModules);
 
-    status = gBootServices->HandleProtocol(
-        imageHandle, 
-        &gEfiLoadedImageProtocolGuid, 
-        &loadedImage);
-    RETURN_IF_ERROR_DEBUG(status);
-
-    status = gBootServices->HandleProtocol(
-        loadedImage->DeviceHandle, 
-        &gEfiSimpleFileSystemProtocolGuid, 
-        &filesystem);
-    RETURN_IF_ERROR_DEBUG(status);
-
-    status = filesystem->OpenVolume(
-        filesystem, 
-        &root);
+    status = FsWrapperOpenDriveRoot(imageHandle, &root);
     RETURN_IF_ERROR_DEBUG(status);
 
     status = root->Open(
@@ -1009,7 +993,7 @@ efi_main(
     */
 #endif
 
-    gBootServices->SetWatchdogTimer(0, 0, 0, NULL);
+    gBS->SetWatchdogTimer(0, 0, 0, NULL);
 
     status = QueryGraphicsInformation(&bootdata);
     RETURN_IF_ERROR_DEBUG(status);
@@ -1022,7 +1006,7 @@ efi_main(
             bootdata.pdwFramebuffer[i] = 0xFF00FFFF;
     }
 
-    status = gBootServices->ExitBootServices(imageHandle, MapKey);
+    status = gBS->ExitBootServices(imageHandle, MapKey);
     if (status != EFI_SUCCESS)
     {
         kernelFile->Close(kernelFile);
