@@ -37,3 +37,4 @@ create.txt
 .vs/*
 debug/*
 debug
+*.fd
