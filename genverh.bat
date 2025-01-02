@@ -6,8 +6,8 @@ set val=%%a
 ) 
 
 set MAJOR=0
-set MINOR=1
-set PATCH=1
+set MINOR=2
+set PATCH=0
 set OSNAME="NNXOS64"
 
 set val=%val:#DEFINE NNX_BUILD= %
@@ -22,6 +22,7 @@ echo #define NNX_MAJOR %MAJOR% >> .\NNXOSKRN\nnxver.h
 echo #define NNX_MINOR %MINOR% >> .\NNXOSKRN\nnxver.h
 echo #define NNX_PATCH %PATCH% >> .\NNXOSKRN\nnxver.h
 echo #define NNX_BUILD %val% >> .\NNXOSKRN\nnxver.h
+echo #define NNX_VER_STR "%MAJOR%.%MINOR%.%PATCH%.%val%" >> .\NNXOSKRN\nnxver.h
 echo #endif>>.\NNXOSKRN\nnxver.h
 
 echo %val%

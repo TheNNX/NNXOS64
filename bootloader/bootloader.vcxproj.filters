@@ -17,9 +17,21 @@
     <ClCompile Include="boot.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="fswrapperfile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fswrappernetwork.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bootdata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fswrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stringa.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

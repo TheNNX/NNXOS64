@@ -12,7 +12,7 @@ extern "C" {
 typedef struct _FILE_WRAPPER FILE_WRAPPER, *FILE_WRAPPER_HANDLE;
 struct _FILE_WRAPPER
 {
-    EFI_FILE_HANDLE FileHandle;
+    VOID* pWrapperContext;
 
     EFI_STATUS(*Close)(
         FILE_WRAPPER_HANDLE self);
@@ -40,8 +40,15 @@ struct _FILE_WRAPPER
         void* buffer);
 };
 
-EFI_STATUS FsWrapperOpenDriveRoot(EFI_HANDLE imageHandle, FILE_WRAPPER_HANDLE *pOut);
-EFI_STATUS FsWrapperOpenNetworkRoot(FILE_WRAPPER_HANDLE* pOut);
+EFI_STATUS 
+FsWrapperOpenDriveRoot(
+    EFI_HANDLE imageHandle, 
+    FILE_WRAPPER_HANDLE *pOut);
+
+EFI_STATUS 
+FsWrapperOpenNetworkRoot(
+    FILE_WRAPPER_HANDLE* pOut, 
+    const CHAR16* address);
 
 #ifndef __INTELLISENSE__
 #ifdef __cplusplus

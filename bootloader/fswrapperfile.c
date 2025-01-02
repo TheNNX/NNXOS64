@@ -47,7 +47,7 @@ FsWrapperFilePopulate(
     dst->Read = FsWrapperFileRead;
     dst->SetPosition = FsWrapperFileSetPosition;
     dst->GetInfo = FsWrapperFileGetInfo;
-    dst->FileHandle = efiFile;
+    dst->pWrapperContext = (VOID*)efiFile;
 }
 
 static
@@ -57,16 +57,18 @@ FsWrapperFileClose(
 {
     EFI_STATUS status;
 
-    if (Handle->FileHandle != NULL)
+    EFI_FILE_HANDLE file = Handle->pWrapperContext;
+
+    if (file != NULL)
     {
-        status = Handle->FileHandle->Close(Handle->FileHandle);
+        status = file->Close(file);
 
         if (EFI_ERROR(status))
         {
             return status;
         }
 
-        Handle->FileHandle = NULL;
+        Handle->pWrapperContext = NULL;
     }
 
     status = gBS->FreePool(Handle);
@@ -86,8 +88,9 @@ FsWrapperFileOpen(
     EFI_STATUS status;
 
     EFI_FILE_HANDLE efiFile;
+    EFI_FILE_HANDLE selfEfiFile = self->pWrapperContext;
 
-    status = self->FileHandle->Open(self->FileHandle, &efiFile, filename, openMode, attributes);
+    status = selfEfiFile->Open(selfEfiFile, &efiFile, filename, openMode, attributes);
     if (EFI_ERROR(status))
     {
         return status;
@@ -112,7 +115,8 @@ FsWrapperFileRead(
     UINTN* bufferSize,
     void* buffer)
 {
-    return self->FileHandle->Read(self->FileHandle, bufferSize, buffer);
+    EFI_FILE_HANDLE selfEfiFile = self->pWrapperContext;
+    return selfEfiFile->Read(selfEfiFile, bufferSize, buffer);
 }
 
 static
@@ -121,7 +125,8 @@ FsWrapperFileSetPosition(
     FILE_WRAPPER_HANDLE self,
     UINT64 position)
 {
-    return self->FileHandle->SetPosition(self->FileHandle, position);
+    EFI_FILE_HANDLE selfEfiFile = self->pWrapperContext;
+    return selfEfiFile->SetPosition(selfEfiFile, position);
 }
 
 static
@@ -132,7 +137,8 @@ FsWrapperFileGetInfo(
     UINTN* bufferSize,
     void* buffer)
 {
-    return self->FileHandle->GetInfo(self->FileHandle, infoType, bufferSize, buffer);
+    EFI_FILE_HANDLE selfEfiFile = self->pWrapperContext;
+    return selfEfiFile->GetInfo(selfEfiFile, infoType, bufferSize, buffer);
 }
 
 EFI_STATUS 

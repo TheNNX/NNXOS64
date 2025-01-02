@@ -67,6 +67,8 @@
       <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <UseFullPaths>false</UseFullPaths>
     </ClCompile>
     <Lib>
       <SubSystem>EFI Application</SubSystem>
@@ -114,6 +116,8 @@ rmdir /Q /S $(ProjectName)</Command>
       <AdditionalOptions>/Oi- %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <UseFullPaths>false</UseFullPaths>
     </ClCompile>
     <Lib>
       <SubSystem>EFI Application</SubSystem>
@@ -131,9 +135,8 @@ rmdir /Q /S $(ProjectName)</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <RandomizedBaseAddress>
       </RandomizedBaseAddress>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <ProgramDatabaseFile>
-      </ProgramDatabaseFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(SolutionDir)debug\$(ProjectName)\$(TargetName).pdb</ProgramDatabaseFile>
       <MergeSections>.pdata=.data</MergeSections>
     </Link>
     <PreBuildEvent>
@@ -151,6 +154,11 @@ rmdir /Q /S $(ProjectName)</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="boot.c" />
+    <ClCompile Include="fswrapperfile.c" />
+    <ClCompile Include="fswrappernetwork.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\.vs\msvc\gnu-efi.vcxproj">
@@ -165,6 +173,8 @@ rmdir /Q /S $(ProjectName)</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bootdata.h" />
+    <ClInclude Include="fswrapper.h" />
+    <ClInclude Include="stringa.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,6 +3,7 @@
 #include <ntlist.h>
 #include <efi.h>
 #include <efilib.h>
+#include <efiip.h>
 #include <nnxtype.h>
 #include <nnxcfg.h>
 #include <nnxpe.h>
@@ -18,8 +19,9 @@
     { \
         if(d) \
             Print(L"Line: %d Status: %r\n", __LINE__, status); \
-        return status; \
+        while(1);return status; \
     }
+
 #define RETURN_IF_ERROR(status) RETURN_IF_ERROR_A(status, 0)
 #define RETURN_IF_ERROR_DEBUG(status) RETURN_IF_ERROR_A(status, 1)
 
@@ -409,6 +411,12 @@ LoadImage(
         return Status;
     }
 
+    if (ImageDosHeader.Signature != 'ZM')
+    {
+        Print(L"Unsupported DOS header signature, expected %X, got %X\n", 'ZM', ImageDosHeader.Signature);
+        return EFI_UNSUPPORTED;
+    }
+
     Status = File->SetPosition(File, ImageDosHeader.e_lfanew);
     if (EFI_ERROR(Status))
     {
@@ -424,13 +432,14 @@ LoadImage(
 
     if (ImagePeHeader.Signature != IMAGE_PE_MAGIC)
     {
+        Print(L"Unsupported PE header signature, expected %X, got %X\n", IMAGE_PE_MAGIC, ImagePeHeader.Signature);
         return EFI_UNSUPPORTED;
     }
     
     if (ImagePeHeader.OptionalHeader.Signature != IMAGE_OPTIONAL_HEADER_NT64 ||
         ImagePeHeader.FileHeader.Machine != IMAGE_MACHINE_X64)
     {
-        Print(L"%a: File specified is not a 64 bit executable\n", __FUNCDNAME__);
+        Print(L"%a: File specified is not an x64 executable\n", __FUNCDNAME__);
         return EFI_UNSUPPORTED;
     }
 
@@ -611,7 +620,12 @@ LoadImage(
     {
         return Status;
     }
-    HandleDataDirectories(Module, DllPathFile);
+    Status = HandleDataDirectories(Module, DllPathFile);
+    if (EFI_ERROR(Status))
+    {
+        DllPathFile->Close(DllPathFile);
+        return Status;
+    }
     DllPathFile->Close(DllPathFile);
 
     return EFI_SUCCESS;
@@ -648,8 +662,7 @@ QueryGraphicsInformation(
 /* TODO: Make less ugly */
 EFI_STATUS
 QueryMemoryMap(
-    BOOTDATA* bootdata,
-    UINTN* pOutMapKey)
+    BOOTDATA* bootdata)
 {
     EFI_STATUS status;
     UINTN memoryMapSize = 0, memoryMapKey, descriptorSize;
@@ -765,37 +778,6 @@ QueryMemoryMap(
 
     pageFrameEntries[0].Flags = 1;
 
-    do
-    {
-        if (memoryMap != NULL)
-        {
-            FreePool(memoryMap);
-        }
-
-        status = gBS->AllocatePool(
-            EfiLoaderData, 
-            memoryMapSize, 
-            &memoryMap);
-
-        if (EFI_ERROR(status))
-        {
-            return status;
-        }
-
-        status = gBS->GetMemoryMap(
-            &memoryMapSize, 
-            memoryMap, 
-            &memoryMapKey, 
-            &descriptorSize, 
-            &descriptorVersion);
-
-        memoryMapSize *= 3;
-        memoryMapSize /= 2;
-    }
-    while (status == EFI_BUFFER_TOO_SMALL);
-    RETURN_IF_ERROR(status);
-
-    *pOutMapKey = memoryMapKey;
     bootdata->NumberOfPageFrames = pages;
     bootdata->PageFrameDescriptorEntries = pageFrameEntries;
 
@@ -920,13 +902,13 @@ PreloadBootFiles(
 EFI_STATUS
 EFIAPI 
 efi_main(
-    EFI_HANDLE imageHandle, 
+    EFI_HANDLE imageHandle,
     EFI_SYSTEM_TABLE* systemTable)
 {
     EFI_STATUS status;
     FILE_WRAPPER_HANDLE root, kernelFile;
     BOOTDATA bootdata;
-    VOID (*kernelEntrypoint)(BOOTDATA*);
+    VOID(*kernelEntrypoint)(BOOTDATA*);
     PLOADED_BOOT_MODULE module;
     UINTN MapKey;
 
@@ -934,9 +916,18 @@ efi_main(
 
     InitializeListHead(&LoadedModules);
 
-    status = FsWrapperOpenDriveRoot(imageHandle, &root);
-    RETURN_IF_ERROR_DEBUG(status);
+#ifdef NET_BOOT
+    if (EFI_ERROR(status = FsWrapperOpenNetworkRoot(&root, L"http://10.10.0.1")))
+    {
+        Print(L"Error fetching from network - %r, trying local device\n", status);
+#endif
+        status = FsWrapperOpenDriveRoot(imageHandle, &root);
+        RETURN_IF_ERROR_DEBUG(status);
+#ifdef NET_BOOT
+    }
+#endif
 
+    Print(L"Opening file\n");
     status = root->Open(
         root, 
         &kernelFile, 
@@ -945,6 +936,7 @@ efi_main(
         0);
     RETURN_IF_ERROR_DEBUG(status);
 
+    Print(L"Loading image\n");
     status = LoadImage(
         kernelFile, 
         &module);
@@ -967,7 +959,6 @@ efi_main(
     bootdata.MaxKernelPhysAddress = MaxKernelPhysAddress;
     bootdata.MinKernelPhysAddress = MinKernelPhysAddress;
     LibGetSystemConfigurationTable(&gAcpi20TableGuid, &bootdata.pRdsp);
-    
 #ifdef INACCESIBLE_BOOT_DEVICE
     status = PreloadBootFiles(root, &bootdata);
     if (status != EFI_SUCCESS)
@@ -975,47 +966,64 @@ efi_main(
         Print(L"%r", status);
         return status;
     }
-
-    /*
-    PPRELOADED_FILE pCurrent = (PPRELOADED_FILE)bootdata.PreloadedFiles.First;
-    while (pCurrent != (PPRELOADED_FILE)&bootdata.PreloadedFiles)
-    {
-        Print(L"File %s, first 16 characters:\n", pCurrent->Name);
-        for (int i = 0; i < 16; i++)
-        {
-            Print(L"'%c', ", ((PCHAR)pCurrent->Data)[i]);
-        }
-
-        pCurrent = (PPRELOADED_FILE)pCurrent->Entry.Next;
-    }
-
-    while (1);
-    */
 #endif
-
     gBS->SetWatchdogTimer(0, 0, 0, NULL);
 
     status = QueryGraphicsInformation(&bootdata);
     RETURN_IF_ERROR_DEBUG(status);
-    status = QueryMemoryMap(&bootdata, &MapKey);
+
+    status = QueryMemoryMap(&bootdata);
     RETURN_IF_ERROR_DEBUG(status);
 
-    for (int i = 0; i < 1024 * 768; i++)
+    EFI_MEMORY_DESCRIPTOR* MemoryMap = NULL;
+    UINTN MemoryMapSize = 0;
+    UINTN DescriptorSize = 0;
+    UINT32 DescriptorVersion;
+  
+    while (TRUE)
     {
-        if (i % 4 == 0)
-            bootdata.pdwFramebuffer[i] = 0xFF00FFFF;
-    }
+        status = gBS->GetMemoryMap(&MemoryMapSize, MemoryMap, &MapKey,
+            &DescriptorSize, &DescriptorVersion);
+        if (status != EFI_BUFFER_TOO_SMALL)
+        {
+            Print(L"Error: GetMemoryMap 1 failed\n");
+            return status;
+        }
 
-    status = gBS->ExitBootServices(imageHandle, MapKey);
-    if (status != EFI_SUCCESS)
-    {
-        kernelFile->Close(kernelFile);
-        root->Close(root);
-        Print(L"%r", status);
-        return status;
-    }
+        MemoryMapSize *= 2;
+        MemoryMap = (EFI_MEMORY_DESCRIPTOR*)AllocateZeroPool(MemoryMapSize);
+        if (MemoryMap == NULL)
+        {
+            Print(L"Error: AllocatePages failed\n");
+            return EFI_OUT_OF_RESOURCES;
+        }
 
-    kernelEntrypoint(&bootdata);
+        status = gBS->GetMemoryMap(&MemoryMapSize, MemoryMap, &MapKey,
+            &DescriptorSize, &DescriptorVersion);
+        if (EFI_ERROR(status))
+        {
+            Print(L"Error: GetMemoryMap 2 failed\n");
+            return EFI_OUT_OF_RESOURCES;
+        }
+
+        status = gBS->ExitBootServices(imageHandle, MapKey);
+
+        if (EFI_ERROR(status))
+        {
+            Print(L"Exiting boot services failed - %rm args were %lX %lX\n", status, imageHandle, MapKey);
+            continue;
+        }
+
+        for (UINT32 i = 0; i < bootdata.dwHeight / 2; i++)
+        {
+            for (UINT32 j = 0; j < bootdata.dwWidth / 2; j++)
+            {
+                bootdata.pdwFramebuffer[i * bootdata.dwPixelsPerScanline + j] = 0xFFFFFF / bootdata.dwWidth * 2 * j;
+            }
+        }
+
+        kernelEntrypoint(&bootdata);
+    }
 
     /* FIXME */
     // ClearListAndDestroyValues(&LoadedModules, DestroyLoadedModule);
