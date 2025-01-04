@@ -69,7 +69,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Gs9999999 /experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <TreatSpecificWarningsAsErrors>
@@ -83,6 +83,7 @@
       <PreprocessorDefinitions>_MBCS;NNX_KERNEL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -142,7 +143,7 @@ $(SolutionDir)genverh.bat</Command>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalOptions>/Gs9999999 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Gs9999999 /experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>_MBCS;NNX_KERNEL;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
@@ -155,6 +156,7 @@ $(SolutionDir)genverh.bat</Command>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -208,6 +210,12 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="device\fs\preloaded.c" />
     <ClCompile Include="dispatcher\dispatcher.c" />
     <ClCompile Include="dispatcher\mutex.c" />
+    <ClCompile Include="gdi\brush.c" />
+    <ClCompile Include="gdi\device.c" />
+    <ClCompile Include="gdi\dc.c" />
+    <ClCompile Include="gdi\gditest.c" />
+    <ClCompile Include="gdi\object.c" />
+    <ClCompile Include="gdi\region.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
     <ClCompile Include="device\fs\fat.c" />
     <ClCompile Include="device\fs\gpt.c" />
@@ -245,7 +253,10 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="dispatcher\wait.c" />
     <ClCompile Include="loadstub.c" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MemoryOperations.c" />
+    <ClCompile Include="MemoryOperations.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="HAL\X64\paging.c" />
     <ClCompile Include="HAL\X64\physical_allocator.c" />
     <ClCompile Include="ntlist.c" />
@@ -261,6 +272,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\fat.h" />
     <ClInclude Include="include\fat32.h" />
     <ClInclude Include="include\file.h" />
+    <ClInclude Include="include\gdi.h" />
     <ClInclude Include="include\gpt.h" />
     <ClInclude Include="include\mbr.h" />
     <ClInclude Include="include\mm.h" />

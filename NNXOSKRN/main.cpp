@@ -87,10 +87,10 @@ extern "C"
 
         Status = ExInitializePool(
             (PVOID)PagingAllocatePageBlockFromRange(
-                32, 
+                128, 
                 PAGING_KERNEL_SPACE,
                 PAGING_KERNEL_SPACE_END),
-            PAGE_SIZE * 32,
+            PAGE_SIZE * 128,
             (PVOID)PagingAllocatePageBlockFromRange(
                 64, 
                 PAGING_KERNEL_SPACE,
@@ -197,12 +197,6 @@ extern "C"
         PrintT("\n");
 
         NtFileObjInit();
-        
-        //Status = GdiInit(4096 * 4);
-        //if (!NT_SUCCESS(Status))
-        //{
-        //    KeBugCheck(HAL_INITIALIZATION_FAILED);
-        //}
         
         MpInitialize();
 

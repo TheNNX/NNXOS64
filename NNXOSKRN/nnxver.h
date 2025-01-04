@@ -5,6 +5,6 @@
 #define NNX_MAJOR 0 
 #define NNX_MINOR 2 
 #define NNX_PATCH 0 
-#define NNX_BUILD 6378 
-#define NNX_VER_STR "0.2.0.6378" 
+#define NNX_BUILD 6462 
+#define NNX_VER_STR "0.2.0.6462" 
 #endif

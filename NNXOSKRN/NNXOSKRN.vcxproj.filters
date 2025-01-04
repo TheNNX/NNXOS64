@@ -231,6 +231,24 @@
     <ClCompile Include="device\fs\preloaded.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gdi\object.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gdi\device.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gdi\dc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gdi\brush.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gdi\region.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="gdi\gditest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bugcheck.h">
@@ -363,6 +381,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\preloaded.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gdi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

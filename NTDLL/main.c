@@ -4,6 +4,7 @@
 #include <mm.h>
 #include <ntqueue.h>
 #include <pool.h>
+#include <gdi.h>
 
 NTSYSAPI
 ULONG_PTR 
@@ -37,9 +38,24 @@ NTAPI
 LdrInitThread()
 {
     PKQUEUE dummy;
+    NTSTATUS status;
 
     dummy = ExAllocatePoolWithTag(NonPagedPool, sizeof(*dummy), 'QQQQ');
     KeInitializeQueue(dummy, 0);
+
+    status = GdiInit(4096 * 4);
+    if (!NT_SUCCESS(status))
+    {
+        while (1);
+        return status;
+    }
+
+    status = GdiStartTest();
+    if (!NT_SUCCESS(status))
+    {
+        while (1);
+        return status;
+    }
 
     while (1)
     {

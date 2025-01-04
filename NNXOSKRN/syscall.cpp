@@ -14,6 +14,7 @@
 #include <SimpleTextIO.h>
 #include <pcr.h>
 #include <pool.h>
+#include <gdi.h>
 
 template<int I>
 class SyscallInvoker
