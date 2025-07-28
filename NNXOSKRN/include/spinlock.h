@@ -146,6 +146,7 @@ extern "C" {
         const char* functionName,
         int line);
 
+#ifdef DESPERATE_SPINLOCK_DEBUG
 #define XSTR(s) #s
 #define STR(s) XSTR(s)
 
@@ -163,6 +164,7 @@ KeAcquireSpinLockAtDpcLevelDebug(lock, #lock, __FUNCTION__, __LINE__)
 KeReleaseSpinLockFromDpcLevelDebug(lock, #lock, __FUNCTION__, __LINE__)
 #undef STR
 
+#endif
 #endif
 
 #ifdef __cplusplus

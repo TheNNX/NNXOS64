@@ -16,7 +16,7 @@
 #include "nnxver.h"
 #include <object.h>
 #include <pool.h>
-#include <Keyboard.h>
+#include <ps2.h>
 #include <rtc.h>
 #include <syscall.h>
 #include <file.h>
@@ -155,7 +155,9 @@ extern "C"
 
         SetupSystemCallHandler(SystemCallHandler);
         HalpSetupPcrForCurrentCpu(0);
-        KeyboardInitialize();
+        Ps2Initialize();
+        Ps2KeyboardInitialize();
+        Ps2MouseInitialize();
 
         PrintT(
             "%s %i.%i.%i.%i, compiled %s %s\n",

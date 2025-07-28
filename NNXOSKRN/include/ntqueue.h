@@ -44,11 +44,12 @@ extern "C"
     NTAPI 
     KeInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry);
 
-    NTSYSAPI
+#ifdef NNX_KERNEL
     VOID
     NTAPI
     KiUnwaitWaitBlockFromQueue(
         PKWAIT_BLOCK pWaitBlock);
+#endif
 
 #ifdef __cplusplus
 }

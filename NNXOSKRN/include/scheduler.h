@@ -66,6 +66,8 @@ extern "C" {
         /* Used to store the threads state and to execute interrupts */
         PVOID KernelStackPointer;
 
+        PVOID SwitchStackPointer;
+
         /* Used for deallocating the kernel stack */
         PVOID OriginalKernelStackPointer;
         SIZE_T NumberOfKernelStackPages;
@@ -128,6 +130,7 @@ extern "C" {
 
         CCHAR ApcStateIndex;
 
+        /* TODO */
         BOOLEAN WaitIrql;
         KIRQL   WaitIrqlRestore;
 
@@ -180,6 +183,9 @@ extern "C" {
 #endif
     }KTASK_STATE, *PKTASK_STATE;
 
+    /* FIXME!!! */
+    typedef KTASK_STATE *PCONTEXT, CONTEXT;
+
     NTSYSAPI
     VOID
     NTAPI
@@ -222,6 +228,19 @@ extern "C" {
         HANDLE SectionHandle,
         HANDLE DebugPort,
         HANDLE ExceptionPort);
+
+    NTSYSAPI
+    NTSTATUS
+    NTAPI
+    NtCreateThread(
+        PHANDLE ThreadHandle,
+        ACCESS_MASK DesiredAccess,
+        POBJECT_ATTRIBUTES ObjectAttributes,
+        HANDLE ProcessHandle,
+        PVOID ClientId,
+        PVOID Context,
+        PVOID InitialTeb,
+        BOOLEAN CreateSuspended);
 
 #ifdef NNX_KERNEL
     NTSTATUS 
@@ -325,6 +344,11 @@ extern "C" {
     NTAPI
     HalpApplyTaskState(
         PKTASK_STATE TaskState);
+
+    PVOID
+    NTAPI
+    PspCreateKernelStack(
+        SIZE_T nPages);
 
     PEPROCESS
     NTAPI

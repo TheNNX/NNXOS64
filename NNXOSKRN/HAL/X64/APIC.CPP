@@ -149,6 +149,7 @@ extern "C"
         }
 
         ApicInitIsaIrq(irqSourceToGsiMapping, 1, KEYBOARD_VECTOR);
+        ApicInitIsaIrq(irqSourceToGsiMapping, 12, MOUSE_VECTOR);
 
         PicDisableForApic();
 

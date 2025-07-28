@@ -1,6 +1,5 @@
 #include <HALX64/include/IDT.h>
 #include <SimpleTextIo.h>
-#include <Keyboard.h>
 #include <HALX64/include/GDT.h>
 #include <paging.h>
 #include <dispatcher.h>
@@ -275,7 +274,7 @@ HalHandleApc(
     {
         KeDeliverApcs(
             PsGetProcessorModeFromTrapFrame(
-            pcr->Prcb->CurrentThread->KernelStackPointer));
+                pcr->Prcb->CurrentThread->KernelStackPointer));
     }
     KiReleaseDispatcherLock(lockIrql);
 }

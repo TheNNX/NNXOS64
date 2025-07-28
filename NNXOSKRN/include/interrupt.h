@@ -29,14 +29,13 @@ extern "C"
         KFULLCTX_ROUTINE    pfnFullCtxRoutine;
         BOOLEAN             Trap;
         BOOLEAN             (NTAPI *pfnGetRequiresFullCtx)(
-                                struct _KINTERRUPT* Interrupt);
+            struct _KINTERRUPT* Interrupt);
         BOOLEAN             SendEOI;
         VOID                (NTAPI *pfnSetMask)(
-                                struct _KINTERRUPT* Self, 
-                                BOOLEAN State);
+            struct _KINTERRUPT* Self, 
+            BOOLEAN State);
         /* FIXME */
         ULONG               IoApicVector;
-        
     } KINTERRUPT, *PKINTERRUPT;
 
     NTHALAPI
@@ -51,22 +50,22 @@ extern "C"
     VOID
     HalDisableInterrupts();
 
-    NTHALAPI extern VOID(*gExceptionHandlerPtr)(
-        ULONG_PTR n, 
-        ULONG_PTR errcode, 
-        ULONG_PTR errcode2,
-        ULONG_PTR rip);
+    NTHALAPI 
+    extern 
+    VOID
+    (*gExceptionHandlerPtr)(ULONG_PTR n, 
+                            ULONG_PTR errcode, 
+                            ULONG_PTR errcode2,
+                            ULONG_PTR rip);
 
 #ifdef NNX_KERNEL
     BOOLEAN
     NTAPI 
-    KeConnectInterrupt(
-        PKINTERRUPT Interrupt);
+    KeConnectInterrupt(PKINTERRUPT Interrupt);
 
     BOOLEAN  
     NTAPI 
-    KeDisconnectInterrupt(
-        PKINTERRUPT Interrupt);
+    KeDisconnectInterrupt(PKINTERRUPT Interrupt);
 
     NTSTATUS 
     NTAPI 
@@ -74,27 +73,26 @@ extern "C"
 
     NTSTATUS 
     NTAPI 
-    KiCreateInterrupt(
-        PKINTERRUPT* ppInterrupt);
+    KiCreateInterrupt(PKINTERRUPT* ppInterrupt);
 
     NTSTATUS
     NTAPI
-    IoCreateInterrupt(
-        PKINTERRUPT* pOutInterrupt,
-        UCHAR Vector,
-        PVOID Handler,
-        ULONG CpuNumber,
-        KIRQL Irql,
-        BOOL  Trap,
-        KSERVICE_ROUTINE Routine);
+    IoCreateInterrupt(PKINTERRUPT* pOutInterrupt,
+                      UCHAR Vector,
+                      PVOID Handler,
+                      ULONG CpuNumber,
+                      KIRQL Irql,
+                      BOOL  Trap,
+                      KSERVICE_ROUTINE Routine);
 
     VOID 
     NTAPI 
     IrqHandler();
 
-    #define CLOCK_VECTOR 0x20
-    #define KEYBOARD_VECTOR 0x30
-    #define STOP_IPI_VECTOR 0xEF
+#define CLOCK_VECTOR    0x20
+#define KEYBOARD_VECTOR 0x30
+#define MOUSE_VECTOR    0x31
+#define STOP_IPI_VECTOR 0xEF
 
 #endif
 

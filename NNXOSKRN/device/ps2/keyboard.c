@@ -1,12 +1,23 @@
-#include <Keyboard.h>
+#include <ps2.h>
 #include <SimpleTextIo.h>
-#include <Port.h>
 #include <HALX64/include/APIC.h>
 #include <interrupt.h>
 #include <cpu.h>
 
 KEY_STATE state;
 UINT8 ScancodeSet = 0;
+
+static
+BOOLEAN
+SetScancodeSet(UINT8 setNumber);
+
+static
+UINT8
+GetScancodeSet(VOID);
+
+static
+UINT8 
+GetKeyOnInterrupt(VOID);
 
 KEY(UNDEF, 0, 0, 0, 0, 0);
 KEY(ESC, K_ESCAPE, 0, 0, 0, 0);
@@ -99,7 +110,6 @@ KEYSide(RALT, K_RMENU, K_MENU);
 KEYSide(RCTRL, K_RCONTROL, K_CONTROL);
 KEY(PrintScreen, K_SNAPSHOT, 0, 0, 0, 0);
 
-
 UINT8(*ScancodeSet2Keys[])() = { KeyUNDEF, KeyF9, KeyUNDEF, KeyF5, KeyF3, KeyF1, KeyF2, KeyF12, KeyUNDEF, KeyF10, KeyF8,
                                 KeyF6, KeyF4, KeyTAB, KeyBacktick, KeyUNDEF, KeyUNDEF, KeyLALT, KeyLShift, KeyUNDEF, KeyLCTRL, KeyQ,
                                 Key1, KeyUNDEF, KeyUNDEF, KeyUNDEF, KeyZ, KeyS, KeyA, KeyW, Key2, KeyUNDEF, KeyUNDEF, KeyC, KeyX, KeyD,
@@ -118,17 +128,30 @@ KeyboardIsr(
     PKINTERRUPT InterruptObj,
     PVOID Ctx)
 {
-    KeyboardInterrupt();
+    char k = GetKeyOnInterrupt();
+    if (k)
+    {
+        PrintT("%c\n", k);
+    }
+
+    Ps2FlushBuffer();
     return TRUE;
 }
 
-VOID KeyboardInitialize()
+NTSTATUS 
+Ps2KeyboardInitialize(VOID)
 {
-    UINT8 selfTest, KCB;
     PKINTERRUPT interrupt;
-    
-    outb(KEYBOARD_COMMAND_PORT, 0xFF);
-    selfTest = inb(KEYBOARD_PORT);
+    UINT8 keyboardDeviceId;
+
+    keyboardDeviceId = Ps2ResetPort1();
+    if (keyboardDeviceId == -1)
+    {
+        return STATUS_INTERNAL_ERROR;
+    }
+
+    PrintT("Keyboard device id %i\n", keyboardDeviceId);
+   
     ScancodeSet = GetScancodeSet();
 
     if (ScancodeSet != 2)
@@ -137,14 +160,6 @@ VOID KeyboardInitialize()
     }
 
     ScancodeSet = 2;
-    outb(KEYBOARD_COMMAND_PORT, 0x20);
-
-    while (inb(KEYBOARD_COMMAND_PORT) & 2);
-
-    KCB = inb(KEYBOARD_PORT);
-    KCB &= ~(0X40);    
-    outb(KEYBOARD_COMMAND_PORT, 0x60);
-    outb(KEYBOARD_PORT, KCB);
 
     IoCreateInterrupt(
         &interrupt, 
@@ -160,76 +175,87 @@ VOID KeyboardInitialize()
     interrupt->pfnSetMask = ApicSetInterruptMask;
 
     KeConnectInterrupt(interrupt);
+
+    Ps2EnableInterruptPort1();
     KeyboardInitialized = TRUE;
+
+    return STATUS_SUCCESS;
 }
 
-/* TODO: no idea what this should return, might investigate later */
-UINT8 SpecialKey()
+static
+UINT8 
+GetKeyOnInterrupt(VOID)
 {
-    while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
-    return NULL;
-}
+    UINT8(*key)();
+    UINT8 scancode;
 
-UINT8 GetKeyOnInterrupt()
-{
-    if (!(inb(KEYBOARD_COMMAND_PORT) & 1))
+    if (!(Ps2ReadStatusPort() & PS2_STATUS_OUTPUT_READY))
+    {
         return 0;
+    }
 
     if (!KeyboardInitialized)
+    {
         return 0;
-    UINT8 scancode = inb(KEYBOARD_PORT);
+    }
+    
+    scancode = Ps2ReadNoPoll();
 
-    UINT8(*key)();
     if (scancode == 0xf0)
     {
-        while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-        scancode = inb(KEYBOARD_PORT);
+        scancode = Ps2ReadNoPoll();
+        
         if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+        {
             return 0;
+        }
+        
         key = ScancodeSet2Keys[scancode];
         return key(1);
     }
     else if (scancode == 0xe0)
     {
-        return SpecialKey();
-    }
-    if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+        Ps2FlushBuffer();
         return 0;
+    }
+
+    if (scancode > (sizeof(ScancodeSet2Keys) / sizeof(*ScancodeSet2Keys)))
+    {
+        return 0;
+    }
+    
     key = ScancodeSet2Keys[scancode];
     return key(0);
 }
 
-UINT8 KeyboardInterrupt()
+static
+UINT8 
+GetScancodeSet(VOID)
 {
-    char k = GetKeyOnInterrupt();
-    if (k)
-        PrintT("%c", k);
-    return  k;
-}
+    UINT8 byte;
 
-UINT8 GetScancodeSet()
-{
-    outb(KEYBOARD_PORT, 0xf0);
-    while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
-    outb(KEYBOARD_PORT, 0);
-    while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-    UINT8 byte = inb(KEYBOARD_PORT);
-    if (byte == KB_ACK)
+    Ps2SendToPort1(0xF0);
+    Ps2SendToPort1(0x0);
+    
+    byte = Ps2Read();
+
+    if (byte == PS2_ACK)
     {
-        while (byte = inb(KEYBOARD_PORT) == KB_ACK);
-        byte = inb(KEYBOARD_PORT);
-        while (inb(KEYBOARD_COMMAND_PORT) & 1) inb(KEYBOARD_PORT);
+        while (byte = Ps2ReadNoPoll() == PS2_ACK);
+        
+        Ps2FlushBuffer();
+        
         PrintT("BYTE: %X\n", byte);
         switch (byte)
         {
-            case 0x43:    //TRANSLATED
-            case 1:        //NOT TRANSLATED
+            case 0x43:    // TRANSLATED
+            case 1:       // NOT TRANSLATED
                 return KB_SCANCODESET1;
-            case 0x41:    //TRANSLATED
-            case 2:        //NOT TRANSLATED
+            case 0x41:    // TRANSLATED
+            case 2:       // NOT TRANSLATED
                 return KB_SCANCODESET2;
-            case 0x3f:    //TRANSLATED
-            case 3:        //NOT TRANSLATED
+            case 0x3f:    // TRANSLATED
+            case 3:       // NOT TRANSLATED
                 return KB_SCANCODESET3;
             default:
                 return KB_SCANCODESET_UNKNOWN;
@@ -243,18 +269,17 @@ UINT8 GetScancodeSet()
     return byte;
 }
 
-UINT8 SetScancodeSet(UINT8 setNumber)
+static
+BOOLEAN 
+SetScancodeSet(UINT8 setNumber)
 {
     if (setNumber < KB_SCANCODESET1 || setNumber > KB_SCANCODESET3)
-        return 0;
-    outb(KEYBOARD_PORT, 0xf0);
-    while (inb(KEYBOARD_COMMAND_PORT) & 0x2);
-    outb(KEYBOARD_PORT, setNumber);
-    while (!(inb(KEYBOARD_COMMAND_PORT) & 1));
-    UINT8 status = inb(KEYBOARD_PORT);
-    if (status == KB_ACK)
-        return 1;
-    else
-        return 0;
+    {
+        return FALSE;
+    }
 
+    Ps2SendToPort1(0xF0);
+    Ps2SendToPort1(setNumber);
+    
+    return (Ps2Read()  == PS2_ACK);
 }

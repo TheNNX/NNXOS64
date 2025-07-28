@@ -204,6 +204,8 @@ extern "C"
         return 0x2222222222222222ULL;
     }
 
+    ULONG_PTR NTAPI NnxUserGetCursorPosition(VOID);
+
     /**
      * @brief The default system call handler - note: it is possible
      * to use different handlers, and even to chain load them - to

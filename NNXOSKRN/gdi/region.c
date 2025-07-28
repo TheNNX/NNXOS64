@@ -706,7 +706,8 @@ GdiCombineRgn(
 VOID 
 DebugFillRect(
     const RECT* rect,
-    UINT32 color)
+    ULONG_PTR color,
+    COLORREF(*colorFunction)(LONG x, LONG y, ULONG_PTR))
 {
     LONG x, y;
     volatile UINT32* line = gFramebuffer + rect->top * gPixelsPerScanline;
@@ -715,7 +716,11 @@ DebugFillRect(
     {
         for (x = rect->left; x < rect->right; x++)
         {
-            line[x] = color;
+            if (colorFunction(x, y, color) & 0xFF000000)
+            {
+                if (x >= 0 && y >= 0 && (UINT32)y <= gHeight && (UINT32)x <= gWidth)
+                line[x] = colorFunction(x, y, color);
+            }
         }
 
         line += gPixelsPerScanline;
@@ -725,15 +730,17 @@ DebugFillRect(
 VOID 
 GdiDebugFillSimpleRegion(
     PGDI_REGION_RECTANGLE region,
-    COLORREF color)
+    ULONG_PTR color,
+    COLORREF(*colorFunction)(LONG x, LONG y, ULONG_PTR))
 {
-    DebugFillRect(&region->Rect, color);
+    DebugFillRect(&region->Rect, color, colorFunction);
 }
 
 VOID 
 GdiDebugFillComplexRegion(
     PGDI_REGION_ARBITRARY region,
-    COLORREF color)
+    ULONG_PTR color,
+    COLORREF(*colorFunction)(LONG x, LONG y, ULONG_PTR))
 {
     const RECT* rect = &region->BoundingBox;
     LONG x, y;
@@ -757,7 +764,10 @@ GdiDebugFillComplexRegion(
 
             if (set)
             {
-                line[x] = color;
+                if (colorFunction(x, y, color) & 0xFF000000)
+                {
+                    line[x] = colorFunction(x, y, color);
+                }
             }
         }
 
@@ -768,17 +778,18 @@ GdiDebugFillComplexRegion(
 VOID
 GdiDebugFillRegion(
     HRGN hRgn,
-    COLORREF color)
+    ULONG_PTR colorFunctionArg,
+    COLORREF(*colorFunction)(LONG x, LONG y, ULONG_PTR))
 {
     PGDI_REGION_HEADER region = (PGDI_REGION_HEADER)GdiLockHandle(hRgn);
 
     switch (region->RegionType)
     {
     case SIMPLEREGION:
-        GdiDebugFillSimpleRegion((PGDI_REGION_RECTANGLE)region, color);
+        GdiDebugFillSimpleRegion((PGDI_REGION_RECTANGLE)region, colorFunctionArg, colorFunction);
         break;
     case COMPLEXREGION:
-        GdiDebugFillComplexRegion((PGDI_REGION_ARBITRARY)region, color);
+        GdiDebugFillComplexRegion((PGDI_REGION_ARBITRARY)region, colorFunctionArg, colorFunction);
         break;
     case NULLREGION:
         break;

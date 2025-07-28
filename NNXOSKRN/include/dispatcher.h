@@ -25,8 +25,9 @@ extern "C" {
         QueueObject,
         EventObject,
         TimerObject,
-        MutexObject
-    }KOBJECTS;
+        MutexObject,
+        SemaphoreObject
+    } KOBJECTS;
 
     typedef struct _DISPATCHER_HEADER
     {
@@ -39,7 +40,7 @@ extern "C" {
                 BYTE Type;
             };
         };
-        LONG SignalState;
+        ULONG SignalState;
         LIST_ENTRY WaitHead;
     }DISPATCHER_HEADER, *PDISPATCHER_HEADER;
 
@@ -148,7 +149,8 @@ extern "C" {
     NTAPI
     KiSignal(
         PDISPATCHER_HEADER Object,
-        ULONG SignalIncrememnt);
+        ULONG SignalIncrememnt,
+        LONG PriorityIncrement);
 
     VOID
     NTAPI

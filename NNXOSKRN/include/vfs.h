@@ -80,13 +80,13 @@ extern "C" {
 #define VFS_ERR_INVALID_FILENAME            0xFFFF0001
 #define VFS_ERR_INVALID_PATH                0xFFFF0002
 #define VFS_ERR_INACCESSIBLE                0xFFFF0003
-#define VFS_ERR_EOF                            0xFFFF0004
-#define VFS_ERR_NOT_A_DIRECTORY                0xFFFF0005
-#define VFS_ERR_NOT_A_FILE                    0xFFFF0006
-#define VFS_ERR_FILE_NOT_FOUND                0xFFFF0007
-#define VFS_ERR_NOT_ENOUGH_ROOM_FOR_WRITE    0xFFFF0008
+#define VFS_ERR_EOF                         0xFFFF0004
+#define VFS_ERR_NOT_A_DIRECTORY             0xFFFF0005
+#define VFS_ERR_NOT_A_FILE                  0xFFFF0006
+#define VFS_ERR_FILE_NOT_FOUND              0xFFFF0007
+#define VFS_ERR_NOT_ENOUGH_ROOM_FOR_WRITE   0xFFFF0008
 #define VFS_ERR_READONLY                    0xFFFF0009
-#define VFS_ERR_FILE_ALREADY_EXISTS            0xFFFF000A
+#define VFS_ERR_FILE_ALREADY_EXISTS         0xFFFF000A
 #define VFS_ERR_ARGUMENT_INVALID            0xFFFF000B
 
 #define VFS_MAX_PATH (2048)

@@ -14,6 +14,7 @@
 #include <mm.h>
 #include <file.h>
 #include <intrin.h>
+#include <dpc.h>
 
 LIST_ENTRY ProcessListHead;
 LIST_ENTRY ThreadListHead;
@@ -21,6 +22,8 @@ LIST_ENTRY ThreadListHead;
 UCHAR PspForegroundQuantum[3] = { 0x06, 0x0C, 0x12 };
 UCHAR PspPrioritySeparation = 2;
 UINT PspCoresInitialized = 0;
+
+static KDPC PsThreadCleanupDpc;
 
 const CHAR PspThrePoolTag[4] = "Thre";
 const CHAR PspProcPoolTag[4] = "Proc";
@@ -66,10 +69,11 @@ PKCORE_SCHEDULER_DATA   CoresSchedulerData = (PKCORE_SCHEDULER_DATA)NULL;
 KSHARED_READY_QUEUE     PspSharedReadyQueue = { 0 };
 
 /* Clear the summary bit for this priority if there are none entries left */
-inline VOID ClearSummaryBitIfNeccessary(
-    LIST_ENTRY* ThreadReadyQueues, 
-    PULONG Summary,
-    UCHAR Priority)
+inline 
+VOID 
+ClearSummaryBitIfNeccessary(LIST_ENTRY* ThreadReadyQueues,
+                            PULONG Summary,
+                            UCHAR Priority)
 {
     if (IsListEmpty(&ThreadReadyQueues[Priority]))
     {
@@ -77,15 +81,26 @@ inline VOID ClearSummaryBitIfNeccessary(
     }
 }
 
-inline VOID SetSummaryBitIfNeccessary(
-    LIST_ENTRY* ThreadReadyQueues, 
-    PULONG Summary, 
-    UCHAR Priority)
+inline 
+VOID
+SetSummaryBitIfNeccessary(LIST_ENTRY* ThreadReadyQueues, 
+                          PULONG Summary, 
+                          UCHAR Priority)
 {
     if (!IsListEmpty(&ThreadReadyQueues[Priority]))
     {
         _bittestandset(Summary, Priority);
     }
+}
+
+static
+VOID
+ThreadCleanupRoutine(PKDPC Dpc,
+                     PVOID Context,
+                     PVOID Thread,
+                     PVOID SystemArgument2)
+{
+    ObDereferenceObject(Thread);
 }
 
 NTSTATUS 
@@ -96,19 +111,17 @@ PspInitializeScheduler()
     KIRQL irql;
     NTSTATUS status;
 
-    status = ObCreateType(
-        &PsProcessType,
-        &PsProcessTypeName,
-        sizeof(EPROCESS));
+    status = ObCreateType(&PsProcessType,
+                          &PsProcessTypeName,
+                          sizeof(EPROCESS));
     if (!NT_SUCCESS(status))
     {
         return status;
     }
 
-    status = ObCreateType(
-        &PsThreadType,
-        &PsThreadTypeName,
-        sizeof(ETHREAD));
+    status = ObCreateType(&PsThreadType,
+                          &PsThreadTypeName,
+                          sizeof(ETHREAD));
     if (!NT_SUCCESS(status))
     {
         ObDereferenceObject(PsProcessType);
@@ -119,6 +132,8 @@ PspInitializeScheduler()
     PsProcessType->OnDelete = PspProcessOnDelete;
     PsThreadType->OnCreate = PspThreadOnCreate;
     PsThreadType->OnDelete = PspThreadOnDelete;
+
+    KeInitializeDpc(&PsThreadCleanupDpc, ThreadCleanupRoutine, NULL);
 
     irql = KiAcquireDispatcherLock();
 
@@ -143,9 +158,10 @@ PspInitializeScheduler()
         }
     }
     KiReleaseDispatcherLock(irql);
-    return (CoresSchedulerData == (PKCORE_SCHEDULER_DATA)NULL) ? 
-        STATUS_NO_MEMORY : 
-        STATUS_SUCCESS;
+    return 
+        (CoresSchedulerData == (PKCORE_SCHEDULER_DATA)NULL) ? 
+            STATUS_NO_MEMORY : 
+            STATUS_SUCCESS;
 }
 
 PKTHREAD 
@@ -155,6 +171,7 @@ PspSelectNextReadyThread(
 {
     INT priority;
     PKTHREAD result;
+    PLIST_ENTRY dequeuedEntry;
     PKCORE_SCHEDULER_DATA coreOwnData = &CoresSchedulerData[CoreNumber];
 
     PspManageSharedReadyQueue(CoreNumber);
@@ -165,9 +182,9 @@ PspSelectNextReadyThread(
     {
         if (_bittest(&coreOwnData->ThreadReadyQueuesSummary, priority))
         {
-            PLIST_ENTRY dequeuedEntry = 
-                (PLIST_ENTRY)RemoveHeadList(&coreOwnData->
-                    ThreadReadyQueues[priority]);
+            dequeuedEntry = 
+                RemoveHeadList(&coreOwnData->ThreadReadyQueues[priority]);
+
             result = (PKTHREAD)
                 ((ULONG_PTR)dequeuedEntry - 
                     FIELD_OFFSET(KTHREAD, ReadyQueueEntry));
@@ -322,6 +339,8 @@ PspInitializeCore(
     pPrcb->NextThread = pPrcb->IdleThread;
     pPrcb->CurrentThread = pPrcb->IdleThread;
 
+    pPrcb->DpcStack = PspCreateKernelStack(1);
+
     pDummyThread = pPrcb->DummyThread;
     pPrcb->DummyThread = NULL;
 
@@ -383,11 +402,74 @@ PspInitializeCore(
 
 #pragma warning(pop)
 
+static
+VOID
+PspCallDpc(PKDPC Dpc, 
+           PKTASK_STATE ResumeStack)
+{
+    Dpc->Routine(Dpc, Dpc->Context, Dpc->SystemArgument1, Dpc->SystemArgument2);
+
+    KfRaiseIrql(HIGH_LEVEL);
+    KeGetCurrentThread()->SwitchStackPointer = ResumeStack;
+    KfLowerIrql(PASSIVE_LEVEL);
+    while (1);
+}
+
+static
+VOID
+PspCheckDpcQueue(PKTHREAD Thread)
+{
+    PKDPC_DATA dpcData;
+    ULONG_PTR dpcStack;
+    PVOID resumeStack;
+    PKTASK_STATE taskState;
+    PLIST_ENTRY entry;
+    PKDPC dpc;
+
+    if (Thread->ThreadIrql > DPC_LEVEL)
+    {
+        return;
+    }
+    
+    KfRaiseIrql(HIGH_LEVEL);
+
+    dpcData = &KeGetPcr()->Prcb->DpcData;
+    KiAcquireSpinLock(&dpcData->DpcLock);
+
+    if (dpcData->DpcQueueDepth == 0)
+    {
+        Thread->ThreadIrql = PASSIVE_LEVEL;
+        KiReleaseSpinLock(&dpcData->DpcLock);
+        return;
+    }
+
+    Thread->ThreadIrql = DPC_LEVEL;
+
+    dpcData->DpcQueueDepth--;
+    entry = RemoveHeadList(&dpcData->DpcListHead);
+
+    dpc = CONTAINING_RECORD(entry, KDPC, Entry);
+    dpc->Inserted = FALSE;
+
+    dpcStack = (ULONG_PTR)KeGetPcr()->Prcb->DpcStack;
+    resumeStack = Thread->KernelStackPointer;
+
+    dpcStack -= sizeof(KTASK_STATE);
+    taskState = (PKTASK_STATE)dpcStack;
+
+    PspSetupThreadState(taskState, TRUE, (ULONG_PTR)PspCallDpc, dpcStack);
+
+    Thread->KernelStackPointer = (PVOID)dpcStack;
+    PspSetUsercallParameter(Thread, 0, (ULONG_PTR)dpc);
+    PspSetUsercallParameter(Thread, 1, (ULONG_PTR)resumeStack);
+
+    KiReleaseSpinLock(&dpcData->DpcLock);
+}
+
 ULONG_PTR 
 NTAPI
-PspScheduleThread(
-    PKINTERRUPT ClockInterrupt, 
-    PKTASK_STATE Stack)
+PspScheduleThread(PKINTERRUPT ClockInterrupt, 
+                  PKTASK_STATE Stack)
 {
     PKPCR pcr;
     KIRQL irql;
@@ -415,6 +497,12 @@ PspScheduleThread(
     }
 
     originalRunningThread->KernelStackPointer = (PVOID)Stack;
+
+    if (originalRunningThread->SwitchStackPointer)
+    {
+        originalRunningThread->KernelStackPointer = originalRunningThread->SwitchStackPointer;
+        originalRunningThread->SwitchStackPointer = NULL;
+    }
 
     if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
     {
@@ -450,7 +538,6 @@ PspScheduleThread(
     if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread || 
         pcr->Prcb->NextThread->ThreadState != THREAD_STATE_READY)
     {
-
         /* Select a new next thread. */
         pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
     }
@@ -509,10 +596,8 @@ PspScheduleThread(
             else if (originalRunningThread->ThreadState == 
                      THREAD_STATE_TERMINATED)
             {
-                /* TODO */
-                /* FIXME: Terminated threads cause a significant memory leak,
-                 * they cannot, however, be dereferenced here, as the IRQL is
-                 * too high to use the Object Manager. */
+                PrintT("Dereferencing terminated thread %X\n", originalRunningThread);
+                KeInsertQueueDpc(&PsThreadCleanupDpc, originalRunningThread, NULL);
             }
         }
     }
@@ -528,6 +613,9 @@ PspScheduleThread(
 
     KeReleaseSpinLockFromDpcLevel(originalRunningProcessSpinlock);
     KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
+
+    PspCheckDpcQueue(pcr->Prcb->CurrentThread);
+
     KiReleaseDispatcherLock(irql);
 
     return (ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer;
@@ -550,8 +638,7 @@ KeGetCurrentThread()
 
 PVOID 
 NTAPI
-PspCreateKernelStack(
-    SIZE_T nPages)
+PspCreateKernelStack(SIZE_T nPages)
 {
     ULONG_PTR blockAllocation, currentMappingGuard1, currentMappingGuard2;
     NTSTATUS status;
@@ -616,12 +703,10 @@ PspFreeKernelStack(
 
 VOID 
 NTAPI
-PspSetupThreadState(
-    PKTASK_STATE pThreadState, 
-    BOOL IsKernel, 
-    ULONG_PTR Entrypoint,
-    ULONG_PTR Userstack
-)
+PspSetupThreadState(PKTASK_STATE pThreadState,
+                    BOOL IsKernel,
+                    ULONG_PTR Entrypoint,
+                    ULONG_PTR Userstack)
 {
     UINT16 code0, code3, data0, data3;
     LPKGDTENTRY64 gdt;
@@ -864,6 +949,8 @@ PspCreateThreadStacks(PKTHREAD tcb)
 
     /* Stack for saving the thread context when executing APCs */
     tcb->ApcBackupKernelStackPointer = PspCreateKernelStack(1);
+
+    tcb->SwitchStackPointer = NULL;
 }
 
 NTSTATUS 
@@ -907,6 +994,7 @@ PspThreadOnCreateNoDispatcher(
     }
     else
     {
+        /* TODO: Usermode should manage its stack on its own. */
         userstack = (ULONG_PTR)
         PagingAllocatePageFromRange(
             PAGING_USER_SPACE,
@@ -1179,7 +1267,7 @@ PsExitThread(
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;
 
-    KiSignal((PDISPATCHER_HEADER)currentThread, -1);
+    KiSignal(&currentThread->Header, -1, 0);
 
     KeReleaseSpinLockFromDpcLevel(&currentThread->Header.Lock);
     KeReleaseSpinLockFromDpcLevel(&currentThread->ThreadLock);
@@ -1420,10 +1508,10 @@ NtCreateProcessEx(
 
     Status = ObCreateHandle(
         &Handle, 
-        FALSE,
         DesiredAccess, /* TODO: Should this be passed for the second time?? 
                           Can handles have different access than the objects 
                           they refer to? */
+        FALSE,
         pProcess);
     if (!NT_SUCCESS(Status))
     {
@@ -1467,4 +1555,69 @@ NtCreateProcess(
         DebugPort,
         ExceptionPort,
         FALSE);
+}
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtCreateThread(
+    PHANDLE ThreadHandle,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    HANDLE ProcessHandle,
+    PVOID ClientId, /* TODO */
+    PCONTEXT Context /* FIXME: Context ignored, incorrect definition! */,
+    PVOID InitialTeb, /* TODO */
+    BOOLEAN CreateSuspended)
+{
+    NTSTATUS Status;
+    PEPROCESS pProcess;
+    PETHREAD pThread;
+    HANDLE handle;
+
+    if (ProcessHandle == NULL)
+    {
+        pProcess = CONTAINING_RECORD(KeGetCurrentThread()->Process, 
+                                     EPROCESS, 
+                                     Pcb);
+    }
+    else
+    {
+        Status = ObReferenceObjectByHandle(ProcessHandle,
+                                           0,
+                                           PsProcessType,
+                                           UserMode,
+                                           &pProcess,
+                                           NULL);
+        if (!NT_SUCCESS(Status))
+        {
+            return Status;
+        }
+    }
+
+    /* FIXME! Context ignored! */
+    Status = PspCreateThreadInternal(&pThread, pProcess, FALSE, Context->Rip);
+    if (ProcessHandle != NULL)
+    {
+        ObDereferenceObject(pProcess);
+    }
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    pThread->Tcb.ThreadPriority = 10;
+
+    if (!CreateSuspended)
+    {
+        PspInsertIntoSharedQueueLocked(&pThread->Tcb);
+    }
+
+    Status = ObCreateHandle(&handle, DesiredAccess, FALSE, pThread);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    return STATUS_SUCCESS;
 }

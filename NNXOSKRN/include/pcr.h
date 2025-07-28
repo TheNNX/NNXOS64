@@ -5,6 +5,7 @@
 #include <spinlock.h>
 #include <irql.h>
 #include <ntlist.h>
+#include <dpc.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -51,6 +52,15 @@ extern "C"
     VOID HalpSetDummyPcr();
     VOID HalpInitDummyPcr();
     VOID HalSetPcr(PKPCR);
+
+    typedef struct _KARCH_CORE_DATA
+    {
+        KGDTENTRY64 GdtEntires[16];
+        KIDTENTRY64 IdtEntries[256];
+        KIDTR64     Idtr;
+        KGDTR64     Gdtr;
+        KTSS        Tss;
+    } KARCH_CORE_DATA, * PKARCH_CORE_DATA;
 #else
 #error "Architecture unsupported"
 #endif
@@ -69,16 +79,9 @@ extern "C"
         ULONG Number;
         struct _KTHREAD* DummyThread;
         KSPIN_LOCK Lock;
-    }KPRCB, *PKPRCB, *LPKRCB;
-
-    typedef struct _KARCH_CORE_DATA
-    {
-        KGDTENTRY64 GdtEntires[16];
-        KIDTENTRY64 IdtEntries[256];
-        KIDTR64        Idtr;
-        KGDTR64        Gdtr;
-        KTSS        Tss;
-    }KARCH_CORE_DATA, *PKARCH_CORE_DATA;
+        KDPC_DATA DpcData;
+        PVOID DpcStack;
+    } KPRCB, *PKPRCB, *LPKRCB;
 
     PKPCR KeGetPcr();
     PKPRCB HalCreatePrcb(UCHAR CoreNumber);

@@ -107,6 +107,13 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
     prcb->IdleThread = prcb->NextThread = (struct _KTHREAD*)NULL;
     prcb->Number = CoreNumber;
 
+    prcb->DpcStack = NULL;
+    
+    prcb->DpcData.DpcCount = 0;
+    prcb->DpcData.DpcQueueDepth = 0;
+    InitializeListHead(&prcb->DpcData.DpcListHead);
+    KeInitializeSpinLock(&prcb->DpcData.DpcLock);
+
     return prcb;
 }
 

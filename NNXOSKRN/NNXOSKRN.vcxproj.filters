@@ -99,7 +99,7 @@
     <ClCompile Include="HAL\PCI\PCIIDE.c">
       <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
-    <ClCompile Include="device\Keyboard.c">
+    <ClCompile Include="device\ps2\keyboard.c">
       <Filter>Source Files\device</Filter>
     </ClCompile>
     <ClCompile Include="device\fs\fat.c">
@@ -210,7 +210,7 @@
     <ClCompile Include="ob\obtest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dispatcher\mutex.c">
+    <ClCompile Include="dispatcher\ntmutex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="nnxalloccpp.cpp">
@@ -249,6 +249,15 @@
     <ClCompile Include="gdi\gditest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="device\ps2\mouse.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="device\ps2\ps2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dispatcher\ntsemaphore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bugcheck.h">
@@ -284,7 +293,7 @@
     <ClInclude Include="include\hdd.h">
       <Filter>Header Files\device\hdd</Filter>
     </ClInclude>
-    <ClInclude Include="include\Keyboard.h">
+    <ClInclude Include="include\ps2.h">
       <Filter>Header Files\device</Filter>
     </ClInclude>
     <ClInclude Include="include\ntqueue.h">
@@ -344,7 +353,7 @@
     <ClInclude Include="include\ntdebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\mutex.h">
+    <ClInclude Include="include\ntmutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\cpu.h">
@@ -384,6 +393,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\gdi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ntsemaphore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

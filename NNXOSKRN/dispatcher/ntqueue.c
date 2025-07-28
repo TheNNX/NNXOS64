@@ -1,6 +1,3 @@
-/* implements NT's KQUEUE's functions */
-/* TODO: waiting threads list */
-
 #include "ntqueue.h"
 #include <scheduler.h>
 #include <SimpleTextIO.h>
@@ -12,7 +9,6 @@ VOID
 NTAPI
 KeInitializeQueue(PKQUEUE Queue, ULONG MaxmimumWaitingThreads) 
 {
-    PrintT("Initializing queue\n");
     InitializeDispatcherHeader(&Queue->Header, QueueObject);
 
     Queue->MaximumWaitingThreads = 
@@ -53,7 +49,7 @@ NTAPI
 KiInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry, BOOL Head)
 {
     LONG initialState;
-    KIRQL irql;
+    KIRQL irql, irql2;
 
     KeAcquireSpinLock(&Queue->Header.Lock, &irql);
     initialState = Queue->Header.SignalState;
@@ -67,7 +63,9 @@ KiInsertQueue(PKQUEUE Queue, PLIST_ENTRY Entry, BOOL Head)
         InsertTailList(&Queue->EntryListHead, Entry);
     }
 
-    KiSignal((PDISPATCHER_HEADER)Queue, 1);
+    irql2 = KiAcquireDispatcherLock();
+    KiSignal(&Queue->Header, 1, 0);
+    KiReleaseDispatcherLock(irql2);
 
     KeReleaseSpinLock(&Queue->Header.Lock, irql);
     return initialState;

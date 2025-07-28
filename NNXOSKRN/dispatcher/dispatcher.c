@@ -1,9 +1,11 @@
-#include "dispatcher.h"
 #include <scheduler.h>
-#include "ntqueue.h"
 #include <SimpleTextIO.h>
 #include <ntdebug.h>
-#include "mutex.h"
+
+#include <dispatcher.h>
+#include <ntmutex.h>
+#include <ntqueue.h>
+#include <ntsemaphore.h>
 
 typedef VOID(NTAPI *THREAD_UNWAIT_ROUTINE)(
     PKWAIT_BLOCK pWaitBlock);
@@ -60,6 +62,10 @@ KeInitializeDispatcher()
     InitDispatcherType(
         &DispatcherDecodeTable[MutexObject],
         KiUnwaitWaitBlockMutex);
+
+    InitDispatcherType(
+        &DispatcherDecodeTable[SemaphoreObject],
+        KiUnwaitWaitBlockFromSemaphore);
 
     InitializeListHead(&AbsoluteTimeoutListHead);
     InitializeListHead(&RelativeTimeoutListHead);
@@ -144,17 +150,16 @@ KiUnwaitWaitBlock(
 
 VOID
 NTAPI
-KiSignal(
-    PDISPATCHER_HEADER Object,
-    ULONG SignalIncrement)
+KiSignal(PDISPATCHER_HEADER Object,
+         ULONG SignalIncrement,
+         LONG PriorityIncrement)
 {
-    if (!LOCKED(Object->Lock))
-    {
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
-    }
+    ASSERT(LOCKED(Object->Lock));
+    ASSERT(LOCKED(DispatcherLock));
 
-    while (SignalIncrement &&
-           !IsListEmpty(&Object->WaitHead))
+    Object->SignalState += SignalIncrement;
+
+    while (Object->SignalState > 0 && !IsListEmpty(&Object->WaitHead))
     {
         PKWAIT_BLOCK WaitBlock;
         PKTHREAD Thread;
@@ -164,9 +169,7 @@ KiSignal(
         Thread = WaitBlock->Thread;
 
         KeAcquireSpinLockAtDpcLevel(&Thread->ThreadLock);
-        KiUnwaitWaitBlock(WaitBlock, TRUE, 0, 0);
+        KiUnwaitWaitBlock(WaitBlock, TRUE, 0, PriorityIncrement);
         KeReleaseSpinLockFromDpcLevel(&Thread->ThreadLock);
     }
-
-    Object->SignalState--;
 }

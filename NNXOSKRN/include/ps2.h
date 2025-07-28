@@ -1,14 +1,47 @@
-#ifndef NNX_KEYBOARD_HEADER
-#define NNX_KEYBOARD_HEADER
+#ifndef NNX_PS2_HEADER
+#define NNX_PS2_HEADER
 #include <nnxtype.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define KEYBOARD_PORT 0x60
-#define KEYBOARD_COMMAND_PORT 0x64
-#define KB_ACK 0xFA
+#define PS2_DATA_PORT 0x60
+#define PS2_COMMAND_PORT 0x64
+#define PS2_STATUS_PORT 0x64
+
+#define PS2_STATUS_OUTPUT_READY 1
+#define PS2_STATUS_INPUT_FULL   2
+
+#define PS2_COMMAND_READ_CCB        0x20
+#define PS2_COMMAND_READ_BYTEN(n)   (0x20 + n & 0x1F)
+#define PS2_COMMAND_WRITE_CCB       0x60
+#define PS2_COMMAND_WRITE_BYTEN(n)  (0x60 + n & 0x1F)
+#define PS2_COMMAND_DISABLE_PORT2   0xA7
+#define PS2_COMMAND_ENABLE_PORT2    0xA8
+#define PS2_COMMAND_TEST_PORT2      0xA9
+#define PS2_COMMAND_TEST_CONTROLLER 0xAA
+#define PS2_COMMAND_TEST_PORT1      0xAB
+#define PS2_COMMAND_DISABLE_PORT1   0xAD
+#define PS2_COMMAND_READ_CIP        0xC0
+#define PS2_COMMAND_ENABLE_PORT1    0xAE
+#define PS2_COMMAND_READ_COP        0xD0
+#define PS2_COMMAND_WRITE_COP       0xD1
+#define PS2_COMMAND_SEND_BYTE_PORT2 0xD4
+
+#define PS2_CCB_PS2_PORT1_INTERRUPT   1
+#define PS2_CCB_PS2_PORT2_INTERRUPT   2
+#define PS2_CCB_PS2_SYSTEM_FLAG       4
+#define PS2_CCB_PS2_PORT1_CLOCK       16
+#define PS2_CCB_PS2_PORT2_CLOCK       32
+#define PS2_CCB_PS2_PORT1_TRANSLATION 64
+
+#define PS2_MOUSE_COMMAND_SET_RESOLUTION        0xE8
+#define PS2_MOUSE_COMMAND_READ_DATA             0xEB
+#define PS2_MOUSE_COMMAND_SET_SAMPLE_RATE       0xF3
+#define PS2_MOUSE_COMMAND_ENABLE_DATA_REPORTING 0xF4
+
+#define PS2_ACK 0xFA
 
 #define KB_SCANCODESET1 1
 #define KB_SCANCODESET2 2
@@ -186,15 +219,32 @@ extern "C" {
     return 0;\
 }
 
-
     extern UINT8(*ScancodeSet2Keys[])();
-
     extern UINT8 ScancodeSet;
 
-    VOID KeyboardInitialize();
-    UINT8 KeyboardInterrupt();
-    UINT8 GetScancodeSet();
-    UINT8 SetScancodeSet(UINT8);
+    NTSTATUS Ps2KeyboardInitialize(VOID);
+    NTSTATUS Ps2MouseInitialize(VOID);
+
+    VOID Ps2PollWaitForOutputBuffer(VOID);
+    VOID Ps2PollWaitForInputBuffer(VOID);
+    VOID Ps2FlushBuffer(VOID);
+    NTSTATUS Ps2Initialize(VOID);
+
+    UINT8 Ps2ResetPort1(VOID);
+    UINT8 Ps2ResetPort2(VOID);
+
+    VOID Ps2SendToPort1(UINT8 byte);
+    VOID Ps2SendToPort2(UINT8 byte);
+    UINT8 Ps2Read(VOID);
+
+    VOID Ps2SendToPort1NoPoll(UINT8 byte);
+    VOID Ps2SendToPort2NoPoll(UINT8 byte);
+    UINT8 Ps2ReadNoPoll(VOID);
+
+    UINT8 Ps2ReadStatusPort(VOID);
+
+    VOID Ps2EnableInterruptPort1(VOID);
+    VOID Ps2EnableInterruptPort2(VOID);
 
 #pragma pack(push, 1)
     //designed to be compatible with MS virtual key mappings

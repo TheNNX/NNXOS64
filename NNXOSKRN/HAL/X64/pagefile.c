@@ -325,7 +325,9 @@ PageFaultHandler(
     }
     else
     {
-        PrintT("Page fault handler line %i, current mapping %X\n", __LINE__, PagingGetTableMapping(PAGE_ALIGN(Address)));
+        PrintT(
+            "Page fault handler line %i, current mapping %X\n",
+            __LINE__, PagingGetTableMapping(PAGE_ALIGN(Address)));
         KeBugCheckEx(
             PAGE_FAULT_IN_NONPAGED_AREA,
             Address,

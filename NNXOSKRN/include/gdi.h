@@ -151,6 +151,7 @@ GdiMovePtrIntoHandle(
     GDI_HANDLE Dst,
     PGDI_OBJECT_HEADER Src);
 
+NTSYSAPI
 VOID
 NTAPI
 GdiFreeObject(
@@ -238,6 +239,12 @@ HRGN
 NTAPI
 GdiCreateEmptyRgn(
     VOID);
+
+NTSYSAPI
+VOID
+NTAPI
+GdiFillRect(LPRECT rect,
+            COLORREF colour);
 
 #ifndef __INTELLISENSE__ 
 #ifdef __cplusplus

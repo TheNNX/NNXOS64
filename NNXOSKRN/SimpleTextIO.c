@@ -3,7 +3,7 @@
 #include <rtl.h>
 #include <text.h>
 
-#define UNKNOWNMARK {0xC7,0xBB,0xFB,0xF7,0xEF,0xEF,0xFF,0xEF}
+#define UNKNOWNMARK {0x46,0xBB,0xFB,0xF7,0xEF,0xEF,0xFF,0x6E}
 
 UINT64 FrameBufferSize()
 {
@@ -15,7 +15,7 @@ UINT32 TextIoDeltaY = 0;
 
 BOOL IsCurrentOperationGlobal;
 
-UINT8 align = 0;
+static UINT8 align = 0;
 
 UINT32 gCursorX = 0, gCursorY = 0, gColor = 0, gBackdrop = 0;
 UINT8 gRenderBackdrop = 0;
@@ -23,7 +23,7 @@ UINT8 gRenderBackdrop = 0;
 UINT32 gMinX = 0, gMaxX = 0;
 UINT32 gMinY = 0, gMaxY = 0;
 
-UINT8 initialized = 0;
+static UINT8 initialized = 0;
 
 static UINT8 StaticFont8x8[][8] =
 {

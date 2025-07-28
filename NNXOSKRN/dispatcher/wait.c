@@ -274,6 +274,14 @@ KeUnwaitThreadNoLock(
         RundownWaitBlocks(pThread);
     }
 
+    //if (pThread->ThreadPriority + pThread->Process->BasePriority > 
+    //    KeGetCurrentThread()->ThreadPriority + KeGetCurrentProcess()->Pcb.BasePriority)
+    //{
+        //PrintT("Should preempt, can't %X %X %X %X\n", pThread->ThreadPriority,
+        //       pThread->Process->BasePriority, KeGetCurrentThread()->ThreadPriority,
+        //       KeGetCurrentProcess()->Pcb.BasePriority);
+    //}
+
     pThread->WaitStatus = WaitStatus;
 }
 
