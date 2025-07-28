@@ -92,11 +92,10 @@ KiReleaseDispatcherLock(KIRQL oldIrql)
 
 VOID
 NTAPI
-KiUnwaitWaitBlock(
-    PKWAIT_BLOCK pWaitBlock,
-    BOOLEAN Designal,
-    LONG_PTR WaitStatus,
-    LONG PriorityIncrement)
+KiUnwaitWaitBlock(PKWAIT_BLOCK pWaitBlock,
+                  BOOLEAN Designal,
+                  LONG_PTR WaitStatus,
+                  LONG PriorityIncrement)
 {
     PKTHREAD Thread;
     SIZE_T Index;

@@ -11,6 +11,8 @@ extern LIST_ENTRY RelativeTimeoutListHead;
 extern LIST_ENTRY AbsoluteTimeoutListHead;
 extern ULONG_PTR KeMaximumIncrement;
 
+extern volatile ULONG_PTR KeClockTicks = 0;
+
 VOID 
 NTAPI
 KiHandleObjectWaitTimeout(
@@ -19,18 +21,18 @@ KiHandleObjectWaitTimeout(
 {
     if (!LOCKED(DispatcherLock))
     {
-        KeBugCheckEx(
-            SPIN_LOCK_NOT_OWNED, 
-            __LINE__, 
-            (ULONG_PTR)&DispatcherLock,
-            0, 
-            0);
+        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, 
+                     __LINE__,
+                     (ULONG_PTR)&DispatcherLock,
+                     0,
+                     0);
     }
 
     if (Thread->TimeoutEntry.Timeout != 0)
     {
         RemoveEntryList(&Thread->TimeoutEntry.ListEntry);
     }
+
     Thread->TimeoutEntry.Timeout = 0;
     Thread->TimeoutEntry.TimeoutIsAbsolute = TRUE;
 
@@ -139,7 +141,7 @@ KeWaitForMultipleObjects(
         KiReleaseDispatcherLock(Irql);
         return STATUS_SUCCESS;
     }
-
+    
     CurrentThread->Alertable = Alertable;
     KiHandleObjectWaitTimeout(
         CurrentThread,
@@ -159,7 +161,7 @@ KeWaitForMultipleObjects(
     {
         KeBugCheckEx(IRQL_NOT_LESS_OR_EQUAL, 0, Irql, 0, 0);
     }
-    
+
     /* Force a clock tick - if the thread is waiting, it will have the control 
      * back only when the wait conditions are satisfied. */
     KeForceClockTick();
@@ -243,10 +245,9 @@ KeUnwaitThread(
 
 VOID
 NTAPI
-KeUnwaitThreadNoLock(
-    PKTHREAD pThread,
-    LONG_PTR WaitStatus,
-    LONG PriorityIncrement)
+KeUnwaitThreadNoLock(PKTHREAD pThread,
+                     LONG_PTR WaitStatus,
+                     LONG PriorityIncrement)
 {
     ASSERT(pThread->ThreadState == THREAD_STATE_WAITING ||
            pThread->ThreadState == THREAD_STATE_TERMINATED);
@@ -264,8 +265,7 @@ KeUnwaitThreadNoLock(
         }
     }
 
-    if (!LOCKED(pThread->ThreadLock))
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
+    ASSERT(LOCKED(pThread->ThreadLock));
 
     KiHandleObjectWaitTimeout(pThread, 0);
 
@@ -273,14 +273,6 @@ KeUnwaitThreadNoLock(
     {
         RundownWaitBlocks(pThread);
     }
-
-    //if (pThread->ThreadPriority + pThread->Process->BasePriority > 
-    //    KeGetCurrentThread()->ThreadPriority + KeGetCurrentProcess()->Pcb.BasePriority)
-    //{
-        //PrintT("Should preempt, can't %X %X %X %X\n", pThread->ThreadPriority,
-        //       pThread->Process->BasePriority, KeGetCurrentThread()->ThreadPriority,
-        //       KeGetCurrentProcess()->Pcb.BasePriority);
-    //}
 
     pThread->WaitStatus = WaitStatus;
 }
@@ -305,21 +297,15 @@ KiClockTick()
     PKTIMEOUT_ENTRY TimeoutEntry;
     ULONG64 Time = 0;
 
-    if (!LOCKED(DispatcherLock))
-    {
-        KeBugCheckEx(
-            SPIN_LOCK_NOT_OWNED,
-            __LINE__,
-            (ULONG_PTR)&DispatcherLock,
-            0,
-            0);
-    }
+    _InterlockedIncrement64(&KeClockTicks);
+
+    ASSERT(LOCKED(DispatcherLock));
 
     /* FIXME: It seems KeQuerySystemTime has some weird timing bug. 
      * Reading CMOS too often maybe?
      * Maybe trying to read the same value twice fails often 
      * and it gets itself stuck in the loop there? */
-#if 1
+#if 0
     KeQuerySystemTime(&Time);
 
     Current = AbsoluteTimeoutListHead.First;

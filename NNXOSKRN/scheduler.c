@@ -233,7 +233,7 @@ PspCreateIdleProcessForCore(
     }
     pIdleProcess->Pcb.AffinityMask = (1ULL << (ULONG_PTR)coreNumber);
 
-    /* Allocate memory fot the thread structure. */
+    /* Allocate memory for the thread structure. */
     pIdleThread = ExAllocatePool(NonPagedPool, sizeof(*pIdleThread));
     if (pIdleThread == NULL)
     {
@@ -344,7 +344,7 @@ PspInitializeCore(
     pDummyThread = pPrcb->DummyThread;
     pPrcb->DummyThread = NULL;
 
-    pPcr->CyclesLeft = (LONG_PTR)KiCyclesPerQuantum * 100;
+    pPcr->CyclesLeft = (LONG_PTR)KiCyclesPerQuantum * 3;
     KeReleaseSpinLockFromDpcLevel(&pPrcb->Lock);
 
     PspCoresInitialized++;
@@ -538,8 +538,15 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt,
     if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread || 
         pcr->Prcb->NextThread->ThreadState != THREAD_STATE_READY)
     {
+        PKTHREAD prevThread = pcr->Prcb->NextThread;
+
         /* Select a new next thread. */
         pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
+        if (prevThread == pcr->Prcb->IdleThread &&
+            prevThread != pcr->Prcb->NextThread)
+        {
+            //PrintT("Preempted idle thread\n");
+        }
     }
 
     /* If the thread has already used all its CPU time, 
@@ -1605,8 +1612,6 @@ NtCreateThread(
     {
         return Status;
     }
-
-    pThread->Tcb.ThreadPriority = 10;
 
     if (!CreateSuspended)
     {
