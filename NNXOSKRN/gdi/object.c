@@ -16,8 +16,7 @@ static GDI_HANDLE GenericGdiDisplayDevice = NULL;
 
 NTSTATUS 
 NTAPI
-GdiInit(
-    SIZE_T maxGdiObjects)
+GdiInit(SIZE_T maxGdiObjects)
 {
     SIZE_T i;
 
@@ -58,9 +57,8 @@ GdiInit(
 
 NTSTATUS
 NTAPI
-GdiUnlockHandle(
-    GDI_HANDLE handle, 
-    PGDI_OBJECT_HEADER object)
+GdiUnlockHandle(GDI_HANDLE handle,
+                PGDI_OBJECT_HEADER object)
 {
     KIRQL irql;
     if (handle == NULL || object == GDI_LOCKED_OBJECT)
@@ -69,7 +67,7 @@ GdiUnlockHandle(
     }
 
     KeAcquireSpinLock(&ObjectDatabaseLock, &irql);
-    if (ObjectDatabase[handle - 1] != GDI_LOCKED_OBJECT)
+    if (ObjectDatabase[((ULONG_PTR)handle) - 1] != GDI_LOCKED_OBJECT)
     {
         PrintT("Warning - invalid handle unlock for %X with %X\n", handle, object);
         KeReleaseSpinLock(&ObjectDatabaseLock, irql);
@@ -80,7 +78,7 @@ GdiUnlockHandle(
     {
         PrintT("Warning - %X->SelfHandle == %X, not %X\n", object, object->SelfHandle, handle);
     }
-    ObjectDatabase[handle - 1] = object;
+    ObjectDatabase[((ULONG_PTR)handle) - 1] = object;
     KeReleaseSpinLock(&ObjectDatabaseLock, irql);
 
     return STATUS_SUCCESS;
@@ -88,8 +86,7 @@ GdiUnlockHandle(
 
 PGDI_OBJECT_HEADER 
 NTAPI 
-GdiLockHandle(
-    GDI_HANDLE handle)
+GdiLockHandle(GDI_HANDLE handle)
 {
     KIRQL irql;
     PGDI_OBJECT_HEADER result;
@@ -102,7 +99,7 @@ GdiLockHandle(
     do
     {
         KeAcquireSpinLock(&ObjectDatabaseLock, &irql);
-        result = ObjectDatabase[handle - 1];
+        result = ObjectDatabase[((ULONG_PTR)handle) - 1];
         if (result == GDI_LOCKED_OBJECT)
         {
             KeReleaseSpinLock(&ObjectDatabaseLock, irql);
@@ -110,7 +107,7 @@ GdiLockHandle(
     } 
     while (result == GDI_LOCKED_OBJECT);
 
-    ObjectDatabase[handle - 1] = GDI_LOCKED_OBJECT;
+    ObjectDatabase[((ULONG_PTR)handle) - 1] = GDI_LOCKED_OBJECT;
     KeReleaseSpinLock(&ObjectDatabaseLock, irql);
 
     return result;
@@ -118,8 +115,7 @@ GdiLockHandle(
 
 VOID
 NTAPI
-GdiDestroy(
-    GDI_HANDLE handle)
+GdiDestroy(GDI_HANDLE handle)
 {
     PGDI_OBJECT_HEADER pObj;
     
@@ -141,7 +137,7 @@ GDI_HANDLE
 NTAPI
 GdiRegisterObject(PGDI_OBJECT_HEADER pObject)
 {
-    GDI_HANDLE i;
+    ULONG_PTR i;
     KIRQL irql;
 
     for (i = 0; i < ObjectDatabaseLength; i++)
@@ -150,11 +146,11 @@ GdiRegisterObject(PGDI_OBJECT_HEADER pObject)
         if (ObjectDatabase[i] == NULL)
         {
             ObjectDatabase[i] = pObject;
-            pObject->SelfHandle = i + 1;
+            pObject->SelfHandle = (GDI_HANDLE)(i + 1);
             KeInitializeSpinLock(&pObject->Lock);
 
             KeReleaseSpinLock(&ObjectDatabaseLock, irql);
-            return i + 1;
+            return (GDI_HANDLE)(i + 1);
         }
         KeReleaseSpinLock(&ObjectDatabaseLock, irql);
     }
@@ -164,9 +160,8 @@ GdiRegisterObject(PGDI_OBJECT_HEADER pObject)
 
 PGDI_OBJECT_HEADER
 NTAPI
-GdiCreateObject(
-    GDI_OBJECT_TYPE type,
-    SIZE_T size)
+GdiCreateObject(GDI_OBJECT_TYPE type,
+                SIZE_T size)
 {
     PGDI_OBJECT_HEADER object = ExAllocatePoolWithTag(
         PagedPool, size, 'GDIO');
@@ -185,9 +180,8 @@ GdiCreateObject(
 
 VOID
 NTAPI
-GdiMoveIntoHandle(
-    GDI_HANDLE Dst,
-    GDI_HANDLE Src)
+GdiMoveIntoHandle(GDI_HANDLE Dst,
+                  GDI_HANDLE Src)
 {
     KIRQL irql;
     PGDI_OBJECT_HEADER pObjDst, pObjSrc;
@@ -220,15 +214,14 @@ GdiMoveIntoHandle(
 
     /* Free the Src handle */
     KeAcquireSpinLock(&ObjectDatabaseLock, &irql);
-    ObjectDatabase[Src - 1] = NULL;
+    ObjectDatabase[((ULONG_PTR)Src) - 1] = NULL;
     KeReleaseSpinLock(&ObjectDatabaseLock, irql);
 }
 
 VOID
 NTAPI
-GdiMovePtrIntoHandle(
-    GDI_HANDLE Dst,
-    PGDI_OBJECT_HEADER SrcPtr)
+GdiMovePtrIntoHandle(GDI_HANDLE Dst,
+                     PGDI_OBJECT_HEADER SrcPtr)
 {
     KIRQL irql;
     GDI_HANDLE Src;
@@ -253,7 +246,7 @@ GdiMovePtrIntoHandle(
     Src = SrcPtr->SelfHandle;
     if (Src != NULL)
     {
-        ObjectDatabase[Src - 1] = NULL;
+        ObjectDatabase[((ULONG_PTR)Src) - 1] = NULL;
     }
     KeReleaseSpinLock(&ObjectDatabaseLock, irql);
 
@@ -261,8 +254,7 @@ GdiMovePtrIntoHandle(
 
 VOID
 NTAPI
-GdiFreeObject(
-    PGDI_OBJECT_HEADER pObject)
+GdiFreeObject(PGDI_OBJECT_HEADER pObject)
 {
     if (pObject == NULL)
     {

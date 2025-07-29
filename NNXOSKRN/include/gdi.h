@@ -10,7 +10,7 @@ extern "C" {
 #include <nnxtype.h>
 #include <ntlist.h>
 
-typedef ULONG_PTR GDI_HANDLE, *PGDI_HANDLE;
+typedef PVOID GDI_HANDLE, *PGDI_HANDLE;
 #define GDI_LOCKED_OBJECT ((PVOID)-1)
 
 typedef GDI_HANDLE HDC,      *PHDC;

@@ -39,7 +39,7 @@ GdiStartTest()
     TextIoGetBoundingBox(bbox);
 
     bbox[2] = bbox[3] / 2;
-    TextIoSetBoundingBox(bbox);
+    //TextIoSetBoundingBox(bbox);
     rect1.bottom = bbox[2] - 1;
     rect1.top = 0;
     rect1.left = bbox[0];
