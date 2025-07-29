@@ -67,12 +67,14 @@
       <RuntimeLibrary />
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <Optimization>Disabled</Optimization>
+      <AdditionalOptions>/experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-      <AdditionalDependencies />
+      <AdditionalDependencies>$(SolutionDir)lib\NNXOSKRN\NNXOSKRN.lib</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
@@ -98,6 +100,8 @@
       <RuntimeLibrary />
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <Optimization>Disabled</Optimization>
+      <AdditionalOptions>/experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -107,7 +111,7 @@
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-      <AdditionalDependencies />
+      <AdditionalDependencies>$(SolutionDir)lib\NNXOSKRN\NNXOSKRN.lib</AdditionalDependencies>
       <ImportLibrary>$(SolutionDir)lib\$(ProjectName)\$(TargetName).lib</ImportLibrary>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
@@ -120,9 +124,11 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cmos.c" />
     <ClCompile Include="gdt.c" />
     <ClCompile Include="idt.c" />
     <ClCompile Include="hal.c" />
+    <ClCompile Include="rtc.c" />
     <ClCompile Include="spinlock.c" />
   </ItemGroup>
   <ItemGroup>
@@ -152,6 +158,7 @@
     <ClInclude Include="include\PCIIDE.h" />
     <ClInclude Include="include\PIC.h" />
     <ClInclude Include="include\PIT.h" />
+    <ClInclude Include="include\rtc.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="memory.asm">

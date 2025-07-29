@@ -134,9 +134,9 @@ typedef const VOID *PCVOID, *LPCVOID;
 
 #ifndef NULL
 #ifdef __cplusplus
-#define NULL __nullptr
+#define NULL nullptr
 #else
-#define NULL 0
+#define NULL ((PVOID)0)
 #endif
 #endif
 

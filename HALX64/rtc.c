@@ -1,4 +1,4 @@
-#include <HALX64/include/cmos.h>
+#include <cmos.h>
 #include <spinlock.h>
 #include <SimpleTextIO.h>
 #include <rtc.h>
@@ -39,10 +39,8 @@ HalpRtcHandleDataRead(
     UCHAR value1, value2;
     KIRQL irql;
 
-    irql = KeGetCurrentIrql();
-    if (irql < DISPATCH_LEVEL)
-        KeRaiseIrql(DISPATCH_LEVEL, &irql);
-    KeAcquireSpinLockAtDpcLevel(&RtcLock);
+    KeRaiseIrql(HIGH_LEVEL, &irql);
+    KiAcquireSpinLock(&RtcLock);
 
     /**
      * read the values two times, until they're the same 
@@ -73,7 +71,8 @@ HalpRtcHandleDataRead(
         value = 10 * value2 + value1;
     }
 
-    KeReleaseSpinLock(&RtcLock, irql);
+    KiReleaseSpinLock(&RtcLock);
+    KeLowerIrql(irql);
     return value;
 }
 
@@ -171,54 +170,9 @@ HalRtcGetYear()
     return HalpRtcHandleDataRead(0x09);
 }
 
-static VOID PrintDigits(UCHAR Digits, ULONG_PTR Value)
-{
-    ULONG_PTR valueCopy;
-    ULONG i;
-
-    valueCopy = Value;
-
-    for (i = 0; i < Digits; i++)
-    {
-        if (!valueCopy)
-        {
-            PrintT("0");
-        }
-        valueCopy /= 10;
-    }
-
-    PrintT("%i", Value);
-}
-
 VOID 
 NTAPI
-HalpPrintCurrentTime()
-{
-    PrintDigits(2, (ULONG_PTR)HalRtcGetHours());
-    PrintT(":");
-    PrintDigits(2, (ULONG_PTR)HalRtcGetMinutes());
-    PrintT(":");
-    PrintDigits(2, (ULONG_PTR)HalRtcGetSeconds());
-}
-
-VOID 
-NTAPI
-HalpPrintCurrentDate()
-{
-    PrintDigits(2, (ULONG_PTR)HalRtcGetDay());
-    PrintT(".");
-    PrintDigits(2, (ULONG_PTR)HalRtcGetMonth());
-    PrintT(".%i", (ULONG_PTR)HalRtcGetYear());
-}
-
-/**
- * This is black magic.
- * And to think that I'll have to write a reverse function... yikes...
- */
-VOID 
-NTAPI
-KeQuerySystemTime(
-    PULONG64 outCurrentTime)
+HalRtcGetTime(PULONG64 outCurrentTime)
 {
     USHORT year;
     UCHAR month, day;
@@ -273,5 +227,5 @@ KeQuerySystemTime(
         day - 1;
 
     secondsSince1600 = 60 * (60 * (daysSince1600 * 24 + hour) + minute) + second;
-    *outCurrentTime = secondsSince1600 * 10000000ULL;
+    *outCurrentTime = secondsSince1600 * 10'000'000ULL;
 }

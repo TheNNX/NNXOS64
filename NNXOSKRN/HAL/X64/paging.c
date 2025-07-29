@@ -41,7 +41,7 @@
 
 KSPIN_LOCK PagingSpinlock;
 ULONG_PTR KeKernelPhysicalAddress;
-ULONG_PTR KernelPml4Entry = NULL;
+ULONG_PTR KernelPml4Entry = 0;
 
 VOID 
 NTAPI
@@ -200,7 +200,7 @@ PagingFlagsFromSectionFlags(
     PKMEMORY_SECTION Section,
     PSECTION_VIEW View)
 {
-    if (Mapping == NULL)
+    if (Mapping == 0)
     {
         return 0;
     }

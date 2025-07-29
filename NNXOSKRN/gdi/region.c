@@ -714,11 +714,17 @@ DebugFillRect(
 
     for (y = rect->top; y < rect->bottom; y++)
     {
+        if (y < 0 || y >= (int)gHeight)
+        {
+            line += gPixelsPerScanline;
+            continue;
+        }
+
         for (x = rect->left; x < rect->right; x++)
         {
             if (colorFunction(x, y, color) & 0xFF000000)
             {
-                if (x >= 0 && y >= 0 && (UINT32)y <= gHeight && (UINT32)x <= gWidth)
+                if (x >= 0 && (UINT32)x <= gWidth)
                 line[x] = colorFunction(x, y, color);
             }
         }

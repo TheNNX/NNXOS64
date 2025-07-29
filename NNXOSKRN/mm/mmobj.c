@@ -263,7 +263,7 @@ MmCreateView(
         }
     }
 
-    if (VirtualAddress == NULL)
+    if (VirtualAddress == (ULONG_PTR)NULL)
     {
         VirtualAddress = PagingFindFreePages(
             PAGING_USER_SPACE,
@@ -340,7 +340,7 @@ MmDeleteView(
 
     for (Index = 0; Index < View->SizePages; Index++)
     {
-        PagingMapPage(View->BaseAddress + Index * PAGE_SIZE, NULL, 0);
+        PagingMapPage(View->BaseAddress + Index * PAGE_SIZE, 0, 0);
     }
 
     RemoveEntryList(&View->AddressSpaceEntry);
@@ -475,7 +475,7 @@ MmHandleViewPageFault(
         MappingIndex = (Address - SectionView->BaseAddress) / PAGE_SIZE + SectionView->MappingStart;
         Offset.QuadPart = FileOffset;
 
-        if (Section->Mappings[MappingIndex] == NULL)
+        if (Section->Mappings[MappingIndex] == 0)
         {
             Status = MmAllocatePfn(&Section->Mappings[MappingIndex]);
             if (!NT_SUCCESS(Status))

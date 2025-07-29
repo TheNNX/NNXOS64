@@ -5,6 +5,8 @@
     <ClCompile Include="spinlock.c" />
     <ClCompile Include="idt.c" />
     <ClCompile Include="gdt.c" />
+    <ClCompile Include="rtc.c" />
+    <ClCompile Include="cmos.c" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="interrupt.asm" />
@@ -27,5 +29,6 @@
     <ClInclude Include="include\msr.h" />
     <ClInclude Include="include\PIC.h" />
     <ClInclude Include="include\PIT.h" />
+    <ClInclude Include="include\rtc.h" />
   </ItemGroup>
 </Project>

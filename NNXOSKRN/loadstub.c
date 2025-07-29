@@ -226,7 +226,7 @@ BindRelocatedImports(
 {
     if (Module->NumberOfDirectoryEntries <= IMAGE_DIRECTORY_ENTRY_IMPORT ||
         Module->DirectoryEntires[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddressRVA
-        == NULL)
+        == 0)
     {
         return;
     }

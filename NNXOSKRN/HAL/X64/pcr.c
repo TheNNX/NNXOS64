@@ -37,7 +37,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
     PKARCH_CORE_DATA pCoreData;
     PKPCR pcr, tempPcr;
 
-    KiAcquireSpinLock((volatile ULONG_PTR*)&PcrCreationLock);
+    KiAcquireSpinLock(&PcrCreationLock);
     HalDisableInterrupts();
 
     pCoreData = (PKARCH_CORE_DATA)PagingAllocatePageBlockFromRange(
@@ -63,7 +63,7 @@ VOID HalpSetupPcrForCurrentCpu(UCHAR id)
     pcr = HalCreatePcr(pCoreData->GdtEntires, pCoreData->IdtEntries, id);
     HalInitializeSystemCallForCurrentCore((ULONG_PTR)HalpSystemCall);
     KfRaiseIrql(DISPATCH_LEVEL);
-    KiReleaseSpinLock((volatile ULONG_PTR*)&PcrCreationLock);
+    KiReleaseSpinLock(&PcrCreationLock);
 }
 
 PKIDTENTRY64 HalpGetIdt()
@@ -108,6 +108,8 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
     prcb->Number = CoreNumber;
 
     prcb->DpcStack = NULL;
+    prcb->DpcInProgress = FALSE;
+    prcb->DpcEnding = FALSE;
     
     prcb->DpcData.DpcCount = 0;
     prcb->DpcData.DpcQueueDepth = 0;

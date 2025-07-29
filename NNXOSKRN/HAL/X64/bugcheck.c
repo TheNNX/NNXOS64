@@ -7,13 +7,14 @@
 #include <HALX64/include/APIC.h>
 #include <interrupt.h>
 #include <pool.h>
+#include <pcr.h>
 
 __declspec(noreturn)
 VOID
 NTAPI
 KeBugCheck(ULONG code)
 {
-    KeBugCheckEx(code, NULL, NULL, NULL, NULL);
+    KeBugCheckEx(code, 0, 0, 0, 0);
 }
 
 volatile long AtomicStopVariable = 0;
@@ -59,6 +60,7 @@ KeBugCheckEx(
     ULONG_PTR param3,
     ULONG_PTR param4)
 {
+    PrintT("%i trying bugcheck\n", KeGetCurrentProcessorId());
     KeStopOtherCores();
     HalDisableInterrupts();
     TextIoSetColorInformation(0xFFFFFFFF, 0xFF0000AA, TRUE);
@@ -101,9 +103,42 @@ KeBugCheckEx(
 
     PrintT("\n\n");
     PrintT("0x%X, 0x%X, 0x%X, 0x%X\n\n\n", param1, param2, param3, param4);
-    PrintT("CR2: %H CR3: %H", __readcr2(), __readcr3());
+    PrintT("CR2: %H CR3: %H\n", __readcr2(), __readcr3());
 
-    PrintT("HAL.dll!HalDisableInterrupts at 0x%X", HalDisableInterrupts);
+    PrintT("DpcStack: %X\n\n", KeGetPcr()->Prcb->DpcStack);
+
+    /* TODO: this is not updated in exception handlers currently */
+    PrintT("Current stack:\n");
+    PKTASK_STATE taskState = (PKTASK_STATE)KeGetCurrentThread()->KernelStackPointer;
+    PrintT("RSP0   %X\n", taskState);
+    PrintT("RIP    %X\n", taskState->Rip);
+    PrintT("RSP    %X\n", taskState->Rsp);
+    PrintT("SS     %X\n", taskState->Ss);
+    PrintT("CS     %X\n", taskState->Cs);
+    PrintT("RFLAGS %X\n", taskState->Rflags);
+
+    PLIST_ENTRY entry, originalEntry;
+    PKTHREAD thread;
+
+    extern LIST_ENTRY ThreadListHead;
+
+    originalEntry = &ThreadListHead;
+    entry = originalEntry->Next;
+
+    while (entry != originalEntry)
+    {
+        thread = CONTAINING_RECORD(entry, KTHREAD, ThreadListEntry);
+
+        PrintT("THREAD %X\n", thread);
+        PrintT("KernelStack: %X ", 
+               thread->KernelStackPointer);
+        PrintT("CurrentSize: %X ", 
+               (ULONG_PTR)thread->OriginalKernelStackPointer - (ULONG_PTR)thread->KernelStackPointer);
+        PrintT("Last stack switch: %x\n\n", 
+               thread->SwitchStackPointer);
+
+        entry = entry->Next;
+    }
 
     HalDisableInterrupts();
     KeLowerIrql(0);

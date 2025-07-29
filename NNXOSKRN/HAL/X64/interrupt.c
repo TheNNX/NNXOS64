@@ -9,6 +9,7 @@
 #include <pcr.h>
 #include <HALX64/include/APIC.h>
 #include <apc.h>
+#include <interrupt.h>
 
 VOID 
 HalpMockupInterruptHandler(
@@ -71,13 +72,6 @@ KiCreateInterrupt(
     return STATUS_SUCCESS;
 }
 
-static
-BOOLEAN
-GetRequiresFullCtxAlways(KINTERRUPT* interrupt)
-{
-    return TRUE;
-}
-
 NTSTATUS
 NTAPI
 KiInitializeInterrupts(VOID)
@@ -118,8 +112,6 @@ KiInitializeInterrupts(VOID)
             i,
             exceptionHandlers[i],
             cpuNumber,
-            /* TODO: Select a more appropriate IRQL for error handlers */
-            SYNCH_LEVEL,
             (i == 1) || (i == 3) || (i == 4),
             NULL);
 
@@ -155,7 +147,6 @@ KiInitializeInterrupts(VOID)
         STOP_IPI_VECTOR,
         KeStop,
         KeGetCurrentProcessorId(),
-        IPI_LEVEL,
         FALSE,
         KeStopIsr);
 
@@ -175,14 +166,12 @@ KiInitializeInterrupts(VOID)
 
 NTSTATUS
 NTAPI
-IoCreateInterrupt(
-    PKINTERRUPT* pOutInterrupt,
-    UCHAR Vector,
-    PVOID Handler,
-    ULONG CpuNumber,
-    KIRQL Irql,
-    BOOL  Trap,
-    KSERVICE_ROUTINE Routine)
+IoCreateInterrupt(PKINTERRUPT* pOutInterrupt,
+                  UCHAR Vector,
+                  PVOID Handler,
+                  ULONG CpuNumber,
+                  BOOL  Trap,
+                  KSERVICE_ROUTINE Routine)
 {
     PKINTERRUPT interrupt;
     NTSTATUS status;
@@ -197,7 +186,7 @@ IoCreateInterrupt(
         Vector,
         Handler,
         CpuNumber,
-        Irql,
+        Vector >> 4,
         Routine);
 
     interrupt->Trap = Trap;
@@ -327,12 +316,12 @@ HalMockupInterrupt(PKINTERRUPT Interrupt)
 
 BOOLEAN
 NTAPI
-HalGenericInterruptHandlerEntry(
-    PKINTERRUPT Interrupt)
+HalGenericInterruptHandlerEntry(PKINTERRUPT Interrupt)
 {
     KIRQL irql;
     irql = KiAcquireDispatcherLock();
     KeGetCurrentThread()->ThreadIrql = irql;
+
     /* If this interrupt has no function defined for
      * requesting full thread context, or such function returns FALSE. */
     if (Interrupt->pfnGetRequiresFullCtx == NULL ||
@@ -342,21 +331,24 @@ HalGenericInterruptHandlerEntry(
         KiReleaseDispatcherLock(KeGetCurrentIrql());
         KiApplyInterruptIrql(Interrupt);
 
+        ASSERT(Interrupt->pfnServiceRoutine != NULL);
+        Interrupt->pfnServiceRoutine(Interrupt, Interrupt->ServiceCtx);
+
         if (Interrupt->SendEOI != FALSE)
         {
             ApicSendEoi();
         }
-        ASSERT(Interrupt->pfnServiceRoutine != NULL);
-        Interrupt->pfnServiceRoutine(Interrupt, Interrupt->ServiceCtx);
+
         HalDisableInterrupts();
         KeLowerIrql(irql);
+
         return FALSE;
     }
     /* Full thread context required. */
     else
     {
-        HalDisableInterrupts();
-        KiReleaseDispatcherLock(irql);
+        KiReleaseSpinLock(&DispatcherLock);
+        KiApplyIrql(irql);
         return TRUE;
     }
 }
@@ -370,17 +362,19 @@ HalFullCtxInterruptHandlerEntry(
     ULONG_PTR result;
     KIRQL irql;
 
-    irql = KfRaiseIrql(Interrupt->InterruptIrql);
+    irql = KiApplyInterruptIrql(Interrupt);
+    KeGetCurrentThread()->ThreadIrql = irql;
+
+    ASSERT(Interrupt->pfnFullCtxRoutine != NULL);
+    result = Interrupt->pfnFullCtxRoutine(Interrupt, FullCtx);
+
     if (Interrupt->SendEOI != 0)
     {
         ApicSendEoi();
     }
 
-    ASSERT(Interrupt->pfnFullCtxRoutine != NULL);
-    result = Interrupt->pfnFullCtxRoutine(Interrupt, FullCtx);
-
     HalDisableInterrupts();
-    KiApplyIrql(KeGetCurrentThread()->ThreadIrql);
+    KiApplyIrql(irql);
     return result;
 }
 
@@ -396,9 +390,8 @@ KiSendIpiToSingleCore(
 
 VOID
 NTAPI
-KeSendIpi(
-    KAFFINITY TargetProcessors,
-    BYTE Vector)
+KeSendIpi(KAFFINITY TargetProcessors,
+          BYTE Vector)
 {
     ULONG currentId = 0;
     ULONG selfId = KeGetCurrentProcessorId();

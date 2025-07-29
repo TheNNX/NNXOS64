@@ -227,7 +227,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="device\ps2\keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
-    <ClCompile Include="HAL\X64\cmos.c" />
     <ClCompile Include="HAL\X64\interrupt.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
     <ClCompile Include="io\fileio.c" />
@@ -236,7 +235,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="HAL\PCI\PCI.c" />
     <ClCompile Include="HAL\PCI\PCIIDE.c" />
     <ClCompile Include="HAL\X64\pagefile.c" />
-    <ClCompile Include="HAL\X64\rtc.c" />
     <ClCompile Include="ldr\ldr.c" />
     <ClCompile Include="mm\mmobj.c" />
     <ClCompile Include="nnxalloccpp.cpp" />
@@ -268,6 +266,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="syscall.cpp" />
     <ClCompile Include="text.c" />
     <ClCompile Include="SimpleTextIO.c" />
+    <ClCompile Include="time.c" />
     <ClCompile Include="userstubs.c" />
   </ItemGroup>
   <ItemGroup>
@@ -282,6 +281,7 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\ntsemaphore.h" />
     <ClInclude Include="include\preloaded.h" />
     <ClInclude Include="include\scheduler_internal.h" />
+    <ClInclude Include="include\time.h" />
     <ClInclude Include="include\vfs.h" />
     <ClInclude Include="include\hdd.h" />
     <ClInclude Include="include\ps2.h" />
@@ -294,7 +294,6 @@ $(SolutionDir)genverh.bat</Command>
     <ClInclude Include="include\pcr.h" />
     <ClInclude Include="include\physical_allocator.h" />
     <ClInclude Include="include\Port.h" />
-    <ClInclude Include="include\rtc.h" />
     <ClInclude Include="include\spinlock.h" />
     <ClInclude Include="include\apc.h" />
     <ClInclude Include="include\dpc.h" />

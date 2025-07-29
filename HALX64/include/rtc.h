@@ -7,47 +7,46 @@
 extern "C" {
 #endif
     
-    NTSYSAPI
-    VOID 
-    NTAPI 
-    KeQuerySystemTime(PULONG64 CurrentTime);
+#if defined(NNX_KERNEL) || defined(NNX_HAL)
+    NTHALAPI
+    VOID
+    NTAPI
+    HalRtcGetTime(PULONG64 outCurrentTime);
 
-#ifdef NNX_KERNEL
+    NTHALAPI
     VOID 
     NTAPI
     HalRtcInitialize(UCHAR CenturyRegister);
 
+    NTHALAPI
     UCHAR 
     NTAPI
     HalRtcGetSeconds();
 
+    NTHALAPI
     UCHAR 
     NTAPI
     HalRtcGetMinutes();
 
+    NTHALAPI
     UCHAR 
     NTAPI
     HalRtcGetHours();
     
+    NTHALAPI
     UCHAR 
     NTAPI
     HalRtcGetDay();
     
+    NTHALAPI
     UCHAR 
     NTAPI
     HalRtcGetMonth();
     
+    NTHALAPI
     USHORT 
     NTAPI
     HalRtcGetYear();
-
-    VOID 
-    NTAPI
-    HalpPrintCurrentTime();
-    
-    VOID 
-    NTAPI
-    HalpPrintCurrentDate();
 #endif
 
 #ifdef __cplusplus

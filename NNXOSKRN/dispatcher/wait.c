@@ -3,73 +3,21 @@
 #include <pool.h>
 #include <bugcheck.h>
 #include <scheduler.h>
-#include <rtc.h>
+#include <HALX64/include/rtc.h>
 #include <ntdebug.h>
 #include <SimpleTextIO.h>
-
-extern LIST_ENTRY RelativeTimeoutListHead;
-extern LIST_ENTRY AbsoluteTimeoutListHead;
-extern ULONG_PTR KeMaximumIncrement;
-
-extern volatile ULONG_PTR KeClockTicks = 0;
-
-VOID 
-NTAPI
-KiHandleObjectWaitTimeout(
-    PKTHREAD Thread, 
-    PLONG64 pTimeout)
-{
-    if (!LOCKED(DispatcherLock))
-    {
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, 
-                     __LINE__,
-                     (ULONG_PTR)&DispatcherLock,
-                     0,
-                     0);
-    }
-
-    if (Thread->TimeoutEntry.Timeout != 0)
-    {
-        RemoveEntryList(&Thread->TimeoutEntry.ListEntry);
-    }
-
-    Thread->TimeoutEntry.Timeout = 0;
-    Thread->TimeoutEntry.TimeoutIsAbsolute = TRUE;
-
-    if (pTimeout != NULL)
-    {
-        /* Relative is negative */
-        if (*pTimeout < 0)
-        {
-            Thread->TimeoutEntry.TimeoutIsAbsolute = FALSE;
-            Thread->TimeoutEntry.Timeout = -*pTimeout;
-            InsertTailList(
-                &RelativeTimeoutListHead,
-                &Thread->TimeoutEntry.ListEntry);
-        }
-        /* Absolute is positive */
-        else
-        {
-            Thread->TimeoutEntry.TimeoutIsAbsolute = TRUE;
-            Thread->TimeoutEntry.Timeout = *pTimeout;
-            InsertTailList(
-                &AbsoluteTimeoutListHead,
-                &Thread->TimeoutEntry.ListEntry);
-        }
-    }
-}
+#include <time.h>
 
 NTSTATUS 
 NTAPI
-KeWaitForMultipleObjects(
-    ULONG Count,
-    PVOID *Objects,
-    WAIT_TYPE WaitType,
-    KWAIT_REASON WaitReason,
-    KPROCESSOR_MODE WaitMode,
-    BOOLEAN Alertable,
-    PLONG64 pTimeout,
-    PKWAIT_BLOCK WaitBlockArray)
+KeWaitForMultipleObjects(ULONG Count,
+                         PVOID *Objects,
+                         WAIT_TYPE WaitType,
+                         KWAIT_REASON WaitReason,
+                         KPROCESSOR_MODE WaitMode,
+                         BOOLEAN Alertable,
+                         PLONG64 pTimeout,
+                         PKWAIT_BLOCK WaitBlockArray)
 {
     ULONG i;
     KIRQL Irql;
@@ -81,7 +29,7 @@ KeWaitForMultipleObjects(
         return STATUS_INVALID_PARAMETER;
     
     /* Lock all objects and the dispatcher lock. */
-    Irql = KiAcquireDispatcherLock();
+    Irql = KfRaiseIrql(DISPATCH_LEVEL);
     CurrentThread = KeGetCurrentThread();
 
     for (i = 0; i < Count; i++)
@@ -89,6 +37,8 @@ KeWaitForMultipleObjects(
         PDISPATCHER_HEADER Header = (PDISPATCHER_HEADER)Objects[i];
         KeAcquireSpinLockAtDpcLevel(&Header->Lock);
     }
+
+    KiAcquireDispatcherLock();
 
     if (WaitBlockArray != NULL)
     {
@@ -170,12 +120,11 @@ KeWaitForMultipleObjects(
 
 NTSTATUS 
 NTAPI
-KeWaitForSingleObject(
-    PVOID Object, 
-    KWAIT_REASON WaitReason, 
-    KPROCESSOR_MODE WaitMode, 
-    BOOLEAN Alertable, 
-    PLONG64 Timeout)
+KeWaitForSingleObject(PVOID Object, 
+                      KWAIT_REASON WaitReason, 
+                      KPROCESSOR_MODE WaitMode, 
+                      BOOLEAN Alertable, 
+                      PLONG64 Timeout)
 {
     return KeWaitForMultipleObjects(
         1, 
@@ -190,8 +139,7 @@ KeWaitForSingleObject(
 
 static
 VOID
-RundownWaitBlocks(
-    PKTHREAD pThread)
+RundownWaitBlocks(PKTHREAD pThread)
 {
     ULONG i;
 
@@ -231,10 +179,9 @@ RundownWaitBlocks(
  */
 VOID
 NTAPI
-KeUnwaitThread(
-    PKTHREAD pThread,
-    LONG_PTR WaitStatus,
-    LONG PriorityIncrement)
+KeUnwaitThread(PKTHREAD pThread,
+               LONG_PTR WaitStatus,
+               LONG PriorityIncrement)
 {
     KIRQL irql = KiAcquireDispatcherLock();
     KeAcquireSpinLockAtDpcLevel(&pThread->ThreadLock);
@@ -262,6 +209,7 @@ KeUnwaitThreadNoLock(PKTHREAD pThread,
         {
             pThread->ThreadState = THREAD_STATE_READY;
             PspInsertIntoSharedQueue(pThread);
+            PsNotifyThreadAwaken();
         }
     }
 
@@ -275,66 +223,4 @@ KeUnwaitThreadNoLock(PKTHREAD pThread,
     }
 
     pThread->WaitStatus = WaitStatus;
-}
-
-static
-VOID
-KiExpireTimeout(
-    PKTIMEOUT_ENTRY pTimeout)
-{
-    RemoveEntryList(&pTimeout->ListEntry);
-    if (pTimeout->OnTimeout != NULL)
-    {
-        pTimeout->OnTimeout(pTimeout);
-    }
-}
-
-VOID
-NTAPI
-KiClockTick()
-{
-    PLIST_ENTRY Current;
-    PKTIMEOUT_ENTRY TimeoutEntry;
-    ULONG64 Time = 0;
-
-    _InterlockedIncrement64(&KeClockTicks);
-
-    ASSERT(LOCKED(DispatcherLock));
-
-    /* FIXME: It seems KeQuerySystemTime has some weird timing bug. 
-     * Reading CMOS too often maybe?
-     * Maybe trying to read the same value twice fails often 
-     * and it gets itself stuck in the loop there? */
-#if 0
-    KeQuerySystemTime(&Time);
-
-    Current = AbsoluteTimeoutListHead.First;
-    while (Current != &AbsoluteTimeoutListHead)
-    {
-        TimeoutEntry = CONTAINING_RECORD(Current, KTIMEOUT_ENTRY, ListEntry);
-        Current = Current->Next;
-        
-        if (TimeoutEntry->Timeout > Time)
-        {
-            KiExpireTimeout(TimeoutEntry);
-        }
-    }
-#endif
-
-    Current = RelativeTimeoutListHead.First;
-    while (Current != &RelativeTimeoutListHead)
-    {
-        TimeoutEntry = CONTAINING_RECORD(Current, KTIMEOUT_ENTRY, ListEntry);
-        Current = Current->Next;
-
-        /* Temporary solution. */
-        if (KeGetCurrentProcessorId() == 0)
-        {
-            TimeoutEntry->Timeout -= KeMaximumIncrement;
-        }
-        if ((LONG64)TimeoutEntry->Timeout < 0)
-        {
-            KiExpireTimeout(TimeoutEntry);
-        }
-    }
 }

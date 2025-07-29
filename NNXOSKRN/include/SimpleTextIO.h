@@ -25,7 +25,7 @@ extern "C"
     UINT8 TextIoGetAlignment();
     UINT8 TextIoIsInitialized();
     void TextIoOutputCharacterWithinBox(UINT8 characterID, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
-    void PrintTA(const char* input, ...);
+    NTSYSAPI void PrintTA(const char* input, ...);
     void TextIoOutputStringGlobal(const char* input);
     void TextIoOutputString(const char* input, UINT32 posX, UINT32 posY, UINT32 color, UINT32 backdrop, UINT8 renderBackdrop, UINT32 minX, UINT32 maxX, UINT32 minY, UINT32 maxY);
 #ifdef VERBOSE

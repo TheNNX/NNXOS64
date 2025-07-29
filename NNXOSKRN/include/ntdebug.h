@@ -14,7 +14,7 @@ extern "C" {
 #define ASSERTMSG(expr, ...) \
     if (!(expr))\
     {\
-        void PrintTA(const char* c, ...);\
+        NTSYSAPI void PrintTA(const char* c, ...);\
         PrintTA(__VA_ARGS__); __debugbreak();\
     }
 

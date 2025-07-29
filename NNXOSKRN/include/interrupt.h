@@ -81,7 +81,6 @@ extern "C"
                       UCHAR Vector,
                       PVOID Handler,
                       ULONG CpuNumber,
-                      KIRQL Irql,
                       BOOL  Trap,
                       KSERVICE_ROUTINE Routine);
 
@@ -89,10 +88,21 @@ extern "C"
     NTAPI 
     IrqHandler();
 
-#define CLOCK_VECTOR    0x20
-#define KEYBOARD_VECTOR 0x30
-#define MOUSE_VECTOR    0x31
-#define STOP_IPI_VECTOR 0xEF
+    static
+    inline
+    BOOLEAN
+    GetRequiresFullCtxAlways(PKINTERRUPT interrupt)
+    {
+        return TRUE;
+    }
+
+#define CLOCK_VECTOR                0x20
+/* This IPI has to run at the same IRQL as the clock, 
+   because of that, its vector must be on the same prority level */
+#define SCHEDULER_NOTIFY_IPI_VECTOR 0x21
+#define KEYBOARD_VECTOR             0x30
+#define MOUSE_VECTOR                0x31
+#define STOP_IPI_VECTOR             0xEF
 
 #endif
 

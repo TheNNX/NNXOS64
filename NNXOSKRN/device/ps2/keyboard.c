@@ -134,7 +134,6 @@ KeyboardIsr(
         PrintT("%c\n", k);
     }
 
-    Ps2FlushBuffer();
     return TRUE;
 }
 
@@ -166,7 +165,6 @@ Ps2KeyboardInitialize(VOID)
         KEYBOARD_VECTOR, 
         IrqHandler, 
         KeGetCurrentProcessorId(), 
-        3, 
         FALSE,
         KeyboardIsr);
 

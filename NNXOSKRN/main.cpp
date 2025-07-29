@@ -17,7 +17,7 @@
 #include <object.h>
 #include <pool.h>
 #include <ps2.h>
-#include <rtc.h>
+#include <time.h>
 #include <syscall.h>
 #include <file.h>
 #include <preloaded.h>
@@ -188,14 +188,13 @@ extern "C"
             */
 
         MmInitObjects();
-        CmosInitialize();
-        HalRtcInitialize(pFacp->CenturyRegister);
+        CmosInitialize(pFacp->CenturyRegister);
         
         KeQuerySystemTime(&CurrentTime);
         PrintT("Current date and time (%i): ", CurrentTime);
-        HalpPrintCurrentDate();
+        KiPrintCurrentDate();
         PrintT(" ");
-        HalpPrintCurrentTime();
+        KiPrintCurrentTime();
         PrintT("\n");
 
         NtFileObjInit();

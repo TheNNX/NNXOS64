@@ -7,18 +7,19 @@
 extern "C" {
 #endif
 
-    extern BOOLEAN HalNmiDesiredState;
+extern BOOLEAN HalNmiDesiredState;
 
-    VOID CmosInitialize();
+NTHALAPI
+VOID 
+NTAPI
+CmosInitialize(UINT8 century);
 
-    VOID CmosWriteRegister(
-        UCHAR Register,
-        UCHAR Value
-    );
+#ifdef NNX_HAL
+VOID CmosWriteRegister(UCHAR Register,
+                       UCHAR Value);
 
-    UCHAR CmosReadRegister(
-        UCHAR Register
-    );
+UCHAR CmosReadRegister(UCHAR Register);
+#endif
 
 #ifdef __cplusplus
 }

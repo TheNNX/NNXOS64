@@ -37,8 +37,9 @@ UINT64 IoApicCount = 0;
 extern "C"
 {
     extern ULONG_PTR KeMaximumIncrement;
-    ULONG_PTR KiCyclesPerClockQuantum;
-    ULONG_PTR KiCyclesPerQuantum;
+    extern ULONG64 KiCyclesPerClockQuantum;
+    extern ULONG64 KiCyclesPerQuantum;
+    extern ULONG64 KiClockTickInterval;
 
     BOOLEAN ApicInitIsaIrq(DWORD* IsaIrqGsiMapping, BYTE Irqn, BYTE TargetVector)
     {
@@ -225,7 +226,7 @@ extern "C"
             LAPIC_ID_REGISTER_OFFSET) & 0xFF000000) >> 24);
     }
 
-    VOID ApicSetupTimer(UINT8 interruptVector, ULONG_PTR hundredsOfNsInterval)
+    VOID ApicSetupTimer(UINT8 interruptVector, UINT32 cyclesInterval)
     {
         /* make sure the timer is not running */
         ApicLocalApicWriteRegister(
@@ -239,14 +240,9 @@ extern "C"
             LAPIC_DIVIDE_TIMER_REGISTER_OFFSET,
             LAPIC_TIMER_DIVISOR_1);
 
-        KiCyclesPerClockQuantum = 
-            (HalpTimerTicksPerSecond * (hundredsOfNsInterval * 100) / 1000000000);
-
-        KiCyclesPerQuantum = KiCyclesPerClockQuantum / 3;
-
         ApicLocalApicWriteRegister(
             LAPIC_INITIAL_TIMER_COUNT_REGISTER_OFFSET, 
-            (UINT32)KiCyclesPerClockQuantum);
+            cyclesInterval);
     }
 
     UINT64 ApicTestTimer()
@@ -290,13 +286,20 @@ extern "C"
             LAPIC_SPURIOUS_INTERRUPT_REGISTER_OFFSET, 
             0x1FF);
 
+        /* Perform one-time initialization when initializing the BPS */
         if (!ApicBspLapicInitialized)
         {
             HalpTimerTicksPerSecond = ApicTestTimer();
+
+            KiCyclesPerClockQuantum =
+                (HalpTimerTicksPerSecond * KeMaximumIncrement / 10'000'000);
+
+            KiCyclesPerQuantum = KiCyclesPerClockQuantum / 3;
+            KiClockTickInterval = KeMaximumIncrement;
         }
 
         /* If timer interval changed, adjust dispatcher\wait.c accordingly! */
-        ApicSetupTimer(CLOCK_VECTOR, KeMaximumIncrement);
+        ApicSetupTimer(CLOCK_VECTOR, (UINT32)KiCyclesPerClockQuantum);
 
         if (!ApicBspLapicInitialized)
         {

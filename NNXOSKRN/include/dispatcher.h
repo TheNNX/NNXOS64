@@ -99,6 +99,7 @@ extern "C" {
         PLONG64 Timeout,
         PKWAIT_BLOCK WaitBlockArray);
 
+#ifndef DESPERATE_SPINLOCK_DEBUG
     NTSYSAPI
     KIRQL
     NTAPI
@@ -108,6 +109,20 @@ extern "C" {
     VOID
     NTAPI
     KiReleaseDispatcherLock(KIRQL oldIrql);
+#else
+    NTSYSAPI
+        KIRQL
+        NTAPI
+        KiAcquireDispatcherLockDebug(UINT line, const char* function);
+
+    NTSYSAPI
+        VOID
+        NTAPI
+        KiReleaseDispatcherLockDebug(KIRQL oldIrql, UINT line, const char* function);
+
+#define KiAcquireDispatcherLock() KiAcquireDispatcherLockDebug(__LINE__, __FUNCTION__)
+#define KiReleaseDispatcherLock(x) KiReleaseDispatcherLockDebug(x, __LINE__, __FUNCTION__)
+#endif
 
 #ifdef NNX_KERNEL
 

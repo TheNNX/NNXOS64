@@ -300,6 +300,41 @@ PspInitializeCoreSchedulerData(
         KeBugCheckEx(PHASE1_INITIALIZATION_FAILED, status, 0, 0, 0);
 }
 
+static
+NTSTATUS
+PsConnectNotifyIpi()
+{
+    PKINTERRUPT notifyInterrupt;
+    NTSTATUS status;
+
+    status = KiCreateInterrupt(&notifyInterrupt);
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+    
+    notifyInterrupt->CpuNumber = KeGetCurrentProcessorId();
+    notifyInterrupt->InterruptIrql = CLOCK_LEVEL;
+    notifyInterrupt->Connected = FALSE;
+    KeInitializeSpinLock(&notifyInterrupt->Lock);
+    notifyInterrupt->Trap = FALSE;
+    notifyInterrupt->Vector = SCHEDULER_NOTIFY_IPI_VECTOR;
+    notifyInterrupt->pfnServiceRoutine = NULL;
+    notifyInterrupt->pfnFullCtxRoutine = PspScheduleThread;
+    notifyInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
+    notifyInterrupt->SendEOI = TRUE;
+    notifyInterrupt->IoApicVector = -1;
+    notifyInterrupt->pfnSetMask = NULL;
+    HalpInitInterruptHandlerStub(notifyInterrupt, (ULONG_PTR)IrqHandler);
+    
+    if (!KeConnectInterrupt(notifyInterrupt))
+    {
+        return STATUS_INTERNAL_ERROR;
+    }
+
+    return STATUS_SUCCESS;
+}
+
 #pragma warning(push)
 NTSTATUS 
 NTAPI
@@ -315,12 +350,14 @@ PspInitializeCore(
 
     /* check if this is the first core to be initialized */
     /* if so, initialize the scheduler first */
-    if ((PVOID)CoresSchedulerData == NULL)
+    if (CoresSchedulerData == NULL)
     {
         status = PspInitializeScheduler();
-        
-        if (status)
+
+        if (!NT_SUCCESS(status))
+        {
             return status;
+        }
     }
 
     KeRaiseIrql(DISPATCH_LEVEL, &irql);
@@ -358,6 +395,8 @@ PspInitializeCore(
     ExFreePool(CONTAINING_RECORD(pDummyThread->Process, EPROCESS, Pcb));
     ExFreePool(CONTAINING_RECORD(pDummyThread, ETHREAD, Tcb));
 
+    PsConnectNotifyIpi();
+
     if (PspCoresInitialized == KeNumberOfProcessors)
     {
         NTSTATUS status;
@@ -365,6 +404,7 @@ PspInitializeCore(
 
         UNICODE_STRING t = RTL_CONSTANT_STRING(L"NTDLL.DLL");
         PrintT("Starting NTDLL.DLL\n");
+
         status = NnxStartUserProcess(&t, &hProcess, 10);
         if (!NT_SUCCESS(status))
         {
@@ -373,15 +413,6 @@ PspInitializeCore(
 
         PrintT("hProcess: %X\n");
     }
-#ifdef DESPERATE_SPINLOCK_DEBUG
-    else if (KeNumberOfProcessors - 1 == PspCoresInitialized)
-    {
-        VOID KiPrintSpinlockDebug();
-        PrintT("Core %i on update duty\n", CoreNumber);
-        while (1);
-        KiPrintSpinlockDebug();
-    }
-#endif
 
     pTaskState = pPrcb->IdleThread->KernelStackPointer;
     
@@ -390,10 +421,10 @@ PspInitializeCore(
     HalDisableInterrupts();
     KeLowerIrql(0);
     
-    PrintT(
-        "Core %i scheduler initialized %i\n", 
-        KeGetCurrentProcessorId(), 
-        KeGetCurrentIrql());
+    PrintT("Core %i scheduler initialized %i\n", 
+           KeGetCurrentProcessorId(), 
+           KeGetCurrentIrql());
+
 
     HalpApplyTaskState(pTaskState);
 
@@ -407,12 +438,15 @@ VOID
 PspCallDpc(PKDPC Dpc, 
            PKTASK_STATE ResumeStack)
 {
+    KfRaiseIrql(DPC_LEVEL);
+
     Dpc->Routine(Dpc, Dpc->Context, Dpc->SystemArgument1, Dpc->SystemArgument2);
 
     KfRaiseIrql(HIGH_LEVEL);
     KeGetCurrentThread()->SwitchStackPointer = ResumeStack;
+
     KfLowerIrql(PASSIVE_LEVEL);
-    while (1);
+    KeForceClockTick();
 }
 
 static
@@ -425,25 +459,44 @@ PspCheckDpcQueue(PKTHREAD Thread)
     PKTASK_STATE taskState;
     PLIST_ENTRY entry;
     PKDPC dpc;
+    KIRQL irql;
+
+    dpcStack = (ULONG_PTR)KeGetPcr()->Prcb->DpcStack;
+
+    /* We're currently in a DPC handler, trying to set it up again would trash
+       the DPC stack. */
+    if (KeGetPcr()->Prcb->DpcEnding)
+    {
+        KeGetPcr()->Prcb->DpcInProgress = FALSE;
+        KeGetPcr()->Prcb->DpcEnding = FALSE;
+        return;
+    }
+
+    if (KeGetPcr()->Prcb->DpcInProgress)
+    {
+        return;
+    }
+
+    ASSERT(!((ULONG_PTR) & dpc >= dpcStack - 4096 && (ULONG_PTR)&dpc < dpcStack));
 
     if (Thread->ThreadIrql > DPC_LEVEL)
     {
         return;
     }
     
-    KfRaiseIrql(HIGH_LEVEL);
+    irql = KfRaiseIrql(HIGH_LEVEL);
 
     dpcData = &KeGetPcr()->Prcb->DpcData;
     KiAcquireSpinLock(&dpcData->DpcLock);
 
     if (dpcData->DpcQueueDepth == 0)
     {
-        Thread->ThreadIrql = PASSIVE_LEVEL;
         KiReleaseSpinLock(&dpcData->DpcLock);
+        KeLowerIrql(irql);
         return;
     }
 
-    Thread->ThreadIrql = DPC_LEVEL;
+    KeGetPcr()->Prcb->DpcInProgress = TRUE;
 
     dpcData->DpcQueueDepth--;
     entry = RemoveHeadList(&dpcData->DpcListHead);
@@ -451,24 +504,27 @@ PspCheckDpcQueue(PKTHREAD Thread)
     dpc = CONTAINING_RECORD(entry, KDPC, Entry);
     dpc->Inserted = FALSE;
 
-    dpcStack = (ULONG_PTR)KeGetPcr()->Prcb->DpcStack;
     resumeStack = Thread->KernelStackPointer;
+    dpcStack -= 32;
 
-    dpcStack -= sizeof(KTASK_STATE);
-    taskState = (PKTASK_STATE)dpcStack;
+    taskState = (PKTASK_STATE)(dpcStack - sizeof(KTASK_STATE) - 1000);
 
     PspSetupThreadState(taskState, TRUE, (ULONG_PTR)PspCallDpc, dpcStack);
+    taskState->R15 = 0x1515'1515'1515'1515;
 
-    Thread->KernelStackPointer = (PVOID)dpcStack;
+    Thread->KernelStackPointer = (PVOID)taskState;
+    ASSERT((ULONG_PTR)Thread->KernelStackPointer > 0xFFFFFF);
+
     PspSetUsercallParameter(Thread, 0, (ULONG_PTR)dpc);
     PspSetUsercallParameter(Thread, 1, (ULONG_PTR)resumeStack);
 
     KiReleaseSpinLock(&dpcData->DpcLock);
+    KeLowerIrql(irql);
 }
 
 ULONG_PTR 
 NTAPI
-PspScheduleThread(PKINTERRUPT ClockInterrupt, 
+PspScheduleThread(PKINTERRUPT InterruptSource, 
                   PKTASK_STATE Stack)
 {
     PKPCR pcr;
@@ -481,9 +537,13 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt,
     UCHAR origRunThrdPriority;
 
     irql = KiAcquireDispatcherLock();
-    KiClockTick();
     pcr = KeGetPcr();
-
+    
+    if (pcr->ClockInterrupt == InterruptSource)
+    {
+        KiClockTick();
+    }
+    
     KeAcquireSpinLockAtDpcLevel(&pcr->Prcb->Lock);
 
     originalRunningThread = pcr->Prcb->CurrentThread;
@@ -496,26 +556,36 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt,
             0, 0, 0);
     }
 
-    originalRunningThread->KernelStackPointer = (PVOID)Stack;
-
-    if (originalRunningThread->SwitchStackPointer)
-    {
-        originalRunningThread->KernelStackPointer = originalRunningThread->SwitchStackPointer;
-        originalRunningThread->SwitchStackPointer = NULL;
-    }
-
-    if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
-    {
-        pcr->CyclesLeft = 0;
-    }
-
     /* The thread has IRQL too high for the scheduler, the clock interrupt
      * should only update the clock state. */
     if (originalRunningThread->ThreadIrql >= DISPATCH_LEVEL)
     {
         KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
         KiReleaseDispatcherLock(irql);
-        return (ULONG_PTR)originalRunningThread->KernelStackPointer;
+        return (ULONG_PTR)NULL;
+    }
+
+    originalRunningThread->KernelStackPointer = (PVOID)Stack;
+    ASSERT((ULONG_PTR)originalRunningThread->KernelStackPointer > 0xFFFFFF);
+
+    if (originalRunningThread->SwitchStackPointer)
+    {
+        originalRunningThread->KernelStackPointer = originalRunningThread->SwitchStackPointer;
+        originalRunningThread->LastSwitchStackPointer = originalRunningThread->KernelStackPointer;
+        originalRunningThread->SwitchStackPointer = NULL;
+
+        pcr->Prcb->DpcEnding = TRUE;
+
+        ASSERT((ULONG_PTR)originalRunningThread->KernelStackPointer > 0xFFFFFF);
+    }
+    else
+    {
+        originalRunningThread->LastSwitchStackPointer = 0;
+    }
+
+    if (originalRunningThread->ThreadState != THREAD_STATE_RUNNING)
+    {
+        pcr->CyclesLeft = 0;
     }
 
     originalRunningProcess = originalRunningThread->Process;
@@ -538,15 +608,8 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt,
     if (pcr->Prcb->IdleThread == pcr->Prcb->NextThread || 
         pcr->Prcb->NextThread->ThreadState != THREAD_STATE_READY)
     {
-        PKTHREAD prevThread = pcr->Prcb->NextThread;
-
         /* Select a new next thread. */
         pcr->Prcb->NextThread = PspSelectNextReadyThread(pcr->Prcb->Number);
-        if (prevThread == pcr->Prcb->IdleThread &&
-            prevThread != pcr->Prcb->NextThread)
-        {
-            //PrintT("Preempted idle thread\n");
-        }
     }
 
     /* If the thread has already used all its CPU time, 
@@ -625,6 +688,12 @@ PspScheduleThread(PKINTERRUPT ClockInterrupt,
 
     KiReleaseDispatcherLock(irql);
 
+    PVOID sane = (PVOID)0x1000000;
+
+    ASSERT((ULONG_PTR)pcr > (ULONG_PTR)sane);
+    ASSERT((ULONG_PTR)pcr->Prcb > (ULONG_PTR)sane);
+    ASSERT((ULONG_PTR)pcr->Prcb->CurrentThread > (ULONG_PTR)sane);
+    ASSERT((ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer > (ULONG_PTR)sane);
     return (ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer;
 }
 
@@ -1155,10 +1224,7 @@ PspInsertIntoSharedQueue(
 {
     UCHAR ThreadPriority;
 
-    if (!LOCKED(DispatcherLock))
-    {
-        KeBugCheckEx(SPIN_LOCK_NOT_OWNED, __LINE__, 0, 0, 0);
-    }
+    ASSERT(LOCKED(DispatcherLock));
 
     ThreadPriority = (UCHAR)(
         Thread->ThreadPriority 
@@ -1170,6 +1236,13 @@ PspInsertIntoSharedQueue(
     _bittestandset(
         &PspSharedReadyQueue.ThreadReadyQueuesSummary,
         ThreadPriority);
+}
+
+VOID
+NTAPI
+PsNotifyThreadAwaken()
+{
+    KeSendIpi(KAFFINITY_ALL, SCHEDULER_NOTIFY_IPI_VECTOR);
 }
 
 BOOLEAN
@@ -1266,10 +1339,11 @@ PsExitThread(
     PKTHREAD currentThread;
     KIRQL originalIrql;
 
-    originalIrql = KiAcquireDispatcherLock();
+    originalIrql = KfRaiseIrql(DISPATCH_LEVEL);
 
     currentThread = KeGetCurrentThread();
     KeAcquireSpinLockAtDpcLevel(&currentThread->Header.Lock);
+    KiAcquireDispatcherLock();
     KeAcquireSpinLockAtDpcLevel(&currentThread->ThreadLock);
     currentThread->ThreadState = THREAD_STATE_TERMINATED;
     currentThread->ThreadExitCode = exitCode;

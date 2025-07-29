@@ -67,6 +67,7 @@ extern "C" {
         PVOID KernelStackPointer;
 
         PVOID SwitchStackPointer;
+        PVOID LastSwitchStackPointer;
 
         /* Used for deallocating the kernel stack */
         PVOID OriginalKernelStackPointer;
@@ -364,6 +365,10 @@ extern "C" {
     KeSetCustomThreadAddressSpace(
         PKTHREAD pThread,
         PADDRESS_SPACE AddressSpace);
+
+    VOID
+    NTAPI
+    PsNotifyThreadAwaken();
 #endif
 
 #ifdef __cplusplus

@@ -81,6 +81,9 @@ extern "C"
         KSPIN_LOCK Lock;
         KDPC_DATA DpcData;
         PVOID DpcStack;
+        BOOLEAN DpcInProgress;
+        BOOLEAN DpcEnding;
+        KDPC SchedulerNotifyDpc;
     } KPRCB, *PKPRCB, *LPKRCB;
 
     PKPCR KeGetPcr();

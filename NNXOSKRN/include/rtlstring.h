@@ -71,7 +71,7 @@ extern "C"
     inline static void DebugWPrint(
         PUNICODE_STRING unicodeStr)
     {
-        VOID PrintTA(const char*, ...);
+        NTSYSAPI VOID PrintTA(const char*, ...);
 
         USHORT i;
 

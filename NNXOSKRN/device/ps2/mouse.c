@@ -12,6 +12,7 @@ static SHORT MouseX = 0;
 static SHORT MouseY = 0;
 static BOOLEAN MouseLeft = FALSE, MouseMiddle = FALSE, MouseRight = FALSE;
 static KSEMAPHORE MouseSemaphore;
+static volatile BOOLEAN DpcReady = TRUE;
 
 static KDPC MouseDpc;
 
@@ -23,7 +24,6 @@ NnxUserGetCursorPosition(VOID)
 {
     RECT rect;
 
-    KeWaitForSingleObject(&MouseSemaphore, Executive, UserMode, FALSE, NULL);
     ULONG encodedPosition = MouseX | (MouseY << 16);
     int x, y;
     x = encodedPosition & 0xFFFF;
@@ -34,7 +34,21 @@ NnxUserGetCursorPosition(VOID)
     rect.left = x;
     rect.right = x + 10;
 
+    KeWaitForSingleObject(&MouseSemaphore, Executive, UserMode, FALSE, NULL);
+
+    GdiFillRect(&rect, 0xFF000000);
+    encodedPosition = MouseX | (MouseY << 16);
+    
+    x = encodedPosition & 0xFFFF;
+    y = encodedPosition >> 16;
+
+    rect.top = y;
+    rect.bottom = y + 10;
+    rect.left = x;
+    rect.right = x + 10;
+
     GdiFillRect(&rect, 0xFF000000 | encodedPosition);
+
     return encodedPosition;
 }
 
@@ -45,20 +59,10 @@ MouseDpcRoutine(PKDPC Ddpc,
                 PVOID SystemArgument1,
                 PVOID SystemArgument2)
 {
-
-    RECT rect;
-
     if (KeReadStateSemaphore(&MouseSemaphore) < MOUSE_SEMAPHORE_LIMIT)
     {
         KeReleaseSemaphore(&MouseSemaphore, 0, 1, FALSE);
     }
-
-    rect.top = MouseY;
-    rect.bottom = MouseY + 1;
-    rect.left = MouseX;
-    rect.right = MouseX + 1;
-
-    //GdiFillRect(&rect, 0xFFFFFFFF);
 }
 
 static
@@ -162,14 +166,12 @@ Ps2MouseInitialize(VOID)
     KeInitializeDpc(&MouseDpc, MouseDpcRoutine, NULL);
     KeInitializeSemaphore(&MouseSemaphore, 1, MOUSE_SEMAPHORE_LIMIT);
 
-    IoCreateInterrupt(
-        &interrupt,
-        MOUSE_VECTOR,
-        IrqHandler,
-        KeGetCurrentProcessorId(),
-        3,
-        FALSE,
-        MouseIsr);
+    IoCreateInterrupt(&interrupt,
+                      MOUSE_VECTOR,
+                      IrqHandler,
+                      KeGetCurrentProcessorId(),
+                      FALSE,
+                      MouseIsr);
 
     /* FIXME */
     interrupt->IoApicVector = 2;

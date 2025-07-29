@@ -73,6 +73,7 @@ KeInitializeDispatcher()
     return STATUS_SUCCESS;
 }
 
+#ifndef DESPERATE_SPINLOCK_DEBUG
 KIRQL 
 NTAPI
 KiAcquireDispatcherLock()
@@ -89,6 +90,24 @@ KiReleaseDispatcherLock(KIRQL oldIrql)
     KeReleaseSpinLockFromDpcLevel(&DispatcherLock);
     KeLowerIrql(oldIrql);
 }
+#else
+KIRQL
+NTAPI
+KiAcquireDispatcherLockDebug(UINT line, const char* function)
+{
+    KIRQL oldIrql = KfRaiseIrql(SYNCH_LEVEL);
+    KeAcquireSpinLockAtDpcLevelDebug(&DispatcherLock, "DispatcherLock", function, line);
+    return oldIrql;
+}
+
+VOID
+NTAPI
+KiReleaseDispatcherLockDebug(KIRQL oldIrql, UINT line, const char* function)
+{
+    KeReleaseSpinLockFromDpcLevelDebug(&DispatcherLock, "DispatcherLock", function, line);
+    KeLowerIrql(oldIrql);
+}
+#endif
 
 VOID
 NTAPI
@@ -156,6 +175,8 @@ KiSignal(PDISPATCHER_HEADER Object,
     ASSERT(LOCKED(Object->Lock));
     ASSERT(LOCKED(DispatcherLock));
 
+    ASSERT((LONG)SignalIncrement > 0 || SignalIncrement == -1);
+    
     Object->SignalState += SignalIncrement;
 
     while (Object->SignalState > 0 && !IsListEmpty(&Object->WaitHead))

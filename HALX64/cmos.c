@@ -1,6 +1,7 @@
-#include <HALX64/include/cmos.h>
+#include <cmos.h>
 #include <Port.h>
 #include <spinlock.h>
+#include <rtc.h>
 
 BOOLEAN HalNmiDesiredState = TRUE;
 KSPIN_LOCK CmosSpinlock;
@@ -14,9 +15,13 @@ static VOID CmosSelectRegister(UCHAR Register)
     for (i = 0; i < 1000; i++);
 }
 
-VOID CmosInitialize()
+NTHALAPI
+VOID 
+NTAPI
+CmosInitialize(UINT8 century)
 {
     KeInitializeSpinLock(&CmosSpinlock);
+    HalRtcInitialize(century);
 }
 
 VOID CmosWriteRegister(
@@ -26,32 +31,27 @@ VOID CmosWriteRegister(
 {
     KIRQL irql;
 
-    irql = KeGetCurrentIrql();
-    if (irql < DISPATCH_LEVEL)
-        KeRaiseIrql(DISPATCH_LEVEL, &irql);
-    KeAcquireSpinLockAtDpcLevel(&CmosSpinlock);
+    KeRaiseIrql(HIGH_LEVEL, &irql);
+    KiAcquireSpinLock(&CmosSpinlock);
 
     CmosSelectRegister(Register);
     outb(0x71, Value);
-    KeReleaseSpinLock(&CmosSpinlock, irql);
+    KiReleaseSpinLock(&CmosSpinlock);
+    KeLowerIrql(irql);
 }
 
-UCHAR CmosReadRegister(
-    UCHAR Register
-)
+UCHAR CmosReadRegister(UCHAR Register)
 {
     KIRQL irql;
     UCHAR returnValue;
 
-    irql = KeGetCurrentIrql();
-    if (irql < DISPATCH_LEVEL)
-        KeRaiseIrql(DISPATCH_LEVEL, &irql);
-    KeAcquireSpinLockAtDpcLevel(&CmosSpinlock);
+    KeRaiseIrql(HIGH_LEVEL, &irql);
+    KiAcquireSpinLock(&CmosSpinlock);
 
     CmosSelectRegister(Register);
     returnValue = inb(0x71);
 
-    KeReleaseSpinLock(&CmosSpinlock, irql);
-
+    KiReleaseSpinLock(&CmosSpinlock);
+    KeLowerIrql(irql);
     return returnValue;
 }

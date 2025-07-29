@@ -77,7 +77,12 @@ HalpSetGdtTssDescriptorEntry(
     SIZE_T tssSize
 )
 {
-    HalpSetGdtEntry(gdt, entryIndex, ((ULONG_PTR)tss) & UINT32_MAX, (UINT32)tssSize, 0x40, 0x89);
+    HalpSetGdtEntry(gdt, 
+                    entryIndex, 
+                    ((ULONG_PTR)tss) & UINT32_MAX, 
+                    (UINT32)tssSize, 
+                    0x40, 
+                    0x89);
     *((UINT64*)(gdt + entryIndex + 1)) = (((ULONG_PTR)tss) & ~((UINT64)UINT32_MAX)) >> 32;
 
     return sizeof(KGDTENTRY64) * entryIndex;

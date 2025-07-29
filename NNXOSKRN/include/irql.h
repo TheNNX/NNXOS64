@@ -37,7 +37,7 @@ extern "C" {
     KeGetCurrentIrql();
 
 
-#define HIGH_LEVEL         31
+#define HIGH_LEVEL         15
 #define IPI_LEVEL          14
 #define CLOCK_LEVEL        13
 /* TODO: When (or if) the scheduling is moved to a DPC, SYNCH_LEVEL should be 

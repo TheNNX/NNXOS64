@@ -268,10 +268,10 @@ NnxLdrCreateModule(
 
     pModule = ExAllocatePoolWithTag(NonPagedPool, sizeof(*pModule), LdrmTag);
     pModule->SectionViews = NULL;
-    pModule->EntrypointRVA = NULL;
+    pModule->EntrypointRVA = 0;
     pModule->hSection = hSection;
-    pModule->PreferredBaseAddress = NULL;
-    pModule->BaseAddress = NULL;
+    pModule->PreferredBaseAddress = (ULONG_PTR)NULL;
+    pModule->BaseAddress = (ULONG_PTR)NULL;
 
     Status = NnxLdrCreateSectionSubviews(hSection, pInitialView, pModule);
     if (!NT_SUCCESS(Status))
@@ -341,7 +341,7 @@ NnxDummyLdrThread(
         PsExitThread(Status);
     }
 
-    if (pModule->EntrypointRVA != NULL)
+    if (pModule->EntrypointRVA != (ULONG_PTR)NULL)
     {
         entrypoint = (PBYTE)(pModule->EntrypointRVA + pModule->BaseAddress);
  

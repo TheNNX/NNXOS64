@@ -198,12 +198,6 @@
     <ClCompile Include="HAL\X64\IOAPIC.CPP">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HAL\X64\cmos.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HAL\X64\rtc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dispatcher\dispatcher.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -256,6 +250,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dispatcher\ntsemaphore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -374,9 +371,6 @@
     <ClInclude Include="include\Port.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\rtc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\syscall.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -396,6 +390,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ntsemaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

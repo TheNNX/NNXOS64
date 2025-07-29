@@ -3,6 +3,8 @@
 #include <rtl.h>
 #include <text.h>
 
+static KSPIN_LOCK PrintLock;
+
 #define UNKNOWNMARK {0x46,0xBB,0xFB,0xF7,0xEF,0xEF,0xFF,0x6E}
 
 UINT64 FrameBufferSize()
@@ -285,7 +287,6 @@ void TextIoOutputCharacterWithinBox(
 
 void TextIoMoveUpARow()
 {
-
     for (UINT64 y = gMinY; y < gMaxY - 9; y++)
     {
         for (UINT64 x = gMinX; x < gMaxX; x++)
@@ -317,6 +318,10 @@ void TextIoOutputString(
     TextIoDeltaX = 0;
     TextIoDeltaY = 0;
 
+    if (input == NULL)
+    {
+        input = "(NULL)";
+    }
     while (input[stringIndex])
     {
         if (posX + 8 > maxX || input[stringIndex] == '\n')
@@ -377,12 +382,21 @@ void TextIoOutputString(
 
 void TextIoOutputStringGlobal(const char* input)
 {
+    if (initialized == false)
+    {
+        return;
+    }
+
     IsCurrentOperationGlobal = TRUE;
     TextIoOutputString(input, gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
 }
 
 void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
 {
+    if (initialized == false)
+    {
+        return;
+    }
 
     void* args = args2;
 
@@ -404,6 +418,8 @@ void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
             gCursorX /= align;
             gCursorX *= align;
         }
+
+        KIRQL oldIrql;
 
         switch (input[i])
         {
@@ -513,33 +529,26 @@ void TextIoOutputFormatedString(const char* input, SIZE_T size, va_list args2)
                 }
                 break;
             default:
-            display:
+display:
+                KeRaiseIrql(HIGH_LEVEL, &oldIrql);
+                KiAcquireSpinLock(&PrintLock);
                 TextIoOutputCharacterWithinBox(input[i], gCursorX, gCursorY, gColor, gBackdrop, gRenderBackdrop, gMinX, gMaxX, gMinY, gMaxY);
+                KiReleaseSpinLock(&PrintLock);
+                KeLowerIrql(oldIrql);
                 gCursorX += 8;
                 break;
         }
 
+
     }
 }
-
-static KSPIN_LOCK PrintLock;
 
 void PrintTA(const char* input, ...)
 {
     va_list        args;
     va_start(args, input);
 
-    KIRQL oldIrql = KeGetCurrentIrql();
-
-    if (oldIrql < DISPATCH_LEVEL)
-        KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-    
-    KiAcquireSpinLock((volatile ULONG_PTR*)&PrintLock);
     TextIoOutputFormatedString(input, FindCharacterFirst(input, -1, 0), args);
-    KiReleaseSpinLock((volatile ULONG_PTR*)&PrintLock);
-
-    if (oldIrql < DISPATCH_LEVEL)
-        KeLowerIrql(oldIrql);
         
     va_end(args);
 }
