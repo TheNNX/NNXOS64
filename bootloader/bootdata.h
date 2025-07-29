@@ -34,6 +34,7 @@ typedef struct _LOADED_BOOT_MODULE
     ULONG_PTR               OriginalBase;
     INT                     NumberOfDirectoryEntries;
     IMAGE_DATA_DIRECTORY    DirectoryEntires[16];
+    ULONG_PTR               PreferredBase;
 } LOADED_BOOT_MODULE, * PLOADED_BOOT_MODULE;
 #pragma pack(pop)
 

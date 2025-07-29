@@ -26,9 +26,9 @@
 #define RETURN_IF_ERROR_DEBUG(status) RETURN_IF_ERROR_A(status, 1)
 
 EFI_STATUS
-LoadImage(
-    FILE_WRAPPER_HANDLE file,
-    PLOADED_BOOT_MODULE* outModule);
+LoadImage(FILE_WRAPPER_HANDLE file,
+          PLOADED_BOOT_MODULE* outModule,
+          const WCHAR* Name);
 
 const CHAR16* wszKernelPath = L"NNXOSKRN.exe";
 
@@ -38,7 +38,8 @@ static const CHAR16* PreloadPaths[] =
     L"SMSS.EXE",
     L"APSTART.BIN",
     L"WIN32K.SYS",
-    L"NTDLL.DLL"
+    L"NTDLL.DLL",
+    L"HAL.DLL"
 };
 
 EFI_BOOT_SERVICES* gBS;
@@ -49,10 +50,9 @@ ULONG_PTR MinKernelPhysAddress = (ULONG_PTR)-1LL;
 EFI_GUID gAcpi20TableGuid = ACPI_20_TABLE_GUID;
 
 EFI_STATUS 
-TryToLoadModule(
-    const CHAR* name,
-    FILE_WRAPPER_HANDLE fs,
-    PLOADED_BOOT_MODULE* pOutModule)
+TryToLoadModule(const CHAR* name,
+                FILE_WRAPPER_HANDLE fs,
+                PLOADED_BOOT_MODULE* pOutModule)
 {
     EFI_STATUS status;
     FILE_WRAPPER_HANDLE moduleFile;
@@ -67,38 +67,39 @@ TryToLoadModule(
         Idx++;
     }
     TempBuffer[Idx++] = 0;
-    status = fs->Open(
-        fs,
-        &moduleFile,
-        TempBuffer,
-        EFI_FILE_MODE_READ,
-        0);
+
+    status = fs->Open(fs,
+                      &moduleFile,
+                      TempBuffer,
+                      EFI_FILE_MODE_READ,
+                      0);
 
     RETURN_IF_ERROR_DEBUG(status);
 
-    return LoadImage(moduleFile, pOutModule);
+    return LoadImage(moduleFile, pOutModule, TempBuffer);
 }
 
 LOADED_BOOT_MODULE*
-TryFindLoadedModule(
-    const CHAR* Name)
+TryFindLoadedModule(const CHAR* Name)
 {
     LOADED_BOOT_MODULE* module = NULL;
     PLIST_ENTRY curModuleEntr;
 
+    Print(L"Trying to find module %a\n", Name);
+
     curModuleEntr = LoadedModules.Flink;
     while (curModuleEntr != &LoadedModules)
     {
-        module = CONTAINING_RECORD(
-            curModuleEntr,
-            LOADED_BOOT_MODULE,
-            ListEntry);
+        module = CONTAINING_RECORD(curModuleEntr,
+                                   LOADED_BOOT_MODULE,
+                                   ListEntry);
 
         if (Name != NULL && module->Name != NULL &&
             strcmpa(module->Name, Name) == 0)
         {
             return module;
         }
+        Print(L"%a does not match\n", module->Name);
 
         curModuleEntr = curModuleEntr->Flink;
     }
@@ -107,11 +108,10 @@ TryFindLoadedModule(
 }
 
 EFI_STATUS
-TryFindLoadedExport(
-    PLOADED_BOOT_MODULE Module, 
-    CHAR8* ImportName, 
-    USHORT ImportOrdinal,
-    PBOOT_MODULE_EXPORT* pOutExport)
+TryFindLoadedExport(PLOADED_BOOT_MODULE Module, 
+                    CHAR8* ImportName, 
+                    USHORT ImportOrdinal,
+                    PBOOT_MODULE_EXPORT* pOutExport)
 {
     SIZE_T i;
 
@@ -131,7 +131,7 @@ TryFindLoadedExport(
     {
         if (ImportName != NULL &&
             Module->Exports[i].ExportName != NULL &&
-            Module->Exports[i].ExportNameRva != NULL &&
+            Module->Exports[i].ExportNameRva != 0 &&
             strcmpa(Module->Exports[i].ExportName, ImportName) == 0)
         {
             *pOutExport = &Module->Exports[i];
@@ -212,11 +212,10 @@ HandleImportDirectory(
             }
             else
             {
-                Status = TryFindLoadedExport(
-                    Dependency,
-                    NULL,
-                    (USHORT)CurrentImport->Ordinal,
-                    &Export);
+                Status = TryFindLoadedExport(Dependency,
+                                             NULL,
+                                             (USHORT)CurrentImport->Ordinal,
+                                             &Export);
                 if (Status != EFI_SUCCESS)
                 {
                     Print(
@@ -274,7 +273,7 @@ HandleExportDirectory(
         Export->ExportAddress = Addresses[i] + Module->ImageBase;
         Export->ExportAddressRva = Addresses[i];
         Export->ExportName = NULL;
-        Export->ExportNameRva = NULL;
+        Export->ExportNameRva = 0;
     }
 
     for (i = 0; i < NumberOfNames; i++)
@@ -287,6 +286,79 @@ HandleExportDirectory(
         Export->ExportName = (PCHAR)(Export->ExportNameRva + Module->ImageBase);
     }
 
+    return EFI_SUCCESS;
+}
+
+static
+EFI_STATUS
+HandleBaseRelocationDirectory(
+    LOADED_BOOT_MODULE* module,
+    SIZE_T Size,
+    PIMAGE_BASE_RELOCATION_DIRECTORY_ENTRY BaseRelocationEntry)
+{
+    char *buffer, *end;
+    PIMAGE_BASE_RELOCATION_BLOCK block;
+    size_t blockSize;
+    ULONG_PTR relocPtr;
+    size_t i;
+
+    LONG_PTR difference;
+
+    struct Entry
+    {
+        WORD Offset : 12;
+        WORD Type : 4;
+    } *entries;
+
+    difference = module->ImageBase - module->PreferredBase;
+    if (difference == 0)
+    {
+        Print(L"Image loaded at preferred base, skipping.");
+        return EFI_SUCCESS;
+    }
+
+    buffer = (char*)&BaseRelocationEntry->FirstBlock;
+    end = buffer + Size;
+
+    Print(L"%s reloc table size %d\n", module->Name, Size);
+
+    while (buffer < end)
+    {
+        block = (void*)buffer;
+        blockSize = block->BlockSize - sizeof(*block);
+        buffer += sizeof(*block);
+        entries = (void*)buffer;
+
+        relocPtr = block->PageRVA + module->ImageBase;
+
+        Print(L"Relocation block started %X %X\n", block->PageRVA, block->BlockSize);
+
+        for (i = 0; i < blockSize / sizeof(*entries); i++)
+        {
+            if (entries[i].Type == IMAGE_REL_BASED_ABSOLUTE)
+            {
+                Print(L"Skipping absolute reloc\n");
+            }
+            else if (entries[i].Type == IMAGE_REL_BASED_DIR64)
+            {
+                UINT64* pos = (UINT64*)(relocPtr + entries[i].Offset);
+
+                Print(L"Mapping [%X]=", pos);
+                Print(L"%X -> ", *pos);
+                *pos += difference;
+                Print(L"%X\n", *pos);
+            }
+            else
+            {
+                Print(L"Unimplemented relocation type %X\n", entries[i].Type);
+                return EFI_UNSUPPORTED;
+            }
+        }
+
+        buffer += blockSize;
+    }
+
+    Print(L"Relocation done to base %X from prefered base %X\n", module->ImageBase, module->PreferredBase);
     return EFI_SUCCESS;
 }
 
@@ -331,6 +403,21 @@ HandleDataDirectories(
                 Module, 
                 DllPathFile, 
                 ImportDirectoryEntry);
+
+            if (EFI_ERROR(Status))
+            {
+                return Status;
+            }
+        }
+        else if (i == IMAGE_DIRECTORY_ENTRY_BASERELOC)
+        {
+            PIMAGE_BASE_RELOCATION_DIRECTORY_ENTRY BaseRelocation =
+                (PIMAGE_BASE_RELOCATION_DIRECTORY_ENTRY)DataDirectory;
+
+            Status = HandleBaseRelocationDirectory(
+                Module,
+                Module->DirectoryEntires[i].Size,
+                BaseRelocation);
 
             if (EFI_ERROR(Status))
             {
@@ -385,9 +472,9 @@ LoadSectionsWithBase(
 }
 
 EFI_STATUS 
-LoadImage(
-    FILE_WRAPPER_HANDLE File,
-    PLOADED_BOOT_MODULE* outModule)
+LoadImage(FILE_WRAPPER_HANDLE File,
+          PLOADED_BOOT_MODULE* outModule,
+          const WCHAR* Name)
 {
     IMAGE_DOS_HEADER ImageDosHeader;
     IMAGE_PE_HEADER ImagePeHeader;
@@ -395,7 +482,7 @@ LoadImage(
     EFI_STATUS Status;
     PIMAGE_SECTION_HEADER Sections;
     SIZE_T DataDirSize, SizeOfSectionHeaders;
-    SIZE_T Size;
+    SIZE_T Size, i;
     INTN NumberOfExports = 0;
     PLOADED_BOOT_MODULE Module;
     ULONG_PTR HighestSectionAddress;
@@ -574,6 +661,7 @@ LoadImage(
     Module = (PLOADED_BOOT_MODULE)PhysAddr;
     Module->Exports = 
         (PBOOT_MODULE_EXPORT)(PhysAddr + ModulePages * PAGE_SIZE);
+    Module->PreferredBase = ImagePeHeader.OptionalHeader.ImageBase;
     Module->ImageBase =
         PhysAddr +
         (ModulePages + ExportDataPages + SectionHeaderPages) * PAGE_SIZE;
@@ -588,28 +676,31 @@ LoadImage(
         (PIMAGE_SECTION_HEADER)(PhysAddr + (ModulePages + ExportDataPages) * PAGE_SIZE);
     Module->NumberOfDirectoryEntries = 
         ImagePeHeader.OptionalHeader.NumberOfDataDirectories;
-    Module->Name = NULL;
+    Module->Name = AllocatePool(StrSize(Name) + 1);
+    for (i = 0; i < StrSize(Name); i++)
+    {
+        Module->Name[i] = (CHAR)Name[i];
+        Module->Name[i + 1] = 0;
+    }
+
     *outModule = Module;
 
-    CopyMem(
-        (void*)Module->DirectoryEntires,
-        DataDirectories,
-        DataDirSize);
+    CopyMem((void*)Module->DirectoryEntires,
+            DataDirectories,
+            DataDirSize);
 
-    CopyMem(
-        (void*)Module->SectionHeaders,
-        Sections,
-        SizeOfSectionHeaders);
+    CopyMem((void*)Module->SectionHeaders,
+            Sections,
+            SizeOfSectionHeaders);
     
     FreePool(Sections);
     Sections = Module->SectionHeaders;
     InsertTailList(&LoadedModules, &Module->ListEntry);
 
-    Status = LoadSectionsWithBase(
-        File, 
-        Module->ImageBase,
-        &ImagePeHeader,
-        Sections);
+    Status = LoadSectionsWithBase(File, 
+                                  Module->ImageBase,
+                                  &ImagePeHeader,
+                                  Sections);
     if (EFI_ERROR(Status))
     {
         return Status;
@@ -824,18 +915,6 @@ PreloadBootFiles(
 
     for (i = 0; i < sizeof(PreloadPaths) / sizeof(*PreloadPaths); i++)
     {
-        status = gBS->AllocatePool(EfiLoaderData, sizeof(*pCurrent), &pCurrent);
-        if (status != EFI_SUCCESS)
-        {
-            RundownLoadedFiles(pBootdata);
-            return status;
-        }
-
-        InsertTailList(&pBootdata->PreloadedFiles, &pCurrent->Entry);
-        pCurrent->Filesize = 0;
-        pCurrent->Data = NULL;
-        RtStpCpy(pCurrent->Name, PreloadPaths[i]);
-
         status = filesystem->Open(
             filesystem,
             &hFile,
@@ -844,9 +923,22 @@ PreloadBootFiles(
             0);
         if (status != EFI_SUCCESS)
         {
+            Print(L"Couldn't find file to preload: '%s'\n", PreloadPaths[i]);
+            continue;
+        }
+        
+        status = gBS->AllocatePool(EfiLoaderData, sizeof(*pCurrent), &pCurrent);
+        if (status != EFI_SUCCESS)
+        {
+            hFile->Close(hFile);
             RundownLoadedFiles(pBootdata);
             return status;
         }
+
+        InsertTailList(&pBootdata->PreloadedFiles, &pCurrent->Entry);
+        pCurrent->Filesize = 0;
+        pCurrent->Data = NULL;
+        RtStpCpy(pCurrent->Name, PreloadPaths[i]);
 
         bufferSize = sizeof(EFI_FILE_INFO);
         do
@@ -928,18 +1020,17 @@ efi_main(
 #endif
 
     Print(L"Opening file\n");
-    status = root->Open(
-        root, 
-        &kernelFile, 
-        (CHAR16*)wszKernelPath, 
-        EFI_FILE_MODE_READ, 
-        0);
+    status = root->Open(root, 
+                        &kernelFile, 
+                        (CHAR16*)wszKernelPath, 
+                        EFI_FILE_MODE_READ, 
+                        0);
     RETURN_IF_ERROR_DEBUG(status);
 
     Print(L"Loading image\n");
-    status = LoadImage(
-        kernelFile, 
-        &module);
+    status = LoadImage(kernelFile, 
+                       &module,
+                       wszKernelPath);
 
     RETURN_IF_ERROR_DEBUG(status);
 
