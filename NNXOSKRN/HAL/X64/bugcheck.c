@@ -106,9 +106,11 @@ KeBugCheckEx(
     PrintT("CR2: %H CR3: %H\n", __readcr2(), __readcr3());
 
     PrintT("DpcStack: %X\n\n", KeGetPcr()->Prcb->DpcStack);
+    PrintT("Nesting level %X\n\n", KeGetPcr()->Prcb->NestedInterrupts);
+    PrintT("Thread IRQL %X\n\n", KeGetCurrentThread()->ThreadIrql);
 
     /* TODO: this is not updated in exception handlers currently */
-    PrintT("Current stack:\n");
+    PrintT("Last known stack approximation:\n");
     PKTASK_STATE taskState = (PKTASK_STATE)KeGetCurrentThread()->KernelStackPointer;
     PrintT("RSP0   %X\n", taskState);
     PrintT("RIP    %X\n", taskState->Rip);

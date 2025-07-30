@@ -31,6 +31,7 @@ extern "C"
         struct _KPCR    *SelfPcr;
         struct _KPRCB   *Prcb;
         KIRQL           Irql;
+        KIRQL           PrevIrql;
 
         /* These have to be accessed with interrupts disabled.
          * Once interrupts are reenabled, the value of these should
@@ -84,6 +85,7 @@ extern "C"
         BOOLEAN DpcInProgress;
         BOOLEAN DpcEnding;
         KDPC SchedulerNotifyDpc;
+        UCHAR NestedInterrupts;
     } KPRCB, *PKPRCB, *LPKRCB;
 
     PKPCR KeGetPcr();

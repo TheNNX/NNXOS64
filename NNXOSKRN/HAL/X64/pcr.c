@@ -24,6 +24,7 @@ VOID HalpInitDummyPcr()
     dummyPcr.SelfPcr = &dummyPcr;
     dummyPcr.Prcb = &dummyPrcb;
     dummyPrcb.CurrentThread = NULL;
+    dummyPrcb.NestedInterrupts = 0;
     InitializeListHead(&dummyPcr.InterruptListHead);
 }
 
@@ -110,6 +111,7 @@ PKPRCB HalCreatePrcb(UCHAR CoreNumber)
     prcb->DpcStack = NULL;
     prcb->DpcInProgress = FALSE;
     prcb->DpcEnding = FALSE;
+    prcb->NestedInterrupts = 0;
     
     prcb->DpcData.DpcCount = 0;
     prcb->DpcData.DpcQueueDepth = 0;

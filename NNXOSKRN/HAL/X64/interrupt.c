@@ -318,19 +318,20 @@ BOOLEAN
 NTAPI
 HalGenericInterruptHandlerEntry(PKINTERRUPT Interrupt)
 {
-    KIRQL irql;
-    irql = KiAcquireDispatcherLock();
+    KIRQL irql, prevIrql;
+    
+    HalDisableInterrupts();
+    irql = KiApplyInterruptIrql(Interrupt);
+    prevIrql = KeGetCurrentThread()->ThreadIrql;
     KeGetCurrentThread()->ThreadIrql = irql;
+    KeGetPcr()->Prcb->NestedInterrupts++;
+    HalEnableInterrupts();
 
     /* If this interrupt has no function defined for
      * requesting full thread context, or such function returns FALSE. */
     if (Interrupt->pfnGetRequiresFullCtx == NULL ||
         Interrupt->pfnGetRequiresFullCtx(Interrupt) == FALSE)
     {
-        /* No IRQL change, so IPIs can work. (IPI_LEVEL > SYNCH_LEVEL) */
-        KiReleaseDispatcherLock(KeGetCurrentIrql());
-        KiApplyInterruptIrql(Interrupt);
-
         ASSERT(Interrupt->pfnServiceRoutine != NULL);
         Interrupt->pfnServiceRoutine(Interrupt, Interrupt->ServiceCtx);
 
@@ -341,14 +342,15 @@ HalGenericInterruptHandlerEntry(PKINTERRUPT Interrupt)
 
         HalDisableInterrupts();
         KeLowerIrql(irql);
-
+        KeGetCurrentThread()->ThreadIrql = prevIrql;
+        KeGetPcr()->Prcb->NestedInterrupts--;
         return FALSE;
     }
     /* Full thread context required. */
     else
     {
-        KiReleaseSpinLock(&DispatcherLock);
-        KiApplyIrql(irql);
+        KeLowerIrql(irql);
+        KeGetCurrentThread()->ThreadIrql = prevIrql;
         return TRUE;
     }
 }
@@ -360,10 +362,13 @@ HalFullCtxInterruptHandlerEntry(
     PKTASK_STATE FullCtx)
 {
     ULONG_PTR result;
-    KIRQL irql;
+    KIRQL irql, prevIrql;
 
+    HalDisableInterrupts();
     irql = KiApplyInterruptIrql(Interrupt);
+    prevIrql = KeGetCurrentThread()->ThreadIrql;
     KeGetCurrentThread()->ThreadIrql = irql;
+    HalEnableInterrupts();
 
     ASSERT(Interrupt->pfnFullCtxRoutine != NULL);
     result = Interrupt->pfnFullCtxRoutine(Interrupt, FullCtx);
@@ -375,6 +380,8 @@ HalFullCtxInterruptHandlerEntry(
 
     HalDisableInterrupts();
     KiApplyIrql(irql);
+    KeGetCurrentThread()->ThreadIrql = prevIrql;
+    KeGetPcr()->Prcb->NestedInterrupts--;
     return result;
 }
 

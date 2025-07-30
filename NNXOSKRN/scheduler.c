@@ -322,7 +322,7 @@ PsConnectNotifyIpi()
     notifyInterrupt->pfnServiceRoutine = NULL;
     notifyInterrupt->pfnFullCtxRoutine = PspScheduleThread;
     notifyInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
-    notifyInterrupt->SendEOI = TRUE;
+    notifyInterrupt->SendEOI = FALSE;
     notifyInterrupt->IoApicVector = -1;
     notifyInterrupt->pfnSetMask = NULL;
     HalpInitInterruptHandlerStub(notifyInterrupt, (ULONG_PTR)IrqHandler);
@@ -479,11 +479,19 @@ PspCheckDpcQueue(PKTHREAD Thread)
 
     ASSERT(!((ULONG_PTR) & dpc >= dpcStack - 4096 && (ULONG_PTR)&dpc < dpcStack));
 
-    if (Thread->ThreadIrql > DPC_LEVEL)
+    if (Thread->ThreadIrql >= DPC_LEVEL)
     {
         return;
     }
     
+    if (KeGetPcr()->Prcb->NestedInterrupts > 1)
+    {
+        PrintT("Nesting level for DPC too high %i\n"
+               "ThreadIrql: %X\n\n", 
+               KeGetPcr()->Prcb->NestedInterrupts, 
+               Thread->ThreadIrql);
+        ASSERT(FALSE);
+    }
     irql = KfRaiseIrql(HIGH_LEVEL);
 
     dpcData = &KeGetPcr()->Prcb->DpcData;
@@ -558,7 +566,10 @@ PspScheduleThread(PKINTERRUPT InterruptSource,
 
     /* The thread has IRQL too high for the scheduler, the clock interrupt
      * should only update the clock state. */
-    if (originalRunningThread->ThreadIrql >= DISPATCH_LEVEL)
+    /* FIXME: ThreadIrql is not always correctly updated by the interrupt 
+       handler. Assume IRQL >= DISPATCH_LEVEL if 2 interrupts deep */
+    if (originalRunningThread->ThreadIrql >= DISPATCH_LEVEL ||
+        pcr->Prcb->NestedInterrupts > 1)
     {
         KeReleaseSpinLockFromDpcLevel(&pcr->Prcb->Lock);
         KiReleaseDispatcherLock(irql);
@@ -694,6 +705,7 @@ PspScheduleThread(PKINTERRUPT InterruptSource,
     ASSERT((ULONG_PTR)pcr->Prcb > (ULONG_PTR)sane);
     ASSERT((ULONG_PTR)pcr->Prcb->CurrentThread > (ULONG_PTR)sane);
     ASSERT((ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer > (ULONG_PTR)sane);
+    ASSERT((ULONG_PTR)((PKTASK_STATE)pcr->Prcb->CurrentThread->KernelStackPointer)->Rip > 0x20000);
     return (ULONG_PTR)pcr->Prcb->CurrentThread->KernelStackPointer;
 }
 
@@ -1022,7 +1034,6 @@ PspCreateThreadStacks(PKTHREAD tcb)
     tcb->KernelStackPointer = (PVOID)(
         (ULONG_PTR)tcb->OriginalKernelStackPointer
         - sizeof(KTASK_STATE));
-
     /* Stack for saving the thread context when executing APCs */
     tcb->ApcBackupKernelStackPointer = PspCreateKernelStack(1);
 
