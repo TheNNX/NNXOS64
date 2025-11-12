@@ -99,19 +99,19 @@
     <ClCompile Include="HAL\PCI\PCIIDE.c">
       <Filter>Source Files\HAL\PCI</Filter>
     </ClCompile>
-    <ClCompile Include="device\ps2\keyboard.c">
+    <ClCompile Include="drivers\builtin\ps2\keyboard.c">
       <Filter>Source Files\device</Filter>
     </ClCompile>
-    <ClCompile Include="device\fs\fat.c">
+    <ClCompile Include="drivers\builtin\fs\fat.c">
       <Filter>Source Files\device\fs</Filter>
     </ClCompile>
-    <ClCompile Include="device\fs\gpt.c">
+    <ClCompile Include="drivers\builtin\fs\gpt.c">
       <Filter>Source Files\device\fs</Filter>
     </ClCompile>
-    <ClCompile Include="device\fs\vfs.c">
+    <ClCompile Include="drivers\builtin\fs\vfs.c">
       <Filter>Source Files\device\fs</Filter>
     </ClCompile>
-    <ClCompile Include="device\hdd\hdd.c">
+    <ClCompile Include="drivers\builtin\hdd\hdd.c">
       <Filter>Source Files\device\hdd</Filter>
     </ClCompile>
     <ClCompile Include="pool.c">
@@ -222,7 +222,7 @@
     <ClCompile Include="ldr\ldr.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="device\fs\preloaded.c">
+    <ClCompile Include="drivers\builtin\fs\preloaded.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gdi\object.c">
@@ -243,16 +243,22 @@
     <ClCompile Include="gdi\gditest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="device\ps2\mouse.c">
+    <ClCompile Include="drivers\builtin\ps2\mouse.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="device\ps2\ps2.c">
+    <ClCompile Include="drivers\builtin\ps2\ps2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dispatcher\ntsemaphore.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io\driver.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="drivers\builtin\fs\rtl8139.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -393,6 +399,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\time.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\driver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

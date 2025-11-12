@@ -10,19 +10,22 @@ static MMPFN_LIST   FreeList;
 static MMPFN_LIST   WorkingsetList;
 static KSPIN_LOCK   PfnEntriesLock;
 
+#define MM_PFN_NEXT_ENTRY(entry) CONTAINING_RECORD((entry)->ListEntry.Next, \
+                                                   MMPFN_ENTRY, \
+                                                   ListEntry)
+
 /**
  * @brief This function initializes the physical memory allocator. 
  * 
- * @param pfnEntries - a pointer to an array of preallocated
- * MMPFN_ENTRY strucutres. The flags member has to be non-zero, should
- * the page frame start as an allocated one.
- * @param numberOfPfnEntries - number of entries in the PfnEntires array
+ * @param pfnEntries A pointer to an array of preallocated MMPFN_ENTRY 
+ *                   strucutres. The flags member has to be non-zero, should 
+ *                   the page frame start as an allocated one.
+ * @param numberOfPfnEntries The number of entries in the PfnEntires array
  */
 VOID 
 NTAPI
-MmReinitPhysAllocator(
-    PMMPFN_ENTRY pfnEntries,
-    SIZE_T numberOfPfnEntries)
+MmReinitPhysAllocator(PMMPFN_ENTRY pfnEntries,
+                      SIZE_T numberOfPfnEntries)
 {
     PFN_NUMBER pfnIndex;
 
@@ -51,10 +54,8 @@ MmReinitPhysAllocator(
 
         pfnEntries[pfnIndex].InList = selectedList;
 
-        InsertTailList(
-            &selectedList->PfnListHead,
-            &pfnEntries[pfnIndex].ListEntry
-        );
+        InsertTailList(&selectedList->PfnListHead,
+                       &pfnEntries[pfnIndex].ListEntry);
     }
 
     PfnEntries = pfnEntries;
@@ -67,8 +68,7 @@ MmReinitPhysAllocator(
  */
 NTSTATUS 
 NTAPI
-MmAllocatePfn(
-    PFN_NUMBER* pPfnNumber)
+MmAllocatePfn(PFN_NUMBER* pPfnNumber)
 {
     PMMPFN_ENTRY listEntry;
     NTSTATUS result;
@@ -85,7 +85,7 @@ MmAllocatePfn(
         listEntry->InList->NumberOfPfns--;
         listEntry->InList = &WorkingsetList;
         listEntry->InList->NumberOfPfns++;
-        listEntry->Flags = 4;
+        listEntry->Flags = 0;
         InsertTailList(&WorkingsetList.PfnListHead, &listEntry->ListEntry);
         *pPfnNumber = (PFN_NUMBER)(listEntry - PfnEntries);
 
@@ -94,6 +94,101 @@ MmAllocatePfn(
     KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
     
     return result;
+}
+
+static
+VOID
+MiLockedAllocRange(PMMPFN_ENTRY Start, PMMPFN_ENTRY End)
+{
+    PMMPFN_ENTRY Current = Start, Next = NULL;
+
+    while (Current != End)
+    {
+        Next = MM_PFN_NEXT_ENTRY(Current);
+
+        RemoveEntryList(&Current->ListEntry);
+        Current->InList->NumberOfPfns--;
+        Current->InList = &WorkingsetList;
+        Current->InList->NumberOfPfns++;
+        Current->Flags = 4;
+        InsertTailList(&WorkingsetList.PfnListHead, &Current->ListEntry);
+
+        PrintT("Allocating %X(%X) for contiguous block\n", PA_FROM_PFN(Current - PfnEntries), Current);
+
+        Current = Next;
+    }
+}
+
+/**
+ * @brief This function finds, and allocates a contiguous region of physical 
+ *        memory.
+ * 
+ * @param nRegionPages Number of pages to allocate
+ * @param[out] pPfnNumber If the function is successful, this pointer receives 
+ *                        the PFN of the first page in the allocated region.
+ * @param Flags A bitwise OR of zero or more following values:
+ *               - MM_ALLOC_PFN_REGION_4GB - The allocated region must reside
+ *                                           in the lower 4GB of physical memory.
+ */
+NTSTATUS
+NTAPI
+MmAllocatePfnRegion(SIZE_T nRegionPages, 
+                    PFN_NUMBER* pPfnNumber, 
+                    UINT Flags)
+{
+    PLIST_ENTRY ListEntry;
+    SIZE_T ContiguousPrefix;
+    PFN_NUMBER LastPfn, CurrentPfn;
+    PMMPFN_ENTRY MmPfnEntry;
+    PMMPFN_ENTRY PrefixStart;
+
+    KeAcquireSpinLockAtDpcLevel(&PfnEntriesLock);
+
+    if (IsListEmpty(&FreeList.PfnListHead))
+    {
+        KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
+        return STATUS_NO_MEMORY;
+    }
+    
+    ListEntry = FreeList.PfnListHead.First;
+    ContiguousPrefix = 0;
+    LastPfn = 0;
+    PrefixStart = NULL;
+
+    while (ListEntry != &FreeList.PfnListHead)
+    {
+        MmPfnEntry = CONTAINING_RECORD(ListEntry, MMPFN_ENTRY, ListEntry);
+        CurrentPfn = (PFN_NUMBER)(MmPfnEntry - PfnEntries);
+
+        if (PrefixStart != NULL && 
+            LastPfn + 1 == CurrentPfn && 
+            (!(Flags & MM_ALLOC_PFN_REGION_4GB) || 
+                PA_FROM_PFN(CurrentPfn) <= 0xFFFFFFFF))
+        {
+            ContiguousPrefix++;
+        }
+        else
+        {
+            ContiguousPrefix = 0;
+            PrefixStart = MmPfnEntry;
+        }
+
+        LastPfn = CurrentPfn;
+        ListEntry = ListEntry->Next;
+
+        if (ContiguousPrefix + 1 >= nRegionPages)
+        {
+            PrintT("Found range for %i pages:\n", nRegionPages);
+            MiLockedAllocRange(PrefixStart, MM_PFN_NEXT_ENTRY(MmPfnEntry));
+            
+            *pPfnNumber = (PFN_NUMBER)(PrefixStart - PfnEntries);
+            KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
+            return STATUS_SUCCESS;
+        }
+    }
+
+    KeReleaseSpinLockFromDpcLevel(&PfnEntriesLock);
+    return STATUS_NO_MEMORY;
 }
 
 NTSTATUS 
@@ -128,8 +223,7 @@ MmFreePfn(PFN_NUMBER pfnNumber)
 
 NTSTATUS 
 NTAPI
-MmAllocatePhysicalAddress(
-    ULONG_PTR* pPhysAddress)
+MmAllocatePhysicalAddress(ULONG_PTR* pPhysAddress)
 {
     PFN_NUMBER pfn;
     NTSTATUS status;
@@ -144,16 +238,14 @@ MmAllocatePhysicalAddress(
 
 NTSTATUS 
 NTAPI
-MmFreePhysicalAddress(
-    ULONG_PTR physAddress)
+MmFreePhysicalAddress(ULONG_PTR physAddress)
 {
     return MmFreePfn(PFN_FROM_PA(physAddress));
 }
 
 NTSTATUS
 NTAPI
-MmMarkPfnAsUsed(
-    PFN_NUMBER pfnNumber)
+MmMarkPfnAsUsed(PFN_NUMBER pfnNumber)
 {
     PMMPFN_ENTRY entry;
     NTSTATUS result;
@@ -195,7 +287,7 @@ MiFlagPfnsForRemap()
         }
         else
         {
-            PfnEntries[i].Flags = 1;
+            PfnEntries[i].Flags = MMPFN_FLAG_NO_PAGEOUT;
         }
     }
 }

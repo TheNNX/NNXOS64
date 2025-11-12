@@ -47,9 +47,6 @@ InitializeInterrupt(
     pInterrupt->pfnServiceRoutine = Routine;
     pInterrupt->pfnGetRequiresFullCtx = NULL;
     pInterrupt->SendEOI = TRUE;
-    pInterrupt->pfnSetMask = NULL;
-    /* FIXME */
-    pInterrupt->IoApicVector = Vector;
 }
 
 /* TODO: Create some sort of a KiDeleteInterrupt function. */
@@ -136,8 +133,6 @@ KiInitializeInterrupts(VOID)
     clockInterrupt->pfnFullCtxRoutine = PspScheduleThread;
     clockInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
     clockInterrupt->SendEOI = TRUE;
-    clockInterrupt->IoApicVector = -1;
-    clockInterrupt->pfnSetMask = ApicSetClockMask;
     HalpInitInterruptHandlerStub(clockInterrupt, (ULONG_PTR)IrqHandler);
     KeGetPcr()->ClockInterrupt = clockInterrupt;
     KeConnectInterrupt(clockInterrupt);

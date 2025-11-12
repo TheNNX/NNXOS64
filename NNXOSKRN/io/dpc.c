@@ -34,6 +34,7 @@ KeInsertQueueDpc(PKDPC Dpc,
     KIRQL irql;
     
     KeRaiseIrql(HIGH_LEVEL, &irql);
+
     data = Dpc->DpcData;
 
     KiAcquireSpinLock(&data->DpcLock);

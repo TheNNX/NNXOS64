@@ -115,8 +115,6 @@ extern "C"
             KeBugCheck(HAL_INITIALIZATION_FAILED);
         }
 
-        PciScan();
-
         ACPI_RDSP* pRdsp = (ACPI_RDSP*) 
             PagingMapStrcutureToVirtual(
                 gRdspPhysical, 
@@ -155,6 +153,8 @@ extern "C"
 
         SetupSystemCallHandler(SystemCallHandler);
         HalpSetupPcrForCurrentCpu(0);
+
+        PciScan();
         Ps2Initialize();
         Ps2KeyboardInitialize();
         Ps2MouseInitialize();

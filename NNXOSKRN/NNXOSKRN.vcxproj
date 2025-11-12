@@ -207,9 +207,10 @@ $(SolutionDir)genverh.bat</Command>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="device\fs\preloaded.c" />
-    <ClCompile Include="device\ps2\mouse.c" />
-    <ClCompile Include="device\ps2\ps2.c" />
+    <ClCompile Include="drivers\builtin\fs\preloaded.c" />
+    <ClCompile Include="drivers\builtin\fs\rtl8139.c" />
+    <ClCompile Include="drivers\builtin\ps2\mouse.c" />
+    <ClCompile Include="drivers\builtin\ps2\ps2.c" />
     <ClCompile Include="dispatcher\dispatcher.c" />
     <ClCompile Include="dispatcher\ntmutex.c" />
     <ClCompile Include="dispatcher\ntsemaphore.c" />
@@ -220,15 +221,16 @@ $(SolutionDir)genverh.bat</Command>
     <ClCompile Include="gdi\object.c" />
     <ClCompile Include="gdi\region.c" />
     <ClCompile Include="HAL\X64\bugcheck.c" />
-    <ClCompile Include="device\fs\fat.c" />
-    <ClCompile Include="device\fs\gpt.c" />
-    <ClCompile Include="device\fs\vfs.c" />
-    <ClCompile Include="device\hdd\hdd.c" />
-    <ClCompile Include="device\ps2\keyboard.c" />
+    <ClCompile Include="drivers\builtin\fs\fat.c" />
+    <ClCompile Include="drivers\builtin\fs\gpt.c" />
+    <ClCompile Include="drivers\builtin\fs\vfs.c" />
+    <ClCompile Include="drivers\builtin\hdd\hdd.c" />
+    <ClCompile Include="drivers\builtin\ps2\keyboard.c" />
     <ClCompile Include="HAL\ACPI\ACPI.c" />
     <ClCompile Include="HAL\X64\APIC.CPP" />
     <ClCompile Include="HAL\X64\interrupt.c" />
     <ClCompile Include="HAL\X64\IOAPIC.CPP" />
+    <ClCompile Include="io\driver.c" />
     <ClCompile Include="io\fileio.c" />
     <ClCompile Include="irql.c" />
     <ClCompile Include="HAL\X64\MP.cpp" />
@@ -271,6 +273,7 @@ $(SolutionDir)genverh.bat</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bugcheck.h" />
+    <ClInclude Include="include\driver.h" />
     <ClInclude Include="include\fat.h" />
     <ClInclude Include="include\fat32.h" />
     <ClInclude Include="include\file.h" />

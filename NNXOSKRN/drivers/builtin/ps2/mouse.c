@@ -173,10 +173,6 @@ Ps2MouseInitialize(VOID)
                       FALSE,
                       MouseIsr);
 
-    /* FIXME */
-    interrupt->IoApicVector = 2;
-    interrupt->pfnSetMask = ApicSetInterruptMask;
-
     KeConnectInterrupt(interrupt);
 
     Ps2EnableInterruptPort2();

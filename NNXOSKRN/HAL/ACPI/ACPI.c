@@ -77,7 +77,7 @@ AcpiRemapSdt(ACPI_SDT_HEADER* Addr)
     SIZE_T Size;
 
     /* Create a temporary mapping, to read the SDT size. */
-    KiAcquireSpinLock((volatile ULONG_PTR*)&PageViewSpinLock);
+    KiAcquireSpinLock(&PageViewSpinLock);
     Status = PagingMapPage((ULONG_PTR)PageView, (ULONG_PTR)Addr, PAGE_PRESENT);
     if (!NT_SUCCESS(Status))
     {
@@ -86,7 +86,7 @@ AcpiRemapSdt(ACPI_SDT_HEADER* Addr)
 
     Virtual = (ACPI_SDT_HEADER*)PageView;
     Size = Virtual->Lenght;
-    KiReleaseSpinLock((volatile ULONG_PTR*)&PageViewSpinLock);
+    KiReleaseSpinLock(&PageViewSpinLock);
 
     /* Remap to a sensible address. */
     Virtual = (ACPI_SDT_HEADER*)

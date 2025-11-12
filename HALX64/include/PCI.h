@@ -14,7 +14,7 @@ extern "C" {
 #define PCI_SUBCLASS_NON_VGA_COMPATIBLE 0
 #define PCI_SUBCLASS_VGA_COMPATIBLE 1
 #define PCI_CLASS_MASS_STORAGE_CONTROLLER 0X1
-#define    PCI_SUBCLASS_SCSI_BUS_CONTROLLER 0x0
+#define PCI_SUBCLASS_SCSI_BUS_CONTROLLER 0x0
 #define PCI_SUBCLASS_IDE_CONTROLLER 0x1
 #define PCI_SUBCLASS_FLOPPY_DISK_CONTROLLER 0x2
 #define PCI_SUBCLASS_IPI_BUS_CONTROLLER 0X3
@@ -48,19 +48,34 @@ extern "C" {
 #define PCI_CLASS_UNSPECIFIED 0XFF
 #define PCI_SUBCLASS_OTHER 0x80
 
+#define PCI_ADDRESS(bus, slot, function, offset) \
+    ((UINT32) ((((UINT32) (bus)) << 16) | \
+               (((UINT32) (slot)) << 11) | \
+               (((UINT32) (function)) << 8) | \
+               ((offset) & 0xfc) | 0x80000000))
+
+#define PCI_BUS(address) (((address) >> 16) & 0xFF)
+#define PCI_SLOT(address) (((address) >> 11) & 0xFF)
+#define PCI_FUNCTION(address) (((address) >> 8) & 0xFF)
+#define PCI_OFFSET(address) (((address) & 0xFC))
+
 
     UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
     UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset);
 
-    inline UINT16 PCIGetVendor(UINT8 bus, UINT8 slot, UINT8 function)
+    inline UINT16 PCIGetVendorId(UINT8 bus, UINT8 slot, UINT8 function)
     {
         return PciConfigReadWord(bus, slot, function, 0);
     }
 
+    inline UINT16 PCIGetDeviceId(UINT8 bus, UINT8 slot, UINT8 function)
+    {
+        return PciConfigReadWord(bus, slot, function, 2);
+    }
+
     inline bool PciCheckIfPresent(UINT8 bus, UINT8 slot, UINT8 function)
     {
-
-        return PCIGetVendor(bus, slot, function) != 0xffff;
+        return PCIGetVendorId(bus, slot, function) != 0xffff;
     }
 
     inline UINT8 PciGetHeader(UINT8 bus, UINT8 slot, UINT8 function)

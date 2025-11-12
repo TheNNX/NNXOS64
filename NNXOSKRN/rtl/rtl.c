@@ -1,5 +1,7 @@
 #include "rtl.h"
 
+#include <SimpleTextIO.h>
+
 VOID 
 NTAPI
 RtlFillMemory(

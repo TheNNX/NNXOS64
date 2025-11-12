@@ -168,10 +168,6 @@ Ps2KeyboardInitialize(VOID)
         FALSE,
         KeyboardIsr);
 
-    /* FIXME */
-    interrupt->IoApicVector = 1;
-    interrupt->pfnSetMask = ApicSetInterruptMask;
-
     KeConnectInterrupt(interrupt);
 
     Ps2EnableInterruptPort1();

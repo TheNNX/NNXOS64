@@ -31,11 +31,6 @@ extern "C"
         BOOLEAN             (NTAPI *pfnGetRequiresFullCtx)(
             struct _KINTERRUPT* Interrupt);
         BOOLEAN             SendEOI;
-        VOID                (NTAPI *pfnSetMask)(
-            struct _KINTERRUPT* Self, 
-            BOOLEAN State);
-        /* FIXME */
-        ULONG               IoApicVector;
     } KINTERRUPT, *PKINTERRUPT;
 
     NTHALAPI
@@ -97,11 +92,16 @@ extern "C"
     }
 
 #define CLOCK_VECTOR                0x20
-/* This IPI has to run at the same IRQL as the clock, 
-   because of that, its vector must be on the same prority level */
+/* This IPI has to run at the same IRQL as the clock, because of that, its 
+   vector must be on the same prority level */
 #define SCHEDULER_NOTIFY_IPI_VECTOR 0x21
+
+/* IRQs */
+/* Remember to add APIC IRQ -> GSI mappings, since there is no ACPI support yet.*/
 #define KEYBOARD_VECTOR             0x30
 #define MOUSE_VECTOR                0x31
+#define RTL8139_VECTOR              0x32
+
 #define STOP_IPI_VECTOR             0xEF
 
 #endif

@@ -2,42 +2,57 @@
 #define NNX_IRP_HEADER
 
 #include <nnxtype.h>
-#include <HAL/cpu.h>
-#include <HAL/irql.h>
+#include <cpu.h>
+#include <irql.h>
 #include <ntlist.h>
 #include <scheduler.h>
+#include <mdl.h>
+#include <apc.h>
+
+#define IRP_MJ_MAXIMUM_FUNCTION 0
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+    typedef struct _IO_STATUS_BLOCK
+    {
+        union
+        {
+            NTSTATUS Status;
+            PVOID Pointer;
+        };
+        ULONG_PTR Information;
+    } IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+
     typedef struct _IRP
     {
-        CSHORT                    Type;
-        USHORT                    Size;
-        PMDL                      MdlAddress;
-        ULONG                     Flags;
+        CSHORT Type;
+        USHORT Size;
+        PMDL MdlAddress;
+        ULONG Flags;
         union
         {
             struct _IRP* MasterIrp;
             volatile LONG IrpCount;
-            PVOID           SystemBuffer;
+            PVOID SystemBuffer;
         } AssociatedIrp;
-        LIST_ENTRY                ThreadListEntry;
-        IO_STATUS_BLOCK           IoStatus;
-        KPROCESSOR_MODE           RequestorMode;
-        BOOLEAN                   PendingReturned;
-        CHAR                      StackCount;
-        CHAR                      CurrentLocation;
-        BOOLEAN                   Cancel;
-        KIRQL                     CancelIrql;
-        CCHAR                     ApcEnvironment;
-        UCHAR                     AllocationFlags;
+        LIST_ENTRY ThreadListEntry;
+        IO_STATUS_BLOCK IoStatus;
+        KPROCESSOR_MODE RequestorMode;
+        BOOLEAN PendingReturned;
+        CHAR StackCount;
+        CHAR CurrentLocation;
+        BOOLEAN Cancel;
+        KIRQL CancelIrql;
+        CCHAR ApcEnvironment;
+        UCHAR AllocationFlags;
         union
         {
             PIO_STATUS_BLOCK UserIosb;
-            PVOID            IoRingContext;
+            PVOID IoRingContext;
         };
-        PKEVENT                   UserEvent;
+#if 0
+        PKEVENT UserEvent;
         union
         {
             struct
@@ -45,18 +60,20 @@ extern "C" {
                 union
                 {
                     PIO_APC_ROUTINE UserApcRoutine;
-                    PVOID           IssuingProcess;
+                    PVOID IssuingProcess;
                 };
                 union
                 {
-                    PVOID                 UserApcContext;
+                    PVOID UserApcContext;
                     struct _IORING_OBJECT* IoRing;
                 };
             } AsynchronousParameters;
             LARGE_INTEGER AllocationSize;
         } Overlay;
         volatile PDRIVER_CANCEL CancelRoutine;
-        PVOID                     UserBuffer;
+#endif
+        PVOID UserBuffer;
+#if 0
         union
         {
             struct
@@ -69,23 +86,24 @@ extern "C" {
                         PVOID DriverContext[4];
                     };
                 };
-                PETHREAD     Thread;
-                PCHAR        AuxiliaryBuffer;
+                PETHREAD Thread;
+                PCHAR AuxiliaryBuffer;
                 struct
                 {
                     LIST_ENTRY ListEntry;
                     union
                     {
                         struct _IO_STACK_LOCATION* CurrentStackLocation;
-                        ULONG                     PacketType;
+                        ULONG PacketType;
                     };
                 };
                 PFILE_OBJECT OriginalFileObject;
             } Overlay;
-            KAPC  Apc;
+            KAPC Apc;
             PVOID CompletionKey;
         } Tail;
-    } IRP;
+#endif
+    } IRP, *PIRP;
 #ifdef __cplusplus
 }
 #endif

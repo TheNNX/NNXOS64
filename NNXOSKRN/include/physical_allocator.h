@@ -25,8 +25,11 @@ extern "C"
 #define MMPFN_FLAG_NO_PAGEOUT 1
 #define MMPFN_FLAG_PERMAMENT  2
 
-#define PFN_FROM_PA(x) ((PFN_NUMBER)(x / PAGE_SIZE))
-#define PA_FROM_PFN(x) ((ULONG_PTR)(x * PAGE_SIZE))
+#define MM_ALLOC_PFN_DEFAULT    0
+#define MM_ALLOC_PFN_REGION_4GB 1
+
+#define PFN_FROM_PA(x) ((PFN_NUMBER)((x) / PAGE_SIZE))
+#define PA_FROM_PFN(x) ((ULONG_PTR)((x) * PAGE_SIZE))
 
 #ifdef NNX_KERNEL
     VOID 
@@ -39,6 +42,12 @@ extern "C"
     NTAPI
     MmAllocatePfn(
         PFN_NUMBER* pPfnNumber);
+
+    NTSTATUS
+    NTAPI
+    MmAllocatePfnRegion(SIZE_T nRegionPages, 
+                        PFN_NUMBER* pPfnNumber, 
+                        UINT Flags);
 
     NTSTATUS 
     NTAPI

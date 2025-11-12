@@ -7,27 +7,28 @@
 
 #pragma warning(disable : 4189)
 
+NTSTATUS RT8139Init(UINT32 pciAddress);
 void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
 void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber, UINT8 Class, UINT8 Subclass);
 VOID PciIdeEnumerate();
 
 UINT16 PciConfigReadWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset)
 {
-    UINT32 address = (UINT32) ((((UINT32) bus) << 16) | (((UINT32) slot) << 11) | (((UINT32) function) << 8) | (offset & 0xfc) | 0x80000000);
+    UINT32 address = PCI_ADDRESS(bus, slot, function, offset);
     outd(CONFIG_ADDRESS, address);
-    return (UINT16) ((ind(CONFIG_DATA) >> ((offset & 2) * 8)) & 0xffff);
+    return (UINT16) ((ind(CONFIG_DATA) >> ((offset & 3) * 8)) & 0xffff);
 }
 
 UINT32 PciConfigReadDWord(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset)
 {
-    UINT32 address = (UINT32) ((((UINT32) bus) << 16) | (((UINT32) slot) << 11) | (((UINT32) function) << 8) | (offset & 0xfc) | 0x80000000);
+    UINT32 address = PCI_ADDRESS(bus, slot, function, offset);
     outd(CONFIG_ADDRESS, address);
     return ind(CONFIG_DATA) >> ((offset & 2) * 8);
 }
 
 VOID PciConfigWriteByte(UINT8 bus, UINT8 slot, UINT8 function, UINT8 offset, UINT8 byte)
 {
-    UINT32 address = (UINT32) ((((UINT32) bus) << 16) | (((UINT32) slot) << 11) | (((UINT32) function) << 8) | (offset & 0xfc) | 0x80000000);
+    UINT32 address = PCI_ADDRESS(bus, slot, function, offset);
     outd(CONFIG_ADDRESS, address);
     outb(CONFIG_DATA, byte);
 }
@@ -57,24 +58,36 @@ VOID PciScan()
 void PciScanBus(UINT8 busNumber)
 {
     if (!PciCheckIfPresent(0, 0, busNumber))
+    {
         return;
+    }
+    
     for (UINT8 device = 0;; device++)
     {
         PciScanDevice(busNumber, device);
         if (device == 0xff)
-            break;
+        {
+            return;
+        }
     }
 }
 
 void PciScanDevice(UINT8 busNumber, UINT8 deviceNumber)
 {
+    UINT8 header;
+
     if (!PciCheckIfPresent(busNumber, deviceNumber, 0))
+    {
         return;
+    }
+
+    PrintT("Scanning device %X:%X\n", busNumber, deviceNumber);
     PciScanFunction(busNumber, deviceNumber, 0);
-    UINT8 header = PciGetHeader(busNumber, deviceNumber, 0);
+    
+    header = PciGetHeader(busNumber, deviceNumber, 0);
     if (header & 0x80)
     {
-        for (UINT8 function = 1; function < 0x7f; function++)
+        for (UINT8 function = 1; function < 8; function++)
         {
             PciScanFunction(busNumber, deviceNumber, function);
         }
@@ -85,8 +98,12 @@ void PciScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber)
 {
     if (!PciCheckIfPresent(busNumber, deviceNumber, functionNumber))
         return;
+    
     UINT8 Class = PCIGetClass(busNumber, deviceNumber, functionNumber);
     UINT8 Subclass = PciGetSubclass(busNumber, deviceNumber, functionNumber);
+    
+    PrintT("Checking function %X:%X:%X - %X:%X\n", busNumber, deviceNumber, functionNumber, Class, Subclass);
+    
     switch (Class)
     {
         case PCI_CLASS_BRIDGE_DEVICE:
@@ -94,6 +111,19 @@ void PciScanFunction(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumber)
             break;
         case PCI_CLASS_MASS_STORAGE_CONTROLLER:
             PciMassStorageClass(busNumber, deviceNumber, functionNumber, Class, Subclass);
+            break;
+        case PCI_CLASS_NETWORK_CONTROLLER:
+            if (PCIGetVendorId(busNumber, deviceNumber, functionNumber) == 0x10EC &&
+                PCIGetDeviceId(busNumber, deviceNumber, functionNumber) == 0x8139)
+            {
+                RT8139Init(PCI_ADDRESS(busNumber, deviceNumber, functionNumber, 0));
+            }
+            else
+            {
+                PrintT("Unrecognized network controller %X:%X\n", 
+                       PCIGetVendorId(busNumber, deviceNumber, functionNumber),
+                       PCIGetDeviceId(busNumber, deviceNumber, functionNumber));
+            }
             break;
         default:
             break;
@@ -105,14 +135,12 @@ void PciBridgeDeviceClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNum
     switch (Subclass)
     {
         case PCI_SUBCLASS_PCI_TO_PCI_BRIDGE:;
-            UINT8 secondaryBus = PciToPciGetSecondaryBus(busNumber, deviceNumber, functionNumber);
-
+            PciToPciGetSecondaryBus(busNumber, deviceNumber, functionNumber);
             break;
         default:
             break;
     }
 }
-
 
 PCI_IDE_CONTROLLER Controllers[MAX_PCI_IDE_CONTROLLERS] = { 0 };
 
@@ -125,10 +153,10 @@ BOOL AlreadyContainsController(PCI_IDE_CONTROLLER* controller)
             Controllers[i].Channels[1].Base == controller->Channels[1].Base &&
             Controllers[i].Channels[1].Ctrl == controller->Channels[1].Ctrl)
         {
-            return true;
+            return TRUE;
         }
     }
-    return false;
+    return FALSE;
 }
 
 UINT64 NumberOfControllers()
@@ -136,7 +164,9 @@ UINT64 NumberOfControllers()
     UINT64 result = 0;
 
     for (int i = 0; i < MAX_PCI_IDE_CONTROLLERS; i++)
+    {
         result += ((Controllers[i].Channels[0].Base) != 0);
+    }
 
     return result;
 }
@@ -162,7 +192,7 @@ void PciMassStorageClass(UINT8 busNumber, UINT8 deviceNumber, UINT8 functionNumb
     {
         if (NumberOfControllers() < MAX_PCI_IDE_CONTROLLERS - 1)
         {
-            PCI_IDE_CONTROLLER controller = PciIdeInitPciDevice(busNumber, deviceNumber, functionNumber, PciGetProgIf(busNumber, deviceNumber, functionNumber));
+            PCI_IDE_CONTROLLER controller = PciIdeInitPciDevice(busNumber, deviceNumber, functionNumber, progIF);
             if (!AlreadyContainsController(&controller))
             {
                 int id;

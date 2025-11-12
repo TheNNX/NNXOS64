@@ -323,8 +323,6 @@ PsConnectNotifyIpi()
     notifyInterrupt->pfnFullCtxRoutine = PspScheduleThread;
     notifyInterrupt->pfnGetRequiresFullCtx = GetRequiresFullCtxAlways;
     notifyInterrupt->SendEOI = FALSE;
-    notifyInterrupt->IoApicVector = -1;
-    notifyInterrupt->pfnSetMask = NULL;
     HalpInitInterruptHandlerStub(notifyInterrupt, (ULONG_PTR)IrqHandler);
     
     if (!KeConnectInterrupt(notifyInterrupt))
